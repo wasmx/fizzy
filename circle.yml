@@ -1,0 +1,94 @@
+version: 2.1
+
+executors:
+  linux-gcc-9:
+    docker:
+      - image: ethereum/cpp-build-env:12-gcc-9
+  linux-clang-9:
+    docker:
+      - image: ethereum/cpp-build-env:12-clang-9
+  macos:
+    macos:
+      xcode: 11.3.0
+
+commands:
+  build:
+    description: "Build"
+    steps:
+      - checkout
+      - run:
+          name: "Environment"
+          command: |
+            CC=${CC:-cc}
+            CXX=${CXX:-cpp}
+            echo CC: $CC
+            echo CXX: $CXX
+            $CC --version
+            $CXX --version
+            cmake --version
+
+            # Create the toolchain.info file for cache key.
+            echo $TOOLCHAIN >> toolchain.info
+            $CXX --version >> toolchain.info
+      - run:
+          name: "Configure"
+          working_directory: ~/build
+          command: |
+            cmake ../project -G Ninja -DCMAKE_INSTALL_PREFIX=~/install -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DFIZZY_TESTING=ON $CMAKE_OPTIONS
+      - run:
+          name: "Build"
+          command: cmake --build ~/build
+
+  test:
+    description: "Test"
+    steps:
+    - run:
+        name: "Test"
+        working_directory: ~/build
+        command: ctest -R ${TESTS_FILTER:-'.*'} -j4 --schedule-random --output-on-failure
+
+jobs:
+
+  lint:
+    docker:
+    - image: ethereum/cpp-build-env:12-lint
+    steps:
+    - checkout
+    - run:
+        name: "Check code format"
+        command: |
+          clang-format --version
+          find . -name '*.hpp' -o -name '*.cpp' -o -name '*.h' -o -name '*.c' | xargs clang-format -i
+          git diff --color --exit-code
+    - run:
+        name: "Run codespell"
+        command: |
+          codespell --quiet-level=4
+
+  release-linux:
+    executor: linux-gcc-9
+    environment:
+      BUILD_TYPE: Release
+    steps:
+      - build
+      - test
+
+  release-macos:
+    executor: macos
+    environment:
+      BUILD_TYPE: Release
+    steps:
+      - run:
+          name: "Install System Dependencies"
+          command: HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake ninja
+      - build
+      - test
+
+
+workflows:
+  version: 2
+  fizzy:
+    jobs:
+      - lint
+      - release-linux
+      - release-macos
