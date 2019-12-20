@@ -1,6 +1,14 @@
 cmake_minimum_required(VERSION 3.13)
 
+include(CMakeDependentOption)
+
 option(FIZZY_TESTING "Enable Fizzy internal tests" OFF)
+cmake_dependent_option(HUNTER_ENABLED "Enable Hunter package manager" ON
+    "FIZZY_TESTING" OFF)
+
+if(HUNTER_ENABLED)
+    include(cmake/Hunter/init.cmake)
+endif()
 
 project(fizzy LANGUAGES CXX)
 

@@ -1,10 +1,10 @@
 
 include(GoogleTest)
 
-find_package(GTest REQUIRED)
+find_package(GTest CONFIG REQUIRED)
 
 add_executable(fizzy-unittests)
-target_link_libraries(fizzy-unittests PRIVATE fizzy::fizzy GTest::Main)
+target_link_libraries(fizzy-unittests PRIVATE fizzy::fizzy GTest::gtest_main)
 target_include_directories(fizzy-unittests PRIVATE ${PROJECT_SOURCE_DIR}/lib/fizzy)
 
 target_sources(
