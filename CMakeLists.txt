@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.13)
 
+include(cmake/cable.cmake)
+include(CableBuildType)
+include(CableCompilerSettings)
 include(CMakeDependentOption)
 
 option(FIZZY_TESTING "Enable Fizzy internal tests" OFF)
@@ -10,7 +13,11 @@ if(HUNTER_ENABLED)
     include(cmake/Hunter/init.cmake)
 endif()
 
+cable_set_build_type(DEFAULT Release CONFIGURATION_TYPES Debug;Release;Coverage)
+
 project(fizzy LANGUAGES CXX)
+
+cable_configure_compiler()
 
 set(include_dir ${PROJECT_SOURCE_DIR}/include)  # Public include directory.
 
