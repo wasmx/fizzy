@@ -2,10 +2,10 @@
 
 namespace fizzy
 {
-inline constexpr uint64_t leb128u_decode(const uint8_t* input) noexcept
+constexpr uint64_t leb128u_decode(const uint8_t* input) noexcept
 {
     uint64_t result = 0;
-    uint8_t result_shift = 0;
+    int result_shift = 0;
 
     for (auto byte = input;; ++byte, result_shift += 7)
     {
