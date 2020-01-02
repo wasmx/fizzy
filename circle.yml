@@ -92,6 +92,51 @@ jobs:
       - build
       - test
 
+  clang-latest-coverage:
+    executor: linux-clang-9
+    environment:
+      BUILD_TYPE: Coverage
+      TESTS_FILTER: unittests
+    steps:
+      - run:
+          name: "Install lcov"
+          working_directory: /tmp
+          command: |
+            curl -sL http://downloads.sourceforge.net/ltp/lcov-1.14.tar.gz | tar xz --strip=1
+            sudo make install
+      - build
+      - test
+      - run:
+          name: "Collect coverage data"
+          working_directory: ~/build
+          command: |
+            mkdir coverage
+            find -name '*.profraw'
+            llvm-profdata merge *.profraw -o fizzy.profdata
+
+            llvm-cov report -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt \
+              -object bin/fizzy-unittests -use-color
+            llvm-cov report -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt > coverage/report.txt \
+              -object bin/fizzy-unittests
+
+            llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt -region-coverage-lt=100 > coverage/missing.html \
+              -object bin/fizzy-unittests
+            llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt > coverage/full.html \
+             -object bin/fizzy-unittests
+
+            llvm-cov export -instr-profile fizzy.profdata -format=lcov > fizzy.lcov \
+              -object bin/fizzy-unittests
+            genhtml fizzy.lcov -o coverage -t Fizzy
+      - store_artifacts:
+          path: ~/build/coverage
+          destination: coverage
+      - run:
+          name: "Upload to Codecov"
+          command: |
+            # Convert to relative paths
+            sed -i 's|$(pwd)/||' ~/build/fizzy.lcov
+            codecov --file ~/build/fizzy.lcov -X gcov
+
 
 workflows:
   version: 2
@@ -100,3 +145,4 @@ workflows:
       - lint
       - release-linux
       - release-macos
+      - clang-latest-coverage

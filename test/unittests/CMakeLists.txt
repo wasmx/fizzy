@@ -12,4 +12,8 @@ target_sources(
     leb128_test.cpp
 )
 
-gtest_discover_tests(fizzy-unittests TEST_PREFIX ${PROJECT_NAME}/unittests/)
+gtest_discover_tests(
+    fizzy-unittests
+    TEST_PREFIX ${PROJECT_NAME}/unittests/
+    PROPERTIES ENVIRONMENT LLVM_PROFILE_FILE=${CMAKE_BINARY_DIR}/unittests-%p.profraw
+)

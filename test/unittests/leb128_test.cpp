@@ -6,3 +6,9 @@ TEST(leb128, DISABLED_decode)
     uint8_t encoded_1 = 1;
     EXPECT_EQ(fizzy::leb128_decode(&encoded_1), 1);
 }
+
+TEST(leb128, dummy)
+{
+    auto s = std::string{"hello"};
+    EXPECT_FALSE(s.empty());
+}
