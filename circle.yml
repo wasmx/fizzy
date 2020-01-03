@@ -1,12 +1,15 @@
 version: 2.1
 
 executors:
+  lint:
+    docker:
+      - image: ethereum/cpp-build-env:13-lint
   linux-gcc-9:
     docker:
-      - image: ethereum/cpp-build-env:12-gcc-9
+      - image: ethereum/cpp-build-env:13-gcc-9
   linux-clang-9:
     docker:
-      - image: ethereum/cpp-build-env:12-clang-9
+      - image: ethereum/cpp-build-env:13-clang-9
   macos:
     macos:
       xcode: 11.3.0
@@ -58,8 +61,7 @@ commands:
 jobs:
 
   lint:
-    docker:
-    - image: ethereum/cpp-build-env:12-lint
+    executor: lint
     steps:
     - checkout
     - run:
@@ -98,12 +100,6 @@ jobs:
       BUILD_TYPE: Coverage
       TESTS_FILTER: unittests
     steps:
-      - run:
-          name: "Install lcov"
-          working_directory: /tmp
-          command: |
-            curl -sL http://downloads.sourceforge.net/ltp/lcov-1.14.tar.gz | tar xz --strip=1
-            sudo make install
       - build
       - test
       - run:
