@@ -19,6 +19,8 @@ cable_set_build_type(DEFAULT Release CONFIGURATION_TYPES Debug;Release;Coverage)
 
 project(fizzy LANGUAGES CXX)
 
+add_subdirectory(deps)
+
 cable_configure_compiler()
 
 set(include_dir ${PROJECT_SOURCE_DIR}/include)  # Public include directory.
