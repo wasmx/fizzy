@@ -10,10 +10,4 @@ FetchContent_Declare(
     URL https://github.com/cpp-pm/gate/archive/v0.9.1.tar.gz
     URL_HASH SHA256=33b6c9fdb47f364cd833baccc55100f9b8e9223387edcdfa616ed9661f897ec0
 )
-
-# The following is equivalent of FetchContent_MakeAvailable(SetupHunter) from CMake 3.14.
-FetchContent_GetProperties(SetupHunter)
-if(NOT setuphunter_POPULATED)
-    FetchContent_Populate(SetupHunter)
-    add_subdirectory(${setuphunter_SOURCE_DIR} ${setuphunter_BINARY_DIR})
-endif()
+FetchContent_MakeAvailable(SetupHunter)
