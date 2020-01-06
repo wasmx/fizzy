@@ -17,8 +17,10 @@ III) Conformance
 - Should pass the official Wasm test suite
 
 IV) First class support for determistic applications (*blockchain*)
-- Support the bigint API
+- Support an efficient big integer API (256-bit and perhaps 384-bit)
 - Support runtime metering in the interpreter
+- Support enforcing a call depth bound
+- Further restrictions of complexity, see [the caveats](./CAVEATS.md) for ideas.
 
 ## Testing
 
