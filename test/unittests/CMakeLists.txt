@@ -11,6 +11,8 @@ target_sources(
     fizzy-unittests PRIVATE
     leb128_test.cpp
     parser_test.cpp
+    utils.cpp
+    utils.hpp
 )
 
 gtest_discover_tests(
