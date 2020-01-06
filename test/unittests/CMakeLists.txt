@@ -9,6 +9,7 @@ target_include_directories(fizzy-unittests PRIVATE ${PROJECT_SOURCE_DIR}/lib/fiz
 
 target_sources(
     fizzy-unittests PRIVATE
+    execute_test.cpp
     leb128_test.cpp
     parser_test.cpp
 )
