@@ -7,5 +7,7 @@ target_sources(
     dummy.cpp
     leb128.hpp
     types.hpp
+    parser.cpp
+    parser.hpp
 )
 target_compile_features(fizzy PUBLIC cxx_std_17)
