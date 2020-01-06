@@ -10,6 +10,7 @@ target_include_directories(fizzy-unittests PRIVATE ${PROJECT_SOURCE_DIR}/lib/fiz
 target_sources(
     fizzy-unittests PRIVATE
     leb128_test.cpp
+    parser_test.cpp
 )
 
 gtest_discover_tests(
