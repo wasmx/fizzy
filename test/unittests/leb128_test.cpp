@@ -33,6 +33,10 @@ TEST(leb128, decode_unsigned)
 
     fizzy::bytes encoded_max{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01};
     EXPECT_EQ(fizzy::leb128u_decode(encoded_max), std::numeric_limits<uint64_t>::max());
+
+    // this is not really correct encoding, but is not rejected by our decoder
+    fizzy::bytes encoded_max2{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f};
+    EXPECT_EQ(fizzy::leb128u_decode(encoded_max2), std::numeric_limits<uint64_t>::max());
 }
 
 TEST(leb128, decode_unsigned_invalid)
