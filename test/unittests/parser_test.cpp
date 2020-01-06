@@ -9,6 +9,17 @@ static const auto functype_void_to_void = from_hex("600000");
 static const auto functype_i32i64_to_i32 = from_hex("60027f7e017f");
 static const auto functype_i32_to_void = from_hex("60017f00");
 
+TEST(parser, valtype)
+{
+    uint8_t b;
+    b = 0x7e;
+    EXPECT_EQ(std::get<0>(parser<valtype>{}(&b)), valtype::i64);
+    b = 0x7f;
+    EXPECT_EQ(std::get<0>(parser<valtype>{}(&b)), valtype::i32);
+    b = 0x7d;
+    EXPECT_THROW(std::get<0>(parser<valtype>{}(&b)), parser_error);
+}
+
 TEST(parser, empty_module)
 {
     const auto module = parse(wasm_prefix);
