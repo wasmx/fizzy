@@ -5,7 +5,7 @@ Fizzy aims to be a fast integer-only WebAssembly interpreter written in C++.
 ## Goals
 
 I) Code quality
-- Clean and modern C++14 codebase
+- Clean and modern C++17 codebase
 - Easily embeddable (*and take part of the standardisation of the "C embedding API"*)
 
 II) Simplicity

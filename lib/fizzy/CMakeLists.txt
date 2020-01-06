@@ -7,4 +7,4 @@ target_sources(
     dummy.cpp
     leb128.hpp
 )
-target_compile_features(fizzy PUBLIC cxx_std_14)
+target_compile_features(fizzy PUBLIC cxx_std_17)
