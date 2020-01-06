@@ -38,8 +38,14 @@ enum class instr : uint8_t
 struct code
 {
     uint32_t local_count;
+
+    // The instructions bytecode without immediate values.
     // https://webassembly.github.io/spec/core/binary/instructions.html
-    bytes_view expr;
+    std::vector<instr> instructions;
+
+    // The decoded instructions' immediate values.
+    // These are instruction-type dependent fixed size value in the order of instructions.
+    bytes immediates;
 };
 
 struct module
