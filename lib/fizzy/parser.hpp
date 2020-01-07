@@ -7,6 +7,9 @@
 
 namespace fizzy
 {
+constexpr uint8_t wasm_prefix_data[] = {0x00, 0x61, 0x73, 0xd6, 0x01, 0x00, 0x00, 0x00};
+constexpr bytes_view wasm_prefix{wasm_prefix_data, sizeof(wasm_prefix_data)};
+
 struct parser_error : public std::runtime_error
 {
     using runtime_error::runtime_error;
@@ -15,7 +18,7 @@ struct parser_error : public std::runtime_error
 template <typename T>
 using parser_result = std::tuple<T, const uint8_t*>;
 
-module parse(bytes_view bin);
+module parse(bytes_view input);
 
 template <typename T>
 struct parser
@@ -56,4 +59,5 @@ struct parser<std::vector<T>>
         return {result, pos};
     }
 };
+
 }  // namespace fizzy

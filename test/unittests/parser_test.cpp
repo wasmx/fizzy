@@ -4,7 +4,6 @@
 
 using namespace fizzy;
 
-static const auto wasm_prefix = from_hex("006173d601000000");
 static const auto functype_void_to_void = from_hex("600000");
 static const auto functype_i32i64_to_i32 = from_hex("60027f7e017f");
 static const auto functype_i32_to_void = from_hex("60017f00");
@@ -39,9 +38,17 @@ TEST(parser, empty_module)
     EXPECT_EQ(module.codesec.size(), 0);
 }
 
+TEST(parser, module_with_wrong_prefix)
+{
+    EXPECT_THROW(parse({}), parser_error);
+    EXPECT_THROW(parse(bytes{0x00, 0x61, 0x73, 0xd6}), parser_error);
+    EXPECT_THROW(parse(bytes{0x00, 0x61, 0x73, 0xd6, 0x00, 0x00, 0x00, 0x00}), parser_error);
+    EXPECT_THROW(parse(bytes{0x00, 0x61, 0x73, 0xd6, 0x02, 0x00, 0x00, 0x00}), parser_error);
+}
+
 TEST(parser, custom_section_empty)
 {
-    const auto bin = wasm_prefix + from_hex("0000");
+    const auto bin = bytes{wasm_prefix} + from_hex("0000");
     const auto module = parse(bin);
     EXPECT_EQ(module.typesec.size(), 0);
     EXPECT_EQ(module.funcsec.size(), 0);
@@ -50,7 +57,7 @@ TEST(parser, custom_section_empty)
 
 TEST(parser, custom_section_nonempty)
 {
-    const auto bin = wasm_prefix + from_hex("0001ff");
+    const auto bin = bytes{wasm_prefix} + from_hex("0001ff");
     const auto module = parse(bin);
     EXPECT_EQ(module.typesec.size(), 0);
     EXPECT_EQ(module.funcsec.size(), 0);
@@ -62,7 +69,7 @@ TEST(parser, type_section_with_single_functype)
     // single type [void] -> [void]
     const auto section_contents = uint8_t{0x01} + functype_void_to_void;
     const auto bin =
-        wasm_prefix + uint8_t{0x01} + uint8_t(section_contents.size()) + section_contents;
+        bytes{wasm_prefix} + uint8_t{0x01} + uint8_t(section_contents.size()) + section_contents;
     const auto module = parse(bin);
     ASSERT_EQ(module.typesec.size(), 1);
     const auto functype = module.typesec[0];
@@ -77,7 +84,7 @@ TEST(parser, type_section_with_single_functype_params)
     // single type [i32, i64] -> [i32]
     const auto section_contents = uint8_t{0x01} + functype_i32i64_to_i32;
     const auto bin =
-        wasm_prefix + uint8_t{0x01} + uint8_t(section_contents.size()) + section_contents;
+        bytes{wasm_prefix} + uint8_t{0x01} + uint8_t(section_contents.size()) + section_contents;
     const auto module = parse(bin);
     ASSERT_EQ(module.typesec.size(), 1);
     const auto functype = module.typesec[0];
@@ -98,7 +105,7 @@ TEST(parser, type_section_with_multiple_functypes)
     const auto section_contents =
         uint8_t{0x03} + functype_void_to_void + functype_i32i64_to_i32 + functype_i32_to_void;
     const auto bin =
-        wasm_prefix + uint8_t{0x01} + uint8_t(section_contents.size()) + section_contents;
+        bytes{wasm_prefix} + uint8_t{0x01} + uint8_t(section_contents.size()) + section_contents;
     const auto module = parse(bin);
     ASSERT_EQ(module.typesec.size(), 3);
     const auto functype0 = module.typesec[0];
