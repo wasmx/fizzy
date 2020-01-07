@@ -19,6 +19,7 @@ template <typename T>
 using parser_result = std::tuple<T, const uint8_t*>;
 
 module parse(bytes_view input);
+parser_result<code> parse_expr(const uint8_t* input);
 
 template <typename T>
 struct parser
@@ -72,4 +73,21 @@ struct parser<std::vector<T>>
     }
 };
 
+template <>
+struct parser<code>
+{
+    parser_result<code> operator()(const uint8_t* pos)
+    {
+        const auto [size, pos1] = leb128u_decode<uint32_t>(pos);
+
+        const auto [locals_vec, pos2] = parser<std::vector<locals>>{}(pos1);
+
+        auto result = parse_expr(pos2);
+
+        for (const auto& l : locals_vec)
+            std::get<0>(result).local_count += l.count;
+
+        return result;
+    }
+};
 }  // namespace fizzy

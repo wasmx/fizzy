@@ -156,3 +156,31 @@ TEST(parser, type_section_with_multiple_functypes)
     EXPECT_EQ(module.funcsec.size(), 0);
     EXPECT_EQ(module.codesec.size(), 0);
 }
+
+TEST(parser, code_with_empty_expr_2_locals)
+{
+    // Func with 2x i32 locals, only 0x0b "end" instruction.
+    const auto func_2_locals_bin = from_hex("01027f0b");
+
+    const auto code_bin = uint8_t(func_2_locals_bin.size()) + func_2_locals_bin;
+
+    const auto [code_obj, end_pos1] = parser<code>{}(code_bin.data());
+    EXPECT_EQ(code_obj.local_count, 2);
+    ASSERT_EQ(code_obj.instructions.size(), 1);
+    EXPECT_EQ(code_obj.instructions[0], instr::end);
+    EXPECT_EQ(code_obj.immediates.size(), 0);
+}
+
+TEST(parser, code_with_empty_expr_5_locals)
+{
+    // Func with 1x i64 + 4x i32 locals , only 0x0b "end" instruction.
+    const auto func_5_locals_bin = from_hex("02017f047e0b");
+
+    const auto code_bin = uint8_t(func_5_locals_bin.size()) + func_5_locals_bin;
+
+    const auto [code_obj, end_pos1] = parser<code>{}(code_bin.data());
+    EXPECT_EQ(code_obj.local_count, 5);
+    ASSERT_EQ(code_obj.instructions.size(), 1);
+    EXPECT_EQ(code_obj.instructions[0], instr::end);
+    EXPECT_EQ(code_obj.immediates.size(), 0);
+}

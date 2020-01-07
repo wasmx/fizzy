@@ -51,7 +51,7 @@ enum class instr : uint8_t
 
 struct code
 {
-    uint32_t local_count;
+    uint32_t local_count = 0;
 
     // The instructions bytecode without immediate values.
     // https://webassembly.github.io/spec/core/binary/instructions.html
