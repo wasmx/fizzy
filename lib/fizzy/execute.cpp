@@ -16,11 +16,11 @@ std::vector<uint64_t> execute(const module& _module, funcidx _function, std::vec
     // TODO: preallocate fixed stack depth properly
     std::vector<uint64_t> stack;
 
-    size_t pc = 0;
+    const instr* pc = code.instructions.data();
 
     while (true)
     {
-        const auto instruction = code.instructions[pc];
+        const auto instruction = *pc++;
         switch (instruction)
         {
         case instr::end:
@@ -29,8 +29,6 @@ std::vector<uint64_t> execute(const module& _module, funcidx _function, std::vec
             assert(false);
             break;
         }
-
-        pc++;
     }
 
 end:
