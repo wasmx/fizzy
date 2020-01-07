@@ -32,6 +32,8 @@ using funcidx = uint32_t;
 
 enum class instr : uint8_t
 {
+    unreachable = 0x00,
+    nop = 0x01,
     end = 0x0b,
     local_get = 0x20,
     local_set = 0x21,

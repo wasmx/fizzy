@@ -45,6 +45,8 @@ std::tuple<bool, std::vector<uint64_t>> execute(
     // TODO: preallocate fixed stack depth properly
     uint64_stack stack;
 
+    bool trap = false;
+
     const instr* pc = code.instructions.data();
     const uint8_t* immediates = code.immediates.data();
 
@@ -53,6 +55,11 @@ std::tuple<bool, std::vector<uint64_t>> execute(
         const auto instruction = *pc++;
         switch (instruction)
         {
+        case instr::unreachable:
+            trap = true;
+            goto end;
+        case instr::nop:
+            break;
         case instr::end:
             goto end;
         case instr::local_get: {
@@ -87,6 +94,6 @@ std::tuple<bool, std::vector<uint64_t>> execute(
 
 end:
     // move allows to return derived uint64_stack instance into base vector<uint64_t> value
-    return {false, std::move(stack)};
+    return {trap, std::move(stack)};
 }
 }  // namespace fizzy

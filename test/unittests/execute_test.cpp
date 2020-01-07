@@ -4,12 +4,22 @@
 TEST(execute, smoke)
 {
     fizzy::module module;
-    module.codesec.emplace_back(fizzy::code{1, {fizzy::instr::end}, {}});
+    module.codesec.emplace_back(fizzy::code{1, {fizzy::instr::nop, fizzy::instr::end}, {}});
 
     const auto [trap, ret] = fizzy::execute(module, 0, {});
 
     ASSERT_EQ(trap, false);
     EXPECT_EQ(ret.size(), 0);
+}
+
+TEST(execute, unreachable)
+{
+    fizzy::module module;
+    module.codesec.emplace_back(fizzy::code{1, {fizzy::instr::unreachable, fizzy::instr::end}, {}});
+
+    const auto [trap, ret] = fizzy::execute(module, 0, {});
+
+    ASSERT_EQ(trap, true);
 }
 
 TEST(execute, basic_add)
