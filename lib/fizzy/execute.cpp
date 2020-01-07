@@ -55,17 +55,20 @@ std::vector<uint64_t> execute(const module& _module, funcidx _function, std::vec
             goto end;
         case instr::local_get: {
             const auto idx = read<uint32_t>(immediates);
+            assert(idx <= locals.size());
             stack.push(locals[idx]);
             break;
         }
         case instr::local_set: {
             const auto idx = read<uint32_t>(immediates);
+            assert(idx <= locals.size());
             const auto a = static_cast<uint32_t>(stack.pop());
             locals[idx] = a;
             break;
         }
         case instr::local_tee: {
             const auto idx = read<uint32_t>(immediates);
+            assert(idx <= locals.size());
             const auto a = static_cast<uint32_t>(stack.back());
             locals[idx] = a;
             break;
