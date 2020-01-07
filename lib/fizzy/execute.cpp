@@ -3,7 +3,6 @@
 #include <cassert>
 #include <cstdint>
 #include <iostream>
-#include <tuple>
 
 namespace fizzy
 {
@@ -34,8 +33,7 @@ inline T read(const uint8_t*& input) noexcept
     return ret;
 }
 
-std::tuple<bool, std::vector<uint64_t>> execute(
-    const module& _module, funcidx _function, std::vector<uint64_t> _args)
+execution_result execute(const module& _module, funcidx _function, std::vector<uint64_t> _args)
 {
     const auto& code = _module.codesec[_function];
 
