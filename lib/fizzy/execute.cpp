@@ -17,9 +17,8 @@ std::vector<uint64_t> execute(const module& _module, funcidx _function, std::vec
     std::vector<uint64_t> stack;
 
     size_t pc = 0;
-    const size_t code_end = code.instructions.size();
 
-    while (pc < code_end)
+    while (true)
     {
         const auto instruction = code.instructions[pc];
         switch (instruction)
