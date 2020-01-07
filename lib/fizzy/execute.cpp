@@ -28,6 +28,14 @@ public:
 };
 
 template <typename T>
+inline T load(bytes_view input, size_t offset) noexcept
+{
+    T ret;
+    __builtin_memcpy(&ret, input.data() + offset, sizeof(ret));
+    return ret;
+}
+
+template <typename T>
 inline T read(const uint8_t*& input) noexcept
 {
     T ret;
@@ -204,6 +212,20 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
             const auto idx = read<uint32_t>(immediates);
             assert(idx <= locals.size());
             locals[idx] = stack.back();
+            break;
+        }
+        case Instr::i32_load:
+        {
+            const auto address = static_cast<uint32_t>(stack.pop());
+            // NOTE: alignment is dropped by the parser
+            const auto offset = read<uint32_t>(immediates);
+            if ((address + offset + sizeof(uint32_t)) > instance.memory.size())
+            {
+                trap = true;
+                goto end;
+            }
+            const auto ret = load<uint32_t>(instance.memory, address + offset);
+            stack.push(ret);
             break;
         }
         case Instr::memory_size:

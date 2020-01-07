@@ -119,6 +119,18 @@ parser_result<Code> parse_expr(const uint8_t* pos)
             push(code.immediates, static_cast<uint64_t>(imm));
             break;
         }
+
+        case Instr::i32_load:
+        {
+            // alignment
+            std::tie(std::ignore, pos) = leb128u_decode<uint32_t>(pos);
+
+            // offset
+            uint32_t imm;
+            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos);
+            push(code.immediates, imm);
+            break;
+        }
         }
         code.instructions.emplace_back(instr);
     } while (instr != Instr::end);
