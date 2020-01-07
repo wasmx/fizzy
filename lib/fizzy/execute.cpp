@@ -212,6 +212,31 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
             locals[idx] = stack.back();
             break;
         }
+        case Instr::memory_size:
+        {
+            stack.push(static_cast<uint32_t>(instance.memory.size() / pagesize));
+            break;
+        }
+        case Instr::memory_grow:
+        {
+            const auto delta = static_cast<uint32_t>(stack.pop());
+            const auto cur_pages = instance.memory.size() / pagesize;
+            assert(cur_pages <= size_t(std::numeric_limits<int32_t>::max()));
+            const auto new_pages = cur_pages + delta;
+            assert(new_pages >= cur_pages);
+            // FIXME: check also against maximum allowed page size (from memory section)
+            uint32_t ret = static_cast<uint32_t>(cur_pages);
+            try
+            {
+                instance.memory.resize(new_pages * pagesize);
+            }
+            catch (std::bad_alloc const&)
+            {
+                ret = static_cast<uint32_t>(-1);
+            }
+            stack.push(ret);
+            break;
+        }
         case Instr::i32_const:
         {
             const auto value = read<uint32_t>(immediates);

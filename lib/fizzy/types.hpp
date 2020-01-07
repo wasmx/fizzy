@@ -48,6 +48,8 @@ enum class Instr : uint8_t
     local_get = 0x20,
     local_set = 0x21,
     local_tee = 0x22,
+    memory_size = 0x3f,
+    memory_grow = 0x40,
     i32_const = 0x41,
     i64_const = 0x42,
     i32_eqz = 0x45,

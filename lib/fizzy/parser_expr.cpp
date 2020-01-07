@@ -29,6 +29,8 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         case Instr::end:
         case Instr::drop:
         case Instr::select:
+        case Instr::memory_size:
+        case Instr::memory_grow:
         case Instr::i32_eq:
         case Instr::i32_eqz:
         case Instr::i32_ne:
