@@ -27,8 +27,12 @@ struct functype
 // https://webassembly.github.io/spec/core/binary/modules.html#binary-typeidx
 using typeidx = uint32_t;
 
+// https://webassembly.github.io/spec/core/binary/modules.html#binary-funcidx
+using funcidx = uint32_t;
+
 enum class instr : uint8_t
 {
+    end = 0x0b,
     local_get = 0x20,
     local_set = 0x21,
     local_tee = 0x22,
