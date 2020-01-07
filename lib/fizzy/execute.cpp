@@ -40,6 +40,19 @@ std::vector<uint64_t> execute(const module& _module, funcidx _function, std::vec
             stack.emplace_back(locals[idx]);
             break;
         }
+        case instr::local_set: {
+            const auto idx = read<uint32_t>(immediates);
+            const auto a = static_cast<uint32_t>(stack.back());
+            stack.pop_back();
+            locals[idx] = a;
+            break;
+        }
+        case instr::local_tee: {
+            const auto idx = read<uint32_t>(immediates);
+            const auto a = static_cast<uint32_t>(stack.back());
+            locals[idx] = a;
+            break;
+        }
         case instr::i32_add: {
             const auto a = static_cast<uint32_t>(stack.back());
             stack.pop_back();
