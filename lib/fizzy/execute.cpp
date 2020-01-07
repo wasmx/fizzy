@@ -28,6 +28,12 @@ public:
 };
 
 template <typename T>
+inline void store(bytes& input, size_t offset, T value) noexcept
+{
+    __builtin_memcpy(input.data() + offset, &value, sizeof(value));
+}
+
+template <typename T>
 inline T load(bytes_view input, size_t offset) noexcept
 {
     T ret;
@@ -226,6 +232,20 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
             }
             const auto ret = load<uint32_t>(instance.memory, address + offset);
             stack.push(ret);
+            break;
+        }
+        case Instr::i32_store:
+        {
+            const auto address = static_cast<uint32_t>(stack.pop());
+            // NOTE: alignment is dropped by the parser
+            const auto offset = read<uint32_t>(immediates);
+            const auto value = static_cast<uint32_t>(stack.pop());
+            if ((address + offset + sizeof(uint32_t)) > instance.memory.size())
+            {
+                trap = true;
+                goto end;
+            }
+            store<uint32_t>(instance.memory, address + offset, value);
             break;
         }
         case Instr::memory_size:
