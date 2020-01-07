@@ -30,6 +30,14 @@ using typeidx = uint32_t;
 // https://webassembly.github.io/spec/core/binary/modules.html#binary-funcidx
 using funcidx = uint32_t;
 
+/// Function locals.
+/// https://webassembly.github.io/spec/core/binary/modules.html#binary-local
+struct locals
+{
+    uint32_t count;
+    valtype type;
+};
+
 enum class instr : uint8_t
 {
     unreachable = 0x00,
@@ -43,7 +51,7 @@ enum class instr : uint8_t
 
 struct code
 {
-    uint32_t local_count;
+    uint32_t local_count = 0;
 
     // The instructions bytecode without immediate values.
     // https://webassembly.github.io/spec/core/binary/instructions.html

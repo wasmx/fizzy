@@ -40,6 +40,9 @@ module parse(bytes_view input)
         case sectionid::type:
             std::tie(mod.typesec, it) = parser<std::vector<functype>>{}(it);
             break;
+        case sectionid::code:
+            std::tie(mod.codesec, it) = parser<std::vector<code>>{}(it);
+            break;
         default:
             it += size;
             break;

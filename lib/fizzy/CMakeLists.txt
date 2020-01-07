@@ -11,5 +11,6 @@ target_sources(
     types.hpp
     parser.cpp
     parser.hpp
+    parser_expr.cpp
 )
 target_compile_features(fizzy PUBLIC cxx_std_17)
