@@ -227,3 +227,42 @@ TEST(parser, code_section_with_basic_instructions)
     ASSERT_EQ(module.codesec[0].immediates.size(), 3 * 4);
     EXPECT_EQ(module.codesec[0].immediates, from_hex("010000000200000003000000"));
 }
+
+TEST(parser, milestone1)
+{
+    /*
+    (module
+      (func $add (param $lhs i32) (param $rhs i32) (result i32)
+        (local $local1 i32)
+        local.get $lhs
+        local.get $rhs
+        i32.add
+        local.get $local1
+        i32.add
+        local.tee $local1
+        local.get $lhs
+        i32.add
+      )
+    )
+    */
+
+    const auto bin = from_hex(
+        "0061736d0100000001070160027f7f017f030201000a13011101017f200020016a20026a220220006a0b");
+    const auto m = parse(bin);
+
+    ASSERT_EQ(m.typesec.size(), 1);
+    EXPECT_EQ(m.typesec[0].inputs, (std::vector{valtype::i32, valtype::i32}));
+    EXPECT_EQ(m.typesec[0].outputs, (std::vector{valtype::i32}));
+
+    ASSERT_EQ(m.codesec.size(), 1);
+    const auto& c = m.codesec[0];
+    EXPECT_EQ(c.local_count, 1);
+    EXPECT_EQ(c.instructions,
+        (std::vector{instr::local_get, instr::local_get, instr::i32_add, instr::local_get,
+            instr::i32_add, instr::local_tee, instr::local_get, instr::i32_add, instr::end}));
+    EXPECT_EQ(c.immediates, from_hex("00000000"
+                                     "01000000"
+                                     "02000000"
+                                     "02000000"
+                                     "00000000"));
+}
