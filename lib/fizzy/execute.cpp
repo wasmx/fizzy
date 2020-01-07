@@ -6,6 +6,24 @@
 
 namespace fizzy
 {
+namespace
+{
+class uint64_stack : public std::vector<uint64_t>
+{
+public:
+    using vector::vector;
+
+    void push(uint64_t val) { emplace_back(val); }
+
+    uint64_t pop()
+    {
+        auto const res = back();
+        pop_back();
+        return res;
+    }
+};
+}  // namespace
+
 template <typename T>
 inline T read(const uint8_t*& input) noexcept
 {
@@ -23,7 +41,7 @@ std::vector<uint64_t> execute(const module& _module, funcidx _function, std::vec
     locals.resize(locals.size() + code.local_count);
 
     // TODO: preallocate fixed stack depth properly
-    std::vector<uint64_t> stack;
+    uint64_stack stack;
 
     const instr* pc = code.instructions.data();
     const uint8_t* immediates = code.immediates.data();
@@ -37,13 +55,12 @@ std::vector<uint64_t> execute(const module& _module, funcidx _function, std::vec
             goto end;
         case instr::local_get: {
             const auto idx = read<uint32_t>(immediates);
-            stack.emplace_back(locals[idx]);
+            stack.push(locals[idx]);
             break;
         }
         case instr::local_set: {
             const auto idx = read<uint32_t>(immediates);
-            const auto a = static_cast<uint32_t>(stack.back());
-            stack.pop_back();
+            const auto a = static_cast<uint32_t>(stack.pop());
             locals[idx] = a;
             break;
         }
@@ -54,11 +71,9 @@ std::vector<uint64_t> execute(const module& _module, funcidx _function, std::vec
             break;
         }
         case instr::i32_add: {
-            const auto a = static_cast<uint32_t>(stack.back());
-            stack.pop_back();
-            const auto b = static_cast<uint32_t>(stack.back());
-            stack.pop_back();
-            stack.emplace_back(a + b);
+            const auto a = static_cast<uint32_t>(stack.pop());
+            const auto b = static_cast<uint32_t>(stack.pop());
+            stack.push(a + b);
             break;
         }
         default:
@@ -68,6 +83,7 @@ std::vector<uint64_t> execute(const module& _module, funcidx _function, std::vec
     }
 
 end:
-    return stack;
+    // move allows to return derived uint64_stack instance into base vector<uint64_t> value
+    return std::move(stack);
 }
 }  // namespace fizzy
