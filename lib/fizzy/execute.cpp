@@ -7,10 +7,11 @@
 namespace fizzy
 {
 template <typename T>
-inline T load(const uint8_t* input) noexcept
+inline T read(const uint8_t*& input) noexcept
 {
     T ret;
     __builtin_memcpy(&ret, input, sizeof(ret));
+    input += sizeof(ret);
     return ret;
 }
 
@@ -35,8 +36,7 @@ std::vector<uint64_t> execute(const module& _module, funcidx _function, std::vec
         case instr::end:
             goto end;
         case instr::local_get: {
-            const auto idx = load<uint32_t>(immediates);
-            immediates += sizeof(uint32_t);
+            const auto idx = read<uint32_t>(immediates);
             stack.emplace_back(locals[idx]);
             break;
         }
