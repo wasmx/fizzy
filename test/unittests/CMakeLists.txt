@@ -12,6 +12,8 @@ target_sources(
     execute_test.cpp
     leb128_test.cpp
     parser_test.cpp
+    utils.cpp
+    utils.hpp
 )
 
 gtest_discover_tests(
