@@ -202,3 +202,28 @@ TEST(parser, code_section_with_2_trivial_codes)
     ASSERT_EQ(module.codesec[1].instructions.size(), 1);
     EXPECT_EQ(module.codesec[1].instructions[0], instr::end);
 }
+
+TEST(parser, code_section_with_basic_instructions)
+{
+    const auto func_bin = from_hex(
+        "00"  // vec(locals)
+        "2001210222036a01000b");
+    const auto code_bin = uint8_t(func_bin.size()) + func_bin;
+    const auto section_contents = uint8_t{1} + code_bin;
+    const auto bin =
+        bytes{wasm_prefix} + uint8_t{10} + uint8_t(section_contents.size()) + section_contents;
+    const auto module = parse(bin);
+    EXPECT_EQ(module.typesec.size(), 0);
+    ASSERT_EQ(module.codesec.size(), 1);
+    EXPECT_EQ(module.codesec[0].local_count, 0);
+    ASSERT_EQ(module.codesec[0].instructions.size(), 7);
+    EXPECT_EQ(module.codesec[0].instructions[0], instr::local_get);
+    EXPECT_EQ(module.codesec[0].instructions[1], instr::local_set);
+    EXPECT_EQ(module.codesec[0].instructions[2], instr::local_tee);
+    EXPECT_EQ(module.codesec[0].instructions[3], instr::i32_add);
+    EXPECT_EQ(module.codesec[0].instructions[4], instr::nop);
+    EXPECT_EQ(module.codesec[0].instructions[5], instr::unreachable);
+    EXPECT_EQ(module.codesec[0].instructions[6], instr::end);
+    ASSERT_EQ(module.codesec[0].immediates.size(), 3 * 4);
+    EXPECT_EQ(module.codesec[0].immediates, from_hex("010000000200000003000000"));
+}
