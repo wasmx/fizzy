@@ -33,7 +33,7 @@ inline T read(const uint8_t*& input) noexcept
 }
 
 template <typename Op>
-void binary_op(uint64_stack& stack, Op op)
+inline void binary_op(uint64_stack& stack, Op op) noexcept
 {
     using T = decltype(op(stack.pop(), stack.pop()));
     const auto a = static_cast<T>(stack.pop());
@@ -42,28 +42,28 @@ void binary_op(uint64_stack& stack, Op op)
 }
 
 template <typename T>
-T shift_left(T lhs, T rhs)
+inline T shift_left(T lhs, T rhs) noexcept
 {
     auto const k = rhs % std::numeric_limits<T>::digits;
     return lhs << k;
 }
 
 template <typename T>
-T shift_right(T lhs, T rhs)
+inline T shift_right(T lhs, T rhs) noexcept
 {
     auto const k = rhs % std::numeric_limits<T>::digits;
     return lhs >> k;
 }
 
 template <typename T>
-T rotl(T lhs, T rhs)
+inline T rotl(T lhs, T rhs) noexcept
 {
     auto const k = rhs % std::numeric_limits<T>::digits;
     return (lhs << k) | (lhs >> (std::numeric_limits<T>::digits - k));
 }
 
 template <typename T>
-T rotr(T lhs, T rhs)
+inline T rotr(T lhs, T rhs) noexcept
 {
     auto const k = rhs % std::numeric_limits<T>::digits;
     return (lhs >> k) | (lhs << (std::numeric_limits<T>::digits - k));
