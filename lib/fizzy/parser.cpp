@@ -32,17 +32,22 @@ module parse(bytes_view input)
     for (auto it = input.begin(); it != input.end();)
     {
         const auto id = static_cast<sectionid>(*it++);
-        const auto [size, new_pos] = leb128u_decode<uint32_t>(it);
-        it = new_pos;
+        uint32_t size;
+        std::tie(size, it) = leb128u_decode<uint32_t>(it);
+        const auto expected_end_pos = it + size;
         switch (id)
         {
         case sectionid::type:
-            std::tie(mod.typesec, std::ignore) = parser<std::vector<functype>>{}(it);
+            std::tie(mod.typesec, it) = parser<std::vector<functype>>{}(it);
             break;
         default:
+            it += size;
             break;
         }
-        it += size;
+
+        if (it != expected_end_pos)
+            throw parser_error{"incorrect section " + std::to_string(static_cast<int>(id)) +
+                               " size, difference: " + std::to_string(it - expected_end_pos)};
     }
 
     return mod;

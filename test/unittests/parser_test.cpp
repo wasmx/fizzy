@@ -72,6 +72,22 @@ TEST(parser, functype_wrong_prefix)
     EXPECT_THROW(parse(bin), parser_error);
 }
 
+TEST(parser, type_section_larger_than_expected)
+{
+    const auto section_contents = uint8_t{0x01} + functype_void_to_void;
+    const auto bin = bytes{wasm_prefix} + uint8_t{0x01} + uint8_t(section_contents.size() - 1) +
+                     section_contents;
+    EXPECT_THROW(parse(bin), parser_error);
+}
+
+TEST(parser, type_section_smaller_than_expected)
+{
+    const auto section_contents = uint8_t{0x01} + functype_void_to_void + uint8_t{0xfe};
+    const auto bin =
+        bytes{wasm_prefix} + uint8_t{0x01} + uint8_t(section_contents.size()) + section_contents;
+    EXPECT_THROW(parse(bin), parser_error);
+}
+
 TEST(parser, type_section_with_single_functype)
 {
     // single type [void] -> [void]
