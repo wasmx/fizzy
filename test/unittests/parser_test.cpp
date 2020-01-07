@@ -30,6 +30,14 @@ TEST(parser, valtype_vec)
     EXPECT_EQ(vec[2], valtype::i32);
 }
 
+TEST(parser, locals)
+{
+    const auto input = from_hex("81017f");
+    const auto [l, p] = parser<locals>{}(input.data());
+    EXPECT_EQ(l.count, 0x81);
+    EXPECT_EQ(l.type, valtype::i32);
+}
+
 TEST(parser, empty_module)
 {
     const auto module = parse(wasm_prefix);

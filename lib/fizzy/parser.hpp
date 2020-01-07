@@ -43,6 +43,18 @@ struct parser<valtype>
     }
 };
 
+template <>
+struct parser<locals>
+{
+    parser_result<locals> operator()(const uint8_t* pos)
+    {
+        locals result;
+        std::tie(result.count, pos) = leb128u_decode<uint32_t>(pos);
+        std::tie(result.type, pos) = parser<valtype>{}(pos);
+        return {result, pos};
+    }
+};
+
 template <typename T>
 struct parser<std::vector<T>>
 {
