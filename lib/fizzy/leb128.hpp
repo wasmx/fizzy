@@ -1,3 +1,5 @@
+#pragma once
+
 #include "types.hpp"
 #include <cstdint>
 #include <stdexcept>
