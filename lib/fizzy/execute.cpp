@@ -22,7 +22,6 @@ public:
         return res;
     }
 };
-}  // namespace
 
 template <typename T>
 inline T read(const uint8_t*& input) noexcept
@@ -32,6 +31,28 @@ inline T read(const uint8_t*& input) noexcept
     input += sizeof(ret);
     return ret;
 }
+
+template <typename Op>
+void binary_op(uint64_stack& stack, Op op)
+{
+    using T = decltype(op(stack.pop(), stack.pop()));
+    const auto a = static_cast<T>(stack.pop());
+    const auto b = static_cast<T>(stack.pop());
+    stack.push(static_cast<uint64_t>(op(a, b)));
+}
+
+template <typename T>
+T shift_left(T lhs, T rhs)
+{
+    return lhs << rhs;
+}
+
+template <typename T>
+T shift_right(T lhs, T rhs)
+{
+    return lhs >> rhs;
+}
+}  // namespace
 
 execution_result execute(const module& _module, funcidx _function, std::vector<uint64_t> _args)
 {
@@ -79,11 +100,58 @@ execution_result execute(const module& _module, funcidx _function, std::vector<u
             break;
         }
         case instr::i32_add: {
-            const auto a = static_cast<uint32_t>(stack.pop());
-            const auto b = static_cast<uint32_t>(stack.pop());
-            stack.push(a + b);
+            binary_op(stack, std::plus<uint32_t>());
             break;
         }
+        case instr::i32_sub: {
+            binary_op(stack, std::minus<uint32_t>());
+            break;
+        }
+        case instr::i32_mul: {
+            binary_op(stack, std::multiplies<uint32_t>());
+            break;
+        }
+        case instr::i32_div_s: {
+            binary_op(stack, std::divides<int32_t>());
+            break;
+        }
+        case instr::i32_div_u: {
+            binary_op(stack, std::divides<uint32_t>());
+            break;
+        }
+        case instr::i32_rem_s: {
+            binary_op(stack, std::modulus<int32_t>());
+            break;
+        }
+        case instr::i32_rem_u: {
+            binary_op(stack, std::modulus<uint32_t>());
+            break;
+        }
+        case instr::i32_and: {
+            binary_op(stack, std::bit_and<uint32_t>());
+            break;
+        }
+        case instr::i32_or: {
+            binary_op(stack, std::bit_or<uint32_t>());
+            break;
+        }
+        case instr::i32_xor: {
+            binary_op(stack, std::bit_xor<uint32_t>());
+            break;
+        }
+        case instr::i32_shl: {
+            binary_op(stack, shift_left<uint32_t>);
+            break;
+        }
+        case instr::i32_shr_s: {
+            binary_op(stack, shift_right<int32_t>);
+            break;
+        }
+        case instr::i32_shr_u: {
+            binary_op(stack, shift_right<uint32_t>);
+            break;
+        }
+
         default:
             assert(false);
             break;
