@@ -48,6 +48,45 @@ TEST(execute, nop)
     EXPECT_EQ(ret.size(), 0);
 }
 
+TEST(execute, drop)
+{
+    fizzy::module module;
+    module.codesec.emplace_back(fizzy::code{
+        1, {fizzy::instr::local_get, fizzy::instr::drop, fizzy::instr::end}, {0, 0, 0, 0}});
+
+    const auto [trap, ret] = fizzy::execute(module, 0, {});
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 0);
+}
+
+TEST(execute, select)
+{
+    fizzy::module module;
+    module.codesec.emplace_back(fizzy::code{0,
+        {fizzy::instr::local_get, fizzy::instr::local_get, fizzy::instr::local_get,
+            fizzy::instr::select, fizzy::instr::end},
+        {0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0}});
+
+    auto result = fizzy::execute(module, 0, {3, 6, 0});
+
+    ASSERT_FALSE(result.trapped);
+    ASSERT_EQ(result.stack.size(), 1);
+    EXPECT_EQ(result.stack[0], 6);
+
+    result = fizzy::execute(module, 0, {3, 6, 1});
+
+    ASSERT_FALSE(result.trapped);
+    ASSERT_EQ(result.stack.size(), 1);
+    EXPECT_EQ(result.stack[0], 3);
+
+    result = fizzy::execute(module, 0, {3, 6, 42});
+
+    ASSERT_FALSE(result.trapped);
+    ASSERT_EQ(result.stack.size(), 1);
+    EXPECT_EQ(result.stack[0], 3);
+}
+
 TEST(execute, local_get)
 {
     fizzy::module module;
