@@ -133,6 +133,14 @@ jobs:
             sed -i 's|$(pwd)/||' ~/build/fizzy.lcov
             codecov --file ~/build/fizzy.lcov -X gcov
 
+  clang-latest-asan:
+    executor: linux-clang-9
+    environment:
+      BUILD_TYPE: Release
+      CMAKE_OPTIONS: -DSANITIZE=address
+    steps:
+      - build
+      - test
 
 workflows:
   version: 2
@@ -142,3 +150,4 @@ workflows:
       - release-linux
       - release-macos
       - clang-latest-coverage
+      - clang-latest-asan
