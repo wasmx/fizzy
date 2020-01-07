@@ -20,6 +20,17 @@ TEST(parser, valtype)
     EXPECT_THROW(std::get<0>(parser<valtype>{}(&b)), parser_error);
 }
 
+TEST(parser, valtype_vec)
+{
+    const auto input = from_hex("037f7e7fcc");
+    const auto [vec, pos] = parser<std::vector<valtype>>{}(input.data());
+    EXPECT_EQ(pos, input.data() + 4);
+    ASSERT_EQ(vec.size(), 3);
+    EXPECT_EQ(vec[0], valtype::i32);
+    EXPECT_EQ(vec[1], valtype::i64);
+    EXPECT_EQ(vec[2], valtype::i32);
+}
+
 TEST(parser, empty_module)
 {
     const auto module = parse(wasm_prefix);

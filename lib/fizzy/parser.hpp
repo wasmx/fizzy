@@ -1,5 +1,6 @@
 #pragma once
 
+#include "leb128.hpp"
 #include "types.hpp"
 #include <stdexcept>
 #include <tuple>
@@ -36,6 +37,23 @@ struct parser<valtype>
         default:
             throw parser_error{"invalid valtype " + std::to_string(b)};
         }
+    }
+};
+
+template <typename T>
+struct parser<std::vector<T>>
+{
+    parser_result<std::vector<T>> operator()(const uint8_t* pos)
+    {
+        uint32_t size;
+        std::tie(size, pos) = leb128u_decode<uint32_t>(pos);
+
+        std::vector<T> result;
+        result.reserve(size);
+        auto inserter = std::back_inserter(result);
+        for (uint32_t i = 0; i < size; ++i)
+            std::tie(inserter, pos) = parser<T>{}(pos);
+        return {result, pos};
     }
 };
 }  // namespace fizzy
