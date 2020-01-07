@@ -33,7 +33,7 @@ inline T read(const uint8_t*& input) noexcept
     return ret;
 }
 
-std::vector<uint64_t> execute(const module& _module, funcidx _function, std::vector<uint64_t> _args)
+execution_result execute(const module& _module, funcidx _function, std::vector<uint64_t> _args)
 {
     const auto& code = _module.codesec[_function];
 
@@ -43,6 +43,8 @@ std::vector<uint64_t> execute(const module& _module, funcidx _function, std::vec
     // TODO: preallocate fixed stack depth properly
     uint64_stack stack;
 
+    bool trap = false;
+
     const instr* pc = code.instructions.data();
     const uint8_t* immediates = code.immediates.data();
 
@@ -51,6 +53,11 @@ std::vector<uint64_t> execute(const module& _module, funcidx _function, std::vec
         const auto instruction = *pc++;
         switch (instruction)
         {
+        case instr::unreachable:
+            trap = true;
+            goto end;
+        case instr::nop:
+            break;
         case instr::end:
             goto end;
         case instr::local_get: {
@@ -85,6 +92,6 @@ std::vector<uint64_t> execute(const module& _module, funcidx _function, std::vec
 
 end:
     // move allows to return derived uint64_stack instance into base vector<uint64_t> value
-    return std::move(stack);
+    return {trap, std::move(stack)};
 }
 }  // namespace fizzy
