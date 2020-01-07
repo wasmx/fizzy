@@ -52,6 +52,22 @@ struct code
     bytes immediates;
 };
 
+enum class sectionid : uint8_t
+{
+    custom = 0,
+    type = 1,
+    import = 2,
+    function = 3,
+    table = 4,
+    memory = 5,
+    global = 6,
+    export_ = 7,
+    start = 8,
+    element = 9,
+    code = 10,
+    data = 11
+};
+
 struct module
 {
     // https://webassembly.github.io/spec/core/binary/modules.html#type-section
