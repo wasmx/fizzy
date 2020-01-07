@@ -44,13 +44,29 @@ void binary_op(uint64_stack& stack, Op op)
 template <typename T>
 T shift_left(T lhs, T rhs)
 {
-    return lhs << rhs;
+    auto const k = rhs % std::numeric_limits<T>::digits;
+    return lhs << k;
 }
 
 template <typename T>
 T shift_right(T lhs, T rhs)
 {
-    return lhs >> rhs;
+    auto const k = rhs % std::numeric_limits<T>::digits;
+    return lhs >> k;
+}
+
+template <typename T>
+T rotl(T lhs, T rhs)
+{
+    auto const k = rhs % std::numeric_limits<T>::digits;
+    return (lhs << k) | (lhs >> (std::numeric_limits<T>::digits - k));
+}
+
+template <typename T>
+T rotr(T lhs, T rhs)
+{
+    auto const k = rhs % std::numeric_limits<T>::digits;
+    return (lhs >> k) | (lhs << (std::numeric_limits<T>::digits - k));
 }
 }  // namespace
 
@@ -149,6 +165,14 @@ execution_result execute(const module& _module, funcidx _function, std::vector<u
         }
         case instr::i32_shr_u: {
             binary_op(stack, shift_right<uint32_t>);
+            break;
+        }
+        case instr::i32_rotl: {
+            binary_op(stack, rotl<uint32_t>);
+            break;
+        }
+        case instr::i32_rotr: {
+            binary_op(stack, rotr<uint32_t>);
             break;
         }
 
