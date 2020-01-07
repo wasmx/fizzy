@@ -9,10 +9,13 @@ namespace fizzy
 struct Instance
 {
     const Module& module;
+    bytes memory;
 };
 
 namespace
 {
+constexpr unsigned pagesize = 65536;
+
 class uint64_stack : public std::vector<uint64_t>
 {
 public:
@@ -137,7 +140,11 @@ inline uint64_t popcnt64(uint64_t value) noexcept
 
 Instance instantiate(const Module& module)
 {
-    return {module};
+    // FIXME: set pages from proper section
+    constexpr unsigned pages = 1;
+    // NOTE: fill it with zeroes
+    bytes memory(pages * pagesize, 0);
+    return {module, std::move(memory)};
 }
 
 execution_result execute(Instance& instance, FuncIdx function, std::vector<uint64_t> args)
