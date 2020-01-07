@@ -4,22 +4,22 @@
 
 namespace fizzy
 {
-std::pair<uint64_t, const uint8_t*> leb128u_decode(const uint8_t* input)
+template <typename T>
+std::pair<T, const uint8_t*> leb128u_decode(const uint8_t* input)
 {
-    uint64_t result = 0;
+    T result = 0;
     int result_shift = 0;
 
-    for (; result_shift <= 63; ++input, result_shift += 7)
+    for (; result_shift < std::numeric_limits<T>::digits; ++input, result_shift += 7)
     {
-        // TODO this ignores the bits in the 10th byte other than the least significant one
-        // (when result_shift==63)
-        // So would not reject some invalid encoding with those with bits set.
-        result |= static_cast<uint64_t>(*input & 0x7F) << result_shift;
+        // TODO this ignores the bits in the last byte other than the least significant one
+        // So would not reject some invalid encoding with those bits set.
+        result |= static_cast<T>((static_cast<T>(*input) & 0x7F) << result_shift);
         if ((*input & 0x80) == 0)
             return {result, input + 1};
     }
 
-    throw std::runtime_error("Invalid unsigned integer encoding.");
+    throw std::runtime_error("Invalid LEB128 encoding: too many bytes.");
 }
 
 }  // namespace fizzy
