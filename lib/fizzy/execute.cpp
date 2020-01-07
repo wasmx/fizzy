@@ -128,18 +128,43 @@ execution_result execute(const module& _module, funcidx _function, std::vector<u
             break;
         }
         case instr::i32_div_s: {
+            auto const lhs = static_cast<int32_t>(*(stack.end() - 1));
+            auto const rhs = static_cast<int32_t>(*(stack.end() - 2));
+            if (rhs == 0 || (lhs == std::numeric_limits<int32_t>::min() && rhs == -1))
+            {
+                trap = true;
+                goto end;
+            }
             binary_op(stack, std::divides<int32_t>());
             break;
         }
         case instr::i32_div_u: {
+            auto const rhs = static_cast<uint32_t>(*(stack.end() - 2));
+            if (rhs == 0)
+            {
+                trap = true;
+                goto end;
+            }
             binary_op(stack, std::divides<uint32_t>());
             break;
         }
         case instr::i32_rem_s: {
+            auto const rhs = static_cast<int32_t>(*(stack.end() - 2));
+            if (rhs == 0)
+            {
+                trap = true;
+                goto end;
+            }
             binary_op(stack, std::modulus<int32_t>());
             break;
         }
         case instr::i32_rem_u: {
+            auto const rhs = static_cast<uint32_t>(*(stack.end() - 2));
+            if (rhs == 0)
+            {
+                trap = true;
+                goto end;
+            }
             binary_op(stack, std::modulus<uint32_t>());
             break;
         }
