@@ -63,6 +63,9 @@ enum class instr : uint8_t
     i32_shr_u = 0x76,
     i32_rotl = 0x77,
     i32_rotr = 0x78,
+    i32_wrap_i64 = 0xa7,
+    i64_extend_i32_s = 0xac,
+    i64_extend_i32_u = 0xad,
 };
 
 struct code
