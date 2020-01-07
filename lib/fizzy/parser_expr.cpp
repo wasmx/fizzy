@@ -76,6 +76,14 @@ parser_result<Code> parse_expr(const uint8_t* pos)
             push(code.immediates, imm);
             break;
         }
+
+        case Instr::i32_const:
+        {
+            int32_t imm;
+            std::tie(imm, pos) = leb128s_decode<int32_t>(pos);
+            push(code.immediates, static_cast<uint32_t>(imm));
+            break;
+        }
         }
         code.instructions.emplace_back(instr);
     } while (instr != Instr::end);
