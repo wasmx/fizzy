@@ -47,6 +47,20 @@ enum class instr : uint8_t
     local_set = 0x21,
     local_tee = 0x22,
     i32_add = 0x6a,
+    i32_sub = 0x6b,
+    i32_mul = 0x6c,
+    i32_div_s = 0x6d,
+    i32_div_u = 0x6e,
+    i32_rem_s = 0x6f,
+    i32_rem_u = 0x70,
+    i32_and = 0x71,
+    i32_or = 0x72,
+    i32_xor = 0x73,
+    i32_shl = 0x74,
+    i32_shr_s = 0x75,
+    i32_shr_u = 0x76,
+    i32_rotl = 0x77,
+    i32_rotr = 0x78,
 };
 
 struct code
