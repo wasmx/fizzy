@@ -28,6 +28,20 @@ parser_result<code> parse_expr(const uint8_t* pos)
         case instr::nop:
         case instr::end:
         case instr::i32_add:
+        case instr::i32_sub:
+        case instr::i32_mul:
+        case instr::i32_div_s:
+        case instr::i32_div_u:
+        case instr::i32_rem_s:
+        case instr::i32_rem_u:
+        case instr::i32_and:
+        case instr::i32_or:
+        case instr::i32_xor:
+        case instr::i32_shl:
+        case instr::i32_shr_s:
+        case instr::i32_shr_u:
+        case instr::i32_rotl:
+        case instr::i32_rotr:
             break;
 
         case instr::local_get:
