@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iostream>
+#include <tuple>
 
 namespace fizzy
 {
@@ -33,7 +34,8 @@ inline T read(const uint8_t*& input) noexcept
     return ret;
 }
 
-std::vector<uint64_t> execute(const module& _module, funcidx _function, std::vector<uint64_t> _args)
+std::tuple<bool, std::vector<uint64_t>> execute(
+    const module& _module, funcidx _function, std::vector<uint64_t> _args)
 {
     const auto& code = _module.codesec[_function];
 
@@ -85,6 +87,6 @@ std::vector<uint64_t> execute(const module& _module, funcidx _function, std::vec
 
 end:
     // move allows to return derived uint64_stack instance into base vector<uint64_t> value
-    return std::move(stack);
+    return {false, std::move(stack)};
 }
 }  // namespace fizzy

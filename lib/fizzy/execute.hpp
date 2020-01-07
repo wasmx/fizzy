@@ -5,6 +5,6 @@
 
 namespace fizzy
 {
-std::vector<uint64_t> execute(
+std::tuple<bool, std::vector<uint64_t>> execute(
     const module& _module, funcidx _function, std::vector<uint64_t> _args);
 }  // namespace fizzy
