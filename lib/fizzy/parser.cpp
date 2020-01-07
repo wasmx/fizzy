@@ -4,6 +4,23 @@
 
 namespace fizzy
 {
+template <>
+struct parser<functype>
+{
+    parser_result<functype> operator()(const uint8_t* pos)
+    {
+        if (*pos != 0x60)
+            throw parser_error{
+                "unexpected byte value " + std::to_string(*pos) + ", expected 0x60 for functype"};
+        ++pos;
+
+        functype result;
+        std::tie(result.inputs, pos) = parser<std::vector<valtype>>{}(pos);
+        std::tie(result.outputs, pos) = parser<std::vector<valtype>>{}(pos);
+        return {result, pos};
+    }
+};
+
 module parse(bytes_view input)
 {
     if (input.substr(0, wasm_prefix.size()) != wasm_prefix)
@@ -19,6 +36,9 @@ module parse(bytes_view input)
         it = new_pos;
         switch (id)
         {
+        case sectionid::type:
+            std::tie(mod.typesec, std::ignore) = parser<std::vector<functype>>{}(it);
+            break;
         default:
             break;
         }

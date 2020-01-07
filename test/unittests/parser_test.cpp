@@ -64,6 +64,14 @@ TEST(parser, custom_section_nonempty)
     EXPECT_EQ(module.codesec.size(), 0);
 }
 
+TEST(parser, functype_wrong_prefix)
+{
+    const auto section_contents = uint8_t{0x01} + from_hex("610000");
+    const auto bin =
+        bytes{wasm_prefix} + uint8_t{0x01} + uint8_t(section_contents.size()) + section_contents;
+    EXPECT_THROW(parse(bin), parser_error);
+}
+
 TEST(parser, type_section_with_single_functype)
 {
     // single type [void] -> [void]
