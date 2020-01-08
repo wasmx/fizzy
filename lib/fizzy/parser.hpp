@@ -97,6 +97,17 @@ struct parser<std::vector<T>>
 };
 
 template <>
+struct parser<Memory>
+{
+    parser_result<Memory> operator()(const uint8_t* pos)
+    {
+        Limits limits;
+        std::tie(limits, pos) = parser<Limits>{}(pos);
+        return {{limits}, pos};
+    }
+};
+
+template <>
 struct parser<Code>
 {
     parser_result<Code> operator()(const uint8_t* pos)

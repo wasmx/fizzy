@@ -191,6 +191,43 @@ TEST(parser, type_section_with_multiple_functypes)
     EXPECT_EQ(module.codesec.size(), 0);
 }
 
+TEST(parser, memory_single_min_limit)
+{
+    const auto section_contents = bytes{} + uint8_t{0x01} + uint8_t{0x00} + uint8_t{0x7f};
+    const auto bin =
+        bytes{wasm_prefix} + uint8_t{0x05} + uint8_t(section_contents.size()) + section_contents;
+
+    const auto module = parse(bin);
+    ASSERT_EQ(module.memorysec.size(), 1);
+    EXPECT_EQ(module.memorysec[0].limits.min, 0x7f);
+}
+
+TEST(parser, memory_single_minmax_limit)
+{
+    const auto section_contents =
+        bytes{} + uint8_t{0x01} + uint8_t{0x01} + uint8_t{0x12} + uint8_t{0x7f};
+    const auto bin =
+        bytes{wasm_prefix} + uint8_t{0x05} + uint8_t(section_contents.size()) + section_contents;
+
+    const auto module = parse(bin);
+    ASSERT_EQ(module.memorysec.size(), 1);
+    EXPECT_EQ(module.memorysec[0].limits.min, 0x12);
+    EXPECT_EQ(module.memorysec[0].limits.max, 0x7f);
+}
+
+TEST(parser, memory_multi_min_limit)
+{
+    const auto section_contents =
+        bytes{} + uint8_t{0x02} + uint8_t{0x00} + uint8_t{0x7f} + uint8_t{0x00} + uint8_t{0x7f};
+    const auto bin =
+        bytes{wasm_prefix} + uint8_t{0x05} + uint8_t(section_contents.size()) + section_contents;
+
+    const auto module = parse(bin);
+    ASSERT_EQ(module.memorysec.size(), 2);
+    EXPECT_EQ(module.memorysec[0].limits.min, 0x7f);
+    EXPECT_EQ(module.memorysec[1].limits.min, 0x7f);
+}
+
 TEST(parser, code_with_empty_expr_2_locals)
 {
     // Func with 2x i32 locals, only 0x0b "end" instruction.
