@@ -273,6 +273,61 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
             comparison_op(stack, std::greater_equal<uint32_t>());
             break;
         }
+        case Instr::i64_eqz:
+        {
+            stack.push(stack.pop() == 0);
+            break;
+        }
+        case Instr::i64_eq:
+        {
+            comparison_op(stack, std::equal_to<uint64_t>());
+            break;
+        }
+        case Instr::i64_ne:
+        {
+            comparison_op(stack, std::not_equal_to<uint64_t>());
+            break;
+        }
+        case Instr::i64_lt_s:
+        {
+            comparison_op(stack, std::less<int64_t>());
+            break;
+        }
+        case Instr::i64_lt_u:
+        {
+            comparison_op(stack, std::less<uint64_t>());
+            break;
+        }
+        case Instr::i64_gt_s:
+        {
+            comparison_op(stack, std::greater<int64_t>());
+            break;
+        }
+        case Instr::i64_gt_u:
+        {
+            comparison_op(stack, std::greater<uint64_t>());
+            break;
+        }
+        case Instr::i64_le_s:
+        {
+            comparison_op(stack, std::less_equal<int64_t>());
+            break;
+        }
+        case Instr::i64_le_u:
+        {
+            comparison_op(stack, std::less_equal<uint64_t>());
+            break;
+        }
+        case Instr::i64_ge_s:
+        {
+            comparison_op(stack, std::greater_equal<int64_t>());
+            break;
+        }
+        case Instr::i64_ge_u:
+        {
+            comparison_op(stack, std::greater_equal<uint64_t>());
+            break;
+        }
         case Instr::i32_clz:
         {
             unary_op(stack, clz32);
