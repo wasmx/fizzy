@@ -6,7 +6,11 @@
 namespace fizzy
 {
 // The module instance.
-struct Instance;
+struct Instance
+{
+    const Module& module;
+    bytes memory;
+};
 
 // Instantiate a module.
 Instance instantiate(const Module& module);

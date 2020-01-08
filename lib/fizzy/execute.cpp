@@ -6,12 +6,6 @@
 
 namespace fizzy
 {
-struct Instance
-{
-    const Module& module;
-    bytes memory;
-};
-
 namespace
 {
 constexpr unsigned pagesize = 65536;
