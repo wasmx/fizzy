@@ -6,10 +6,10 @@
 namespace fizzy
 {
 // The module instance.
-struct instance;
+struct Instance;
 
 // Instantiate a module.
-instance instantiate(const module& _module);
+Instance instantiate(const Module& module);
 
 // The result of an execution.
 struct execution_result
@@ -22,8 +22,8 @@ struct execution_result
 };
 
 // Execute a function on an instance.
-execution_result execute(instance& _instance, funcidx _function, std::vector<uint64_t> _args);
+execution_result execute(Instance& instance, FuncIdx function, std::vector<uint64_t> args);
 
 // TODO: remove this helper
-execution_result execute(const module& _module, funcidx _function, std::vector<uint64_t> _args);
+execution_result execute(const Module& module, FuncIdx function, std::vector<uint64_t> args);
 }  // namespace fizzy

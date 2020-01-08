@@ -12,58 +12,58 @@ inline void push(bytes& b, T value)
 }
 }  // namespace
 
-parser_result<code> parse_expr(const uint8_t* pos)
+parser_result<Code> parse_expr(const uint8_t* pos)
 {
-    code c;
-    instr i;
+    Code code;
+    Instr instr;
     do
     {
-        i = static_cast<instr>(*pos++);
-        switch (i)
+        instr = static_cast<Instr>(*pos++);
+        switch (instr)
         {
         default:
             throw parser_error{"invalid instruction " + std::to_string(*pos)};
 
-        case instr::unreachable:
-        case instr::nop:
-        case instr::end:
-        case instr::drop:
-        case instr::select:
-        case instr::i32_eq:
-        case instr::i32_eqz:
-        case instr::i32_ne:
-        case instr::i32_add:
-        case instr::i32_sub:
-        case instr::i32_mul:
-        case instr::i32_div_s:
-        case instr::i32_div_u:
-        case instr::i32_rem_s:
-        case instr::i32_rem_u:
-        case instr::i32_and:
-        case instr::i32_or:
-        case instr::i32_xor:
-        case instr::i32_shl:
-        case instr::i32_shr_s:
-        case instr::i32_shr_u:
-        case instr::i32_rotl:
-        case instr::i32_rotr:
-        case instr::i32_wrap_i64:
-        case instr::i64_extend_i32_s:
-        case instr::i64_extend_i32_u:
+        case Instr::unreachable:
+        case Instr::nop:
+        case Instr::end:
+        case Instr::drop:
+        case Instr::select:
+        case Instr::i32_eq:
+        case Instr::i32_eqz:
+        case Instr::i32_ne:
+        case Instr::i32_add:
+        case Instr::i32_sub:
+        case Instr::i32_mul:
+        case Instr::i32_div_s:
+        case Instr::i32_div_u:
+        case Instr::i32_rem_s:
+        case Instr::i32_rem_u:
+        case Instr::i32_and:
+        case Instr::i32_or:
+        case Instr::i32_xor:
+        case Instr::i32_shl:
+        case Instr::i32_shr_s:
+        case Instr::i32_shr_u:
+        case Instr::i32_rotl:
+        case Instr::i32_rotr:
+        case Instr::i32_wrap_i64:
+        case Instr::i64_extend_i32_s:
+        case Instr::i64_extend_i32_u:
             break;
 
-        case instr::local_get:
-        case instr::local_set:
-        case instr::local_tee:
+        case Instr::local_get:
+        case Instr::local_set:
+        case Instr::local_tee:
         {
             uint32_t imm;
             std::tie(imm, pos) = leb128u_decode<uint32_t>(pos);
-            push(c.immediates, imm);
+            push(code.immediates, imm);
             break;
         }
         }
-        c.instructions.emplace_back(i);
-    } while (i != instr::end);
-    return {c, pos};
+        code.instructions.emplace_back(instr);
+    } while (instr != Instr::end);
+    return {code, pos};
 }
 }  // namespace fizzy
