@@ -113,6 +113,19 @@ TEST(leb128, decode_s64)
     }
 }
 
+TEST(leb128, decode_s64_invalid)
+{
+    fizzy::bytes encoded_1_too_many_leading_zeroes{
+        0x81, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80};
+    EXPECT_THROW(fizzy::leb128s_decode<int64_t>(encoded_1_too_many_leading_zeroes.data()),
+        std::runtime_error);
+
+    fizzy::bytes encoded_minus1_too_many_leading_1s{
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01};
+    EXPECT_THROW(fizzy::leb128s_decode<int64_t>(encoded_minus1_too_many_leading_1s.data()),
+        std::runtime_error);
+}
+
 TEST(leb128, decode_s32)
 {
     // clang-format off
@@ -163,4 +176,14 @@ TEST(leb128, decode_s8)
         EXPECT_EQ(res.second, &testcase.first[0] + testcase.first.size())
             << fizzy::hex(testcase.first);
     }
+}
+
+TEST(leb128, decode_s8_invalid)
+{
+    fizzy::bytes encoded_1_too_many_leading_zeroes{0x81, 0x80, 0x80};
+    EXPECT_THROW(fizzy::leb128s_decode<int8_t>(encoded_1_too_many_leading_zeroes.data()),
+        std::runtime_error);
+
+    fizzy::bytes encoded_too_big{0xe5, 0x8e, 0x26};
+    EXPECT_THROW(fizzy::leb128s_decode<int8_t>(encoded_too_big.data()), std::runtime_error);
 }
