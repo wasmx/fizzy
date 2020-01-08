@@ -36,27 +36,6 @@ TEST(execute, end)
     EXPECT_EQ(ret.size(), 0);
 }
 
-TEST(execute, unreachable)
-{
-    fizzy::Module module;
-    module.codesec.emplace_back(fizzy::Code{0, {fizzy::Instr::unreachable, fizzy::Instr::end}, {}});
-
-    const auto [trap, ret] = fizzy::execute(module, 0, {});
-
-    ASSERT_TRUE(trap);
-}
-
-TEST(execute, nop)
-{
-    fizzy::Module module;
-    module.codesec.emplace_back(fizzy::Code{0, {fizzy::Instr::nop, fizzy::Instr::end}, {}});
-
-    const auto [trap, ret] = fizzy::execute(module, 0, {});
-
-    ASSERT_FALSE(trap);
-    EXPECT_EQ(ret.size(), 0);
-}
-
 TEST(execute, drop)
 {
     fizzy::Module module;
