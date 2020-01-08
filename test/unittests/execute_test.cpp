@@ -204,15 +204,15 @@ TEST(execute, memory_grow)
     ASSERT_EQ(result.stack.size(), 1);
     EXPECT_EQ(result.stack[0], 1);
 
-    // 4GB memory.
-    result = fizzy::execute(module, 0, {65535});
+    // 256MB memory.
+    result = fizzy::execute(module, 0, {4095});
 
     ASSERT_FALSE(result.trapped);
     ASSERT_EQ(result.stack.size(), 1);
     EXPECT_EQ(result.stack[0], 1);
 
-    // >4GB memory.
-    result = fizzy::execute(module, 0, {65536});
+    // >256MB memory.
+    result = fizzy::execute(module, 0, {4096});
 
     ASSERT_FALSE(result.trapped);
     ASSERT_EQ(result.stack.size(), 1);

@@ -9,8 +9,8 @@ namespace fizzy
 namespace
 {
 constexpr unsigned pagesize = 65536;
-// Set hard limit of 4GB of memory.
-constexpr auto memorylimit = 4 * 1024 * 1024 * 1024ULL;
+// Set hard limit of 256MB of memory.
+constexpr auto memorylimit = 256 * 1024 * 1024ULL;
 
 class uint64_stack : public std::vector<uint64_t>
 {
