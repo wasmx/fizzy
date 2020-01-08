@@ -47,6 +47,21 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         case Instr::i32_shr_u:
         case Instr::i32_rotl:
         case Instr::i32_rotr:
+        case Instr::i64_add:
+        case Instr::i64_sub:
+        case Instr::i64_mul:
+        case Instr::i64_div_s:
+        case Instr::i64_div_u:
+        case Instr::i64_rem_s:
+        case Instr::i64_rem_u:
+        case Instr::i64_and:
+        case Instr::i64_or:
+        case Instr::i64_xor:
+        case Instr::i64_shl:
+        case Instr::i64_shr_s:
+        case Instr::i64_shr_u:
+        case Instr::i64_rotl:
+        case Instr::i64_rotr:
         case Instr::i32_wrap_i64:
         case Instr::i64_extend_i32_s:
         case Instr::i64_extend_i32_u:

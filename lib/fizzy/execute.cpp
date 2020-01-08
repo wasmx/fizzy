@@ -267,6 +267,106 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
             binary_op(stack, rotr<uint32_t>);
             break;
         }
+        case Instr::i64_add:
+        {
+            binary_op(stack, std::plus<uint64_t>());
+            break;
+        }
+        case Instr::i64_sub:
+        {
+            binary_op(stack, std::minus<uint64_t>());
+            break;
+        }
+        case Instr::i64_mul:
+        {
+            binary_op(stack, std::multiplies<uint64_t>());
+            break;
+        }
+        case Instr::i64_div_s:
+        {
+            auto const lhs = static_cast<int64_t>(stack.peek(1));
+            auto const rhs = static_cast<int64_t>(stack.peek(2));
+            if (rhs == 0 || (lhs == std::numeric_limits<int64_t>::min() && rhs == -1))
+            {
+                trap = true;
+                goto end;
+            }
+            binary_op(stack, std::divides<int64_t>());
+            break;
+        }
+        case Instr::i64_div_u:
+        {
+            auto const rhs = static_cast<uint64_t>(stack.peek(2));
+            if (rhs == 0)
+            {
+                trap = true;
+                goto end;
+            }
+            binary_op(stack, std::divides<uint64_t>());
+            break;
+        }
+        case Instr::i64_rem_s:
+        {
+            auto const rhs = static_cast<int64_t>(stack.peek(2));
+            if (rhs == 0)
+            {
+                trap = true;
+                goto end;
+            }
+            binary_op(stack, std::modulus<int64_t>());
+            break;
+        }
+        case Instr::i64_rem_u:
+        {
+            auto const rhs = static_cast<uint64_t>(stack.peek(2));
+            if (rhs == 0)
+            {
+                trap = true;
+                goto end;
+            }
+            binary_op(stack, std::modulus<uint64_t>());
+            break;
+        }
+        case Instr::i64_and:
+        {
+            binary_op(stack, std::bit_and<uint64_t>());
+            break;
+        }
+        case Instr::i64_or:
+        {
+            binary_op(stack, std::bit_or<uint64_t>());
+            break;
+        }
+        case Instr::i64_xor:
+        {
+            binary_op(stack, std::bit_xor<uint64_t>());
+            break;
+        }
+        case Instr::i64_shl:
+        {
+            binary_op(stack, shift_left<uint64_t>);
+            break;
+        }
+        case Instr::i64_shr_s:
+        {
+            binary_op(stack, shift_right<int64_t>);
+            break;
+        }
+        case Instr::i64_shr_u:
+        {
+            binary_op(stack, shift_right<uint64_t>);
+            break;
+        }
+        case Instr::i64_rotl:
+        {
+            binary_op(stack, rotl<uint64_t>);
+            break;
+        }
+        case Instr::i64_rotr:
+        {
+            binary_op(stack, rotr<uint64_t>);
+            break;
+        }
         case Instr::i32_wrap_i64:
         {
             stack.push(static_cast<uint32_t>(stack.pop()));
