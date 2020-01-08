@@ -91,7 +91,10 @@ TEST(leb128, decode_s64)
             {{0x81, 0x80, 0x80, 0x00}, 1}, // 1 with leading zeroes
             {{0x81, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x00}, 1}, // 1 with max leading zeroes
             {{0x7f}, -1},
-            {{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01}, -1},
+            {{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01}, -1}, // -1 with leading 1s
+            {{0x7e}, -2},
+            {{0xfe, 0x7f}, -2}, // -2 with leading 1s
+            {{0xfe, 0xff, 0x7f}, -2},  // -2 with leading 1s
             {{0xe5, 0x8e, 0x26}, 624485},
             {{0xe5, 0x8e, 0xa6, 0x80, 0x80, 0x00}, 624485}, // 624485 with leading zeroes
             {{0xc0, 0xbb, 0x78}, -123456},
@@ -104,6 +107,58 @@ TEST(leb128, decode_s64)
     for (auto const& testcase : testcases)
     {
         auto res = fizzy::leb128s_decode<int64_t>(testcase.first.data());
+        EXPECT_EQ(res.first, testcase.second) << fizzy::hex(testcase.first);
+        EXPECT_EQ(res.second, &testcase.first[0] + testcase.first.size())
+            << fizzy::hex(testcase.first);
+    }
+}
+
+TEST(leb128, decode_s32)
+{
+    // clang-format off
+    std::vector<std::pair<fizzy::bytes, int32_t>> testcases = {
+            {{0}, 0}, // 0
+            {{0x80, 0x80, 0x00}, 0}, // 0 with leading zeroes
+            {{1}, 1},
+            {{0x81, 0x80, 0x80, 0x00}, 1}, // 1 with leading zeroes
+            {{0x81, 0x80, 0x80, 0x80, 0x00}, 1}, // 1 with max leading zeroes
+            {{0x7f}, -1},
+            {{0xff, 0xff, 0xff, 0xff, 0x0f}, -1}, // -1 with leading 1s
+            {{0x7e}, -2},
+            {{0xfe, 0x7f}, -2}, // -2 with leading 1s
+            {{0xfe, 0xff, 0x7f}, -2}, // -2 with leading 1s
+            {{0xe5, 0x8e, 0x26}, 624485},
+            {{0xe5, 0x8e, 0xa6, 0x80, 0x00}, 624485}, // 624485 with leading zeroes
+            {{0xc0, 0xbb, 0x78}, -123456},
+            {{0x9b, 0xf1, 0x59}, -624485},
+    };
+    // clang-format on
+
+    for (auto const& testcase : testcases)
+    {
+        auto res = fizzy::leb128s_decode<int32_t>(testcase.first.data());
+        EXPECT_EQ(res.first, testcase.second) << fizzy::hex(testcase.first);
+        EXPECT_EQ(res.second, &testcase.first[0] + testcase.first.size())
+            << fizzy::hex(testcase.first);
+    }
+}
+
+TEST(leb128, decode_s8)
+{
+    // clang-format off
+    std::vector<std::pair<fizzy::bytes, int64_t>> testcases = {
+            {{0}, 0}, // 0
+            {{0x80, 0x00}, 0}, // 0 with leading zero
+            {{1}, 1}, // 1
+            {{0x81, 0x00}, 1}, // 1 with leading zero
+            {{0xff, 0x01}, -1},
+            {{0xfe, 0x01}, -2},
+    };
+    // clang-format on
+
+    for (auto const& testcase : testcases)
+    {
+        auto res = fizzy::leb128s_decode<int8_t>(testcase.first.data());
         EXPECT_EQ(res.first, testcase.second) << fizzy::hex(testcase.first);
         EXPECT_EQ(res.second, &testcase.first[0] + testcase.first.size())
             << fizzy::hex(testcase.first);
