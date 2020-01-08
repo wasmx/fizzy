@@ -99,11 +99,13 @@ execution_result execute(const module& _module, funcidx _function, std::vector<u
             break;
         case instr::end:
             goto end;
-        case instr::drop: {
+        case instr::drop:
+        {
             stack.pop();
             break;
         }
-        case instr::select: {
+        case instr::select:
+        {
             const auto condition = static_cast<uint32_t>(stack.pop());
             // NOTE: these two are the same type (ensured by validation)
             const auto val2 = stack.pop();
@@ -114,54 +116,64 @@ execution_result execute(const module& _module, funcidx _function, std::vector<u
                 stack.push(val1);
             break;
         }
-        case instr::local_get: {
+        case instr::local_get:
+        {
             const auto idx = read<uint32_t>(immediates);
             assert(idx <= locals.size());
             stack.push(locals[idx]);
             break;
         }
-        case instr::local_set: {
+        case instr::local_set:
+        {
             const auto idx = read<uint32_t>(immediates);
             assert(idx <= locals.size());
             locals[idx] = stack.pop();
             break;
         }
-        case instr::local_tee: {
+        case instr::local_tee:
+        {
             const auto idx = read<uint32_t>(immediates);
             assert(idx <= locals.size());
             locals[idx] = stack.back();
             break;
         }
-        case instr::i32_eqz: {
+        case instr::i32_eqz:
+        {
             const auto value = static_cast<uint32_t>(stack.pop());
             stack.push(value == 0);
             break;
         }
-        case instr::i32_eq: {
+        case instr::i32_eq:
+        {
             const auto lhs = static_cast<uint32_t>(stack.pop());
             const auto rhs = static_cast<uint32_t>(stack.pop());
             stack.push(lhs == rhs);
             break;
         }
-        case instr::i32_ne: {
+        case instr::i32_ne:
+        {
             const auto lhs = static_cast<uint32_t>(stack.pop());
             const auto rhs = static_cast<uint32_t>(stack.pop());
             stack.push(lhs != rhs);
             break;
         }
-        case instr::i32_add: {
+        case instr::i32_add:
+        {
             binary_op(stack, std::plus<uint32_t>());
             break;
         }
-        case instr::i32_sub: {
+        case instr::i32_sub:
+        {
             binary_op(stack, std::minus<uint32_t>());
             break;
         }
-        case instr::i32_mul: {
+        case instr::i32_mul:
+        {
             binary_op(stack, std::multiplies<uint32_t>());
             break;
         }
-        case instr::i32_div_s: {
+        case instr::i32_div_s:
+        {
             auto const lhs = static_cast<int32_t>(stack.peek(1));
             auto const rhs = static_cast<int32_t>(stack.peek(2));
             if (rhs == 0 || (lhs == std::numeric_limits<int32_t>::min() && rhs == -1))
@@ -172,7 +184,8 @@ execution_result execute(const module& _module, funcidx _function, std::vector<u
             binary_op(stack, std::divides<int32_t>());
             break;
         }
-        case instr::i32_div_u: {
+        case instr::i32_div_u:
+        {
             auto const rhs = static_cast<uint32_t>(stack.peek(2));
             if (rhs == 0)
             {
@@ -182,7 +195,8 @@ execution_result execute(const module& _module, funcidx _function, std::vector<u
             binary_op(stack, std::divides<uint32_t>());
             break;
         }
-        case instr::i32_rem_s: {
+        case instr::i32_rem_s:
+        {
             auto const rhs = static_cast<int32_t>(stack.peek(2));
             if (rhs == 0)
             {
@@ -192,7 +206,8 @@ execution_result execute(const module& _module, funcidx _function, std::vector<u
             binary_op(stack, std::modulus<int32_t>());
             break;
         }
-        case instr::i32_rem_u: {
+        case instr::i32_rem_u:
+        {
             auto const rhs = static_cast<uint32_t>(stack.peek(2));
             if (rhs == 0)
             {
@@ -202,48 +217,59 @@ execution_result execute(const module& _module, funcidx _function, std::vector<u
             binary_op(stack, std::modulus<uint32_t>());
             break;
         }
-        case instr::i32_and: {
+        case instr::i32_and:
+        {
             binary_op(stack, std::bit_and<uint32_t>());
             break;
         }
-        case instr::i32_or: {
+        case instr::i32_or:
+        {
             binary_op(stack, std::bit_or<uint32_t>());
             break;
         }
-        case instr::i32_xor: {
+        case instr::i32_xor:
+        {
             binary_op(stack, std::bit_xor<uint32_t>());
             break;
         }
-        case instr::i32_shl: {
+        case instr::i32_shl:
+        {
             binary_op(stack, shift_left<uint32_t>);
             break;
         }
-        case instr::i32_shr_s: {
+        case instr::i32_shr_s:
+        {
             binary_op(stack, shift_right<int32_t>);
             break;
         }
-        case instr::i32_shr_u: {
+        case instr::i32_shr_u:
+        {
             binary_op(stack, shift_right<uint32_t>);
             break;
         }
-        case instr::i32_rotl: {
+        case instr::i32_rotl:
+        {
             binary_op(stack, rotl<uint32_t>);
             break;
         }
-        case instr::i32_rotr: {
+        case instr::i32_rotr:
+        {
             binary_op(stack, rotr<uint32_t>);
             break;
         }
-        case instr::i32_wrap_i64: {
+        case instr::i32_wrap_i64:
+        {
             stack.push(static_cast<uint32_t>(stack.pop()));
             break;
         }
-        case instr::i64_extend_i32_s: {
+        case instr::i64_extend_i32_s:
+        {
             const auto value = static_cast<int32_t>(stack.pop());
             stack.push(static_cast<uint64_t>(int64_t{value}));
             break;
         }
-        case instr::i64_extend_i32_u: {
+        case instr::i64_extend_i32_u:
+        {
             // effectively no-op
             break;
         }
