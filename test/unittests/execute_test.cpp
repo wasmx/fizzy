@@ -138,6 +138,51 @@ TEST(execute, local_tee)
     EXPECT_EQ(ret[0], 42);
 }
 
+TEST(execute, i32_eqz)
+{
+    auto result = execute_unary_operation(fizzy::instr::i32_eqz, 0);
+
+    ASSERT_FALSE(result.trapped);
+    ASSERT_EQ(result.stack.size(), 1);
+    EXPECT_EQ(result.stack[0], 1);
+
+    result = execute_unary_operation(fizzy::instr::i32_eqz, 1);
+
+    ASSERT_FALSE(result.trapped);
+    ASSERT_EQ(result.stack.size(), 1);
+    EXPECT_EQ(result.stack[0], 0);
+}
+
+TEST(execute, i32_eq)
+{
+    auto result = execute_binary_operation(fizzy::instr::i32_eq, 22, 20);
+
+    ASSERT_FALSE(result.trapped);
+    ASSERT_EQ(result.stack.size(), 1);
+    EXPECT_EQ(result.stack[0], 0);
+
+    result = execute_binary_operation(fizzy::instr::i32_eq, 22, 22);
+
+    ASSERT_FALSE(result.trapped);
+    ASSERT_EQ(result.stack.size(), 1);
+    EXPECT_EQ(result.stack[0], 1);
+}
+
+TEST(execute, i32_ne)
+{
+    auto result = execute_binary_operation(fizzy::instr::i32_ne, 22, 20);
+
+    ASSERT_FALSE(result.trapped);
+    ASSERT_EQ(result.stack.size(), 1);
+    EXPECT_EQ(result.stack[0], 1);
+
+    result = execute_binary_operation(fizzy::instr::i32_ne, 22, 22);
+
+    ASSERT_FALSE(result.trapped);
+    ASSERT_EQ(result.stack.size(), 1);
+    EXPECT_EQ(result.stack[0], 0);
+}
+
 TEST(execute, i32_add)
 {
     const auto [trap, ret] = execute_binary_operation(fizzy::instr::i32_add, 22, 20);

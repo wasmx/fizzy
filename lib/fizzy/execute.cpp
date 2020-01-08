@@ -132,6 +132,23 @@ execution_result execute(const module& _module, funcidx _function, std::vector<u
             locals[idx] = stack.back();
             break;
         }
+        case instr::i32_eqz: {
+            const auto value = static_cast<uint32_t>(stack.pop());
+            stack.push(value == 0);
+            break;
+        }
+        case instr::i32_eq: {
+            const auto lhs = static_cast<uint32_t>(stack.pop());
+            const auto rhs = static_cast<uint32_t>(stack.pop());
+            stack.push(lhs == rhs);
+            break;
+        }
+        case instr::i32_ne: {
+            const auto lhs = static_cast<uint32_t>(stack.pop());
+            const auto rhs = static_cast<uint32_t>(stack.pop());
+            stack.push(lhs != rhs);
+            break;
+        }
         case instr::i32_add: {
             binary_op(stack, std::plus<uint32_t>());
             break;
