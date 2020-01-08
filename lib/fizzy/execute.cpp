@@ -9,6 +9,8 @@ namespace fizzy
 namespace
 {
 constexpr unsigned pagesize = 65536;
+// Set hard limit of 4GB of memory.
+constexpr auto memorylimit = 4 * 1024 * 1024 * 1024ULL;
 
 class uint64_stack : public std::vector<uint64_t>
 {
@@ -264,6 +266,9 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
             uint32_t ret = static_cast<uint32_t>(cur_pages);
             try
             {
+                // TODO: remove this once section parsing is done (and enforce limit in parser)
+                if ((new_pages * pagesize) > memorylimit)
+                    throw std::bad_alloc();
                 instance.memory.resize(new_pages * pagesize);
             }
             catch (std::bad_alloc const&)
