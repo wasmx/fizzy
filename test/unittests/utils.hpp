@@ -21,4 +21,10 @@ bytes from_hex(const std::string& hex);
 
 /// Encodes bytes as hex string.
 std::string hex(const uint8_t* data, size_t size);
+
+/// Encodes bytes as hex string.
+inline std::string hex(bytes_view data)
+{
+    return hex(data.data(), data.size());
+}
 }  // namespace fizzy
