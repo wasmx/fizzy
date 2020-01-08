@@ -175,6 +175,57 @@ TEST(execute, i32_store)
     ASSERT_EQ(instance.memory.substr(0, 4), fizzy::from_hex("2a000000"));
 }
 
+TEST(execute, memory_size)
+{
+    fizzy::Module module;
+    module.codesec.emplace_back(fizzy::Code{0, {fizzy::Instr::memory_size, fizzy::Instr::end}, {}});
+
+    const auto [trap, ret] = fizzy::execute(module, 0, {});
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+}
+
+TEST(execute, memory_grow)
+{
+    fizzy::Module module;
+    module.codesec.emplace_back(fizzy::Code{
+        0, {fizzy::Instr::local_get, fizzy::Instr::memory_grow, fizzy::Instr::end}, {0, 0, 0, 0}});
+
+    auto result = fizzy::execute(module, 0, {0});
+
+    ASSERT_FALSE(result.trapped);
+    ASSERT_EQ(result.stack.size(), 1);
+    EXPECT_EQ(result.stack[0], 1);
+
+    result = fizzy::execute(module, 0, {1});
+
+    ASSERT_FALSE(result.trapped);
+    ASSERT_EQ(result.stack.size(), 1);
+    EXPECT_EQ(result.stack[0], 1);
+
+    // 4GB memory.
+    result = fizzy::execute(module, 0, {65535});
+
+    ASSERT_FALSE(result.trapped);
+    ASSERT_EQ(result.stack.size(), 1);
+    EXPECT_EQ(result.stack[0], 1);
+
+    // >4GB memory.
+    result = fizzy::execute(module, 0, {65536});
+
+    ASSERT_FALSE(result.trapped);
+    ASSERT_EQ(result.stack.size(), 1);
+    EXPECT_EQ(result.stack[0], uint32_t(-1));
+
+    // Way too high (but still within bounds)
+    result = fizzy::execute(module, 0, {0xffffffe});
+
+    ASSERT_FALSE(result.trapped);
+    ASSERT_EQ(result.stack.size(), 1);
+    EXPECT_EQ(result.stack[0], uint32_t(-1));
+}
+
 TEST(execute, i32_eqz)
 {
     auto result = execute_unary_operation(fizzy::Instr::i32_eqz, 0);
