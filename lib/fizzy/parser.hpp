@@ -45,6 +45,29 @@ struct parser<ValType>
 };
 
 template <>
+struct parser<Limits>
+{
+    parser_result<Limits> operator()(const uint8_t* pos)
+    {
+        Limits result;
+        const auto b = *pos++;
+        switch (b)
+        {
+        case 0x00:
+            std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos);
+            result.max = std::numeric_limits<uint32_t>::max();
+            return {result, pos};
+        case 0x01:
+            std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos);
+            std::tie(result.max, pos) = leb128u_decode<uint32_t>(pos);
+            return {result, pos};
+        default:
+            throw parser_error{"invalid limits " + std::to_string(b)};
+        }
+    }
+};
+
+template <>
 struct parser<Locals>
 {
     parser_result<Locals> operator()(const uint8_t* pos)

@@ -30,6 +30,40 @@ TEST(parser, valtype_vec)
     EXPECT_EQ(vec[2], ValType::i32);
 }
 
+TEST(parser, limits_min)
+{
+    const auto input = from_hex("007f");
+    const auto [limits, pos] = parser<Limits>{}(input.data());
+    EXPECT_EQ(limits.min, 0x7f);
+    EXPECT_EQ(limits.max, std::numeric_limits<uint32_t>::max());
+}
+
+TEST(parser, limits_minmax)
+{
+    const auto input = from_hex("01207f");
+    const auto [limits, pos] = parser<Limits>{}(input.data());
+    EXPECT_EQ(limits.min, 0x20);
+    EXPECT_EQ(limits.max, 0x7f);
+}
+
+TEST(parser, DISABLED_limits_min_invalid_too_short)
+{
+    const auto input = from_hex("00");
+    EXPECT_THROW(parser<Limits>{}(input.data()), parser_error);
+}
+
+TEST(parser, DISABLED_limits_minmax_invalid_too_short)
+{
+    const auto input = from_hex("0120");
+    EXPECT_THROW(parser<Limits>{}(input.data()), parser_error);
+}
+
+TEST(parser, limits_invalid)
+{
+    const auto input = from_hex("02");
+    EXPECT_THROW(parser<Limits>{}(input.data()), parser_error);
+}
+
 TEST(parser, locals)
 {
     const auto input = from_hex("81017f");

@@ -24,6 +24,13 @@ struct FuncType
     std::vector<ValType> outputs;
 };
 
+// https://webassembly.github.io/spec/core/binary/types.html#binary-limits
+struct Limits
+{
+    uint32_t min;
+    uint32_t max;
+};
+
 // https://webassembly.github.io/spec/core/binary/modules.html#binary-typeidx
 using TypeIdx = uint32_t;
 
