@@ -5,6 +5,15 @@
 
 namespace
 {
+fizzy::execution_result execute_unary_operation(fizzy::instr instr, uint64_t arg)
+{
+    fizzy::module module;
+    module.codesec.emplace_back(
+        fizzy::code{0, {fizzy::instr::local_get, instr, fizzy::instr::end}, {0, 0, 0, 0}});
+
+    return fizzy::execute(module, 0, {arg});
+}
+
 fizzy::execution_result execute_binary_operation(fizzy::instr instr, uint64_t lhs, uint64_t rhs)
 {
     fizzy::module module;
@@ -299,6 +308,61 @@ TEST(execute, i32_rotr)
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
     EXPECT_EQ(ret[0], 0xf000000f);
+}
+
+TEST(execute, i32_wrap_i64)
+{
+    const auto [trap, ret] =
+        execute_unary_operation(fizzy::instr::i32_wrap_i64, 0xffffffffffffffff);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 0xffffffff);
+}
+
+TEST(execute, i64_extend_i32_s_all_bits_set)
+{
+    const auto [trap, ret] = execute_unary_operation(fizzy::instr::i64_extend_i32_s, 0xffffffff);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 0xffffffffffffffff);
+}
+
+TEST(execute, i64_extend_i32_s_one_bit_set)
+{
+    const auto [trap, ret] = execute_unary_operation(fizzy::instr::i64_extend_i32_s, 0x80000000);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 0xffffffff80000000);
+}
+
+TEST(execute, i64_extend_i32_s_0)
+{
+    const auto [trap, ret] = execute_unary_operation(fizzy::instr::i64_extend_i32_s, 0);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 0);
+}
+
+TEST(execute, i64_extend_i32_s_1)
+{
+    const auto [trap, ret] = execute_unary_operation(fizzy::instr::i64_extend_i32_s, 0x01);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 0x01);
+}
+
+TEST(execute, i64_extend_i32_u)
+{
+    const auto [trap, ret] = execute_unary_operation(fizzy::instr::i64_extend_i32_u, 0xff000000);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 0x00000000ff000000);
 }
 
 TEST(execute, milestone1)

@@ -217,7 +217,19 @@ execution_result execute(const module& _module, funcidx _function, std::vector<u
             binary_op(stack, rotr<uint32_t>);
             break;
         }
-
+        case instr::i32_wrap_i64: {
+            stack.push(static_cast<uint32_t>(stack.pop()));
+            break;
+        }
+        case instr::i64_extend_i32_s: {
+            const auto value = static_cast<int32_t>(stack.pop());
+            stack.push(static_cast<uint64_t>(int64_t{value}));
+            break;
+        }
+        case instr::i64_extend_i32_u: {
+            // effectively no-op
+            break;
+        }
         default:
             assert(false);
             break;
