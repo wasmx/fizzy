@@ -209,6 +209,51 @@ TEST(execute, i32_ne)
     EXPECT_EQ(result.stack[0], 0);
 }
 
+TEST(execute, i32_clz)
+{
+    const auto [trap, ret] = execute_unary_operation(fizzy::Instr::i32_clz, 0x7f);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 32 - 7);
+}
+
+TEST(execute, i32_clz0)
+{
+    const auto [trap, ret] = execute_unary_operation(fizzy::Instr::i32_clz, 0);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 32);
+}
+
+TEST(execute, i32_ctz)
+{
+    const auto [trap, ret] = execute_unary_operation(fizzy::Instr::i32_ctz, 0x80);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 7);
+}
+
+TEST(execute, i32_ctz0)
+{
+    const auto [trap, ret] = execute_unary_operation(fizzy::Instr::i32_ctz, 0);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 32);
+}
+
+TEST(execute, i32_popcnt)
+{
+    const auto [trap, ret] = execute_unary_operation(fizzy::Instr::i32_popcnt, 0x7fff00);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 7 + 8);
+}
+
 TEST(execute, i32_add)
 {
     const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i32_add, 22, 20);
@@ -434,6 +479,51 @@ TEST(execute, i64_extend_i32_u)
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
     EXPECT_EQ(ret[0], 0x00000000ff000000);
+}
+
+TEST(execute, i64_clz)
+{
+    const auto [trap, ret] = execute_unary_operation(fizzy::Instr::i64_clz, 0x7f);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 64 - 7);
+}
+
+TEST(execute, i64_clz0)
+{
+    const auto [trap, ret] = execute_unary_operation(fizzy::Instr::i64_clz, 0);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 64);
+}
+
+TEST(execute, i64_ctz)
+{
+    const auto [trap, ret] = execute_unary_operation(fizzy::Instr::i64_ctz, 0x80);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 7);
+}
+
+TEST(execute, i64_ctz0)
+{
+    const auto [trap, ret] = execute_unary_operation(fizzy::Instr::i64_ctz, 0);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 64);
+}
+
+TEST(execute, i64_popcnt)
+{
+    const auto [trap, ret] = execute_unary_operation(fizzy::Instr::i64_popcnt, 0x7fff00);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 7 + 8);
 }
 
 TEST(execute, i64_add)
