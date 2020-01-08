@@ -104,6 +104,27 @@ inline uint32_t popcnt32(uint32_t value) noexcept
 {
     return static_cast<uint32_t>(__builtin_popcount(value));
 }
+
+inline uint64_t clz64(uint64_t value) noexcept
+{
+    // NOTE: Wasm specifies this case, but C/C++ intrinsic leaves it as undefined.
+    if (value == 0)
+        return 64;
+    return static_cast<uint64_t>(__builtin_clzll(value));
+}
+
+inline uint64_t ctz64(uint64_t value) noexcept
+{
+    // NOTE: Wasm specifies this case, but C/C++ intrinsic leaves it as undefined.
+    if (value == 0)
+        return 64;
+    return static_cast<uint64_t>(__builtin_ctzll(value));
+}
+
+inline uint64_t popcnt64(uint64_t value) noexcept
+{
+    return static_cast<uint64_t>(__builtin_popcountll(value));
+}
 }  // namespace
 
 Instance instantiate(const Module& module)
@@ -321,6 +342,21 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         case Instr::i32_rotr:
         {
             binary_op(stack, rotr<uint32_t>);
+            break;
+        }
+        case Instr::i64_clz:
+        {
+            unary_op(stack, clz64);
+            break;
+        }
+        case Instr::i64_ctz:
+        {
+            unary_op(stack, ctz64);
+            break;
+        }
+        case Instr::i64_popcnt:
+        {
+            unary_op(stack, popcnt64);
             break;
         }
         case Instr::i64_add:
