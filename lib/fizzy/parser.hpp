@@ -18,8 +18,8 @@ struct parser_error : public std::runtime_error
 template <typename T>
 using parser_result = std::tuple<T, const uint8_t*>;
 
-module parse(bytes_view input);
-parser_result<code> parse_expr(const uint8_t* input);
+Module parse(bytes_view input);
+parser_result<Code> parse_expr(const uint8_t* input);
 
 template <typename T>
 struct parser
@@ -27,17 +27,17 @@ struct parser
 };
 
 template <>
-struct parser<valtype>
+struct parser<ValType>
 {
-    parser_result<valtype> operator()(const uint8_t* pos)
+    parser_result<ValType> operator()(const uint8_t* pos)
     {
         const auto b = *pos++;
         switch (b)
         {
         case 0x7F:
-            return {valtype::i32, pos};
+            return {ValType::i32, pos};
         case 0x7E:
-            return {valtype::i64, pos};
+            return {ValType::i64, pos};
         default:
             throw parser_error{"invalid valtype " + std::to_string(b)};
         }
@@ -45,13 +45,13 @@ struct parser<valtype>
 };
 
 template <>
-struct parser<locals>
+struct parser<Locals>
 {
-    parser_result<locals> operator()(const uint8_t* pos)
+    parser_result<Locals> operator()(const uint8_t* pos)
     {
-        locals result;
+        Locals result;
         std::tie(result.count, pos) = leb128u_decode<uint32_t>(pos);
-        std::tie(result.type, pos) = parser<valtype>{}(pos);
+        std::tie(result.type, pos) = parser<ValType>{}(pos);
         return {result, pos};
     }
 };
@@ -74,13 +74,13 @@ struct parser<std::vector<T>>
 };
 
 template <>
-struct parser<code>
+struct parser<Code>
 {
-    parser_result<code> operator()(const uint8_t* pos)
+    parser_result<Code> operator()(const uint8_t* pos)
     {
         const auto [size, pos1] = leb128u_decode<uint32_t>(pos);
 
-        const auto [locals_vec, pos2] = parser<std::vector<locals>>{}(pos1);
+        const auto [locals_vec, pos2] = parser<std::vector<Locals>>{}(pos1);
 
         auto result = parse_expr(pos2);
 

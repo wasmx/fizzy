@@ -6,9 +6,9 @@
 
 namespace fizzy
 {
-struct instance
+struct Instance
 {
-    const module& mod;
+    const Module& module;
 };
 
 namespace
@@ -77,16 +77,16 @@ inline T rotr(T lhs, T rhs) noexcept
 }
 }  // namespace
 
-instance instantiate(const module& _module)
+Instance instantiate(const Module& module)
 {
-    return {_module};
+    return {module};
 }
 
-execution_result execute(instance& _instance, funcidx _function, std::vector<uint64_t> _args)
+execution_result execute(Instance& instance, FuncIdx function, std::vector<uint64_t> args)
 {
-    const auto& code = _instance.mod.codesec[_function];
+    const auto& code = instance.module.codesec[function];
 
-    std::vector<uint64_t> locals = std::move(_args);
+    std::vector<uint64_t> locals = std::move(args);
     locals.resize(locals.size() + code.local_count);
 
     // TODO: preallocate fixed stack depth properly
@@ -94,7 +94,7 @@ execution_result execute(instance& _instance, funcidx _function, std::vector<uin
 
     bool trap = false;
 
-    const instr* pc = code.instructions.data();
+    const Instr* pc = code.instructions.data();
     const uint8_t* immediates = code.immediates.data();
 
     while (true)
@@ -102,19 +102,19 @@ execution_result execute(instance& _instance, funcidx _function, std::vector<uin
         const auto instruction = *pc++;
         switch (instruction)
         {
-        case instr::unreachable:
+        case Instr::unreachable:
             trap = true;
             goto end;
-        case instr::nop:
+        case Instr::nop:
             break;
-        case instr::end:
+        case Instr::end:
             goto end;
-        case instr::drop:
+        case Instr::drop:
         {
             stack.pop();
             break;
         }
-        case instr::select:
+        case Instr::select:
         {
             const auto condition = static_cast<uint32_t>(stack.pop());
             // NOTE: these two are the same type (ensured by validation)
@@ -126,63 +126,63 @@ execution_result execute(instance& _instance, funcidx _function, std::vector<uin
                 stack.push(val1);
             break;
         }
-        case instr::local_get:
+        case Instr::local_get:
         {
             const auto idx = read<uint32_t>(immediates);
             assert(idx <= locals.size());
             stack.push(locals[idx]);
             break;
         }
-        case instr::local_set:
+        case Instr::local_set:
         {
             const auto idx = read<uint32_t>(immediates);
             assert(idx <= locals.size());
             locals[idx] = stack.pop();
             break;
         }
-        case instr::local_tee:
+        case Instr::local_tee:
         {
             const auto idx = read<uint32_t>(immediates);
             assert(idx <= locals.size());
             locals[idx] = stack.back();
             break;
         }
-        case instr::i32_eqz:
+        case Instr::i32_eqz:
         {
             const auto value = static_cast<uint32_t>(stack.pop());
             stack.push(value == 0);
             break;
         }
-        case instr::i32_eq:
+        case Instr::i32_eq:
         {
             const auto lhs = static_cast<uint32_t>(stack.pop());
             const auto rhs = static_cast<uint32_t>(stack.pop());
             stack.push(lhs == rhs);
             break;
         }
-        case instr::i32_ne:
+        case Instr::i32_ne:
         {
             const auto lhs = static_cast<uint32_t>(stack.pop());
             const auto rhs = static_cast<uint32_t>(stack.pop());
             stack.push(lhs != rhs);
             break;
         }
-        case instr::i32_add:
+        case Instr::i32_add:
         {
             binary_op(stack, std::plus<uint32_t>());
             break;
         }
-        case instr::i32_sub:
+        case Instr::i32_sub:
         {
             binary_op(stack, std::minus<uint32_t>());
             break;
         }
-        case instr::i32_mul:
+        case Instr::i32_mul:
         {
             binary_op(stack, std::multiplies<uint32_t>());
             break;
         }
-        case instr::i32_div_s:
+        case Instr::i32_div_s:
         {
             auto const lhs = static_cast<int32_t>(stack.peek(1));
             auto const rhs = static_cast<int32_t>(stack.peek(2));
@@ -194,7 +194,7 @@ execution_result execute(instance& _instance, funcidx _function, std::vector<uin
             binary_op(stack, std::divides<int32_t>());
             break;
         }
-        case instr::i32_div_u:
+        case Instr::i32_div_u:
         {
             auto const rhs = static_cast<uint32_t>(stack.peek(2));
             if (rhs == 0)
@@ -205,7 +205,7 @@ execution_result execute(instance& _instance, funcidx _function, std::vector<uin
             binary_op(stack, std::divides<uint32_t>());
             break;
         }
-        case instr::i32_rem_s:
+        case Instr::i32_rem_s:
         {
             auto const rhs = static_cast<int32_t>(stack.peek(2));
             if (rhs == 0)
@@ -216,7 +216,7 @@ execution_result execute(instance& _instance, funcidx _function, std::vector<uin
             binary_op(stack, std::modulus<int32_t>());
             break;
         }
-        case instr::i32_rem_u:
+        case Instr::i32_rem_u:
         {
             auto const rhs = static_cast<uint32_t>(stack.peek(2));
             if (rhs == 0)
@@ -227,58 +227,58 @@ execution_result execute(instance& _instance, funcidx _function, std::vector<uin
             binary_op(stack, std::modulus<uint32_t>());
             break;
         }
-        case instr::i32_and:
+        case Instr::i32_and:
         {
             binary_op(stack, std::bit_and<uint32_t>());
             break;
         }
-        case instr::i32_or:
+        case Instr::i32_or:
         {
             binary_op(stack, std::bit_or<uint32_t>());
             break;
         }
-        case instr::i32_xor:
+        case Instr::i32_xor:
         {
             binary_op(stack, std::bit_xor<uint32_t>());
             break;
         }
-        case instr::i32_shl:
+        case Instr::i32_shl:
         {
             binary_op(stack, shift_left<uint32_t>);
             break;
         }
-        case instr::i32_shr_s:
+        case Instr::i32_shr_s:
         {
             binary_op(stack, shift_right<int32_t>);
             break;
         }
-        case instr::i32_shr_u:
+        case Instr::i32_shr_u:
         {
             binary_op(stack, shift_right<uint32_t>);
             break;
         }
-        case instr::i32_rotl:
+        case Instr::i32_rotl:
         {
             binary_op(stack, rotl<uint32_t>);
             break;
         }
-        case instr::i32_rotr:
+        case Instr::i32_rotr:
         {
             binary_op(stack, rotr<uint32_t>);
             break;
         }
-        case instr::i32_wrap_i64:
+        case Instr::i32_wrap_i64:
         {
             stack.push(static_cast<uint32_t>(stack.pop()));
             break;
         }
-        case instr::i64_extend_i32_s:
+        case Instr::i64_extend_i32_s:
         {
             const auto value = static_cast<int32_t>(stack.pop());
             stack.push(static_cast<uint64_t>(int64_t{value}));
             break;
         }
-        case instr::i64_extend_i32_u:
+        case Instr::i64_extend_i32_u:
         {
             // effectively no-op
             break;
@@ -294,9 +294,9 @@ end:
     return {trap, std::move(stack)};
 }
 
-execution_result execute(const module& _module, funcidx _function, std::vector<uint64_t> _args)
+execution_result execute(const Module& module, FuncIdx function, std::vector<uint64_t> args)
 {
-    auto _instance = instantiate(_module);
-    return execute(_instance, _function, _args);
+    auto instance = instantiate(module);
+    return execute(instance, function, args);
 }
 }  // namespace fizzy

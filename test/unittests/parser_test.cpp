@@ -12,30 +12,30 @@ TEST(parser, valtype)
 {
     uint8_t b;
     b = 0x7e;
-    EXPECT_EQ(std::get<0>(parser<valtype>{}(&b)), valtype::i64);
+    EXPECT_EQ(std::get<0>(parser<ValType>{}(&b)), ValType::i64);
     b = 0x7f;
-    EXPECT_EQ(std::get<0>(parser<valtype>{}(&b)), valtype::i32);
+    EXPECT_EQ(std::get<0>(parser<ValType>{}(&b)), ValType::i32);
     b = 0x7d;
-    EXPECT_THROW(std::get<0>(parser<valtype>{}(&b)), parser_error);
+    EXPECT_THROW(std::get<0>(parser<ValType>{}(&b)), parser_error);
 }
 
 TEST(parser, valtype_vec)
 {
     const auto input = from_hex("037f7e7fcc");
-    const auto [vec, pos] = parser<std::vector<valtype>>{}(input.data());
+    const auto [vec, pos] = parser<std::vector<ValType>>{}(input.data());
     EXPECT_EQ(pos, input.data() + 4);
     ASSERT_EQ(vec.size(), 3);
-    EXPECT_EQ(vec[0], valtype::i32);
-    EXPECT_EQ(vec[1], valtype::i64);
-    EXPECT_EQ(vec[2], valtype::i32);
+    EXPECT_EQ(vec[0], ValType::i32);
+    EXPECT_EQ(vec[1], ValType::i64);
+    EXPECT_EQ(vec[2], ValType::i32);
 }
 
 TEST(parser, locals)
 {
     const auto input = from_hex("81017f");
-    const auto [l, p] = parser<locals>{}(input.data());
+    const auto [l, p] = parser<Locals>{}(input.data());
     EXPECT_EQ(l.count, 0x81);
-    EXPECT_EQ(l.type, valtype::i32);
+    EXPECT_EQ(l.type, ValType::i32);
 }
 
 TEST(parser, empty_module)
@@ -121,10 +121,10 @@ TEST(parser, type_section_with_single_functype_params)
     ASSERT_EQ(module.typesec.size(), 1);
     const auto functype = module.typesec[0];
     ASSERT_EQ(functype.inputs.size(), 2);
-    EXPECT_EQ(functype.inputs[0], valtype::i32);
-    EXPECT_EQ(functype.inputs[1], valtype::i64);
+    EXPECT_EQ(functype.inputs[0], ValType::i32);
+    EXPECT_EQ(functype.inputs[1], ValType::i64);
     ASSERT_EQ(functype.outputs.size(), 1);
-    EXPECT_EQ(functype.outputs[0], valtype::i32);
+    EXPECT_EQ(functype.outputs[0], ValType::i32);
     EXPECT_EQ(module.funcsec.size(), 0);
     EXPECT_EQ(module.codesec.size(), 0);
 }
@@ -145,13 +145,13 @@ TEST(parser, type_section_with_multiple_functypes)
     EXPECT_EQ(functype0.outputs.size(), 0);
     const auto functype1 = module.typesec[1];
     EXPECT_EQ(functype1.inputs.size(), 2);
-    EXPECT_EQ(functype1.inputs[0], valtype::i32);
-    EXPECT_EQ(functype1.inputs[1], valtype::i64);
+    EXPECT_EQ(functype1.inputs[0], ValType::i32);
+    EXPECT_EQ(functype1.inputs[1], ValType::i64);
     EXPECT_EQ(functype1.outputs.size(), 1);
-    EXPECT_EQ(functype1.outputs[0], valtype::i32);
+    EXPECT_EQ(functype1.outputs[0], ValType::i32);
     const auto functype2 = module.typesec[2];
     EXPECT_EQ(functype2.inputs.size(), 1);
-    EXPECT_EQ(functype2.inputs[0], valtype::i32);
+    EXPECT_EQ(functype2.inputs[0], ValType::i32);
     EXPECT_EQ(functype2.outputs.size(), 0);
     EXPECT_EQ(module.funcsec.size(), 0);
     EXPECT_EQ(module.codesec.size(), 0);
@@ -164,10 +164,10 @@ TEST(parser, code_with_empty_expr_2_locals)
 
     const auto code_bin = uint8_t(func_2_locals_bin.size()) + func_2_locals_bin;
 
-    const auto [code_obj, end_pos1] = parser<code>{}(code_bin.data());
+    const auto [code_obj, end_pos1] = parser<Code>{}(code_bin.data());
     EXPECT_EQ(code_obj.local_count, 2);
     ASSERT_EQ(code_obj.instructions.size(), 1);
-    EXPECT_EQ(code_obj.instructions[0], instr::end);
+    EXPECT_EQ(code_obj.instructions[0], Instr::end);
     EXPECT_EQ(code_obj.immediates.size(), 0);
 }
 
@@ -178,10 +178,10 @@ TEST(parser, code_with_empty_expr_5_locals)
 
     const auto code_bin = uint8_t(func_5_locals_bin.size()) + func_5_locals_bin;
 
-    const auto [code_obj, end_pos1] = parser<code>{}(code_bin.data());
+    const auto [code_obj, end_pos1] = parser<Code>{}(code_bin.data());
     EXPECT_EQ(code_obj.local_count, 5);
     ASSERT_EQ(code_obj.instructions.size(), 1);
-    EXPECT_EQ(code_obj.instructions[0], instr::end);
+    EXPECT_EQ(code_obj.instructions[0], Instr::end);
     EXPECT_EQ(code_obj.immediates.size(), 0);
 }
 
@@ -197,10 +197,10 @@ TEST(parser, code_section_with_2_trivial_codes)
     ASSERT_EQ(module.codesec.size(), 2);
     EXPECT_EQ(module.codesec[0].local_count, 0);
     ASSERT_EQ(module.codesec[0].instructions.size(), 1);
-    EXPECT_EQ(module.codesec[0].instructions[0], instr::end);
+    EXPECT_EQ(module.codesec[0].instructions[0], Instr::end);
     EXPECT_EQ(module.codesec[1].local_count, 0);
     ASSERT_EQ(module.codesec[1].instructions.size(), 1);
-    EXPECT_EQ(module.codesec[1].instructions[0], instr::end);
+    EXPECT_EQ(module.codesec[1].instructions[0], Instr::end);
 }
 
 TEST(parser, code_section_with_basic_instructions)
@@ -217,13 +217,13 @@ TEST(parser, code_section_with_basic_instructions)
     ASSERT_EQ(module.codesec.size(), 1);
     EXPECT_EQ(module.codesec[0].local_count, 0);
     ASSERT_EQ(module.codesec[0].instructions.size(), 7);
-    EXPECT_EQ(module.codesec[0].instructions[0], instr::local_get);
-    EXPECT_EQ(module.codesec[0].instructions[1], instr::local_set);
-    EXPECT_EQ(module.codesec[0].instructions[2], instr::local_tee);
-    EXPECT_EQ(module.codesec[0].instructions[3], instr::i32_add);
-    EXPECT_EQ(module.codesec[0].instructions[4], instr::nop);
-    EXPECT_EQ(module.codesec[0].instructions[5], instr::unreachable);
-    EXPECT_EQ(module.codesec[0].instructions[6], instr::end);
+    EXPECT_EQ(module.codesec[0].instructions[0], Instr::local_get);
+    EXPECT_EQ(module.codesec[0].instructions[1], Instr::local_set);
+    EXPECT_EQ(module.codesec[0].instructions[2], Instr::local_tee);
+    EXPECT_EQ(module.codesec[0].instructions[3], Instr::i32_add);
+    EXPECT_EQ(module.codesec[0].instructions[4], Instr::nop);
+    EXPECT_EQ(module.codesec[0].instructions[5], Instr::unreachable);
+    EXPECT_EQ(module.codesec[0].instructions[6], Instr::end);
     ASSERT_EQ(module.codesec[0].immediates.size(), 3 * 4);
     EXPECT_EQ(module.codesec[0].immediates, from_hex("010000000200000003000000"));
 }
@@ -251,15 +251,15 @@ TEST(parser, milestone1)
     const auto m = parse(bin);
 
     ASSERT_EQ(m.typesec.size(), 1);
-    EXPECT_EQ(m.typesec[0].inputs, (std::vector{valtype::i32, valtype::i32}));
-    EXPECT_EQ(m.typesec[0].outputs, (std::vector{valtype::i32}));
+    EXPECT_EQ(m.typesec[0].inputs, (std::vector{ValType::i32, ValType::i32}));
+    EXPECT_EQ(m.typesec[0].outputs, (std::vector{ValType::i32}));
 
     ASSERT_EQ(m.codesec.size(), 1);
     const auto& c = m.codesec[0];
     EXPECT_EQ(c.local_count, 1);
     EXPECT_EQ(c.instructions,
-        (std::vector{instr::local_get, instr::local_get, instr::i32_add, instr::local_get,
-            instr::i32_add, instr::local_tee, instr::local_get, instr::i32_add, instr::end}));
+        (std::vector{Instr::local_get, Instr::local_get, Instr::i32_add, Instr::local_get,
+            Instr::i32_add, Instr::local_tee, Instr::local_get, Instr::i32_add, Instr::end}));
     EXPECT_EQ(c.immediates, from_hex("00000000"
                                      "01000000"
                                      "02000000"

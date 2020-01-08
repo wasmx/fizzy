@@ -5,20 +5,20 @@
 
 namespace
 {
-fizzy::execution_result execute_unary_operation(fizzy::instr instr, uint64_t arg)
+fizzy::execution_result execute_unary_operation(fizzy::Instr instr, uint64_t arg)
 {
-    fizzy::module module;
+    fizzy::Module module;
     module.codesec.emplace_back(
-        fizzy::code{0, {fizzy::instr::local_get, instr, fizzy::instr::end}, {0, 0, 0, 0}});
+        fizzy::Code{0, {fizzy::Instr::local_get, instr, fizzy::Instr::end}, {0, 0, 0, 0}});
 
     return fizzy::execute(module, 0, {arg});
 }
 
-fizzy::execution_result execute_binary_operation(fizzy::instr instr, uint64_t lhs, uint64_t rhs)
+fizzy::execution_result execute_binary_operation(fizzy::Instr instr, uint64_t lhs, uint64_t rhs)
 {
-    fizzy::module module;
+    fizzy::Module module;
     module.codesec.emplace_back(
-        fizzy::code{0, {fizzy::instr::local_get, fizzy::instr::local_get, instr, fizzy::instr::end},
+        fizzy::Code{0, {fizzy::Instr::local_get, fizzy::Instr::local_get, instr, fizzy::Instr::end},
             {0, 0, 0, 0, 1, 0, 0, 0}});
 
     return fizzy::execute(module, 0, {rhs, lhs});
@@ -27,8 +27,8 @@ fizzy::execution_result execute_binary_operation(fizzy::instr instr, uint64_t lh
 
 TEST(execute, end)
 {
-    fizzy::module module;
-    module.codesec.emplace_back(fizzy::code{0, {fizzy::instr::end}, {}});
+    fizzy::Module module;
+    module.codesec.emplace_back(fizzy::Code{0, {fizzy::Instr::end}, {}});
 
     const auto [trap, ret] = fizzy::execute(module, 0, {});
 
@@ -38,8 +38,8 @@ TEST(execute, end)
 
 TEST(execute, unreachable)
 {
-    fizzy::module module;
-    module.codesec.emplace_back(fizzy::code{0, {fizzy::instr::unreachable, fizzy::instr::end}, {}});
+    fizzy::Module module;
+    module.codesec.emplace_back(fizzy::Code{0, {fizzy::Instr::unreachable, fizzy::Instr::end}, {}});
 
     const auto [trap, ret] = fizzy::execute(module, 0, {});
 
@@ -48,8 +48,8 @@ TEST(execute, unreachable)
 
 TEST(execute, nop)
 {
-    fizzy::module module;
-    module.codesec.emplace_back(fizzy::code{0, {fizzy::instr::nop, fizzy::instr::end}, {}});
+    fizzy::Module module;
+    module.codesec.emplace_back(fizzy::Code{0, {fizzy::Instr::nop, fizzy::Instr::end}, {}});
 
     const auto [trap, ret] = fizzy::execute(module, 0, {});
 
@@ -59,9 +59,9 @@ TEST(execute, nop)
 
 TEST(execute, drop)
 {
-    fizzy::module module;
-    module.codesec.emplace_back(fizzy::code{
-        1, {fizzy::instr::local_get, fizzy::instr::drop, fizzy::instr::end}, {0, 0, 0, 0}});
+    fizzy::Module module;
+    module.codesec.emplace_back(fizzy::Code{
+        1, {fizzy::Instr::local_get, fizzy::Instr::drop, fizzy::Instr::end}, {0, 0, 0, 0}});
 
     const auto [trap, ret] = fizzy::execute(module, 0, {});
 
@@ -71,10 +71,10 @@ TEST(execute, drop)
 
 TEST(execute, select)
 {
-    fizzy::module module;
-    module.codesec.emplace_back(fizzy::code{0,
-        {fizzy::instr::local_get, fizzy::instr::local_get, fizzy::instr::local_get,
-            fizzy::instr::select, fizzy::instr::end},
+    fizzy::Module module;
+    module.codesec.emplace_back(fizzy::Code{0,
+        {fizzy::Instr::local_get, fizzy::Instr::local_get, fizzy::Instr::local_get,
+            fizzy::Instr::select, fizzy::Instr::end},
         {0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0}});
 
     auto result = fizzy::execute(module, 0, {3, 6, 0});
@@ -98,9 +98,9 @@ TEST(execute, select)
 
 TEST(execute, local_get)
 {
-    fizzy::module module;
+    fizzy::Module module;
     module.codesec.emplace_back(
-        fizzy::code{0, {fizzy::instr::local_get, fizzy::instr::end}, {0, 0, 0, 0}});
+        fizzy::Code{0, {fizzy::Instr::local_get, fizzy::Instr::end}, {0, 0, 0, 0}});
 
     const auto [trap, ret] = fizzy::execute(module, 0, {42});
 
@@ -111,10 +111,10 @@ TEST(execute, local_get)
 
 TEST(execute, local_set)
 {
-    fizzy::module module;
-    module.codesec.emplace_back(fizzy::code{1,
-        {fizzy::instr::local_get, fizzy::instr::local_set, fizzy::instr::local_get,
-            fizzy::instr::end},
+    fizzy::Module module;
+    module.codesec.emplace_back(fizzy::Code{1,
+        {fizzy::Instr::local_get, fizzy::Instr::local_set, fizzy::Instr::local_get,
+            fizzy::Instr::end},
         {0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0}});
 
     const auto [trap, ret] = fizzy::execute(module, 0, {42});
@@ -126,9 +126,9 @@ TEST(execute, local_set)
 
 TEST(execute, local_tee)
 {
-    fizzy::module module;
+    fizzy::Module module;
     module.codesec.emplace_back(
-        fizzy::code{1, {fizzy::instr::local_get, fizzy::instr::local_tee, fizzy::instr::end},
+        fizzy::Code{1, {fizzy::Instr::local_get, fizzy::Instr::local_tee, fizzy::Instr::end},
             {0, 0, 0, 0, 1, 0, 0, 0}});
 
     const auto [trap, ret] = fizzy::execute(module, 0, {42});
@@ -140,13 +140,13 @@ TEST(execute, local_tee)
 
 TEST(execute, i32_eqz)
 {
-    auto result = execute_unary_operation(fizzy::instr::i32_eqz, 0);
+    auto result = execute_unary_operation(fizzy::Instr::i32_eqz, 0);
 
     ASSERT_FALSE(result.trapped);
     ASSERT_EQ(result.stack.size(), 1);
     EXPECT_EQ(result.stack[0], 1);
 
-    result = execute_unary_operation(fizzy::instr::i32_eqz, 1);
+    result = execute_unary_operation(fizzy::Instr::i32_eqz, 1);
 
     ASSERT_FALSE(result.trapped);
     ASSERT_EQ(result.stack.size(), 1);
@@ -155,13 +155,13 @@ TEST(execute, i32_eqz)
 
 TEST(execute, i32_eq)
 {
-    auto result = execute_binary_operation(fizzy::instr::i32_eq, 22, 20);
+    auto result = execute_binary_operation(fizzy::Instr::i32_eq, 22, 20);
 
     ASSERT_FALSE(result.trapped);
     ASSERT_EQ(result.stack.size(), 1);
     EXPECT_EQ(result.stack[0], 0);
 
-    result = execute_binary_operation(fizzy::instr::i32_eq, 22, 22);
+    result = execute_binary_operation(fizzy::Instr::i32_eq, 22, 22);
 
     ASSERT_FALSE(result.trapped);
     ASSERT_EQ(result.stack.size(), 1);
@@ -170,13 +170,13 @@ TEST(execute, i32_eq)
 
 TEST(execute, i32_ne)
 {
-    auto result = execute_binary_operation(fizzy::instr::i32_ne, 22, 20);
+    auto result = execute_binary_operation(fizzy::Instr::i32_ne, 22, 20);
 
     ASSERT_FALSE(result.trapped);
     ASSERT_EQ(result.stack.size(), 1);
     EXPECT_EQ(result.stack[0], 1);
 
-    result = execute_binary_operation(fizzy::instr::i32_ne, 22, 22);
+    result = execute_binary_operation(fizzy::Instr::i32_ne, 22, 22);
 
     ASSERT_FALSE(result.trapped);
     ASSERT_EQ(result.stack.size(), 1);
@@ -185,7 +185,7 @@ TEST(execute, i32_ne)
 
 TEST(execute, i32_add)
 {
-    const auto [trap, ret] = execute_binary_operation(fizzy::instr::i32_add, 22, 20);
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i32_add, 22, 20);
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -194,7 +194,7 @@ TEST(execute, i32_add)
 
 TEST(execute, i32_sub)
 {
-    const auto [trap, ret] = execute_binary_operation(fizzy::instr::i32_sub, 424242, 424200);
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i32_sub, 424242, 424200);
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -203,7 +203,7 @@ TEST(execute, i32_sub)
 
 TEST(execute, i32_mul)
 {
-    const auto [trap, ret] = execute_binary_operation(fizzy::instr::i32_mul, 2, 21);
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i32_mul, 2, 21);
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -212,7 +212,7 @@ TEST(execute, i32_mul)
 
 TEST(execute, i32_div_s)
 {
-    const auto [trap, ret] = execute_binary_operation(fizzy::instr::i32_div_s, uint64_t(-84), 2);
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i32_div_s, uint64_t(-84), 2);
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -221,7 +221,7 @@ TEST(execute, i32_div_s)
 
 TEST(execute, i32_div_s_by_zero)
 {
-    const auto [trap, ret] = execute_binary_operation(fizzy::instr::i32_div_s, 84, 0);
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i32_div_s, 84, 0);
 
     ASSERT_TRUE(trap);
 }
@@ -229,14 +229,14 @@ TEST(execute, i32_div_s_by_zero)
 TEST(execute, i32_div_s_overflow)
 {
     const auto [trap, ret] = execute_binary_operation(
-        fizzy::instr::i32_div_s, uint64_t(std::numeric_limits<int32_t>::min()), uint64_t(-1));
+        fizzy::Instr::i32_div_s, uint64_t(std::numeric_limits<int32_t>::min()), uint64_t(-1));
 
     ASSERT_TRUE(trap);
 }
 
 TEST(execute, i32_div_u)
 {
-    const auto [trap, ret] = execute_binary_operation(fizzy::instr::i32_div_u, 84, 2);
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i32_div_u, 84, 2);
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -245,7 +245,7 @@ TEST(execute, i32_div_u)
 
 TEST(execute, i32_div_u_by_zero)
 {
-    const auto [trap, ret] = execute_binary_operation(fizzy::instr::i32_div_u, 84, 0);
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i32_div_u, 84, 0);
 
     ASSERT_TRUE(trap);
 }
@@ -253,7 +253,7 @@ TEST(execute, i32_div_u_by_zero)
 TEST(execute, i32_rem_s)
 {
     const auto [trap, ret] =
-        execute_binary_operation(fizzy::instr::i32_rem_s, uint64_t(-4242), 4200);
+        execute_binary_operation(fizzy::Instr::i32_rem_s, uint64_t(-4242), 4200);
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -262,14 +262,14 @@ TEST(execute, i32_rem_s)
 
 TEST(execute, i32_rem_s_by_zero)
 {
-    const auto [trap, ret] = execute_binary_operation(fizzy::instr::i32_rem_s, uint64_t(-4242), 0);
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i32_rem_s, uint64_t(-4242), 0);
 
     ASSERT_TRUE(trap);
 }
 
 TEST(execute, i32_rem_u)
 {
-    const auto [trap, ret] = execute_binary_operation(fizzy::instr::i32_rem_u, 4242, 4200);
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i32_rem_u, 4242, 4200);
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -278,14 +278,14 @@ TEST(execute, i32_rem_u)
 
 TEST(execute, i32_rem_u_by_zero)
 {
-    const auto [trap, ret] = execute_binary_operation(fizzy::instr::i32_rem_u, 4242, 0);
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i32_rem_u, 4242, 0);
 
     ASSERT_TRUE(trap);
 }
 
 TEST(execute, i32_and)
 {
-    const auto [trap, ret] = execute_binary_operation(fizzy::instr::i32_and, 0x00ffff, 0xffff00);
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i32_and, 0x00ffff, 0xffff00);
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -294,7 +294,7 @@ TEST(execute, i32_and)
 
 TEST(execute, i32_or)
 {
-    const auto [trap, ret] = execute_binary_operation(fizzy::instr::i32_or, 0x00ffff, 0xffff00);
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i32_or, 0x00ffff, 0xffff00);
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -303,7 +303,7 @@ TEST(execute, i32_or)
 
 TEST(execute, i32_xor)
 {
-    const auto [trap, ret] = execute_binary_operation(fizzy::instr::i32_xor, 0x00ffff, 0xffff00);
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i32_xor, 0x00ffff, 0xffff00);
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -312,7 +312,7 @@ TEST(execute, i32_xor)
 
 TEST(execute, i32_shl)
 {
-    const auto [trap, ret] = execute_binary_operation(fizzy::instr::i32_shl, 21, 1);
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i32_shl, 21, 1);
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -321,7 +321,7 @@ TEST(execute, i32_shl)
 
 TEST(execute, i32_shr_s)
 {
-    const auto [trap, ret] = execute_binary_operation(fizzy::instr::i32_shr_s, uint64_t(-84), 1);
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i32_shr_s, uint64_t(-84), 1);
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -330,7 +330,7 @@ TEST(execute, i32_shr_s)
 
 TEST(execute, i32_shr_u)
 {
-    const auto [trap, ret] = execute_binary_operation(fizzy::instr::i32_shr_u, 84, 1);
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i32_shr_u, 84, 1);
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -339,7 +339,7 @@ TEST(execute, i32_shr_u)
 
 TEST(execute, i32_rotl)
 {
-    const auto [trap, ret] = execute_binary_operation(fizzy::instr::i32_rotl, 0xff000000, 4);
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i32_rotl, 0xff000000, 4);
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -348,7 +348,7 @@ TEST(execute, i32_rotl)
 
 TEST(execute, i32_rotr)
 {
-    const auto [trap, ret] = execute_binary_operation(fizzy::instr::i32_rotr, 0x000000ff, 4);
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i32_rotr, 0x000000ff, 4);
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -358,7 +358,7 @@ TEST(execute, i32_rotr)
 TEST(execute, i32_wrap_i64)
 {
     const auto [trap, ret] =
-        execute_unary_operation(fizzy::instr::i32_wrap_i64, 0xffffffffffffffff);
+        execute_unary_operation(fizzy::Instr::i32_wrap_i64, 0xffffffffffffffff);
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -367,7 +367,7 @@ TEST(execute, i32_wrap_i64)
 
 TEST(execute, i64_extend_i32_s_all_bits_set)
 {
-    const auto [trap, ret] = execute_unary_operation(fizzy::instr::i64_extend_i32_s, 0xffffffff);
+    const auto [trap, ret] = execute_unary_operation(fizzy::Instr::i64_extend_i32_s, 0xffffffff);
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -376,7 +376,7 @@ TEST(execute, i64_extend_i32_s_all_bits_set)
 
 TEST(execute, i64_extend_i32_s_one_bit_set)
 {
-    const auto [trap, ret] = execute_unary_operation(fizzy::instr::i64_extend_i32_s, 0x80000000);
+    const auto [trap, ret] = execute_unary_operation(fizzy::Instr::i64_extend_i32_s, 0x80000000);
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -385,7 +385,7 @@ TEST(execute, i64_extend_i32_s_one_bit_set)
 
 TEST(execute, i64_extend_i32_s_0)
 {
-    const auto [trap, ret] = execute_unary_operation(fizzy::instr::i64_extend_i32_s, 0);
+    const auto [trap, ret] = execute_unary_operation(fizzy::Instr::i64_extend_i32_s, 0);
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -394,7 +394,7 @@ TEST(execute, i64_extend_i32_s_0)
 
 TEST(execute, i64_extend_i32_s_1)
 {
-    const auto [trap, ret] = execute_unary_operation(fizzy::instr::i64_extend_i32_s, 0x01);
+    const auto [trap, ret] = execute_unary_operation(fizzy::Instr::i64_extend_i32_s, 0x01);
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -403,7 +403,7 @@ TEST(execute, i64_extend_i32_s_1)
 
 TEST(execute, i64_extend_i32_u)
 {
-    const auto [trap, ret] = execute_unary_operation(fizzy::instr::i64_extend_i32_u, 0xff000000);
+    const auto [trap, ret] = execute_unary_operation(fizzy::Instr::i64_extend_i32_u, 0xff000000);
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);

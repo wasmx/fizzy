@@ -11,34 +11,34 @@ using bytes = std::basic_string<uint8_t>;
 using bytes_view = std::basic_string_view<uint8_t>;
 
 // https://webassembly.github.io/spec/core/binary/types.html#binary-valtype
-enum class valtype : uint8_t
+enum class ValType : uint8_t
 {
     i32 = 0x7f,
     i64 = 0x7e,
 };
 
 // https://webassembly.github.io/spec/core/binary/types.html#binary-functype
-struct functype
+struct FuncType
 {
-    std::vector<valtype> inputs;
-    std::vector<valtype> outputs;
+    std::vector<ValType> inputs;
+    std::vector<ValType> outputs;
 };
 
 // https://webassembly.github.io/spec/core/binary/modules.html#binary-typeidx
-using typeidx = uint32_t;
+using TypeIdx = uint32_t;
 
 // https://webassembly.github.io/spec/core/binary/modules.html#binary-funcidx
-using funcidx = uint32_t;
+using FuncIdx = uint32_t;
 
 /// Function locals.
 /// https://webassembly.github.io/spec/core/binary/modules.html#binary-local
-struct locals
+struct Locals
 {
     uint32_t count;
-    valtype type;
+    ValType type;
 };
 
-enum class instr : uint8_t
+enum class Instr : uint8_t
 {
     unreachable = 0x00,
     nop = 0x01,
@@ -71,20 +71,20 @@ enum class instr : uint8_t
     i64_extend_i32_u = 0xad,
 };
 
-struct code
+struct Code
 {
     uint32_t local_count = 0;
 
     // The instructions bytecode without immediate values.
     // https://webassembly.github.io/spec/core/binary/instructions.html
-    std::vector<instr> instructions;
+    std::vector<Instr> instructions;
 
     // The decoded instructions' immediate values.
     // These are instruction-type dependent fixed size value in the order of instructions.
     bytes immediates;
 };
 
-enum class sectionid : uint8_t
+enum class SectionId : uint8_t
 {
     custom = 0,
     type = 1,
@@ -100,14 +100,14 @@ enum class sectionid : uint8_t
     data = 11
 };
 
-struct module
+struct Module
 {
     // https://webassembly.github.io/spec/core/binary/modules.html#type-section
-    std::vector<functype> typesec;
+    std::vector<FuncType> typesec;
     // https://webassembly.github.io/spec/core/binary/modules.html#function-section
-    std::vector<typeidx> funcsec;
+    std::vector<TypeIdx> funcsec;
     // https://webassembly.github.io/spec/core/binary/modules.html#code-section
-    std::vector<code> codesec;
+    std::vector<Code> codesec;
 };
 
 }  // namespace fizzy
