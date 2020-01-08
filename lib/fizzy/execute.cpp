@@ -56,6 +56,14 @@ inline void binary_op(uint64_stack& stack, Op op) noexcept
     stack.push(static_cast<uint64_t>(op(a, b)));
 }
 
+template <typename T, template <typename> class Op>
+inline void comparison_op(uint64_stack& stack, Op<T> op) noexcept
+{
+    const auto a = static_cast<T>(stack.pop());
+    const auto b = static_cast<T>(stack.pop());
+    stack.push(static_cast<uint64_t>(op(a, b)));
+}
+
 template <typename T>
 inline T shift_left(T lhs, T rhs) noexcept
 {
@@ -217,16 +225,52 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         }
         case Instr::i32_eq:
         {
-            const auto lhs = static_cast<uint32_t>(stack.pop());
-            const auto rhs = static_cast<uint32_t>(stack.pop());
-            stack.push(lhs == rhs);
+            comparison_op(stack, std::equal_to<uint32_t>());
             break;
         }
         case Instr::i32_ne:
         {
-            const auto lhs = static_cast<uint32_t>(stack.pop());
-            const auto rhs = static_cast<uint32_t>(stack.pop());
-            stack.push(lhs != rhs);
+            comparison_op(stack, std::not_equal_to<uint32_t>());
+            break;
+        }
+        case Instr::i32_lt_s:
+        {
+            comparison_op(stack, std::less<int32_t>());
+            break;
+        }
+        case Instr::i32_lt_u:
+        {
+            comparison_op(stack, std::less<uint32_t>());
+            break;
+        }
+        case Instr::i32_gt_s:
+        {
+            comparison_op(stack, std::greater<int32_t>());
+            break;
+        }
+        case Instr::i32_gt_u:
+        {
+            comparison_op(stack, std::greater<uint32_t>());
+            break;
+        }
+        case Instr::i32_le_s:
+        {
+            comparison_op(stack, std::less_equal<int32_t>());
+            break;
+        }
+        case Instr::i32_le_u:
+        {
+            comparison_op(stack, std::less_equal<uint32_t>());
+            break;
+        }
+        case Instr::i32_ge_s:
+        {
+            comparison_op(stack, std::greater_equal<int32_t>());
+            break;
+        }
+        case Instr::i32_ge_u:
+        {
+            comparison_op(stack, std::greater_equal<uint32_t>());
             break;
         }
         case Instr::i32_clz:
