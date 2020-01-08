@@ -99,6 +99,21 @@ execution_result execute(const module& _module, funcidx _function, std::vector<u
             break;
         case instr::end:
             goto end;
+        case instr::drop: {
+            stack.pop();
+            break;
+        }
+        case instr::select: {
+            const auto condition = static_cast<uint32_t>(stack.pop());
+            // NOTE: these two are the same type (ensured by validation)
+            const auto val2 = stack.pop();
+            const auto val1 = stack.pop();
+            if (condition == 0)
+                stack.push(val2);
+            else
+                stack.push(val1);
+            break;
+        }
         case instr::local_get: {
             const auto idx = read<uint32_t>(immediates);
             assert(idx <= locals.size());
