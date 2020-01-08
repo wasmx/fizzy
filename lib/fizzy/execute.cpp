@@ -40,6 +40,14 @@ inline T read(const uint8_t*& input) noexcept
 }
 
 template <typename Op>
+inline void unary_op(uint64_stack& stack, Op op) noexcept
+{
+    using T = decltype(op(stack.pop()));
+    const auto a = static_cast<T>(stack.pop());
+    stack.push(static_cast<uint64_t>(op(a)));
+}
+
+template <typename Op>
 inline void binary_op(uint64_stack& stack, Op op) noexcept
 {
     using T = decltype(op(stack.pop(), stack.pop()));
@@ -74,6 +82,27 @@ inline T rotr(T lhs, T rhs) noexcept
 {
     auto const k = rhs % std::numeric_limits<T>::digits;
     return (lhs >> k) | (lhs << (std::numeric_limits<T>::digits - k));
+}
+
+inline uint32_t clz32(uint32_t value) noexcept
+{
+    // NOTE: Wasm specifies this case, but C/C++ intrinsic leaves it as undefined.
+    if (value == 0)
+        return 32;
+    return static_cast<uint32_t>(__builtin_clz(value));
+}
+
+inline uint32_t ctz32(uint32_t value) noexcept
+{
+    // NOTE: Wasm specifies this case, but C/C++ intrinsic leaves it as undefined.
+    if (value == 0)
+        return 32;
+    return static_cast<uint32_t>(__builtin_ctz(value));
+}
+
+inline uint32_t popcnt32(uint32_t value) noexcept
+{
+    return static_cast<uint32_t>(__builtin_popcount(value));
 }
 }  // namespace
 
@@ -177,6 +206,21 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
             const auto lhs = static_cast<uint32_t>(stack.pop());
             const auto rhs = static_cast<uint32_t>(stack.pop());
             stack.push(lhs != rhs);
+            break;
+        }
+        case Instr::i32_clz:
+        {
+            unary_op(stack, clz32);
+            break;
+        }
+        case Instr::i32_ctz:
+        {
+            unary_op(stack, ctz32);
+            break;
+        }
+        case Instr::i32_popcnt:
+        {
+            unary_op(stack, popcnt32);
             break;
         }
         case Instr::i32_add:
