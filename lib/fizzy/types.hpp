@@ -49,6 +49,7 @@ enum class Instr : uint8_t
     local_set = 0x21,
     local_tee = 0x22,
     i32_const = 0x41,
+    i64_const = 0x42,
     i32_eqz = 0x45,
     i32_eq = 0x46,
     i32_ne = 0x47,

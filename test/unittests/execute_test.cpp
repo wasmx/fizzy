@@ -151,6 +151,19 @@ TEST(execute, i32_const)
     EXPECT_EQ(ret[0], 0x420042);
 }
 
+TEST(execute, i64_const)
+{
+    fizzy::Module module;
+    module.codesec.emplace_back(fizzy::Code{
+        0, {fizzy::Instr::i64_const, fizzy::Instr::end}, {0x42, 0, 0x42, 0, 0, 0, 0, 1}});
+
+    const auto [trap, ret] = fizzy::execute(module, 0, {});
+
+    ASSERT_EQ(trap, false);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 0x0100000000420042ULL);
+}
+
 TEST(execute, i32_eqz)
 {
     auto result = execute_unary_operation(fizzy::Instr::i32_eqz, 0);
