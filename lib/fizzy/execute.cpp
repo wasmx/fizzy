@@ -222,6 +222,7 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
             locals[idx] = stack.back();
             break;
         }
+        // FIXME: make this into a template?
         case Instr::i32_load:
         {
             const auto address = static_cast<uint32_t>(stack.pop());
@@ -236,6 +237,22 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
             stack.push(ret);
             break;
         }
+        // FIXME: make this into a template?
+        case Instr::i64_load:
+        {
+            const auto address = static_cast<uint32_t>(stack.pop());
+            // NOTE: alignment is dropped by the parser
+            const auto offset = read<uint32_t>(immediates);
+            if ((address + offset + sizeof(uint64_t)) > instance.memory.size())
+            {
+                trap = true;
+                goto end;
+            }
+            const auto ret = load<uint64_t>(instance.memory, address + offset);
+            stack.push(ret);
+            break;
+        }
+        // FIXME: make this into a template?
         case Instr::i32_store:
         {
             const auto address = static_cast<uint32_t>(stack.pop());
@@ -248,6 +265,21 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
                 goto end;
             }
             store<uint32_t>(instance.memory, address + offset, value);
+            break;
+        }
+        // FIXME: make this into a template?
+        case Instr::i64_store:
+        {
+            const auto address = static_cast<uint32_t>(stack.pop());
+            // NOTE: alignment is dropped by the parser
+            const auto offset = read<uint32_t>(immediates);
+            const auto value = static_cast<uint64_t>(stack.pop());
+            if ((address + offset + sizeof(uint64_t)) > instance.memory.size())
+            {
+                trap = true;
+                goto end;
+            }
+            store<uint64_t>(instance.memory, address + offset, value);
             break;
         }
         case Instr::memory_size:
