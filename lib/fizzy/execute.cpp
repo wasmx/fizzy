@@ -147,6 +147,18 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
             locals[idx] = stack.back();
             break;
         }
+        case Instr::i32_const:
+        {
+            const auto value = read<uint32_t>(immediates);
+            stack.push(value);
+            break;
+        }
+        case Instr::i64_const:
+        {
+            const auto value = read<uint64_t>(immediates);
+            stack.push(value);
+            break;
+        }
         case Instr::i32_eqz:
         {
             const auto value = static_cast<uint32_t>(stack.pop());
