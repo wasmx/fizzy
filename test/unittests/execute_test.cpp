@@ -410,6 +410,179 @@ TEST(execute, i64_extend_i32_u)
     EXPECT_EQ(ret[0], 0x00000000ff000000);
 }
 
+TEST(execute, i64_add)
+{
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i64_add, 22, 20);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 42);
+}
+
+TEST(execute, i64_sub)
+{
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i64_sub, 424242, 424200);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 42);
+}
+
+TEST(execute, i64_mul)
+{
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i64_mul, 2, 21);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 42);
+}
+
+TEST(execute, i64_div_s)
+{
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i64_div_s, uint64_t(-84), 2);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], -42);
+}
+
+TEST(execute, i64_div_s_by_zero)
+{
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i64_div_s, 84, 0);
+
+    ASSERT_TRUE(trap);
+}
+
+TEST(execute, i64_div_s_overflow)
+{
+    const auto [trap, ret] = execute_binary_operation(
+        fizzy::Instr::i64_div_s, uint64_t(std::numeric_limits<int64_t>::min()), uint64_t(-1));
+
+    ASSERT_TRUE(trap);
+}
+
+TEST(execute, i64_div_u)
+{
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i64_div_u, 84, 2);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 42);
+}
+
+TEST(execute, i64_div_u_by_zero)
+{
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i64_div_u, 84, 0);
+
+    ASSERT_TRUE(trap);
+}
+
+TEST(execute, i64_rem_s)
+{
+    const auto [trap, ret] =
+        execute_binary_operation(fizzy::Instr::i64_rem_s, uint64_t(-4242), 4200);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], -42);
+}
+
+TEST(execute, i64_rem_s_by_zero)
+{
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i64_rem_s, uint64_t(-4242), 0);
+
+    ASSERT_TRUE(trap);
+}
+
+TEST(execute, i64_rem_u)
+{
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i64_rem_u, 4242, 4200);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 42);
+}
+
+TEST(execute, i64_rem_u_by_zero)
+{
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i64_rem_u, 4242, 0);
+
+    ASSERT_TRUE(trap);
+}
+
+TEST(execute, i64_and)
+{
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i64_and, 0x00ffff, 0xffff00);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 0xff00);
+}
+
+TEST(execute, i64_or)
+{
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i64_or, 0x00ffff, 0xffff00);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 0xffffff);
+}
+
+TEST(execute, i64_xor)
+{
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i64_xor, 0x00ffff, 0xffff00);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 0xff00ff);
+}
+
+TEST(execute, i64_shl)
+{
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i64_shl, 21, 1);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 42);
+}
+
+TEST(execute, i64_shr_s)
+{
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i64_shr_s, uint64_t(-84), 1);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], -42);
+}
+
+TEST(execute, i64_shr_u)
+{
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i64_shr_u, 84, 1);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 42);
+}
+
+TEST(execute, i64_rotl)
+{
+    const auto [trap, ret] =
+        execute_binary_operation(fizzy::Instr::i64_rotl, 0xff00000000000000, 4);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 0xf00000000000000f);
+}
+
+TEST(execute, i64_rotr)
+{
+    const auto [trap, ret] = execute_binary_operation(fizzy::Instr::i64_rotr, 0xff, 4);
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 0xf00000000000000f);
+}
+
 TEST(execute, milestone1)
 {
     /*
