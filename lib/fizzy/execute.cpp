@@ -6,6 +6,11 @@
 
 namespace fizzy
 {
+struct instance
+{
+    const module& mod;
+};
+
 namespace
 {
 class uint64_stack : public std::vector<uint64_t>
@@ -72,9 +77,14 @@ inline T rotr(T lhs, T rhs) noexcept
 }
 }  // namespace
 
-execution_result execute(const module& _module, funcidx _function, std::vector<uint64_t> _args)
+instance instantiate(const module& _module)
 {
-    const auto& code = _module.codesec[_function];
+    return {_module};
+}
+
+execution_result execute(instance& _instance, funcidx _function, std::vector<uint64_t> _args)
+{
+    const auto& code = _instance.mod.codesec[_function];
 
     std::vector<uint64_t> locals = std::move(_args);
     locals.resize(locals.size() + code.local_count);
@@ -282,5 +292,11 @@ execution_result execute(const module& _module, funcidx _function, std::vector<u
 end:
     // move allows to return derived uint64_stack instance into base vector<uint64_t> value
     return {trap, std::move(stack)};
+}
+
+execution_result execute(const module& _module, funcidx _function, std::vector<uint64_t> _args)
+{
+    auto _instance = instantiate(_module);
+    return execute(_instance, _function, _args);
 }
 }  // namespace fizzy
