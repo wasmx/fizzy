@@ -293,7 +293,7 @@ TEST(execute, i32_store)
     module.codesec.emplace_back(fizzy::Code{0,
         {fizzy::Instr::local_get, fizzy::Instr::local_get, fizzy::Instr::i32_store,
             fizzy::Instr::end},
-        {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0}});
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
     auto instance = fizzy::instantiate(module);
     const auto [trap, ret] = fizzy::execute(instance, 0, {42, 0});
@@ -310,7 +310,7 @@ TEST(execute, i32_store_trap)
     module.codesec.emplace_back(fizzy::Code{0,
         {fizzy::Instr::local_get, fizzy::Instr::local_get, fizzy::Instr::i32_store,
             fizzy::Instr::end},
-        {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0}});
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
     auto instance = fizzy::instantiate(module);
     const auto [trap, ret] = fizzy::execute(instance, 0, {42, 65537});
@@ -325,7 +325,7 @@ TEST(execute, i64_store)
     module.codesec.emplace_back(fizzy::Code{0,
         {fizzy::Instr::local_get, fizzy::Instr::local_get, fizzy::Instr::i64_store,
             fizzy::Instr::end},
-        {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0}});
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
     auto instance = fizzy::instantiate(module);
     const auto [trap, ret] = fizzy::execute(instance, 0, {0x2a0000002a, 0});
@@ -342,7 +342,7 @@ TEST(execute, i64_store_trap)
     module.codesec.emplace_back(fizzy::Code{0,
         {fizzy::Instr::local_get, fizzy::Instr::local_get, fizzy::Instr::i64_store,
             fizzy::Instr::end},
-        {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0}});
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
     auto instance = fizzy::instantiate(module);
     const auto [trap, ret] = fizzy::execute(instance, 0, {0x2a0000002a, 65537});
@@ -1404,7 +1404,7 @@ TEST(execute, start_section)
     module.codesec.emplace_back(fizzy::Code{0,
         {fizzy::Instr::i32_const, fizzy::Instr::i32_const, fizzy::Instr::i32_store,
             fizzy::Instr::end},
-        {42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
+        {0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0}});
 
     auto instance = fizzy::instantiate(module);
     // Start function sets this

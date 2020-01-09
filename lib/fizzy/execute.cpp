@@ -315,10 +315,10 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         // FIXME: make this into a template?
         case Instr::i32_store:
         {
+            const auto value = static_cast<uint32_t>(stack.pop());
             const auto address = static_cast<uint32_t>(stack.pop());
             // NOTE: alignment is dropped by the parser
             const auto offset = read<uint32_t>(immediates);
-            const auto value = static_cast<uint32_t>(stack.pop());
             if ((address + offset + sizeof(uint32_t)) > instance.memory.size())
             {
                 trap = true;
@@ -330,10 +330,10 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         // FIXME: make this into a template?
         case Instr::i64_store:
         {
+            const auto value = static_cast<uint64_t>(stack.pop());
             const auto address = static_cast<uint32_t>(stack.pop());
             // NOTE: alignment is dropped by the parser
             const auto offset = read<uint32_t>(immediates);
-            const auto value = static_cast<uint64_t>(stack.pop());
             if ((address + offset + sizeof(uint64_t)) > instance.memory.size())
             {
                 trap = true;
