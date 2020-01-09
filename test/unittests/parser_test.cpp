@@ -30,6 +30,40 @@ TEST(parser, valtype_vec)
     EXPECT_EQ(vec[2], ValType::i32);
 }
 
+TEST(parser, limits_min)
+{
+    const auto input = from_hex("007f");
+    const auto [limits, pos] = parser<Limits>{}(input.data());
+    EXPECT_EQ(limits.min, 0x7f);
+    EXPECT_EQ(limits.max, std::numeric_limits<uint32_t>::max());
+}
+
+TEST(parser, limits_minmax)
+{
+    const auto input = from_hex("01207f");
+    const auto [limits, pos] = parser<Limits>{}(input.data());
+    EXPECT_EQ(limits.min, 0x20);
+    EXPECT_EQ(limits.max, 0x7f);
+}
+
+TEST(parser, DISABLED_limits_min_invalid_too_short)
+{
+    const auto input = from_hex("00");
+    EXPECT_THROW(parser<Limits>{}(input.data()), parser_error);
+}
+
+TEST(parser, DISABLED_limits_minmax_invalid_too_short)
+{
+    const auto input = from_hex("0120");
+    EXPECT_THROW(parser<Limits>{}(input.data()), parser_error);
+}
+
+TEST(parser, limits_invalid)
+{
+    const auto input = from_hex("02");
+    EXPECT_THROW(parser<Limits>{}(input.data()), parser_error);
+}
+
 TEST(parser, locals)
 {
     const auto input = from_hex("81017f");
@@ -155,6 +189,43 @@ TEST(parser, type_section_with_multiple_functypes)
     EXPECT_EQ(functype2.outputs.size(), 0);
     EXPECT_EQ(module.funcsec.size(), 0);
     EXPECT_EQ(module.codesec.size(), 0);
+}
+
+TEST(parser, memory_single_min_limit)
+{
+    const auto section_contents = bytes{} + uint8_t{0x01} + uint8_t{0x00} + uint8_t{0x7f};
+    const auto bin =
+        bytes{wasm_prefix} + uint8_t{0x05} + uint8_t(section_contents.size()) + section_contents;
+
+    const auto module = parse(bin);
+    ASSERT_EQ(module.memorysec.size(), 1);
+    EXPECT_EQ(module.memorysec[0].limits.min, 0x7f);
+}
+
+TEST(parser, memory_single_minmax_limit)
+{
+    const auto section_contents =
+        bytes{} + uint8_t{0x01} + uint8_t{0x01} + uint8_t{0x12} + uint8_t{0x7f};
+    const auto bin =
+        bytes{wasm_prefix} + uint8_t{0x05} + uint8_t(section_contents.size()) + section_contents;
+
+    const auto module = parse(bin);
+    ASSERT_EQ(module.memorysec.size(), 1);
+    EXPECT_EQ(module.memorysec[0].limits.min, 0x12);
+    EXPECT_EQ(module.memorysec[0].limits.max, 0x7f);
+}
+
+TEST(parser, memory_multi_min_limit)
+{
+    const auto section_contents =
+        bytes{} + uint8_t{0x02} + uint8_t{0x00} + uint8_t{0x7f} + uint8_t{0x00} + uint8_t{0x7f};
+    const auto bin =
+        bytes{wasm_prefix} + uint8_t{0x05} + uint8_t(section_contents.size()) + section_contents;
+
+    const auto module = parse(bin);
+    ASSERT_EQ(module.memorysec.size(), 2);
+    EXPECT_EQ(module.memorysec[0].limits.min, 0x7f);
+    EXPECT_EQ(module.memorysec[1].limits.min, 0x7f);
 }
 
 TEST(parser, code_with_empty_expr_2_locals)

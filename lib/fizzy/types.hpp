@@ -24,6 +24,13 @@ struct FuncType
     std::vector<ValType> outputs;
 };
 
+// https://webassembly.github.io/spec/core/binary/types.html#binary-limits
+struct Limits
+{
+    uint32_t min;
+    uint32_t max;
+};
+
 // https://webassembly.github.io/spec/core/binary/modules.html#binary-typeidx
 using TypeIdx = uint32_t;
 
@@ -119,6 +126,13 @@ enum class Instr : uint8_t
     i64_extend_i32_u = 0xad,
 };
 
+// https://webassembly.github.io/spec/core/binary/modules.html#memory-section
+struct Memory
+{
+    Limits limits;
+};
+
+// https://webassembly.github.io/spec/core/binary/modules.html#code-section
 struct Code
 {
     uint32_t local_count = 0;
@@ -154,6 +168,8 @@ struct Module
     std::vector<FuncType> typesec;
     // https://webassembly.github.io/spec/core/binary/modules.html#function-section
     std::vector<TypeIdx> funcsec;
+    // https://webassembly.github.io/spec/core/binary/modules.html#memory-section
+    std::vector<Memory> memorysec;
     // https://webassembly.github.io/spec/core/binary/modules.html#code-section
     std::vector<Code> codesec;
 };

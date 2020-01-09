@@ -40,6 +40,9 @@ Module parse(bytes_view input)
         case SectionId::type:
             std::tie(module.typesec, it) = parser<std::vector<FuncType>>{}(it);
             break;
+        case SectionId::memory:
+            std::tie(module.memorysec, it) = parser<std::vector<Memory>>{}(it);
+            break;
         case SectionId::code:
             std::tie(module.codesec, it) = parser<std::vector<Code>>{}(it);
             break;
