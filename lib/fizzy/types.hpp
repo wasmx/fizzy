@@ -55,6 +55,8 @@ enum class Instr : uint8_t
     local_get = 0x20,
     local_set = 0x21,
     local_tee = 0x22,
+    global_get = 0x23,
+    global_set = 0x24,
     i32_load = 0x28,
     i64_load = 0x29,
     i32_store = 0x36,
@@ -132,6 +134,25 @@ struct Memory
     Limits limits;
 };
 
+enum class GlobalInitType : uint8_t
+{
+    constant,
+    global
+};
+
+// https://webassembly.github.io/spec/core/binary/modules.html#global-section
+struct Global
+{
+    bool is_mutable = false;
+
+    GlobalInitType init_type = GlobalInitType::constant;
+    union
+    {
+        uint64_t value = 0;
+        uint32_t global_index;
+    } init;
+};
+
 // https://webassembly.github.io/spec/core/binary/modules.html#code-section
 struct Code
 {
@@ -170,6 +191,8 @@ struct Module
     std::vector<TypeIdx> funcsec;
     // https://webassembly.github.io/spec/core/binary/modules.html#memory-section
     std::vector<Memory> memorysec;
+    // https://webassembly.github.io/spec/core/binary/modules.html#global-section
+    std::vector<Global> globalsec;
     // https://webassembly.github.io/spec/core/binary/modules.html#code-section
     std::vector<Code> codesec;
 };
