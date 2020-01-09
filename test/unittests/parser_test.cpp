@@ -228,6 +228,63 @@ TEST(parser, memory_multi_min_limit)
     EXPECT_EQ(module.memorysec[1].limits.min, 0x7f);
 }
 
+TEST(parser, global_single_mutable_const_inited)
+{
+    const auto section_contents = bytes{0x01, 0x7f, 0x01, uint8_t(Instr::i32_const), 0x10, 0x0b};
+    const auto bin =
+        bytes{wasm_prefix} + uint8_t{0x06} + uint8_t(section_contents.size()) + section_contents;
+
+    const auto module = parse(bin);
+    ASSERT_EQ(module.globalsec.size(), 1);
+    EXPECT_TRUE(module.globalsec[0].is_mutable);
+    EXPECT_EQ(module.globalsec[0].init_type, GlobalInitType::constant);
+    EXPECT_EQ(module.globalsec[0].init.value, 0x10);
+}
+
+TEST(parser, global_single_const_global_inited)
+{
+    const auto section_contents = bytes{0x01, 0x7f, 0x00, uint8_t(Instr::global_get), 0x01, 0x0b};
+    const auto bin =
+        bytes{wasm_prefix} + uint8_t{0x06} + uint8_t(section_contents.size()) + section_contents;
+
+    const auto module = parse(bin);
+    ASSERT_EQ(module.globalsec.size(), 1);
+    EXPECT_FALSE(module.globalsec[0].is_mutable);
+    EXPECT_EQ(module.globalsec[0].init_type, GlobalInitType::global);
+    EXPECT_EQ(module.globalsec[0].init.global_index, 0x01);
+}
+
+TEST(parser, global_single_multi_instructions_inited)
+{
+    const auto section_contents = bytes{
+        0x01, 0x7f, 0x01, uint8_t(Instr::i32_const), 0x10, uint8_t(Instr::i64_const), 0x7f, 0x0b};
+    const auto bin =
+        bytes{wasm_prefix} + uint8_t{0x06} + uint8_t(section_contents.size()) + section_contents;
+
+    const auto module = parse(bin);
+    ASSERT_EQ(module.globalsec.size(), 1);
+    EXPECT_TRUE(module.globalsec[0].is_mutable);
+    EXPECT_EQ(module.globalsec[0].init_type, GlobalInitType::constant);
+    EXPECT_EQ(module.globalsec[0].init.value, uint64_t(-1));
+}
+
+TEST(parser, global_multi_const_inited)
+{
+    const auto section_contents = bytes{0x02, 0x7f, 0x00, uint8_t(Instr::i32_const), 0x01, 0x0b,
+        0x7f, 0x01, uint8_t(Instr::i32_const), 0x7f, 0x0b};
+    const auto bin =
+        bytes{wasm_prefix} + uint8_t{0x06} + uint8_t(section_contents.size()) + section_contents;
+
+    const auto module = parse(bin);
+    ASSERT_EQ(module.globalsec.size(), 2);
+    EXPECT_FALSE(module.globalsec[0].is_mutable);
+    EXPECT_EQ(module.globalsec[0].init_type, GlobalInitType::constant);
+    EXPECT_EQ(module.globalsec[0].init.value, 0x01);
+    EXPECT_TRUE(module.globalsec[1].is_mutable);
+    EXPECT_EQ(module.globalsec[1].init_type, GlobalInitType::constant);
+    EXPECT_EQ(module.globalsec[1].init.value, uint32_t(-1));
+}
+
 TEST(parser, code_with_empty_expr_2_locals)
 {
     // Func with 2x i32 locals, only 0x0b "end" instruction.
