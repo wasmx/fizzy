@@ -189,7 +189,16 @@ Instance instantiate(const Module& module)
         }
     }
 
-    return {module, std::move(memory), memory_max, std::move(globals)};
+    Instance instance = {module, std::move(memory), memory_max, std::move(globals)};
+
+    // Run start function if present
+    if (module.startfunc)
+    {
+        if (execute(instance, *module.startfunc, {}).trapped)
+            throw std::runtime_error("Start function failed to execute");
+    }
+
+    return instance;
 }
 
 execution_result execute(Instance& instance, FuncIdx function, std::vector<uint64_t> args)
