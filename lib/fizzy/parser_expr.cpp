@@ -99,6 +99,7 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         case Instr::local_tee:
         case Instr::global_get:
         case Instr::global_set:
+        case Instr::call:
         {
             uint32_t imm;
             std::tie(imm, pos) = leb128u_decode<uint32_t>(pos);

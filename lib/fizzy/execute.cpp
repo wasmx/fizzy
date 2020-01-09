@@ -232,6 +232,36 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
             break;
         case Instr::end:
             goto end;
+        case Instr::call:
+        {
+            const auto func_idx = read<uint32_t>(immediates);
+            assert(func_idx < instance.module.funcsec.size());
+            const auto type_idx = instance.module.funcsec[func_idx];
+            assert(type_idx < instance.module.typesec.size());
+
+            const auto num_inputs = instance.module.typesec[type_idx].inputs.size();
+            assert(stack.size() >= num_inputs);
+            std::vector<uint64_t> call_args(
+                stack.rbegin(), stack.rbegin() + static_cast<ptrdiff_t>(num_inputs));
+            stack.resize(stack.size() - num_inputs);
+
+            const auto ret = execute(instance, func_idx, call_args);
+            // Bubble up traps
+            if (ret.trapped)
+            {
+                trap = true;
+                goto end;
+            }
+
+            const auto num_outputs = instance.module.typesec[type_idx].outputs.size();
+            // NOTE: we can assume these two from validation
+            assert(ret.stack.size() == num_outputs);
+            assert(num_outputs <= 1);
+            // Push back the result
+            if (num_outputs != 0)
+                stack.push(ret.stack[0]);
+            break;
+        }
         case Instr::drop:
         {
             stack.pop();

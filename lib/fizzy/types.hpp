@@ -51,6 +51,7 @@ enum class Instr : uint8_t
     unreachable = 0x00,
     nop = 0x01,
     end = 0x0b,
+    call = 0x10,
     drop = 0x1a,
     select = 0x1b,
     local_get = 0x20,

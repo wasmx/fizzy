@@ -36,6 +36,24 @@ TEST(execute, end)
     EXPECT_EQ(ret.size(), 0);
 }
 
+TEST(execute, call)
+{
+    fizzy::Module module;
+    module.typesec.emplace_back(fizzy::FuncType{{}, {fizzy::ValType::i32}});
+    module.funcsec.emplace_back(fizzy::TypeIdx{0});
+    module.funcsec.emplace_back(fizzy::TypeIdx{0});
+    module.codesec.emplace_back(
+        fizzy::Code{0, {fizzy::Instr::i32_const, fizzy::Instr::end}, {42, 0, 42, 0}});
+    module.codesec.emplace_back(
+        fizzy::Code{0, {fizzy::Instr::call, fizzy::Instr::end}, {0, 0, 0, 0}});
+
+    const auto [trap, ret] = fizzy::execute(module, 1, {});
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 0x2a002a);
+}
+
 TEST(execute, drop)
 {
     fizzy::Module module;
