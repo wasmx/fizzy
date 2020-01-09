@@ -11,6 +11,7 @@ struct Instance
     const Module& module;
     bytes memory;
     size_t memory_max_pages = 0;
+    std::vector<uint64_t> globals;
 };
 
 // Instantiate a module.

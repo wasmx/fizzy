@@ -21,6 +21,66 @@ struct parser<FuncType>
     }
 };
 
+template <>
+struct parser<Global>
+{
+    parser_result<Global> operator()(const uint8_t* pos)
+    {
+        ValType type;
+        std::tie(type, pos) = parser<ValType>{}(pos);
+
+        if (*pos != 0x00 && *pos != 0x01)
+            throw parser_error{"unexpected byte value " + std::to_string(*pos) +
+                               ", expected 0x00 or 0x01 for global mutability"};
+
+        Global result;
+        result.is_mutable = (*pos == 0x01);
+        ++pos;
+
+        Instr instr;
+        do
+        {
+            instr = static_cast<Instr>(*pos++);
+            switch (instr)
+            {
+            default:
+                throw parser_error{"unexpected instruction in the global initializer expression: " +
+                                   std::to_string(*(pos - 1))};
+
+            case Instr::end:
+                break;
+
+            case Instr::global_get:
+            {
+                result.init_type = GlobalInitType::global;
+                std::tie(result.init.global_index, pos) = leb128u_decode<uint32_t>(pos);
+                break;
+            }
+
+            case Instr::i32_const:
+            {
+                result.init_type = GlobalInitType::constant;
+                int32_t value;
+                std::tie(value, pos) = leb128s_decode<int32_t>(pos);
+                result.init.value = static_cast<uint32_t>(value);
+                break;
+            }
+
+            case Instr::i64_const:
+            {
+                result.init_type = GlobalInitType::constant;
+                int64_t value;
+                std::tie(value, pos) = leb128s_decode<int64_t>(pos);
+                result.init.value = static_cast<uint64_t>(value);
+                break;
+            }
+            }
+        } while (instr != Instr::end);
+
+        return {result, pos};
+    }
+};
+
 Module parse(bytes_view input)
 {
     if (input.substr(0, wasm_prefix.size()) != wasm_prefix)
@@ -43,6 +103,9 @@ Module parse(bytes_view input)
         case SectionId::memory:
             std::tie(module.memorysec, it) = parser<std::vector<Memory>>{}(it);
             break;
+        case SectionId::global:
+            std::tie(module.globalsec, it) = parser<std::vector<Global>>{}(it);
+            break;
         case SectionId::code:
             std::tie(module.codesec, it) = parser<std::vector<Code>>{}(it);
             break;
@@ -50,7 +113,6 @@ Module parse(bytes_view input)
         case SectionId::import:
         case SectionId::function:
         case SectionId::table:
-        case SectionId::global:
         case SectionId::export_:
         case SectionId::start:
         case SectionId::element:
