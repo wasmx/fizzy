@@ -285,6 +285,42 @@ TEST(parser, global_multi_const_inited)
     EXPECT_EQ(module.globalsec[1].init.value, uint32_t(-1));
 }
 
+TEST(parser, export_single_function)
+{
+    const auto section_contents = bytes{0x01, 0x03, 'a', 'b', 'c', 0x00, 0x42};
+    const auto bin =
+        bytes{wasm_prefix} + uint8_t{0x07} + uint8_t(section_contents.size()) + section_contents;
+
+    const auto module = parse(bin);
+    ASSERT_EQ(module.exportsec.size(), 1);
+    EXPECT_EQ(module.exportsec[0].name, "abc");
+    EXPECT_EQ(module.exportsec[0].type, ExportType::Function);
+    EXPECT_EQ(module.exportsec[0].index, 0x42);
+}
+
+TEST(parser, export_multiple)
+{
+    const auto section_contents = bytes{0x04, 0x03, 'a', 'b', 'c', 0x00, 0x42, 0x03, 'f', 'o', 'o',
+        0x01, 0x43, 0x03, 'b', 'a', 'r', 0x02, 0x44, 0x03, 'x', 'y', 'z', 0x03, 0x45};
+    const auto bin =
+        bytes{wasm_prefix} + uint8_t{0x07} + uint8_t(section_contents.size()) + section_contents;
+
+    const auto module = parse(bin);
+    ASSERT_EQ(module.exportsec.size(), 4);
+    EXPECT_EQ(module.exportsec[0].name, "abc");
+    EXPECT_EQ(module.exportsec[0].type, ExportType::Function);
+    EXPECT_EQ(module.exportsec[0].index, 0x42);
+    EXPECT_EQ(module.exportsec[1].name, "foo");
+    EXPECT_EQ(module.exportsec[1].type, ExportType::Table);
+    EXPECT_EQ(module.exportsec[1].index, 0x43);
+    EXPECT_EQ(module.exportsec[2].name, "bar");
+    EXPECT_EQ(module.exportsec[2].type, ExportType::Memory);
+    EXPECT_EQ(module.exportsec[2].index, 0x44);
+    EXPECT_EQ(module.exportsec[3].name, "xyz");
+    EXPECT_EQ(module.exportsec[3].type, ExportType::Global);
+    EXPECT_EQ(module.exportsec[3].index, 0x45);
+}
+
 TEST(parser, start)
 {
     const auto section_contents = bytes{} + uint8_t{0x07};
