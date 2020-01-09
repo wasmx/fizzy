@@ -22,7 +22,7 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         switch (instr)
         {
         default:
-            throw parser_error{"invalid instruction " + std::to_string(*pos)};
+            throw parser_error{"invalid instruction " + std::to_string(*(pos - 1))};
 
         case Instr::unreachable:
         case Instr::nop:
