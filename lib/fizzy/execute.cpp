@@ -64,17 +64,17 @@ template <typename Op>
 inline void binary_op(uint64_stack& stack, Op op) noexcept
 {
     using T = decltype(op(stack.pop(), stack.pop()));
-    const auto a = static_cast<T>(stack.pop());
-    const auto b = static_cast<T>(stack.pop());
-    stack.push(static_cast<uint64_t>(op(a, b)));
+    const auto val2 = static_cast<T>(stack.pop());
+    const auto val1 = static_cast<T>(stack.pop());
+    stack.push(static_cast<uint64_t>(op(val1, val2)));
 }
 
 template <typename T, template <typename> class Op>
 inline void comparison_op(uint64_stack& stack, Op<T> op) noexcept
 {
-    const auto a = static_cast<T>(stack.pop());
-    const auto b = static_cast<T>(stack.pop());
-    stack.push(static_cast<uint64_t>(op(a, b)));
+    const auto val2 = static_cast<T>(stack.pop());
+    const auto val1 = static_cast<T>(stack.pop());
+    stack.push(uint32_t{op(val1, val2)});
 }
 
 template <typename T>
@@ -465,8 +465,8 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         }
         case Instr::i32_div_s:
         {
-            auto const lhs = static_cast<int32_t>(stack.peek(1));
-            auto const rhs = static_cast<int32_t>(stack.peek(2));
+            auto const rhs = static_cast<int32_t>(stack.peek(1));
+            auto const lhs = static_cast<int32_t>(stack.peek(2));
             if (rhs == 0 || (lhs == std::numeric_limits<int32_t>::min() && rhs == -1))
             {
                 trap = true;
@@ -477,7 +477,7 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         }
         case Instr::i32_div_u:
         {
-            auto const rhs = static_cast<uint32_t>(stack.peek(2));
+            auto const rhs = static_cast<uint32_t>(stack.peek(1));
             if (rhs == 0)
             {
                 trap = true;
@@ -488,7 +488,7 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         }
         case Instr::i32_rem_s:
         {
-            auto const rhs = static_cast<int32_t>(stack.peek(2));
+            auto const rhs = static_cast<int32_t>(stack.peek(1));
             if (rhs == 0)
             {
                 trap = true;
@@ -499,7 +499,7 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         }
         case Instr::i32_rem_u:
         {
-            auto const rhs = static_cast<uint32_t>(stack.peek(2));
+            auto const rhs = static_cast<uint32_t>(stack.peek(1));
             if (rhs == 0)
             {
                 trap = true;
@@ -580,8 +580,8 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         }
         case Instr::i64_div_s:
         {
-            auto const lhs = static_cast<int64_t>(stack.peek(1));
-            auto const rhs = static_cast<int64_t>(stack.peek(2));
+            auto const rhs = static_cast<int64_t>(stack.peek(1));
+            auto const lhs = static_cast<int64_t>(stack.peek(2));
             if (rhs == 0 || (lhs == std::numeric_limits<int64_t>::min() && rhs == -1))
             {
                 trap = true;
@@ -592,7 +592,7 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         }
         case Instr::i64_div_u:
         {
-            auto const rhs = static_cast<uint64_t>(stack.peek(2));
+            auto const rhs = static_cast<uint64_t>(stack.peek(1));
             if (rhs == 0)
             {
                 trap = true;
@@ -603,7 +603,7 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         }
         case Instr::i64_rem_s:
         {
-            auto const rhs = static_cast<int64_t>(stack.peek(2));
+            auto const rhs = static_cast<int64_t>(stack.peek(1));
             if (rhs == 0)
             {
                 trap = true;
@@ -614,7 +614,7 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         }
         case Instr::i64_rem_u:
         {
-            auto const rhs = static_cast<uint64_t>(stack.peek(2));
+            auto const rhs = static_cast<uint64_t>(stack.peek(1));
             if (rhs == 0)
             {
                 trap = true;

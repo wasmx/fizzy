@@ -21,7 +21,7 @@ fizzy::execution_result execute_binary_operation(fizzy::Instr instr, uint64_t lh
         fizzy::Code{0, {fizzy::Instr::local_get, fizzy::Instr::local_get, instr, fizzy::Instr::end},
             {0, 0, 0, 0, 1, 0, 0, 0}});
 
-    return fizzy::execute(module, 0, {rhs, lhs});
+    return fizzy::execute(module, 0, {lhs, rhs});
 }
 }  // namespace
 
