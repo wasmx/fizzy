@@ -8,9 +8,9 @@ namespace fizzy
 {
 namespace
 {
-constexpr unsigned pagesize = 65536;
+constexpr unsigned page_size = 65536;
 // Set hard limit of 256MB of memory.
-constexpr auto memory_pages_limit = (256 * 1024 * 1024ULL) / pagesize;
+constexpr auto memory_pages_limit = (256 * 1024 * 1024ULL) / page_size;
 
 class uint64_stack : public std::vector<uint64_t>
 {
@@ -163,7 +163,7 @@ Instance instantiate(const Module& module)
         // FIXME: better error handling
         if (memory_max > memory_pages_limit)
             throw std::runtime_error("Cannot exceed hard memory limit of " +
-                                     std::to_string(memory_pages_limit * pagesize) + " bytes");
+                                     std::to_string(memory_pages_limit * page_size) + " bytes");
     }
     else
     {
@@ -171,7 +171,7 @@ Instance instantiate(const Module& module)
         memory_max = memory_pages_limit;
     }
     // NOTE: fill it with zeroes
-    bytes memory(memory_min * pagesize, 0);
+    bytes memory(memory_min * page_size, 0);
     return {module, std::move(memory), memory_max};
 }
 
@@ -302,13 +302,13 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         }
         case Instr::memory_size:
         {
-            stack.push(static_cast<uint32_t>(instance.memory.size() / pagesize));
+            stack.push(static_cast<uint32_t>(instance.memory.size() / page_size));
             break;
         }
         case Instr::memory_grow:
         {
             const auto delta = static_cast<uint32_t>(stack.pop());
-            const auto cur_pages = instance.memory.size() / pagesize;
+            const auto cur_pages = instance.memory.size() / page_size;
             assert(cur_pages <= size_t(std::numeric_limits<int32_t>::max()));
             const auto new_pages = cur_pages + delta;
             assert(new_pages >= cur_pages);
@@ -317,7 +317,7 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
             {
                 if (new_pages > instance.memory_max_pages)
                     throw std::bad_alloc();
-                instance.memory.resize(new_pages * pagesize);
+                instance.memory.resize(new_pages * page_size);
             }
             catch (std::bad_alloc const&)
             {
