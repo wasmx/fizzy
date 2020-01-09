@@ -133,3 +133,97 @@ TEST(end_to_end, DISABLED_milestone2_640000_iterations)
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 0);
 }
+
+TEST(end_to_end, DISABLED_nested_loops_in_c)
+{
+    /*
+    int test(int a, int b, int c)
+    {
+        int ret = 0;
+        for (int i = 0; i < a; i++)
+        {
+            ret++;
+            for (int j = 0; j < b; j++)
+            {
+                ret += 7;
+                for (int k = 0; k < c; k++)
+                {
+                    ret /= 2;
+                    if (ret == 4)
+                        return ret;
+                }
+            }
+        }
+        return ret;
+    }
+    */
+
+    const auto bin = from_hex(
+        "0061736d01000000010b0260000060037f7f7f017f030201010405017001"
+        "010105030100020615037f01418088040b7f00418088040b7f004180080b"
+        "072c0404746573740000066d656d6f727902000b5f5f686561705f626173"
+        "6503010a5f5f646174615f656e6403020aa50101a20101057f0240024020"
+        "004101480d0020014101480d01200141076c41016a210341002104410021"
+        "050240034002400240200241004c0d00200541016a210541002106034020"
+        "0541076a21054100210703402005417e714108460d05200541026d210520"
+        "0741016a22072002480d000b200641016a22062001480d000c020b0b2003"
+        "20056a21050b200441016a22042000480d000b20050f0b41040f0b41000f"
+        "0b20000b");
+
+    const auto module = parse(bin);
+
+    // Ignore the results for now
+    const auto [trap, ret] = execute(module, 0, {10, 2, 5});
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 4);
+}
+
+TEST(end_to_end, DISABLED_memset)
+{
+    /*
+    (func $test (export "test") (type $t1) (param $p0 i32) (param $p1 i32)
+    block $B0
+      get_local $p1
+      i32.const 1
+      i32.lt_s
+      br_if $B0
+      loop $L1
+        get_local $p0
+        i32.const 1234
+        i32.store
+        get_local $p0
+        i32.const 4
+        i32.add
+        set_local $p0
+        get_local $p1
+        i32.const -1
+        i32.add
+        tee_local $p1
+        br_if $L1
+      end
+    end)
+    */
+
+    const auto bin = from_hex(
+        "0061736d01000000"
+        "01090260000060027f7f00"
+        "0303020001"
+        "04050170010101"
+        "0503010002"
+        "0615037f01418088040b7f00418088040b7f004180080b"
+        "072c"
+        "0404746573740001066d656d6f727902000b5f5f686561705f6261736503010a5f5f646174615f656e640302"
+        "0a2c"
+        "0202000b2700024020014101480d000340200041d209360200200041046a21002001417f6a22010d000b0b0b");
+
+    const auto module = parse(bin);
+
+    auto instance = instantiate(module);
+    const auto [trap, ret] = execute(instance, 1, {0, 2});
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 0);
+    EXPECT_EQ(hex(instance.memory.substr(0, 2 * sizeof(int))), "d2040000d2040000");
+}
