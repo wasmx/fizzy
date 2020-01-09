@@ -172,11 +172,29 @@ Instance instantiate(const Module& module)
     }
     // NOTE: fill it with zeroes
     bytes memory(memory_min * page_size, 0);
-    return {module, std::move(memory), memory_max};
+
+    // TODO: add imported globals first
+    std::vector<uint64_t> globals;
+    globals.reserve(module.globalsec.size());
+    for (auto const& global : module.globalsec)
+    {
+        if (global.init_type == GlobalInitType::constant)
+            globals.emplace_back(global.init.value);
+        else
+        {
+            // TODO: initialize by imported global
+            // Wasm spec section 3.3.7 constrains initialization by another global to imports only
+            // https://webassembly.github.io/spec/core/valid/instructions.html#expressions
+            throw std::runtime_error("global initialization by imported global is not supported");
+        }
+    }
+
+    return {module, std::move(memory), memory_max, std::move(globals)};
 }
 
 execution_result execute(Instance& instance, FuncIdx function, std::vector<uint64_t> args)
 {
+    // TODO: handle the case when function index points to import
     const auto& code = instance.module.codesec[function];
 
     std::vector<uint64_t> locals = std::move(args);
@@ -238,6 +256,21 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
             const auto idx = read<uint32_t>(immediates);
             assert(idx <= locals.size());
             locals[idx] = stack.back();
+            break;
+        }
+        case Instr::global_get:
+        {
+            const auto idx = read<uint32_t>(immediates);
+            assert(idx <= instance.globals.size());
+            stack.push(instance.globals[idx]);
+            break;
+        }
+        case Instr::global_set:
+        {
+            const auto idx = read<uint32_t>(immediates);
+            assert(idx <= instance.globals.size());
+            assert(instance.module.globalsec[idx].is_mutable);
+            instance.globals[idx] = stack.pop();
             break;
         }
         // FIXME: make this into a template?
