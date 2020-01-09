@@ -1391,6 +1391,33 @@ TEST(execute, i64_rotr)
     EXPECT_EQ(ret[0], 0xf00000000000000f);
 }
 
+TEST(execute, start_section)
+{
+    // In this test the start function (index 1) writes a i32 value to the memory
+    // and the same is read back in the "main" function (index 0).
+    fizzy::Module module;
+    module.startfunc = 1;
+    module.memorysec.emplace_back(fizzy::Memory{{1, 1}});
+    module.codesec.emplace_back(
+        fizzy::Code{0, {fizzy::Instr::i32_const, fizzy::Instr::i32_load, fizzy::Instr::end},
+            {0, 0, 0, 0, 0, 0, 0, 0}});
+    module.codesec.emplace_back(fizzy::Code{0,
+        {fizzy::Instr::i32_const, fizzy::Instr::i32_const, fizzy::Instr::i32_store,
+            fizzy::Instr::end},
+        {42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
+
+    auto instance = fizzy::instantiate(module);
+    // Start function sets this
+    ASSERT_EQ(instance.memory.substr(0, 4), fizzy::from_hex("2a000000"));
+
+    const auto [trap, ret] = fizzy::execute(instance, 0, {});
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 42);
+    EXPECT_EQ(instance.memory.substr(0, 4), fizzy::from_hex("2a000000"));
+}
+
 TEST(execute, milestone1)
 {
     /*

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -193,6 +194,8 @@ struct Module
     std::vector<Memory> memorysec;
     // https://webassembly.github.io/spec/core/binary/modules.html#global-section
     std::vector<Global> globalsec;
+    // https://webassembly.github.io/spec/core/binary/modules.html#start-section
+    std::optional<FuncIdx> startfunc;
     // https://webassembly.github.io/spec/core/binary/modules.html#code-section
     std::vector<Code> codesec;
 };
