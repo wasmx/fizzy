@@ -6,13 +6,12 @@
 
 namespace fizzy
 {
-struct Instance
-{
-    const Module& module;
-};
-
 namespace
 {
+constexpr unsigned pagesize = 65536;
+// Set hard limit of 256MB of memory.
+constexpr auto memorylimit = 256 * 1024 * 1024ULL;
+
 class uint64_stack : public std::vector<uint64_t>
 {
 public:
@@ -29,6 +28,20 @@ public:
 
     uint64_t peek(difference_type depth = 1) const noexcept { return *(end() - depth); }
 };
+
+template <typename T>
+inline void store(bytes& input, size_t offset, T value) noexcept
+{
+    __builtin_memcpy(input.data() + offset, &value, sizeof(value));
+}
+
+template <typename T>
+inline T load(bytes_view input, size_t offset) noexcept
+{
+    T ret;
+    __builtin_memcpy(&ret, input.data() + offset, sizeof(ret));
+    return ret;
+}
 
 template <typename T>
 inline T read(const uint8_t*& input) noexcept
@@ -137,7 +150,11 @@ inline uint64_t popcnt64(uint64_t value) noexcept
 
 Instance instantiate(const Module& module)
 {
-    return {module};
+    // FIXME: set pages from proper section
+    constexpr unsigned pages = 1;
+    // NOTE: fill it with zeroes
+    bytes memory(pages * pagesize, 0);
+    return {module, std::move(memory)};
 }
 
 execution_result execute(Instance& instance, FuncIdx function, std::vector<uint64_t> args)
@@ -203,6 +220,94 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
             const auto idx = read<uint32_t>(immediates);
             assert(idx <= locals.size());
             locals[idx] = stack.back();
+            break;
+        }
+        // FIXME: make this into a template?
+        case Instr::i32_load:
+        {
+            const auto address = static_cast<uint32_t>(stack.pop());
+            // NOTE: alignment is dropped by the parser
+            const auto offset = read<uint32_t>(immediates);
+            if ((address + offset + sizeof(uint32_t)) > instance.memory.size())
+            {
+                trap = true;
+                goto end;
+            }
+            const auto ret = load<uint32_t>(instance.memory, address + offset);
+            stack.push(ret);
+            break;
+        }
+        // FIXME: make this into a template?
+        case Instr::i64_load:
+        {
+            const auto address = static_cast<uint32_t>(stack.pop());
+            // NOTE: alignment is dropped by the parser
+            const auto offset = read<uint32_t>(immediates);
+            if ((address + offset + sizeof(uint64_t)) > instance.memory.size())
+            {
+                trap = true;
+                goto end;
+            }
+            const auto ret = load<uint64_t>(instance.memory, address + offset);
+            stack.push(ret);
+            break;
+        }
+        // FIXME: make this into a template?
+        case Instr::i32_store:
+        {
+            const auto address = static_cast<uint32_t>(stack.pop());
+            // NOTE: alignment is dropped by the parser
+            const auto offset = read<uint32_t>(immediates);
+            const auto value = static_cast<uint32_t>(stack.pop());
+            if ((address + offset + sizeof(uint32_t)) > instance.memory.size())
+            {
+                trap = true;
+                goto end;
+            }
+            store<uint32_t>(instance.memory, address + offset, value);
+            break;
+        }
+        // FIXME: make this into a template?
+        case Instr::i64_store:
+        {
+            const auto address = static_cast<uint32_t>(stack.pop());
+            // NOTE: alignment is dropped by the parser
+            const auto offset = read<uint32_t>(immediates);
+            const auto value = static_cast<uint64_t>(stack.pop());
+            if ((address + offset + sizeof(uint64_t)) > instance.memory.size())
+            {
+                trap = true;
+                goto end;
+            }
+            store<uint64_t>(instance.memory, address + offset, value);
+            break;
+        }
+        case Instr::memory_size:
+        {
+            stack.push(static_cast<uint32_t>(instance.memory.size() / pagesize));
+            break;
+        }
+        case Instr::memory_grow:
+        {
+            const auto delta = static_cast<uint32_t>(stack.pop());
+            const auto cur_pages = instance.memory.size() / pagesize;
+            assert(cur_pages <= size_t(std::numeric_limits<int32_t>::max()));
+            const auto new_pages = cur_pages + delta;
+            assert(new_pages >= cur_pages);
+            // FIXME: check also against maximum allowed page size (from memory section)
+            uint32_t ret = static_cast<uint32_t>(cur_pages);
+            try
+            {
+                // TODO: remove this once section parsing is done (and enforce limit in parser)
+                if ((new_pages * pagesize) > memorylimit)
+                    throw std::bad_alloc();
+                instance.memory.resize(new_pages * pagesize);
+            }
+            catch (std::bad_alloc const&)
+            {
+                ret = static_cast<uint32_t>(-1);
+            }
+            stack.push(ret);
             break;
         }
         case Instr::i32_const:

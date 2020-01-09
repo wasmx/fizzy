@@ -143,6 +143,176 @@ TEST(execute, i64_const)
     EXPECT_EQ(ret[0], 0x0100000000420042ULL);
 }
 
+TEST(execute, i32_load)
+{
+    fizzy::Module module;
+    module.codesec.emplace_back(
+        fizzy::Code{0, {fizzy::Instr::local_get, fizzy::Instr::i32_load, fizzy::Instr::end},
+            {0, 0, 0, 0, 0, 0, 0, 0}});
+
+    auto instance = fizzy::instantiate(module);
+    instance.memory[0] = 42;
+    const auto [trap, ret] = fizzy::execute(instance, 0, {0});
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    ASSERT_EQ(ret[0], 42);
+}
+
+TEST(execute, i32_load_trap)
+{
+    fizzy::Module module;
+    module.codesec.emplace_back(
+        fizzy::Code{0, {fizzy::Instr::local_get, fizzy::Instr::i32_load, fizzy::Instr::end},
+            {0, 0, 0, 0, 0, 0, 0, 0}});
+
+    auto instance = fizzy::instantiate(module);
+    const auto [trap, ret] = fizzy::execute(instance, 0, {65537});
+
+    ASSERT_TRUE(trap);
+}
+
+TEST(execute, i64_load)
+{
+    fizzy::Module module;
+    module.codesec.emplace_back(
+        fizzy::Code{0, {fizzy::Instr::local_get, fizzy::Instr::i64_load, fizzy::Instr::end},
+            {0, 0, 0, 0, 0, 0, 0, 0}});
+
+    auto instance = fizzy::instantiate(module);
+    instance.memory[0] = 0x2a;
+    instance.memory[4] = 0x2a;
+    const auto [trap, ret] = fizzy::execute(instance, 0, {0});
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    ASSERT_EQ(ret[0], 0x2a0000002a);
+}
+
+TEST(execute, i64_load_trap)
+{
+    fizzy::Module module;
+    module.codesec.emplace_back(
+        fizzy::Code{0, {fizzy::Instr::local_get, fizzy::Instr::i64_load, fizzy::Instr::end},
+            {0, 0, 0, 0, 0, 0, 0, 0}});
+
+    auto instance = fizzy::instantiate(module);
+    const auto [trap, ret] = fizzy::execute(instance, 0, {65537});
+
+    ASSERT_TRUE(trap);
+}
+
+TEST(execute, i32_store)
+{
+    fizzy::Module module;
+    module.codesec.emplace_back(fizzy::Code{0,
+        {fizzy::Instr::local_get, fizzy::Instr::local_get, fizzy::Instr::i32_store,
+            fizzy::Instr::end},
+        {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0}});
+
+    auto instance = fizzy::instantiate(module);
+    const auto [trap, ret] = fizzy::execute(instance, 0, {42, 0});
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 0);
+    ASSERT_EQ(instance.memory.substr(0, 4), fizzy::from_hex("2a000000"));
+}
+
+TEST(execute, i32_store_trap)
+{
+    fizzy::Module module;
+    module.codesec.emplace_back(fizzy::Code{0,
+        {fizzy::Instr::local_get, fizzy::Instr::local_get, fizzy::Instr::i32_store,
+            fizzy::Instr::end},
+        {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0}});
+
+    auto instance = fizzy::instantiate(module);
+    const auto [trap, ret] = fizzy::execute(instance, 0, {42, 65537});
+
+    ASSERT_TRUE(trap);
+}
+
+TEST(execute, i64_store)
+{
+    fizzy::Module module;
+    module.codesec.emplace_back(fizzy::Code{0,
+        {fizzy::Instr::local_get, fizzy::Instr::local_get, fizzy::Instr::i64_store,
+            fizzy::Instr::end},
+        {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0}});
+
+    auto instance = fizzy::instantiate(module);
+    const auto [trap, ret] = fizzy::execute(instance, 0, {0x2a0000002a, 0});
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 0);
+    ASSERT_EQ(instance.memory.substr(0, 8), fizzy::from_hex("2a0000002a000000"));
+}
+
+TEST(execute, i64_store_trap)
+{
+    fizzy::Module module;
+    module.codesec.emplace_back(fizzy::Code{0,
+        {fizzy::Instr::local_get, fizzy::Instr::local_get, fizzy::Instr::i64_store,
+            fizzy::Instr::end},
+        {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0}});
+
+    auto instance = fizzy::instantiate(module);
+    const auto [trap, ret] = fizzy::execute(instance, 0, {0x2a0000002a, 65537});
+
+    ASSERT_TRUE(trap);
+}
+
+TEST(execute, memory_size)
+{
+    fizzy::Module module;
+    module.codesec.emplace_back(fizzy::Code{0, {fizzy::Instr::memory_size, fizzy::Instr::end}, {}});
+
+    const auto [trap, ret] = fizzy::execute(module, 0, {});
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+}
+
+TEST(execute, memory_grow)
+{
+    fizzy::Module module;
+    module.codesec.emplace_back(fizzy::Code{
+        0, {fizzy::Instr::local_get, fizzy::Instr::memory_grow, fizzy::Instr::end}, {0, 0, 0, 0}});
+
+    auto result = fizzy::execute(module, 0, {0});
+
+    ASSERT_FALSE(result.trapped);
+    ASSERT_EQ(result.stack.size(), 1);
+    EXPECT_EQ(result.stack[0], 1);
+
+    result = fizzy::execute(module, 0, {1});
+
+    ASSERT_FALSE(result.trapped);
+    ASSERT_EQ(result.stack.size(), 1);
+    EXPECT_EQ(result.stack[0], 1);
+
+    // 256MB memory.
+    result = fizzy::execute(module, 0, {4095});
+
+    ASSERT_FALSE(result.trapped);
+    ASSERT_EQ(result.stack.size(), 1);
+    EXPECT_EQ(result.stack[0], 1);
+
+    // >256MB memory.
+    result = fizzy::execute(module, 0, {4096});
+
+    ASSERT_FALSE(result.trapped);
+    ASSERT_EQ(result.stack.size(), 1);
+    EXPECT_EQ(result.stack[0], uint32_t(-1));
+
+    // Way too high (but still within bounds)
+    result = fizzy::execute(module, 0, {0xffffffe});
+
+    ASSERT_FALSE(result.trapped);
+    ASSERT_EQ(result.stack.size(), 1);
+    EXPECT_EQ(result.stack[0], uint32_t(-1));
+}
+
 TEST(execute, i32_eqz)
 {
     auto result = execute_unary_operation(fizzy::Instr::i32_eqz, 0);

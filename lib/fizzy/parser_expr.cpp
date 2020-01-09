@@ -29,6 +29,8 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         case Instr::end:
         case Instr::drop:
         case Instr::select:
+        case Instr::memory_size:
+        case Instr::memory_grow:
         case Instr::i32_eq:
         case Instr::i32_eqz:
         case Instr::i32_ne:
@@ -115,6 +117,21 @@ parser_result<Code> parse_expr(const uint8_t* pos)
             int64_t imm;
             std::tie(imm, pos) = leb128s_decode<int64_t>(pos);
             push(code.immediates, static_cast<uint64_t>(imm));
+            break;
+        }
+
+        case Instr::i32_load:
+        case Instr::i64_load:
+        case Instr::i32_store:
+        case Instr::i64_store:
+        {
+            // alignment
+            std::tie(std::ignore, pos) = leb128u_decode<uint32_t>(pos);
+
+            // offset
+            uint32_t imm;
+            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos);
+            push(code.immediates, imm);
             break;
         }
         }
