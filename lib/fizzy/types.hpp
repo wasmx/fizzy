@@ -42,6 +42,9 @@ using TypeIdx = uint32_t;
 // https://webassembly.github.io/spec/core/binary/modules.html#binary-funcidx
 using FuncIdx = uint32_t;
 
+// https://webassembly.github.io/spec/core/syntax/modules.html#syntax-memidx
+using MemIdx = uint32_t;
+
 /// Function locals.
 /// https://webassembly.github.io/spec/core/binary/modules.html#binary-local
 struct Locals
@@ -212,6 +215,14 @@ struct Code
     bytes immediates;
 };
 
+// https://webassembly.github.io/spec/core/binary/modules.html#data-section
+struct Data
+{
+    MemIdx memory_index;
+    ConstantExpression offset;
+    bytes init;
+};
+
 enum class SectionId : uint8_t
 {
     custom = 0,
@@ -246,6 +257,8 @@ struct Module
     std::optional<FuncIdx> startfunc;
     // https://webassembly.github.io/spec/core/binary/modules.html#code-section
     std::vector<Code> codesec;
+    // https://webassembly.github.io/spec/core/binary/modules.html#data-section
+    std::vector<Data> datasec;
 };
 
 }  // namespace fizzy
