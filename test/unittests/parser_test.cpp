@@ -285,6 +285,17 @@ TEST(parser, global_multi_const_inited)
     EXPECT_EQ(module.globalsec[1].init.value, uint32_t(-1));
 }
 
+TEST(parser, start)
+{
+    const auto section_contents = bytes{} + uint8_t{0x07};
+    const auto bin =
+        bytes{wasm_prefix} + uint8_t{0x08} + uint8_t(section_contents.size()) + section_contents;
+
+    const auto module = parse(bin);
+    EXPECT_TRUE(module.startfunc);
+    EXPECT_EQ(*module.startfunc, 7);
+}
+
 TEST(parser, code_with_empty_expr_2_locals)
 {
     // Func with 2x i32 locals, only 0x0b "end" instruction.

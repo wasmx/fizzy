@@ -106,6 +106,9 @@ Module parse(bytes_view input)
         case SectionId::global:
             std::tie(module.globalsec, it) = parser<std::vector<Global>>{}(it);
             break;
+        case SectionId::start:
+            std::tie(module.startfunc, it) = leb128u_decode<uint32_t>(it);
+            break;
         case SectionId::code:
             std::tie(module.codesec, it) = parser<std::vector<Code>>{}(it);
             break;
@@ -114,7 +117,6 @@ Module parse(bytes_view input)
         case SectionId::function:
         case SectionId::table:
         case SectionId::export_:
-        case SectionId::start:
         case SectionId::element:
         case SectionId::data:
             // These sections are ignored for now.
