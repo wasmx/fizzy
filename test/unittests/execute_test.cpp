@@ -117,6 +117,86 @@ TEST(execute, local_tee)
     EXPECT_EQ(ret[0], 42);
 }
 
+TEST(execute, global_get)
+{
+    fizzy::Module module;
+    module.globalsec.emplace_back(fizzy::Global{true, fizzy::GlobalInitType::constant, {42}});
+
+    module.codesec.emplace_back(
+        fizzy::Code{0, {fizzy::Instr::global_get, fizzy::Instr::end}, {0, 0, 0, 0}});
+
+    auto instance = fizzy::instantiate(module);
+
+    const auto [trap, ret] = fizzy::execute(instance, 0, {});
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 42);
+}
+
+TEST(execute, global_get_two_globals)
+{
+    fizzy::Module module;
+    module.globalsec.emplace_back(fizzy::Global{true, fizzy::GlobalInitType::constant, {42}});
+    module.globalsec.emplace_back(fizzy::Global{true, fizzy::GlobalInitType::constant, {43}});
+
+    module.codesec.emplace_back(
+        fizzy::Code{0, {fizzy::Instr::global_get, fizzy::Instr::end}, {0, 0, 0, 0}});
+    module.codesec.emplace_back(
+        fizzy::Code{0, {fizzy::Instr::global_get, fizzy::Instr::end}, {1, 0, 0, 0}});
+
+    auto instance = fizzy::instantiate(module);
+
+    auto [trap, ret] = fizzy::execute(instance, 0, {});
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 42);
+
+    auto [trap2, ret2] = fizzy::execute(instance, 1, {});
+
+    ASSERT_FALSE(trap2);
+    ASSERT_EQ(ret2.size(), 1);
+    EXPECT_EQ(ret2[0], 43);
+}
+
+TEST(execute, global_set)
+{
+    fizzy::Module module;
+    module.globalsec.emplace_back(fizzy::Global{true, fizzy::GlobalInitType::constant, {41}});
+
+    module.codesec.emplace_back(
+        fizzy::Code{0, {fizzy::Instr::i32_const, fizzy::Instr::global_set, fizzy::Instr::end},
+            {42, 0, 0, 0, 0, 0, 0, 0}});
+
+    auto instance = fizzy::instantiate(module);
+
+    const auto [trap, ret] = fizzy::execute(instance, 0, {});
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(instance.globals[0], 42);
+}
+
+TEST(execute, global_set_two_globals)
+{
+    fizzy::Module module;
+    module.globalsec.emplace_back(fizzy::Global{true, fizzy::GlobalInitType::constant, {42}});
+    module.globalsec.emplace_back(fizzy::Global{true, fizzy::GlobalInitType::constant, {43}});
+
+    module.codesec.emplace_back(fizzy::Code{0,
+        {fizzy::Instr::i32_const, fizzy::Instr::global_set, fizzy::Instr::i32_const,
+            fizzy::Instr::global_set, fizzy::Instr::end},
+        {44, 0, 0, 0, 0, 0, 0, 0, 45, 0, 0, 0, 1, 0, 0, 0}});
+
+    auto instance = fizzy::instantiate(module);
+
+    const auto [trap, ret] = fizzy::execute(instance, 0, {});
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(instance.globals[0], 44);
+    ASSERT_EQ(instance.globals[1], 45);
+}
+
 TEST(execute, i32_const)
 {
     fizzy::Module module;
