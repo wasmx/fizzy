@@ -8,9 +8,9 @@ namespace fizzy
 {
 namespace
 {
-constexpr unsigned pagesize = 65536;
+constexpr unsigned page_size = 65536;
 // Set hard limit of 256MB of memory.
-constexpr auto memorylimit = 256 * 1024 * 1024ULL;
+constexpr auto memory_pages_limit = (256 * 1024 * 1024ULL) / page_size;
 
 class uint64_stack : public std::vector<uint64_t>
 {
@@ -150,11 +150,29 @@ inline uint64_t popcnt64(uint64_t value) noexcept
 
 Instance instantiate(const Module& module)
 {
-    // FIXME: set pages from proper section
-    constexpr unsigned pages = 1;
+    size_t memory_min, memory_max;
+    if (module.memorysec.size() > 1)
+    {
+        // FIXME: better error handling
+        throw std::runtime_error("Cannot support more than 1 memory section.");
+    }
+    else if (module.memorysec.size() > 0)
+    {
+        memory_min = module.memorysec[0].limits.min;
+        memory_max = module.memorysec[0].limits.max;
+        // FIXME: better error handling
+        if (memory_max > memory_pages_limit)
+            throw std::runtime_error("Cannot exceed hard memory limit of " +
+                                     std::to_string(memory_pages_limit * page_size) + " bytes");
+    }
+    else
+    {
+        memory_min = 0;
+        memory_max = memory_pages_limit;
+    }
     // NOTE: fill it with zeroes
-    bytes memory(pages * pagesize, 0);
-    return {module, std::move(memory)};
+    bytes memory(memory_min * page_size, 0);
+    return {module, std::move(memory), memory_max};
 }
 
 execution_result execute(Instance& instance, FuncIdx function, std::vector<uint64_t> args)
@@ -284,24 +302,22 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         }
         case Instr::memory_size:
         {
-            stack.push(static_cast<uint32_t>(instance.memory.size() / pagesize));
+            stack.push(static_cast<uint32_t>(instance.memory.size() / page_size));
             break;
         }
         case Instr::memory_grow:
         {
             const auto delta = static_cast<uint32_t>(stack.pop());
-            const auto cur_pages = instance.memory.size() / pagesize;
+            const auto cur_pages = instance.memory.size() / page_size;
             assert(cur_pages <= size_t(std::numeric_limits<int32_t>::max()));
             const auto new_pages = cur_pages + delta;
             assert(new_pages >= cur_pages);
-            // FIXME: check also against maximum allowed page size (from memory section)
             uint32_t ret = static_cast<uint32_t>(cur_pages);
             try
             {
-                // TODO: remove this once section parsing is done (and enforce limit in parser)
-                if ((new_pages * pagesize) > memorylimit)
+                if (new_pages > instance.memory_max_pages)
                     throw std::bad_alloc();
-                instance.memory.resize(new_pages * pagesize);
+                instance.memory.resize(new_pages * page_size);
             }
             catch (std::bad_alloc const&)
             {

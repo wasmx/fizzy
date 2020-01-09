@@ -146,6 +146,7 @@ TEST(execute, i64_const)
 TEST(execute, i32_load)
 {
     fizzy::Module module;
+    module.memorysec.emplace_back(fizzy::Memory{{1, 1}});
     module.codesec.emplace_back(
         fizzy::Code{0, {fizzy::Instr::local_get, fizzy::Instr::i32_load, fizzy::Instr::end},
             {0, 0, 0, 0, 0, 0, 0, 0}});
@@ -162,6 +163,7 @@ TEST(execute, i32_load)
 TEST(execute, i32_load_trap)
 {
     fizzy::Module module;
+    module.memorysec.emplace_back(fizzy::Memory{{1, 1}});
     module.codesec.emplace_back(
         fizzy::Code{0, {fizzy::Instr::local_get, fizzy::Instr::i32_load, fizzy::Instr::end},
             {0, 0, 0, 0, 0, 0, 0, 0}});
@@ -175,6 +177,7 @@ TEST(execute, i32_load_trap)
 TEST(execute, i64_load)
 {
     fizzy::Module module;
+    module.memorysec.emplace_back(fizzy::Memory{{1, 1}});
     module.codesec.emplace_back(
         fizzy::Code{0, {fizzy::Instr::local_get, fizzy::Instr::i64_load, fizzy::Instr::end},
             {0, 0, 0, 0, 0, 0, 0, 0}});
@@ -192,6 +195,7 @@ TEST(execute, i64_load)
 TEST(execute, i64_load_trap)
 {
     fizzy::Module module;
+    module.memorysec.emplace_back(fizzy::Memory{{1, 1}});
     module.codesec.emplace_back(
         fizzy::Code{0, {fizzy::Instr::local_get, fizzy::Instr::i64_load, fizzy::Instr::end},
             {0, 0, 0, 0, 0, 0, 0, 0}});
@@ -205,6 +209,7 @@ TEST(execute, i64_load_trap)
 TEST(execute, i32_store)
 {
     fizzy::Module module;
+    module.memorysec.emplace_back(fizzy::Memory{{1, 1}});
     module.codesec.emplace_back(fizzy::Code{0,
         {fizzy::Instr::local_get, fizzy::Instr::local_get, fizzy::Instr::i32_store,
             fizzy::Instr::end},
@@ -221,6 +226,7 @@ TEST(execute, i32_store)
 TEST(execute, i32_store_trap)
 {
     fizzy::Module module;
+    module.memorysec.emplace_back(fizzy::Memory{{1, 1}});
     module.codesec.emplace_back(fizzy::Code{0,
         {fizzy::Instr::local_get, fizzy::Instr::local_get, fizzy::Instr::i32_store,
             fizzy::Instr::end},
@@ -235,6 +241,7 @@ TEST(execute, i32_store_trap)
 TEST(execute, i64_store)
 {
     fizzy::Module module;
+    module.memorysec.emplace_back(fizzy::Memory{{1, 1}});
     module.codesec.emplace_back(fizzy::Code{0,
         {fizzy::Instr::local_get, fizzy::Instr::local_get, fizzy::Instr::i64_store,
             fizzy::Instr::end},
@@ -251,6 +258,7 @@ TEST(execute, i64_store)
 TEST(execute, i64_store_trap)
 {
     fizzy::Module module;
+    module.memorysec.emplace_back(fizzy::Memory{{1, 1}});
     module.codesec.emplace_back(fizzy::Code{0,
         {fizzy::Instr::local_get, fizzy::Instr::local_get, fizzy::Instr::i64_store,
             fizzy::Instr::end},
@@ -265,6 +273,7 @@ TEST(execute, i64_store_trap)
 TEST(execute, memory_size)
 {
     fizzy::Module module;
+    module.memorysec.emplace_back(fizzy::Memory{{1, 1}});
     module.codesec.emplace_back(fizzy::Code{0, {fizzy::Instr::memory_size, fizzy::Instr::end}, {}});
 
     const auto [trap, ret] = fizzy::execute(module, 0, {});
@@ -276,6 +285,7 @@ TEST(execute, memory_size)
 TEST(execute, memory_grow)
 {
     fizzy::Module module;
+    module.memorysec.emplace_back(fizzy::Memory{{1, 4096}});
     module.codesec.emplace_back(fizzy::Code{
         0, {fizzy::Instr::local_get, fizzy::Instr::memory_grow, fizzy::Instr::end}, {0, 0, 0, 0}});
 
