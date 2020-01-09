@@ -46,9 +46,21 @@ Module parse(bytes_view input)
         case SectionId::code:
             std::tie(module.codesec, it) = parser<std::vector<Code>>{}(it);
             break;
-        default:
+        case SectionId::custom:
+        case SectionId::import:
+        case SectionId::function:
+        case SectionId::table:
+        case SectionId::global:
+        case SectionId::export_:
+        case SectionId::start:
+        case SectionId::element:
+        case SectionId::data:
+            // These sections are ignored for now.
             it += size;
             break;
+        default:
+            throw parser_error{
+                "unknown section encountered " + std::to_string(static_cast<int>(id))};
         }
 
         if (it != expected_end_pos)
