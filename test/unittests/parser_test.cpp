@@ -35,7 +35,7 @@ TEST(parser, limits_min)
     const auto input = from_hex("007f");
     const auto [limits, pos] = parser<Limits>{}(input.data());
     EXPECT_EQ(limits.min, 0x7f);
-    EXPECT_EQ(limits.max, std::numeric_limits<uint32_t>::max());
+    EXPECT_FALSE(limits.max.has_value());
 }
 
 TEST(parser, limits_minmax)
@@ -43,7 +43,8 @@ TEST(parser, limits_minmax)
     const auto input = from_hex("01207f");
     const auto [limits, pos] = parser<Limits>{}(input.data());
     EXPECT_EQ(limits.min, 0x20);
-    EXPECT_EQ(limits.max, 0x7f);
+    EXPECT_TRUE(limits.max.has_value());
+    EXPECT_EQ(*limits.max, 0x7f);
 }
 
 TEST(parser, DISABLED_limits_min_invalid_too_short)

@@ -72,7 +72,6 @@ struct parser<Limits>
         {
         case 0x00:
             std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos);
-            result.max = std::numeric_limits<uint32_t>::max();
             return {result, pos};
         case 0x01:
             std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos);

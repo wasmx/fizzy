@@ -29,7 +29,7 @@ struct FuncType
 struct Limits
 {
     uint32_t min;
-    uint32_t max;
+    std::optional<uint32_t> max;
 };
 
 // https://webassembly.github.io/spec/core/binary/modules.html#binary-typeidx
