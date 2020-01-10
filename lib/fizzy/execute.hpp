@@ -32,4 +32,7 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
 
 // TODO: remove this helper
 execution_result execute(const Module& module, FuncIdx function, std::vector<uint64_t> args);
+
+// Find exported function index by name.
+std::optional<FuncIdx> find_exported_function(const Module& module, std::string_view name);
 }  // namespace fizzy
