@@ -65,6 +65,7 @@ enum class Instr : uint8_t
     end = 0x0b,
     br = 0x0c,
     br_if = 0x0d,
+    return_ = 0x0f,
     call = 0x10,
     drop = 0x1a,
     select = 0x1b,
