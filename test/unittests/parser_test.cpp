@@ -191,6 +191,29 @@ TEST(parser, type_section_with_multiple_functypes)
     EXPECT_EQ(module.codesec.size(), 0);
 }
 
+TEST(parser, function_section_with_single_function)
+{
+    const auto section_contents = bytes{0x01, 0x0};
+    const auto bin =
+        bytes{wasm_prefix} + uint8_t{0x03} + uint8_t(section_contents.size()) + section_contents;
+    const auto module = parse(bin);
+    ASSERT_EQ(module.funcsec.size(), 1);
+    EXPECT_EQ(module.funcsec[0], 0);
+}
+
+TEST(parser, function_section_with_multiple_functions)
+{
+    const auto section_contents = bytes{0x04, 0x0, 0x01, 0x42, 0xff, 0x1};
+    const auto bin =
+        bytes{wasm_prefix} + uint8_t{0x03} + uint8_t(section_contents.size()) + section_contents;
+    const auto module = parse(bin);
+    ASSERT_EQ(module.funcsec.size(), 4);
+    EXPECT_EQ(module.funcsec[0], 0);
+    EXPECT_EQ(module.funcsec[1], 1);
+    EXPECT_EQ(module.funcsec[2], 0x42);
+    EXPECT_EQ(module.funcsec[3], 0xff);
+}
+
 TEST(parser, memory_single_min_limit)
 {
     const auto section_contents = bytes{} + uint8_t{0x01} + uint8_t{0x00} + uint8_t{0x7f};
