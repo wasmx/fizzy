@@ -154,6 +154,23 @@ struct Global
     } init;
 };
 
+enum class ExportType : uint8_t
+{
+    Function = 0x00,
+    Table = 0x01,
+    Memory = 0x02,
+    Global = 0x03
+};
+
+
+// https://webassembly.github.io/spec/core/binary/modules.html#export-section
+struct Export
+{
+    std::string name;
+    ExportType type = ExportType::Function;
+    uint32_t index = 0;
+};
+
 // https://webassembly.github.io/spec/core/binary/modules.html#code-section
 struct Code
 {
@@ -194,6 +211,8 @@ struct Module
     std::vector<Memory> memorysec;
     // https://webassembly.github.io/spec/core/binary/modules.html#global-section
     std::vector<Global> globalsec;
+    // https://webassembly.github.io/spec/core/binary/modules.html#export-section
+    std::vector<Export> exportsec;
     // https://webassembly.github.io/spec/core/binary/modules.html#start-section
     std::optional<FuncIdx> startfunc;
     // https://webassembly.github.io/spec/core/binary/modules.html#code-section

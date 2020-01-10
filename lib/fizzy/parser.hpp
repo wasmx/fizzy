@@ -27,6 +27,17 @@ struct parser
 };
 
 template <>
+struct parser<uint8_t>
+{
+    parser_result<uint8_t> operator()(const uint8_t* pos)
+    {
+        const auto result = *pos;
+        ++pos;
+        return {result, pos};
+    }
+};
+
+template <>
 struct parser<ValType>
 {
     parser_result<ValType> operator()(const uint8_t* pos)
