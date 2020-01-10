@@ -476,3 +476,21 @@ TEST(parser, milestone1)
                                      "02000000"
                                      "00000000"));
 }
+
+TEST(parser, instr_loop)
+{
+    const auto loop_without_imm = from_hex("030b");
+    EXPECT_THROW(parse_expr(loop_without_imm.data()), parser_error);
+
+    const auto loop_missing_end = from_hex("03400b");
+    EXPECT_THROW(parse_expr(loop_missing_end.data()), parser_error);
+
+    const auto loop_void_empty = from_hex("03400b0b");
+    const auto [code1, pos1] = parse_expr(loop_void_empty.data());
+    // FIXME: Extend end parsing - it not always terminates the whole program.
+    EXPECT_EQ(code1.instructions, (std::vector{Instr::loop, Instr::end}));
+    EXPECT_EQ(code1.immediates.size(), 0);
+
+    const auto loop_i32_empty = from_hex("037f0b0b");
+    EXPECT_THROW(parse_expr(loop_i32_empty.data()), parser_error);  // loop arity != 0.
+}
