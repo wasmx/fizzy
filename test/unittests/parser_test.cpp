@@ -519,3 +519,32 @@ TEST(parser, instr_block)
         "02000000"
         "09000000");
 }
+
+TEST(parser, block_br)
+{
+    // nop
+    // block
+    //   i32.const 0xa
+    //   local.set 1
+    //   br 0
+    //   i32.const 0xb
+    //   local.set 1
+    // end
+    // local.get 1
+    // end
+
+    const auto code_bin = from_hex("010240410a21010c00410b21010b20010b");
+    const auto [code, pos] = parse_expr(code_bin.data());
+    EXPECT_EQ(code.instructions,
+        (std::vector{Instr::nop, Instr::block, Instr::i32_const, Instr::local_set, Instr::br,
+            Instr::i32_const, Instr::local_set, Instr::end, Instr::local_get, Instr::end}));
+    EXPECT_EQ(hex(code.immediates), hex(from_hex("00"
+                                                 "08000000"
+                                                 "1d000000"
+                                                 "0a000000"
+                                                 "01000000"
+                                                 "00000000"
+                                                 "0b000000"
+                                                 "01000000"
+                                                 "01000000")));
+}
