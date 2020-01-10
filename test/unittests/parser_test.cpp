@@ -487,10 +487,35 @@ TEST(parser, instr_loop)
 
     const auto loop_void_empty = from_hex("03400b0b");
     const auto [code1, pos1] = parse_expr(loop_void_empty.data());
-    // FIXME: Extend end parsing - it not always terminates the whole program.
-    EXPECT_EQ(code1.instructions, (std::vector{Instr::loop, Instr::end}));
+    EXPECT_EQ(code1.instructions, (std::vector{Instr::loop, Instr::end, Instr::end}));
     EXPECT_EQ(code1.immediates.size(), 0);
 
     const auto loop_i32_empty = from_hex("037f0b0b");
     EXPECT_THROW(parse_expr(loop_i32_empty.data()), parser_error);  // loop arity != 0.
+}
+
+TEST(parser, instr_block)
+{
+    const auto wrong_type = from_hex("0200");
+    EXPECT_THROW(parse_expr(wrong_type.data()), parser_error);
+
+    const auto block_missing_end = from_hex("02400b");
+    EXPECT_THROW(parse_expr(block_missing_end.data()), parser_error);
+
+    const auto empty = from_hex("010102400b0b");
+    const auto [code1, pos1] = parse_expr(empty.data());
+    EXPECT_EQ(code1.instructions,
+        (std::vector{Instr::nop, Instr::nop, Instr::block, Instr::end, Instr::end}));
+    EXPECT_EQ(hex(code1.immediates),
+        "00"
+        "04000000"
+        "09000000");
+
+    const auto block_i64 = from_hex("027e0b0b");
+    const auto [code2, pos2] = parse_expr(block_i64.data());
+    EXPECT_EQ(code2.instructions, (std::vector{Instr::block, Instr::end, Instr::end}));
+    EXPECT_EQ(hex(code2.immediates),
+        "01"
+        "02000000"
+        "09000000");
 }

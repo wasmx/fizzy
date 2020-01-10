@@ -54,6 +54,7 @@ enum class Instr : uint8_t
 {
     unreachable = 0x00,
     nop = 0x01,
+    block = 0x02,
     loop = 0x03,
     end = 0x0b,
     call = 0x10,
