@@ -54,6 +54,42 @@ TEST(execute, call)
     EXPECT_EQ(ret[0], 0x2a002a);
 }
 
+TEST(execute, call_trap)
+{
+    fizzy::Module module;
+    module.typesec.emplace_back(fizzy::FuncType{{}, {fizzy::ValType::i32}});
+    module.funcsec.emplace_back(fizzy::TypeIdx{0});
+    module.funcsec.emplace_back(fizzy::TypeIdx{0});
+    module.codesec.emplace_back(fizzy::Code{0, {fizzy::Instr::unreachable, fizzy::Instr::end}, {}});
+    module.codesec.emplace_back(
+        fizzy::Code{0, {fizzy::Instr::call, fizzy::Instr::end}, {0, 0, 0, 0}});
+
+    const auto [trap, ret] = fizzy::execute(module, 1, {});
+
+    ASSERT_TRUE(trap);
+}
+
+TEST(execute, call_with_arguments)
+{
+    fizzy::Module module;
+    module.typesec.emplace_back(
+        fizzy::FuncType{{fizzy::ValType::i32, fizzy::ValType::i32}, {fizzy::ValType::i32}});
+    module.typesec.emplace_back(fizzy::FuncType{{}, {fizzy::ValType::i32}});
+    module.funcsec.emplace_back(fizzy::TypeIdx{0});
+    module.funcsec.emplace_back(fizzy::TypeIdx{1});
+    module.codesec.emplace_back(
+        fizzy::Code{2, {fizzy::Instr::local_get, fizzy::Instr::end}, {0, 0, 0, 0}});
+    module.codesec.emplace_back(fizzy::Code{0,
+        {fizzy::Instr::i32_const, fizzy::Instr::i32_const, fizzy::Instr::call, fizzy::Instr::end},
+        {1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0}});
+
+    const auto [trap, ret] = fizzy::execute(module, 1, {});
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 0x2);
+}
+
 TEST(execute, drop)
 {
     fizzy::Module module;
