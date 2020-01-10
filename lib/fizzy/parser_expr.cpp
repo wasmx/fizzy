@@ -174,6 +174,8 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         case Instr::local_tee:
         case Instr::global_get:
         case Instr::global_set:
+        case Instr::br:
+        case Instr::br_if:
         case Instr::call:
         {
             uint32_t imm;
