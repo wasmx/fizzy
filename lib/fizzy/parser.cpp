@@ -182,6 +182,24 @@ struct parser<Export>
     }
 };
 
+template <>
+struct parser<Data>
+{
+    parser_result<Data> operator()(const uint8_t* pos)
+    {
+        MemIdx memory_index;
+        std::tie(memory_index, pos) = leb128u_decode<uint32_t>(pos);
+
+        ConstantExpression offset;
+        std::tie(offset, pos) = parser<ConstantExpression>{}(pos);
+
+        std::vector<uint8_t> init;
+        std::tie(init, pos) = parser<std::vector<uint8_t>>{}(pos);
+
+        return {{memory_index, offset, bytes(init.data(), init.size())}, pos};
+    }
+};
+
 Module parse(bytes_view input)
 {
     if (input.substr(0, wasm_prefix.size()) != wasm_prefix)
@@ -222,10 +240,12 @@ Module parse(bytes_view input)
         case SectionId::code:
             std::tie(module.codesec, it) = parser<std::vector<Code>>{}(it);
             break;
+        case SectionId::data:
+            std::tie(module.datasec, it) = parser<std::vector<Data>>{}(it);
+            break;
         case SectionId::custom:
         case SectionId::table:
         case SectionId::element:
-        case SectionId::data:
             // These sections are ignored for now.
             it += size;
             break;
