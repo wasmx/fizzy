@@ -38,6 +38,12 @@ struct parser<uint8_t>
 };
 
 template <>
+struct parser<uint32_t>
+{
+    parser_result<uint32_t> operator()(const uint8_t* pos) { return leb128u_decode<uint32_t>(pos); }
+};
+
+template <>
 struct parser<ValType>
 {
     parser_result<ValType> operator()(const uint8_t* pos)
