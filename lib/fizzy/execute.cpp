@@ -753,4 +753,15 @@ execution_result execute(const Module& module, FuncIdx function, std::vector<uin
     auto instance = instantiate(module);
     return execute(instance, function, args);
 }
+
+std::optional<FuncIdx> find_exported_function(const Module& module, std::string_view name)
+{
+    for (const auto& export_ : module.exportsec)
+    {
+        if (export_.type == ExportType::Function && name == export_.name)
+            return export_.index;
+    }
+
+    return {};
+}
 }  // namespace fizzy

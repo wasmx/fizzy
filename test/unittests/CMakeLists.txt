@@ -9,6 +9,7 @@ target_include_directories(fizzy-unittests PRIVATE ${PROJECT_SOURCE_DIR}/lib/fiz
 
 target_sources(
     fizzy-unittests PRIVATE
+    api_test.cpp
     end_to_end_test.cpp
     execute_control_test.cpp
     execute_test.cpp

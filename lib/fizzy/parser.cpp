@@ -81,6 +81,42 @@ struct parser<Global>
     }
 };
 
+template <>
+struct parser<Export>
+{
+    parser_result<Export> operator()(const uint8_t* pos)
+    {
+        std::vector<uint8_t> name;
+        std::tie(name, pos) = parser<std::vector<uint8_t>>{}(pos);
+
+        Export result;
+        result.name.assign(name.begin(), name.end());
+
+        const uint8_t type = *pos++;
+        switch (type)
+        {
+        case 0x00:
+            result.type = ExportType::Function;
+            break;
+        case 0x01:
+            result.type = ExportType::Table;
+            break;
+        case 0x02:
+            result.type = ExportType::Memory;
+            break;
+        case 0x03:
+            result.type = ExportType::Global;
+            break;
+        default:
+            throw parser_error{"unexpected export type value " + std::to_string(type)};
+        }
+
+        std::tie(result.index, pos) = leb128u_decode<uint32_t>(pos);
+
+        return {result, pos};
+    }
+};
+
 Module parse(bytes_view input)
 {
     if (input.substr(0, wasm_prefix.size()) != wasm_prefix)
@@ -106,6 +142,9 @@ Module parse(bytes_view input)
         case SectionId::global:
             std::tie(module.globalsec, it) = parser<std::vector<Global>>{}(it);
             break;
+        case SectionId::export_:
+            std::tie(module.exportsec, it) = parser<std::vector<Export>>{}(it);
+            break;
         case SectionId::start:
             std::tie(module.startfunc, it) = leb128u_decode<uint32_t>(it);
             break;
@@ -116,7 +155,6 @@ Module parse(bytes_view input)
         case SectionId::import:
         case SectionId::function:
         case SectionId::table:
-        case SectionId::export_:
         case SectionId::element:
         case SectionId::data:
             // These sections are ignored for now.
