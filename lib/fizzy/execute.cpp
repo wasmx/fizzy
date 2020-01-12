@@ -98,6 +98,12 @@ inline T rotr(T lhs, T rhs) noexcept
     return (lhs >> k) | (lhs << (std::numeric_limits<T>::digits - k));
 }
 
+template <typename T>
+inline T equal_zero(T value) noexcept
+{
+    return value == 0;
+}
+
 inline uint32_t clz32(uint32_t value) noexcept
 {
     // NOTE: Wasm specifies this case, but C/C++ intrinsic leaves it as undefined.
@@ -476,8 +482,7 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         }
         case Instr::i32_eqz:
         {
-            const auto value = static_cast<uint32_t>(stack.pop());
-            stack.push(value == 0);
+            unary_op(stack, equal_zero<uint32_t>);
             break;
         }
         case Instr::i32_eq:
@@ -532,7 +537,7 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         }
         case Instr::i64_eqz:
         {
-            stack.push(stack.pop() == 0);
+            unary_op(stack, equal_zero<uint64_t>);
             break;
         }
         case Instr::i64_eq:
