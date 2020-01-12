@@ -457,12 +457,32 @@ TEST(parser, export_multiple)
 
 TEST(parser, start)
 {
-    const auto section_contents = "07"_bytes;
-    const auto bin = bytes{wasm_prefix} + make_section(8, section_contents);
+    const auto func_section = make_vec({"00"_bytes, "00"_bytes});
+    const auto start_section = "01"_bytes;
+    const auto bin =
+        bytes{wasm_prefix} + make_section(3, func_section) + make_section(8, start_section);
 
     const auto module = parse(bin);
     EXPECT_TRUE(module.startfunc);
-    EXPECT_EQ(*module.startfunc, 7);
+    EXPECT_EQ(*module.startfunc, 1);
+}
+
+TEST(parser, start_invalid_index)
+{
+    const auto func_section = make_vec({"00"_bytes, "00"_bytes});
+    const auto start_section = "02"_bytes;
+    const auto bin =
+        bytes{wasm_prefix} + make_section(3, func_section) + make_section(8, start_section);
+
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "invalid start function index");
+}
+
+TEST(parser, start_missing_funcsec)
+{
+    const auto start_section = "01"_bytes;
+    const auto bin = bytes{wasm_prefix} + make_section(8, start_section);
+
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "invalid start function index");
 }
 
 TEST(parser, element_section)

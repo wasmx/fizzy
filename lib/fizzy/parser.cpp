@@ -310,6 +310,9 @@ Module parse(bytes_view input)
             throw parser_error("element section encountered without a table section");
     }
 
+    if (module.startfunc && (*module.startfunc >= module.funcsec.size()))
+        throw parser_error{"invalid start function index"};
+
     return module;
 }
 }  // namespace fizzy
