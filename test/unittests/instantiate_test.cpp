@@ -38,6 +38,22 @@ TEST(instantiate, memory_single_unlimited)
     EXPECT_THROW(instantiate(module), std::runtime_error);
 }
 
+TEST(instantiate, memory_single_large_minimum)
+{
+    Module module;
+    module.memorysec.emplace_back(Memory{{(1024 * 1024 * 1024) / page_size, std::nullopt}});
+
+    EXPECT_THROW(instantiate(module), std::runtime_error);
+}
+
+TEST(instantiate, memory_single_large_maximum)
+{
+    Module module;
+    module.memorysec.emplace_back(Memory{{1, (1024 * 1024 * 1024) / page_size}});
+
+    EXPECT_THROW(instantiate(module), std::runtime_error);
+}
+
 TEST(instantiate, memory_multiple)
 {
     Module module;
