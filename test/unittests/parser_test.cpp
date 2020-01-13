@@ -478,6 +478,38 @@ TEST(parser, code_section_with_basic_instructions)
     EXPECT_EQ(module.codesec[0].immediates, from_hex("010000000200000003000000"));
 }
 
+TEST(parser, data_section)
+{
+    const auto section_contents = bytes{0x03, 0x00, 0x41, 0x01, 0x0b, 0x02, 0xaa, 0xff, 0x00, 0x41,
+        0x02, 0x0b, 0x02, 0x55, 0x55, 0x00, 0x23, 0x00, 0x0b, 0x02, 0x24, 0x24};
+    const auto bin =
+        bytes{wasm_prefix} + uint8_t{11} + uint8_t(section_contents.size()) + section_contents;
+
+    const auto module = parse(bin);
+    ASSERT_EQ(module.datasec.size(), 3);
+    EXPECT_EQ(module.datasec[0].memidx, 0);
+    EXPECT_EQ(module.datasec[0].offset.kind, ConstantExpression::Kind::Constant);
+    EXPECT_EQ(module.datasec[0].offset.value.constant, 1);
+    EXPECT_EQ(module.datasec[0].init, from_hex("aaff"));
+    EXPECT_EQ(module.datasec[1].memidx, 0);
+    EXPECT_EQ(module.datasec[1].offset.kind, ConstantExpression::Kind::Constant);
+    EXPECT_EQ(module.datasec[1].offset.value.constant, 2);
+    EXPECT_EQ(module.datasec[1].init, from_hex("5555"));
+    EXPECT_EQ(module.datasec[2].memidx, 0);
+    EXPECT_EQ(module.datasec[2].offset.kind, ConstantExpression::Kind::GlobalGet);
+    EXPECT_EQ(module.datasec[2].offset.value.global_index, 0);
+    EXPECT_EQ(module.datasec[2].init, from_hex("2424"));
+}
+
+TEST(parser, data_section_memidx_nonzero)
+{
+    const auto section_contents = bytes{0x01, 0x01, 0x41, 0x01, 0x0b, 0x01, 0x00};
+    const auto bin =
+        bytes{wasm_prefix} + uint8_t{11} + uint8_t(section_contents.size()) + section_contents;
+
+    EXPECT_THROW(parse({}), parser_error);
+}
+
 TEST(parser, milestone1)
 {
     /*
