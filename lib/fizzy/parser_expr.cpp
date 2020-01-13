@@ -5,10 +5,16 @@ namespace fizzy
 namespace
 {
 template <typename T>
+inline void store(uint8_t* dst, T value) noexcept
+{
+    __builtin_memcpy(dst, &value, sizeof(value));
+}
+
+template <typename T>
 inline void push(bytes& b, T value)
 {
     b.resize(b.size() + sizeof(value));
-    __builtin_memcpy(&b[b.size() - sizeof(value)], &value, sizeof(value));
+    store(&b[b.size() - sizeof(value)], value);
 }
 }  // namespace
 
