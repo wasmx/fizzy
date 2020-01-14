@@ -30,12 +30,15 @@ TEST(instantiate, memory_single)
     EXPECT_EQ(instance.memory_max_pages, 1);
 }
 
-TEST(instantiate, memory_single_unlimited)
+TEST(instantiate, memory_single_unspecified_maximum)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, std::nullopt}});
 
-    EXPECT_THROW(instantiate(module), std::runtime_error);
+    auto instance = instantiate(module);
+
+    ASSERT_EQ(instance.memory.size(), page_size);
+    EXPECT_EQ(instance.memory_max_pages * page_size, 256 * 1024 * 1024);
 }
 
 TEST(instantiate, memory_single_large_minimum)

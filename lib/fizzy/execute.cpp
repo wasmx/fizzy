@@ -162,7 +162,7 @@ Instance instantiate(const Module& module)
         if (module.memorysec[0].limits.max)
             memory_max = *module.memorysec[0].limits.max;
         else
-            memory_max = std::numeric_limits<uint32_t>::max();
+            memory_max = memory_pages_limit;
         // FIXME: better error handling
         if ((memory_min > memory_pages_limit) || (memory_max > memory_pages_limit))
             throw std::runtime_error("Cannot exceed hard memory limit of " +
