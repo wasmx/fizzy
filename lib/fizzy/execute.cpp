@@ -1,8 +1,7 @@
 #include "execute.hpp"
+#include "stack.hpp"
 #include "types.hpp"
 #include <cassert>
-#include <cstdint>
-#include <iostream>
 
 namespace fizzy
 {
@@ -12,22 +11,6 @@ constexpr unsigned page_size = 65536;
 // Set hard limit of 256MB of memory.
 constexpr auto memory_pages_limit = (256 * 1024 * 1024ULL) / page_size;
 
-class uint64_stack : public std::vector<uint64_t>
-{
-public:
-    using vector::vector;
-
-    void push(uint64_t val) { emplace_back(val); }
-
-    uint64_t pop()
-    {
-        auto const res = back();
-        pop_back();
-        return res;
-    }
-
-    uint64_t peek(difference_type depth = 1) const noexcept { return *(end() - depth); }
-};
 
 template <typename T>
 inline void store(bytes& input, size_t offset, T value) noexcept

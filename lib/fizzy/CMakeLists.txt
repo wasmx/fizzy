@@ -6,9 +6,10 @@ target_sources(
     execute.cpp
     execute.hpp
     leb128.hpp
-    types.hpp
     parser.cpp
     parser.hpp
     parser_expr.cpp
+    stack.hpp
+    types.hpp
 )
 target_compile_features(fizzy PUBLIC cxx_std_17)
