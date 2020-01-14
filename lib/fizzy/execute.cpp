@@ -141,7 +141,7 @@ inline uint64_t popcnt64(uint64_t value) noexcept
 }
 }  // namespace
 
-Instance instantiate(const Module& module)
+Instance instantiate(const Module& module, std::vector<ImportedFunction> imported_functions)
 {
     size_t memory_min, memory_max;
     if (module.memorysec.size() > 1)
@@ -200,7 +200,19 @@ Instance instantiate(const Module& module)
         }
     }
 
-    Instance instance = {module, std::move(memory), memory_max, std::move(globals)};
+    std::vector<TypeIdx> imported_function_types;
+    for (auto const& import : module.importsec)
+    {
+        if (import.kind == ExternalKind::Function)
+            imported_function_types.emplace_back(import.desc.function_type_index);
+    }
+    if (imported_functions.size() != imported_function_types.size())
+        throw std::runtime_error(
+            "Module requires " + std::to_string(imported_function_types.size()) +
+            " imported functions, " + std::to_string(imported_functions.size()) + " provided");
+
+    Instance instance = {module, std::move(memory), memory_max, std::move(globals),
+        std::move(imported_functions), std::move(imported_function_types)};
 
     // Run start function if present
     if (module.startfunc)
@@ -214,8 +226,13 @@ Instance instantiate(const Module& module)
 
 execution_result execute(Instance& instance, FuncIdx function, std::vector<uint64_t> args)
 {
-    // TODO: handle the case when function index points to import
-    const auto& code = instance.module.codesec[function];
+    if (function < instance.imported_functions.size())
+        return instance.imported_functions[function](instance, std::move(args));
+
+    const auto code_idx = function - instance.imported_functions.size();
+    assert(code_idx < instance.module.codesec.size());
+
+    const auto& code = instance.module.codesec[code_idx];
 
     std::vector<uint64_t> locals = std::move(args);
     locals.resize(locals.size() + code.local_count);
@@ -296,8 +313,11 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         case Instr::call:
         {
             const auto func_idx = read<uint32_t>(immediates);
-            assert(func_idx < instance.module.funcsec.size());
-            const auto type_idx = instance.module.funcsec[func_idx];
+            assert(func_idx < instance.imported_functions.size() + instance.module.funcsec.size());
+            const auto type_idx =
+                func_idx < instance.imported_functions.size() ?
+                    instance.imported_function_types[func_idx] :
+                    instance.module.funcsec[func_idx - instance.imported_functions.size()];
             assert(type_idx < instance.module.typesec.size());
 
             const auto num_inputs = instance.module.typesec[type_idx].inputs.size();
@@ -845,7 +865,7 @@ end:
 
 execution_result execute(const Module& module, FuncIdx function, std::vector<uint64_t> args)
 {
-    auto instance = instantiate(module);
+    auto instance = instantiate(module, {});
     return execute(instance, function, args);
 }
 
