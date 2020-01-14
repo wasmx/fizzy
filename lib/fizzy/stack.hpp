@@ -28,6 +28,4 @@ public:
 
     T peek(difference_type depth = 1) const noexcept { return *(end() - depth); }
 };
-
-using uint64_stack = stack<uint64_t>;
 }  // namespace fizzy

@@ -36,7 +36,7 @@ inline T read(const uint8_t*& input) noexcept
 }
 
 template <typename Op>
-inline void unary_op(uint64_stack& stack, Op op) noexcept
+inline void unary_op(stack<uint64_t>& stack, Op op) noexcept
 {
     using T = decltype(op(stack.pop()));
     const auto a = static_cast<T>(stack.pop());
@@ -44,7 +44,7 @@ inline void unary_op(uint64_stack& stack, Op op) noexcept
 }
 
 template <typename Op>
-inline void binary_op(uint64_stack& stack, Op op) noexcept
+inline void binary_op(stack<uint64_t>& stack, Op op) noexcept
 {
     using T = decltype(op(stack.pop(), stack.pop()));
     const auto val2 = static_cast<T>(stack.pop());
@@ -53,7 +53,7 @@ inline void binary_op(uint64_stack& stack, Op op) noexcept
 }
 
 template <typename T, template <typename> class Op>
-inline void comparison_op(uint64_stack& stack, Op<T> op) noexcept
+inline void comparison_op(stack<uint64_t>& stack, Op<T> op) noexcept
 {
     const auto val2 = static_cast<T>(stack.pop());
     const auto val1 = static_cast<T>(stack.pop());
@@ -196,7 +196,7 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
     locals.resize(locals.size() + code.local_count);
 
     // TODO: preallocate fixed stack depth properly
-    uint64_stack stack;
+    stack<uint64_t> stack;
 
     bool trap = false;
 
@@ -760,7 +760,7 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
     }
 
 end:
-    // move allows to return derived uint64_stack instance into base vector<uint64_t> value
+    // move allows to return derived stack<uint64_t> instance into base vector<uint64_t> value
     return {trap, std::move(stack)};
 }
 
