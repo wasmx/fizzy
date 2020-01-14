@@ -76,6 +76,8 @@ struct parser<Limits>
         case 0x01:
             std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos);
             std::tie(result.max, pos) = leb128u_decode<uint32_t>(pos);
+            if (result.min > *result.max)
+                throw parser_error("malformed limits (minimum is larger than maximum)");
             return {result, pos};
         default:
             throw parser_error{"invalid limits " + std::to_string(b)};

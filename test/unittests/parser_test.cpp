@@ -239,6 +239,17 @@ TEST(parser, memory_single_minmax_limit)
     EXPECT_EQ(module.memorysec[0].limits.max, 0x7f);
 }
 
+// Where minimum exceeds maximum
+TEST(parser, memory_single_malformed_minmax)
+{
+    const auto section_contents =
+        bytes{} + uint8_t{0x01} + uint8_t{0x01} + uint8_t{0x7f} + uint8_t{0x12};
+    const auto bin =
+        bytes{wasm_prefix} + uint8_t{0x05} + uint8_t(section_contents.size()) + section_contents;
+
+    EXPECT_THROW(parse(bin), parser_error);
+}
+
 TEST(parser, memory_multi_min_limit)
 {
     const auto section_contents =
