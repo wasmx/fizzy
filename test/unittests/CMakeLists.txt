@@ -13,6 +13,7 @@ target_sources(
     end_to_end_test.cpp
     execute_control_test.cpp
     execute_test.cpp
+    instantiate_test.cpp
     leb128_test.cpp
     parser_test.cpp
     utils.cpp
