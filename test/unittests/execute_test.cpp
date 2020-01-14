@@ -164,7 +164,7 @@ TEST(execute, local_tee)
 TEST(execute, global_get)
 {
     Module module;
-    module.globalsec.emplace_back(Global{true, {GlobalInitType::constant, {42}}});
+    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
 
     module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
 
@@ -180,8 +180,8 @@ TEST(execute, global_get)
 TEST(execute, global_get_two_globals)
 {
     Module module;
-    module.globalsec.emplace_back(Global{true, {GlobalInitType::constant, {42}}});
-    module.globalsec.emplace_back(Global{true, {GlobalInitType::constant, {43}}});
+    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
+    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {43}}});
 
     module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
     module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {1, 0, 0, 0}});
@@ -204,7 +204,7 @@ TEST(execute, global_get_two_globals)
 TEST(execute, global_set)
 {
     Module module;
-    module.globalsec.emplace_back(Global{true, {GlobalInitType::constant, {41}}});
+    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {41}}});
 
     module.codesec.emplace_back(
         Code{0, {Instr::i32_const, Instr::global_set, Instr::end}, {42, 0, 0, 0, 0, 0, 0, 0}});
@@ -220,8 +220,8 @@ TEST(execute, global_set)
 TEST(execute, global_set_two_globals)
 {
     Module module;
-    module.globalsec.emplace_back(Global{true, {GlobalInitType::constant, {42}}});
-    module.globalsec.emplace_back(Global{true, {GlobalInitType::constant, {43}}});
+    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
+    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {43}}});
 
     module.codesec.emplace_back(Code{0,
         {Instr::i32_const, Instr::global_set, Instr::i32_const, Instr::global_set, Instr::end},

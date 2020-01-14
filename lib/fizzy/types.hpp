@@ -136,20 +136,20 @@ struct Memory
     Limits limits;
 };
 
-enum class GlobalInitType : uint8_t
-{
-    constant,
-    global
-};
-
 struct ConstantExpression
 {
-    GlobalInitType init_type = GlobalInitType::constant;
+    enum class Kind : uint8_t
+    {
+        Constant,
+        GlobalGet
+    };
+
+    Kind kind = Kind::Constant;
     union
     {
-        uint64_t value = 0;
+        uint64_t constant = 0;
         uint32_t global_index;
-    } init;
+    } value;
 };
 
 // https://webassembly.github.io/spec/core/binary/modules.html#global-section

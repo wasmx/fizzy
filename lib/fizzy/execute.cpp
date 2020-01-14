@@ -181,8 +181,8 @@ Instance instantiate(const Module& module)
     globals.reserve(module.globalsec.size());
     for (auto const& global : module.globalsec)
     {
-        if (global.expression.init_type == GlobalInitType::constant)
-            globals.emplace_back(global.expression.init.value);
+        if (global.expression.kind == ConstantExpression::Kind::Constant)
+            globals.emplace_back(global.expression.value.constant);
         else
         {
             // TODO: initialize by imported global
