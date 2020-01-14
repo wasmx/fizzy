@@ -4,20 +4,30 @@
 
 namespace fizzy
 {
-class uint64_stack : public std::vector<uint64_t>
+template <typename T>
+class stack : public std::vector<T>
 {
 public:
-    using vector::vector;
+    using difference_type = typename std::vector<T>::difference_type;
 
-    void push(uint64_t val) { emplace_back(val); }
+    using std::vector<T>::vector;
 
-    uint64_t pop()
+    using std::vector<T>::back;
+    using std::vector<T>::emplace_back;
+    using std::vector<T>::end;
+    using std::vector<T>::pop_back;
+
+    void push(T val) { emplace_back(val); }
+
+    T pop()
     {
-        auto const res = back();
+        const auto res = back();
         pop_back();
         return res;
     }
 
-    uint64_t peek(difference_type depth = 1) const noexcept { return *(end() - depth); }
+    T peek(difference_type depth = 1) const noexcept { return *(end() - depth); }
 };
+
+using uint64_stack = stack<uint64_t>;
 }  // namespace fizzy
