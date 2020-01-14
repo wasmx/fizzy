@@ -1,16 +1,18 @@
 #include "execute.hpp"
 #include <gtest/gtest.h>
 
+using namespace fizzy;
+
 TEST(api, find_exported_function)
 {
-    fizzy::Module module;
-    module.exportsec.emplace_back(fizzy::Export{"foo1", fizzy::ExportType::Function, 0});
-    module.exportsec.emplace_back(fizzy::Export{"foo2", fizzy::ExportType::Function, 1});
-    module.exportsec.emplace_back(fizzy::Export{"foo3", fizzy::ExportType::Function, 2});
-    module.exportsec.emplace_back(fizzy::Export{"foo4", fizzy::ExportType::Function, 42});
-    module.exportsec.emplace_back(fizzy::Export{"mem", fizzy::ExportType::Memory, 0});
-    module.exportsec.emplace_back(fizzy::Export{"glob", fizzy::ExportType::Global, 0});
-    module.exportsec.emplace_back(fizzy::Export{"table", fizzy::ExportType::Table, 0});
+    Module module;
+    module.exportsec.emplace_back(Export{"foo1", ExportType::Function, 0});
+    module.exportsec.emplace_back(Export{"foo2", ExportType::Function, 1});
+    module.exportsec.emplace_back(Export{"foo3", ExportType::Function, 2});
+    module.exportsec.emplace_back(Export{"foo4", ExportType::Function, 42});
+    module.exportsec.emplace_back(Export{"mem", ExportType::Memory, 0});
+    module.exportsec.emplace_back(Export{"glob", ExportType::Global, 0});
+    module.exportsec.emplace_back(Export{"table", ExportType::Table, 0});
 
     auto optionalIdx = find_exported_function(module, "foo1");
     ASSERT_TRUE(optionalIdx);
