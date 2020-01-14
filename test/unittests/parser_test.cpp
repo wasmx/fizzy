@@ -272,8 +272,8 @@ TEST(parser, global_single_mutable_const_inited)
     const auto module = parse(bin);
     ASSERT_EQ(module.globalsec.size(), 1);
     EXPECT_TRUE(module.globalsec[0].is_mutable);
-    EXPECT_EQ(module.globalsec[0].init_type, GlobalInitType::constant);
-    EXPECT_EQ(module.globalsec[0].init.value, 0x10);
+    EXPECT_EQ(module.globalsec[0].expression.init_type, GlobalInitType::constant);
+    EXPECT_EQ(module.globalsec[0].expression.init.value, 0x10);
 }
 
 TEST(parser, global_single_const_global_inited)
@@ -285,8 +285,8 @@ TEST(parser, global_single_const_global_inited)
     const auto module = parse(bin);
     ASSERT_EQ(module.globalsec.size(), 1);
     EXPECT_FALSE(module.globalsec[0].is_mutable);
-    EXPECT_EQ(module.globalsec[0].init_type, GlobalInitType::global);
-    EXPECT_EQ(module.globalsec[0].init.global_index, 0x01);
+    EXPECT_EQ(module.globalsec[0].expression.init_type, GlobalInitType::global);
+    EXPECT_EQ(module.globalsec[0].expression.init.global_index, 0x01);
 }
 
 TEST(parser, global_single_multi_instructions_inited)
@@ -299,8 +299,8 @@ TEST(parser, global_single_multi_instructions_inited)
     const auto module = parse(bin);
     ASSERT_EQ(module.globalsec.size(), 1);
     EXPECT_TRUE(module.globalsec[0].is_mutable);
-    EXPECT_EQ(module.globalsec[0].init_type, GlobalInitType::constant);
-    EXPECT_EQ(module.globalsec[0].init.value, uint64_t(-1));
+    EXPECT_EQ(module.globalsec[0].expression.init_type, GlobalInitType::constant);
+    EXPECT_EQ(module.globalsec[0].expression.init.value, uint64_t(-1));
 }
 
 TEST(parser, global_multi_const_inited)
@@ -313,11 +313,11 @@ TEST(parser, global_multi_const_inited)
     const auto module = parse(bin);
     ASSERT_EQ(module.globalsec.size(), 2);
     EXPECT_FALSE(module.globalsec[0].is_mutable);
-    EXPECT_EQ(module.globalsec[0].init_type, GlobalInitType::constant);
-    EXPECT_EQ(module.globalsec[0].init.value, 0x01);
+    EXPECT_EQ(module.globalsec[0].expression.init_type, GlobalInitType::constant);
+    EXPECT_EQ(module.globalsec[0].expression.init.value, 0x01);
     EXPECT_TRUE(module.globalsec[1].is_mutable);
-    EXPECT_EQ(module.globalsec[1].init_type, GlobalInitType::constant);
-    EXPECT_EQ(module.globalsec[1].init.value, uint32_t(-1));
+    EXPECT_EQ(module.globalsec[1].expression.init_type, GlobalInitType::constant);
+    EXPECT_EQ(module.globalsec[1].expression.init.value, uint32_t(-1));
 }
 
 TEST(parser, export_single_function)

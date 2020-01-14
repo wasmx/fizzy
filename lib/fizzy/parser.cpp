@@ -37,6 +37,8 @@ struct parser<Global>
         result.is_mutable = (*pos == 0x01);
         ++pos;
 
+        ConstantExpression& expression = result.expression;
+
         Instr instr;
         do
         {
@@ -52,26 +54,26 @@ struct parser<Global>
 
             case Instr::global_get:
             {
-                result.init_type = GlobalInitType::global;
-                std::tie(result.init.global_index, pos) = leb128u_decode<uint32_t>(pos);
+                expression.init_type = GlobalInitType::global;
+                std::tie(expression.init.global_index, pos) = leb128u_decode<uint32_t>(pos);
                 break;
             }
 
             case Instr::i32_const:
             {
-                result.init_type = GlobalInitType::constant;
+                expression.init_type = GlobalInitType::constant;
                 int32_t value;
                 std::tie(value, pos) = leb128s_decode<int32_t>(pos);
-                result.init.value = static_cast<uint32_t>(value);
+                expression.init.value = static_cast<uint32_t>(value);
                 break;
             }
 
             case Instr::i64_const:
             {
-                result.init_type = GlobalInitType::constant;
+                expression.init_type = GlobalInitType::constant;
                 int64_t value;
                 std::tie(value, pos) = leb128s_decode<int64_t>(pos);
-                result.init.value = static_cast<uint64_t>(value);
+                expression.init.value = static_cast<uint64_t>(value);
                 break;
             }
             }

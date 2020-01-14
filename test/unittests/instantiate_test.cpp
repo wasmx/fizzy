@@ -69,7 +69,7 @@ TEST(instantiate, memory_multiple)
 TEST(instantiate, globals_single)
 {
     Module module;
-    module.globalsec.emplace_back(Global{true, GlobalInitType::constant, {42}});
+    module.globalsec.emplace_back(Global{true, {GlobalInitType::constant, {42}}});
 
     auto instance = instantiate(module);
 
@@ -80,8 +80,8 @@ TEST(instantiate, globals_single)
 TEST(instantiate, globals_multiple)
 {
     Module module;
-    module.globalsec.emplace_back(Global{true, GlobalInitType::constant, {42}});
-    module.globalsec.emplace_back(Global{false, GlobalInitType::constant, {43}});
+    module.globalsec.emplace_back(Global{true, {GlobalInitType::constant, {42}}});
+    module.globalsec.emplace_back(Global{false, {GlobalInitType::constant, {43}}});
 
     auto instance = instantiate(module);
 

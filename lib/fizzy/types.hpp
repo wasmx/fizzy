@@ -142,17 +142,21 @@ enum class GlobalInitType : uint8_t
     global
 };
 
-// https://webassembly.github.io/spec/core/binary/modules.html#global-section
-struct Global
+struct ConstantExpression
 {
-    bool is_mutable = false;
-
     GlobalInitType init_type = GlobalInitType::constant;
     union
     {
         uint64_t value = 0;
         uint32_t global_index;
     } init;
+};
+
+// https://webassembly.github.io/spec/core/binary/modules.html#global-section
+struct Global
+{
+    bool is_mutable = false;
+    ConstantExpression expression;
 };
 
 enum class ExportType : uint8_t
