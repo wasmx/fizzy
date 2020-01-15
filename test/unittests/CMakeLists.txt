@@ -16,6 +16,7 @@ target_sources(
     instantiate_test.cpp
     leb128_test.cpp
     parser_test.cpp
+    stack_test.cpp
     utils.cpp
     utils.hpp
 )
