@@ -280,7 +280,7 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         {
             const auto idx = read<uint32_t>(immediates);
             assert(idx <= locals.size());
-            locals[idx] = stack.back();
+            locals[idx] = stack.peek();
             break;
         }
         case Instr::global_get:
@@ -539,8 +539,8 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         }
         case Instr::i32_div_s:
         {
-            auto const rhs = static_cast<int32_t>(stack.peek(1));
-            auto const lhs = static_cast<int32_t>(stack.peek(2));
+            auto const rhs = static_cast<int32_t>(stack.peek(0));
+            auto const lhs = static_cast<int32_t>(stack.peek(1));
             if (rhs == 0 || (lhs == std::numeric_limits<int32_t>::min() && rhs == -1))
             {
                 trap = true;
@@ -551,7 +551,7 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         }
         case Instr::i32_div_u:
         {
-            auto const rhs = static_cast<uint32_t>(stack.peek(1));
+            auto const rhs = static_cast<uint32_t>(stack.peek());
             if (rhs == 0)
             {
                 trap = true;
@@ -562,7 +562,7 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         }
         case Instr::i32_rem_s:
         {
-            auto const rhs = static_cast<int32_t>(stack.peek(1));
+            auto const rhs = static_cast<int32_t>(stack.peek());
             if (rhs == 0)
             {
                 trap = true;
@@ -573,7 +573,7 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         }
         case Instr::i32_rem_u:
         {
-            auto const rhs = static_cast<uint32_t>(stack.peek(1));
+            auto const rhs = static_cast<uint32_t>(stack.peek());
             if (rhs == 0)
             {
                 trap = true;
@@ -654,8 +654,8 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         }
         case Instr::i64_div_s:
         {
-            auto const rhs = static_cast<int64_t>(stack.peek(1));
-            auto const lhs = static_cast<int64_t>(stack.peek(2));
+            auto const rhs = static_cast<int64_t>(stack.peek(0));
+            auto const lhs = static_cast<int64_t>(stack.peek(1));
             if (rhs == 0 || (lhs == std::numeric_limits<int64_t>::min() && rhs == -1))
             {
                 trap = true;
@@ -666,7 +666,7 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         }
         case Instr::i64_div_u:
         {
-            auto const rhs = static_cast<uint64_t>(stack.peek(1));
+            auto const rhs = static_cast<uint64_t>(stack.peek());
             if (rhs == 0)
             {
                 trap = true;
@@ -677,7 +677,7 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         }
         case Instr::i64_rem_s:
         {
-            auto const rhs = static_cast<int64_t>(stack.peek(1));
+            auto const rhs = static_cast<int64_t>(stack.peek());
             if (rhs == 0)
             {
                 trap = true;
@@ -688,7 +688,7 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         }
         case Instr::i64_rem_u:
         {
-            auto const rhs = static_cast<uint64_t>(stack.peek(1));
+            auto const rhs = static_cast<uint64_t>(stack.peek());
             if (rhs == 0)
             {
                 trap = true;
