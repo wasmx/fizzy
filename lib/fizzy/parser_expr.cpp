@@ -32,7 +32,7 @@ parser_result<Code> parse_expr(const uint8_t* pos)
 
     // The stack of labels allowing to distinguish between block and label instructions.
     // For a block instruction the value is the block's immediate offset.
-    stack<LabelPosition> label_positions;
+    Stack<LabelPosition> label_positions;
 
     bool continue_parsing = true;
     while (continue_parsing)

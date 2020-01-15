@@ -5,7 +5,7 @@
 namespace fizzy
 {
 template <typename T>
-class stack : public std::vector<T>
+class Stack : public std::vector<T>
 {
 public:
     using difference_type = typename std::vector<T>::difference_type;
