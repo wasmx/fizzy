@@ -18,6 +18,10 @@ enum class ValType : uint8_t
     i64 = 0x7e,
 };
 
+/// The byte meaning an empty wasm result type.
+/// https://webassembly.github.io/spec/core/binary/types.html#result-types
+constexpr uint8_t BlockTypeEmpty = 0x40;
+
 // https://webassembly.github.io/spec/core/binary/types.html#binary-functype
 struct FuncType
 {
@@ -50,7 +54,11 @@ enum class Instr : uint8_t
 {
     unreachable = 0x00,
     nop = 0x01,
+    block = 0x02,
+    loop = 0x03,
     end = 0x0b,
+    br = 0x0c,
+    br_if = 0x0d,
     call = 0x10,
     drop = 0x1a,
     select = 0x1b,

@@ -1,24 +1,43 @@
 #include "parser.hpp"
+#include "stack.hpp"
 
 namespace fizzy
 {
 namespace
 {
 template <typename T>
+inline void store(uint8_t* dst, T value) noexcept
+{
+    __builtin_memcpy(dst, &value, sizeof(value));
+}
+
+template <typename T>
 inline void push(bytes& b, T value)
 {
     b.resize(b.size() + sizeof(value));
-    __builtin_memcpy(&b[b.size() - sizeof(value)], &value, sizeof(value));
+    store(&b[b.size() - sizeof(value)], value);
 }
+
+/// The immediates offset for block instructions.
+using LabelPosition = size_t;
+
+/// Sentinel constant to loop labels. They are not interesting for parser.
+constexpr auto LoopLabel = LabelPosition(-1);
+
 }  // namespace
 
 parser_result<Code> parse_expr(const uint8_t* pos)
 {
     Code code;
-    Instr instr;
-    do
+
+    // The stack of labels allowing to distinguish between block and label instructions.
+    // For a block instruction the value is the block's immediate offset.
+    stack<LabelPosition> label_positions;
+
+    bool continue_parsing = true;
+    while (continue_parsing)
     {
-        instr = static_cast<Instr>(*pos++);
+        const auto instr = static_cast<Instr>(*pos++);
         switch (instr)
         {
         default:
@@ -26,7 +45,6 @@ parser_result<Code> parse_expr(const uint8_t* pos)
 
         case Instr::unreachable:
         case Instr::nop:
-        case Instr::end:
         case Instr::drop:
         case Instr::select:
         case Instr::memory_size:
@@ -94,11 +112,70 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         case Instr::i64_extend_i32_u:
             break;
 
+        case Instr::end:
+        {
+            if (!label_positions.empty())
+            {
+                const auto label_pos = label_positions.pop();
+                if (label_pos != LoopLabel)  // If end of block instruction.
+                {
+                    const auto target_pc = static_cast<uint32_t>(code.instructions.size() + 1);
+                    const auto target_imm = static_cast<uint32_t>(code.immediates.size());
+
+                    // Set the imm values for block instruction.
+                    auto* block_imm = code.immediates.data() + label_pos;
+                    store(block_imm, target_pc);
+                    block_imm += sizeof(target_pc);
+                    store(block_imm, target_imm);
+                }
+            }
+            else
+                continue_parsing = false;
+            break;
+        }
+
+        case Instr::block:
+        {
+            const uint8_t type{*pos};
+            uint8_t arity;
+            if (type == BlockTypeEmpty)
+            {
+                arity = 0;
+                ++pos;
+            }
+            else
+            {
+                // Will throw in case of incorrect type.
+                std::tie(std::ignore, pos) = parser<ValType>{}(pos);
+                arity = 1;
+            }
+
+            code.immediates.push_back(arity);
+
+            label_positions.push_back(code.immediates.size());  // Imm offset after arity.
+
+            // Placeholders for immediate values, filled at the matching end instruction.
+            push(code.immediates, uint32_t{0});  // Diff to the end instruction.
+            push(code.immediates, uint32_t{0});  // Diff for the immediates.
+            break;
+        }
+
+        case Instr::loop:
+        {
+            const uint8_t type{*pos++};
+            if (type != BlockTypeEmpty)
+                throw parser_error{"loop can only have type arity 0"};
+            label_positions.push_back(LoopLabel);  // Mark as not interested.
+            break;
+        }
+
         case Instr::local_get:
         case Instr::local_set:
         case Instr::local_tee:
         case Instr::global_get:
         case Instr::global_set:
+        case Instr::br:
+        case Instr::br_if:
         case Instr::call:
         {
             uint32_t imm;
@@ -139,7 +216,9 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         }
         }
         code.instructions.emplace_back(instr);
-    } while (instr != Instr::end);
+    }
+    if (!label_positions.empty())
+        throw parser_error{"code is not balanced (missing end statements)"};
     return {code, pos};
 }
 }  // namespace fizzy
