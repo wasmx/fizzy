@@ -136,23 +136,27 @@ struct Memory
     Limits limits;
 };
 
-enum class GlobalInitType : uint8_t
+struct ConstantExpression
 {
-    constant,
-    global
+    enum class Kind : uint8_t
+    {
+        Constant,
+        GlobalGet
+    };
+
+    Kind kind = Kind::Constant;
+    union
+    {
+        uint64_t constant = 0;
+        uint32_t global_index;
+    } value;
 };
 
 // https://webassembly.github.io/spec/core/binary/modules.html#global-section
 struct Global
 {
     bool is_mutable = false;
-
-    GlobalInitType init_type = GlobalInitType::constant;
-    union
-    {
-        uint64_t value = 0;
-        uint32_t global_index;
-    } init;
+    ConstantExpression expression;
 };
 
 enum class ExportType : uint8_t

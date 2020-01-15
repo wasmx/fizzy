@@ -22,20 +22,11 @@ struct parser<FuncType>
 };
 
 template <>
-struct parser<Global>
+struct parser<ConstantExpression>
 {
-    parser_result<Global> operator()(const uint8_t* pos)
+    parser_result<ConstantExpression> operator()(const uint8_t* pos)
     {
-        ValType type;
-        std::tie(type, pos) = parser<ValType>{}(pos);
-
-        if (*pos != 0x00 && *pos != 0x01)
-            throw parser_error{"unexpected byte value " + std::to_string(*pos) +
-                               ", expected 0x00 or 0x01 for global mutability"};
-
-        Global result;
-        result.is_mutable = (*pos == 0x01);
-        ++pos;
+        ConstantExpression result;
 
         Instr instr;
         do
@@ -52,30 +43,52 @@ struct parser<Global>
 
             case Instr::global_get:
             {
-                result.init_type = GlobalInitType::global;
-                std::tie(result.init.global_index, pos) = leb128u_decode<uint32_t>(pos);
+                result.kind = ConstantExpression::Kind::GlobalGet;
+                std::tie(result.value.global_index, pos) = leb128u_decode<uint32_t>(pos);
                 break;
             }
 
             case Instr::i32_const:
             {
-                result.init_type = GlobalInitType::constant;
+                result.kind = ConstantExpression::Kind::Constant;
                 int32_t value;
                 std::tie(value, pos) = leb128s_decode<int32_t>(pos);
-                result.init.value = static_cast<uint32_t>(value);
+                result.value.constant = static_cast<uint32_t>(value);
                 break;
             }
 
             case Instr::i64_const:
             {
-                result.init_type = GlobalInitType::constant;
+                result.kind = ConstantExpression::Kind::Constant;
                 int64_t value;
                 std::tie(value, pos) = leb128s_decode<int64_t>(pos);
-                result.init.value = static_cast<uint64_t>(value);
+                result.value.constant = static_cast<uint64_t>(value);
                 break;
             }
             }
         } while (instr != Instr::end);
+
+        return {result, pos};
+    }
+};
+
+template <>
+struct parser<Global>
+{
+    parser_result<Global> operator()(const uint8_t* pos)
+    {
+        ValType type;
+        std::tie(type, pos) = parser<ValType>{}(pos);
+
+        if (*pos != 0x00 && *pos != 0x01)
+            throw parser_error{"unexpected byte value " + std::to_string(*pos) +
+                               ", expected 0x00 or 0x01 for global mutability"};
+
+        Global result;
+        result.is_mutable = (*pos == 0x01);
+        ++pos;
+
+        std::tie(result.expression, pos) = parser<ConstantExpression>{}(pos);
 
         return {result, pos};
     }
