@@ -95,15 +95,26 @@ struct parser<Global>
 };
 
 template <>
+struct parser<std::string>
+{
+    parser_result<std::string> operator()(const uint8_t* pos)
+    {
+        std::vector<uint8_t> value;
+        std::tie(value, pos) = parser<std::vector<uint8_t>>{}(pos);
+
+        // FIXME: need to validate that string is a valid UTF-8
+
+        return {std::string(value.begin(), value.end()), pos};
+    }
+};
+
+template <>
 struct parser<Export>
 {
     parser_result<Export> operator()(const uint8_t* pos)
     {
-        std::vector<uint8_t> name;
-        std::tie(name, pos) = parser<std::vector<uint8_t>>{}(pos);
-
         Export result;
-        result.name.assign(name.begin(), name.end());
+        std::tie(result.name, pos) = parser<std::string>{}(pos);
 
         const uint8_t type = *pos++;
         switch (type)
