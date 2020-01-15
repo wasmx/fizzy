@@ -78,6 +78,7 @@ TEST(end_to_end, milestone2)
     // Arg2: 2^255 + 2^254 + 0xff
     instance.memory[32] = 0xff;
     instance.memory[63] = 0xc0;
+    // TODO: use find_exported_function
     const auto [trap, ret] = execute(instance, 0, {64, 0, 32});
 
     ASSERT_FALSE(trap);
@@ -125,8 +126,11 @@ TEST(end_to_end, nested_loops_in_c)
 
     const auto module = parse(bin);
 
+    const auto func_idx = find_exported_function(module, "test");
+    ASSERT_TRUE(func_idx);
+
     // Ignore the results for now
-    const auto [trap, ret] = execute(module, 0, {10, 2, 5});
+    const auto [trap, ret] = execute(module, *func_idx, {10, 2, 5});
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -173,8 +177,11 @@ TEST(end_to_end, memset)
 
     const auto module = parse(bin);
 
+    const auto func_idx = find_exported_function(module, "test");
+    ASSERT_TRUE(func_idx);
+
     auto instance = instantiate(module);
-    const auto [trap, ret] = execute(instance, 1, {0, 2});
+    const auto [trap, ret] = execute(instance, *func_idx, {0, 2});
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 0);
