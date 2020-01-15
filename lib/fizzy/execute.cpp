@@ -503,6 +503,8 @@ Instance instantiate(Module module, std::vector<ExternalFunction> imported_funct
     std::vector<ExternalTable> imported_tables, std::vector<ExternalMemory> imported_memories,
     std::vector<ExternalGlobal> imported_globals)
 {
+    assert(module.funcsec.size() == module.codesec.size());
+
     std::vector<TypeIdx> imported_function_types = match_imports(
         module, imported_functions, imported_tables, imported_memories, imported_globals);
 
