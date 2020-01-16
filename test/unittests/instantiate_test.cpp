@@ -24,6 +24,44 @@ TEST(instantiate, imported_functions)
     EXPECT_EQ(instance.imported_function_types[0], TypeIdx{0});
 }
 
+TEST(instantiate, imported_globals)
+{
+    Module module;
+    module.importsec.emplace_back(Import{"mod", "g", ExternalKind::Global, {true}});
+
+    auto instance = instantiate(module, {}, {42});
+
+    ASSERT_EQ(instance.imported_globals_mutability.size(), 1);
+    EXPECT_EQ(instance.imported_globals_mutability[0], true);
+    ASSERT_EQ(instance.globals.size(), 1);
+    EXPECT_EQ(instance.globals[0], 42);
+}
+
+TEST(instantiate, imported_globals_multiple)
+{
+    Module module;
+    module.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {true}});
+    module.importsec.emplace_back(Import{"mod", "g2", ExternalKind::Global, {false}});
+
+    auto instance = instantiate(module, {}, {42, 43});
+
+    ASSERT_EQ(instance.imported_globals_mutability.size(), 2);
+    EXPECT_EQ(instance.imported_globals_mutability[0], true);
+    EXPECT_EQ(instance.imported_globals_mutability[1], false);
+    ASSERT_EQ(instance.globals.size(), 2);
+    EXPECT_EQ(instance.globals[0], 42);
+    EXPECT_EQ(instance.globals[1], 43);
+}
+
+TEST(instantiate, imported_globals_not_enough)
+{
+    Module module;
+    module.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {true}});
+    module.importsec.emplace_back(Import{"mod", "g2", ExternalKind::Global, {false}});
+
+    EXPECT_THROW(instantiate(module, {}, {42}), std::runtime_error);
+}
+
 TEST(instantiate, imported_functions_multiple)
 {
     Module module;
@@ -150,4 +188,19 @@ TEST(instantiate, globals_multiple)
     ASSERT_EQ(instance.globals.size(), 2);
     EXPECT_EQ(instance.globals[0], 42);
     EXPECT_EQ(instance.globals[1], 43);
+}
+
+TEST(instantiate, globals_with_imported)
+{
+    Module module;
+    module.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {true}});
+    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
+    module.globalsec.emplace_back(Global{false, {ConstantExpression::Kind::Constant, {43}}});
+
+    auto instance = instantiate(module, {}, {41});
+
+    ASSERT_EQ(instance.globals.size(), 3);
+    EXPECT_EQ(instance.globals[0], 41);
+    EXPECT_EQ(instance.globals[1], 42);
+    EXPECT_EQ(instance.globals[2], 43);
 }
