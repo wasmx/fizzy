@@ -12,6 +12,15 @@ constexpr unsigned page_size = 65536;
 constexpr auto memory_pages_limit = (256 * 1024 * 1024ULL) / page_size;
 
 
+struct LabelContext
+{
+    const Instr* pc = nullptr;
+    const uint8_t* immediate = nullptr;
+    size_t arity = 0;
+    size_t stack_height = 0;
+};
+
+
 template <typename T>
 inline void store(bytes& input, size_t offset, T value) noexcept
 {
@@ -198,6 +207,8 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
     // TODO: preallocate fixed stack depth properly
     Stack<uint64_t> stack;
 
+    Stack<LabelContext> labels;
+
     bool trap = false;
 
     const Instr* pc = code.instructions.data();
@@ -213,8 +224,57 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
             goto end;
         case Instr::nop:
             break;
+        case Instr::block:
+        {
+            const auto arity = read<uint8_t>(immediates);
+
+            if (arity != 0)
+            {
+                throw std::runtime_error(
+                    "block instruction with non-empty result type not implemented yet");
+            }
+
+            const auto target_pc = read<uint32_t>(immediates);
+            const auto target_imm = read<uint32_t>(immediates);
+            LabelContext label{code.instructions.data() + target_pc,
+                code.immediates.data() + target_imm, arity, stack.size()};
+            labels.emplace_back(label);
+            break;
+        }
+        case Instr::loop:
+        {
+            LabelContext label{pc - 1, immediates, 0, stack.size()};  // Target this instruction.
+            labels.push_back(label);
+            break;
+        }
         case Instr::end:
-            goto end;
+        {
+            if (!labels.empty())
+                labels.pop_back();
+            else
+                goto end;
+            break;
+        }
+        case Instr::br:
+        case Instr::br_if:
+        {
+            const auto label_idx = read<uint32_t>(immediates);
+
+            // Check condition for br_if.
+            if (instruction == Instr::br_if && static_cast<uint32_t>(stack.pop()) == 0)
+                break;
+
+            assert(labels.size() > label_idx);
+            labels.drop(label_idx);  // Drop skipped labels (does nothing for labelidx == 0).
+            const auto label = labels.pop();
+
+            pc = label.pc;
+            immediates = label.immediate;
+
+            // FIXME: handle arity + stack_height ?
+            assert(stack.size() == label.stack_height);
+            break;
+        }
         case Instr::call:
         {
             const auto func_idx = read<uint32_t>(immediates);
@@ -760,6 +820,7 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
     }
 
 end:
+    assert(labels.empty());
     // move allows to return derived Stack<uint64_t> instance into base vector<uint64_t> value
     return {trap, std::move(stack)};
 }
