@@ -122,27 +122,27 @@ struct parser<Import>
         std::tie(result.module, pos) = parser<std::string>{}(pos);
         std::tie(result.name, pos) = parser<std::string>{}(pos);
 
-        const uint8_t type = *pos++;
-        switch (type)
+        const uint8_t kind = *pos++;
+        switch (kind)
         {
         case 0x00:
-            result.kind = ImportKind::Function;
+            result.kind = ExternalKind::Function;
             std::tie(result.desc.function_type_index, pos) = leb128u_decode<uint32_t>(pos);
             break;
         case 0x01:
-            result.kind = ImportKind::Table;
+            result.kind = ExternalKind::Table;
             throw parser_error{"importing Tables is not implemented"};
             break;
         case 0x02:
-            result.kind = ImportKind::Memory;
+            result.kind = ExternalKind::Memory;
             std::tie(result.desc.memory, pos) = parser<Memory>{}(pos);
             break;
         case 0x03:
-            result.kind = ImportKind::Global;
+            result.kind = ExternalKind::Global;
             std::tie(result.desc.global_mutable, pos) = parseGlobalType((pos));
             break;
         default:
-            throw parser_error{"unexpected import type value " + std::to_string(type)};
+            throw parser_error{"unexpected import kind value " + std::to_string(kind)};
         }
 
         return {result, pos};
@@ -157,23 +157,23 @@ struct parser<Export>
         Export result;
         std::tie(result.name, pos) = parser<std::string>{}(pos);
 
-        const uint8_t type = *pos++;
-        switch (type)
+        const uint8_t kind = *pos++;
+        switch (kind)
         {
         case 0x00:
-            result.type = ExportType::Function;
+            result.kind = ExternalKind::Function;
             break;
         case 0x01:
-            result.type = ExportType::Table;
+            result.kind = ExternalKind::Table;
             break;
         case 0x02:
-            result.type = ExportType::Memory;
+            result.kind = ExternalKind::Memory;
             break;
         case 0x03:
-            result.type = ExportType::Global;
+            result.kind = ExternalKind::Global;
             break;
         default:
-            throw parser_error{"unexpected export type value " + std::to_string(type)};
+            throw parser_error{"unexpected export kind value " + std::to_string(kind)};
         }
 
         std::tie(result.index, pos) = leb128u_decode<uint32_t>(pos);

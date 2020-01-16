@@ -167,7 +167,7 @@ struct Global
     ConstantExpression expression;
 };
 
-enum class ImportKind : uint8_t
+enum class ExternalKind : uint8_t
 {
     Function = 0x00,
     Table = 0x01,
@@ -180,7 +180,7 @@ struct Import
 {
     std::string module;
     std::string name;
-    ImportKind kind = ImportKind::Function;
+    ExternalKind kind = ExternalKind::Function;
     union
     {
         TypeIdx function_type_index = 0;
@@ -190,20 +190,11 @@ struct Import
     } desc;
 };
 
-enum class ExportType : uint8_t
-{
-    Function = 0x00,
-    Table = 0x01,
-    Memory = 0x02,
-    Global = 0x03
-};
-
-
 // https://webassembly.github.io/spec/core/binary/modules.html#export-section
 struct Export
 {
     std::string name;
-    ExportType type = ExportType::Function;
+    ExternalKind kind = ExternalKind::Function;
     uint32_t index = 0;
 };
 

@@ -774,7 +774,7 @@ std::optional<FuncIdx> find_exported_function(const Module& module, std::string_
 {
     for (const auto& export_ : module.exportsec)
     {
-        if (export_.type == ExportType::Function && name == export_.name)
+        if (export_.kind == ExternalKind::Function && name == export_.name)
             return export_.index;
     }
 

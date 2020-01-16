@@ -6,13 +6,13 @@ using namespace fizzy;
 TEST(api, find_exported_function)
 {
     Module module;
-    module.exportsec.emplace_back(Export{"foo1", ExportType::Function, 0});
-    module.exportsec.emplace_back(Export{"foo2", ExportType::Function, 1});
-    module.exportsec.emplace_back(Export{"foo3", ExportType::Function, 2});
-    module.exportsec.emplace_back(Export{"foo4", ExportType::Function, 42});
-    module.exportsec.emplace_back(Export{"mem", ExportType::Memory, 0});
-    module.exportsec.emplace_back(Export{"glob", ExportType::Global, 0});
-    module.exportsec.emplace_back(Export{"table", ExportType::Table, 0});
+    module.exportsec.emplace_back(Export{"foo1", ExternalKind::Function, 0});
+    module.exportsec.emplace_back(Export{"foo2", ExternalKind::Function, 1});
+    module.exportsec.emplace_back(Export{"foo3", ExternalKind::Function, 2});
+    module.exportsec.emplace_back(Export{"foo4", ExternalKind::Function, 42});
+    module.exportsec.emplace_back(Export{"mem", ExternalKind::Memory, 0});
+    module.exportsec.emplace_back(Export{"glob", ExternalKind::Global, 0});
+    module.exportsec.emplace_back(Export{"table", ExternalKind::Table, 0});
 
     auto optionalIdx = find_exported_function(module, "foo1");
     ASSERT_TRUE(optionalIdx);
