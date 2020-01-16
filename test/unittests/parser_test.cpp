@@ -203,7 +203,7 @@ TEST(parser, import_single_function)
     ASSERT_EQ(module.importsec.size(), 1);
     EXPECT_EQ(module.importsec[0].module, "mod");
     EXPECT_EQ(module.importsec[0].name, "foo");
-    EXPECT_EQ(module.importsec[0].kind, ImportKind::Function);
+    EXPECT_EQ(module.importsec[0].kind, ExternalKind::Function);
     EXPECT_EQ(module.importsec[0].desc.function_type_index, 0x42);
 }
 
@@ -219,16 +219,16 @@ TEST(parser, import_multiple)
     ASSERT_EQ(module.importsec.size(), 3);
     EXPECT_EQ(module.importsec[0].module, "m1");
     EXPECT_EQ(module.importsec[0].name, "abc");
-    EXPECT_EQ(module.importsec[0].kind, ImportKind::Function);
+    EXPECT_EQ(module.importsec[0].kind, ExternalKind::Function);
     EXPECT_EQ(module.importsec[0].desc.function_type_index, 0x42);
     EXPECT_EQ(module.importsec[1].module, "m2");
     EXPECT_EQ(module.importsec[1].name, "foo");
-    EXPECT_EQ(module.importsec[1].kind, ImportKind::Memory);
+    EXPECT_EQ(module.importsec[1].kind, ExternalKind::Memory);
     EXPECT_EQ(module.importsec[1].desc.memory.limits.min, 0x7f);
     EXPECT_FALSE(module.importsec[1].desc.memory.limits.max);
     EXPECT_EQ(module.importsec[2].module, "m3");
     EXPECT_EQ(module.importsec[2].name, "bar");
-    EXPECT_EQ(module.importsec[2].kind, ImportKind::Global);
+    EXPECT_EQ(module.importsec[2].kind, ExternalKind::Global);
     EXPECT_FALSE(module.importsec[2].desc.global_mutable);
 }
 
@@ -369,7 +369,7 @@ TEST(parser, export_single_function)
     const auto module = parse(bin);
     ASSERT_EQ(module.exportsec.size(), 1);
     EXPECT_EQ(module.exportsec[0].name, "abc");
-    EXPECT_EQ(module.exportsec[0].type, ExportType::Function);
+    EXPECT_EQ(module.exportsec[0].kind, ExternalKind::Function);
     EXPECT_EQ(module.exportsec[0].index, 0x42);
 }
 
@@ -383,16 +383,16 @@ TEST(parser, export_multiple)
     const auto module = parse(bin);
     ASSERT_EQ(module.exportsec.size(), 4);
     EXPECT_EQ(module.exportsec[0].name, "abc");
-    EXPECT_EQ(module.exportsec[0].type, ExportType::Function);
+    EXPECT_EQ(module.exportsec[0].kind, ExternalKind::Function);
     EXPECT_EQ(module.exportsec[0].index, 0x42);
     EXPECT_EQ(module.exportsec[1].name, "foo");
-    EXPECT_EQ(module.exportsec[1].type, ExportType::Table);
+    EXPECT_EQ(module.exportsec[1].kind, ExternalKind::Table);
     EXPECT_EQ(module.exportsec[1].index, 0x43);
     EXPECT_EQ(module.exportsec[2].name, "bar");
-    EXPECT_EQ(module.exportsec[2].type, ExportType::Memory);
+    EXPECT_EQ(module.exportsec[2].kind, ExternalKind::Memory);
     EXPECT_EQ(module.exportsec[2].index, 0x44);
     EXPECT_EQ(module.exportsec[3].name, "xyz");
-    EXPECT_EQ(module.exportsec[3].type, ExportType::Global);
+    EXPECT_EQ(module.exportsec[3].kind, ExternalKind::Global);
     EXPECT_EQ(module.exportsec[3].index, 0x45);
 }
 
