@@ -204,3 +204,33 @@ TEST(instantiate, globals_with_imported)
     EXPECT_EQ(instance.globals[1], 42);
     EXPECT_EQ(instance.globals[2], 43);
 }
+
+TEST(instantiate, globals_initialized_from_imported)
+{
+    Module module;
+    module.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {false}});
+    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::GlobalGet, {0}}});
+
+    auto instance = instantiate(module, {}, {42});
+
+    ASSERT_EQ(instance.globals.size(), 2);
+    EXPECT_EQ(instance.globals[0], 42);
+    EXPECT_EQ(instance.globals[1], 42);
+
+    // initializing from mutable global is not allowed
+    Module module_invalid1;
+    module_invalid1.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {true}});
+    module_invalid1.globalsec.emplace_back(
+        Global{true, {ConstantExpression::Kind::GlobalGet, {0}}});
+
+    EXPECT_THROW(instantiate(module_invalid1, {}, {42}), std::runtime_error);
+
+    // initializing from non-imported global is not allowed
+    Module module_invalid2;
+    module_invalid2.globalsec.emplace_back(
+        Global{true, {ConstantExpression::Kind::Constant, {42}}});
+    module_invalid2.globalsec.emplace_back(
+        Global{true, {ConstantExpression::Kind::GlobalGet, {0}}});
+
+    EXPECT_THROW(instantiate(module_invalid2, {}, {}), std::runtime_error);
+}
