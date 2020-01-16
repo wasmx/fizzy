@@ -352,3 +352,74 @@ TEST(execute_control, br_multiple_blocks_stack_cleanup)
     ASSERT_FALSE(trap);
     EXPECT_EQ(ret.size(), 0);
 }
+
+TEST(execute_control, block_with_result)
+{
+    /*
+    (func (result i64)
+      (block (result i64)
+        i64.const -1
+      )
+    )
+    */
+    const auto bin = from_hex(
+        "0061736d010000000105016000017e030201000a09010700027e427f0b0b000a046e616d650203010000");
+
+    const auto [trap, ret] = execute(parse(bin), 0, {});
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], uint64_t(-1));
+}
+
+TEST(execute_control, br_with_result)
+{
+    /*
+    (func (result i32)
+      (block (result i32)
+        i32.const 1
+        i32.const 2
+        i32.const 3
+        br 0  ;; Takes the top item as the result, drops remaining 2 items.
+      )
+    )
+    */
+    const auto bin = from_hex(
+        "0061736d010000000105016000017f03020100070801046d61696e00000a0f010d00027f4101410241030c000b"
+        "0b000a046e616d650203010000");
+
+    const auto [trap, ret] = execute(parse(bin), 0, {});
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 3);
+}
+
+TEST(execute_control, br_if_with_result)
+{
+    /*
+    (func (param i32) (result i32)
+      (block (result i32)
+        i32.const 1
+        i32.const 2
+        get_local 0
+        br_if 0
+        i32.xor
+      )
+    )
+    */
+    const auto bin = from_hex(
+        "0061736d0100000001060160017f017f03020100070801046d61696e00000a10010e00027f4101410220000d00"
+        "730b0b000c046e616d6502050100010000");
+
+    for (const auto param : {0u, 1u})
+    {
+        constexpr uint64_t expected_results[]{
+            3,  // br_if not taken, result: 1 xor 2 == 3.
+            2,  // br_if taken, result: 2, remaining item dropped.
+        };
+
+        const auto [trap, ret] = execute(parse(bin), 0, {param});
+        ASSERT_FALSE(trap);
+        ASSERT_EQ(ret.size(), 1);
+        EXPECT_EQ(ret[0], expected_results[param]);
+    }
+}
