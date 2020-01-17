@@ -271,8 +271,12 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
             pc = label.pc;
             immediates = label.immediate;
 
-            // FIXME: handle arity + stack_height ?
-            assert(stack.size() == label.stack_height);
+            // FIXME: handle arity
+            assert(label.arity == 0);
+
+            // When branch is taken, additional stack items must be dropped.
+            assert(stack.size() >= label.stack_height);
+            stack.resize(label.stack_height);
             break;
         }
         case Instr::call:

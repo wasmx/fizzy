@@ -279,3 +279,76 @@ TEST(execute_control, nested_br_if)
         EXPECT_EQ(ret[0], (0b11001000 << 8) + loop_count) << loop_count;
     }
 }
+
+TEST(execute_control, br_stack_cleanup)
+{
+    /*
+    (func (result i32)
+      i32.const 1
+      (block
+        i32.const 2
+        br 0  ;; Should drop 2 from the stack.
+      )
+    )
+    */
+
+    const auto bin = from_hex(
+        "0061736d010000000105016000017f030201000a0d010b004101024041020c000b0b000a046e616d6502030100"
+        "00");
+
+    const auto [trap, ret] = execute(parse(bin), 0, {});
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 1);
+}
+
+TEST(execute_control, br_if_stack_cleanup)
+{
+    /*
+    (func (param i32) (result i64)
+      i64.const 0
+      (loop
+        i64.const -2  ;; Additional stack item.
+        i32.const -1
+        get_local 0
+        i32.add
+        tee_local 0
+        br_if 0       ;; Clean up stack.
+        drop          ;; Drop the additional stack item.
+      )
+    )
+    */
+
+    const auto bin = from_hex(
+        "0061736d0100000001060160017f017e030201000a1501130042000340427e417f20006a22000d001a0b0b000c"
+        "046e616d6502050100010000");
+
+    const auto [trap, ret] = execute(parse(bin), 0, {7});
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 0);
+}
+
+TEST(execute_control, br_multiple_blocks_stack_cleanup)
+{
+    /*
+    (func
+      (block
+        i32.const 1
+        (loop
+          i64.const 2
+          br 1
+        )
+        drop
+      )
+    )
+    */
+
+    const auto bin = from_hex(
+        "0061736d01000000010401600000030201000a11010f0002404101034042020c010b1a0b0b000a046e616d6502"
+        "03010000");
+
+    const auto [trap, ret] = execute(parse(bin), 0, {7});
+    ASSERT_FALSE(trap);
+    EXPECT_EQ(ret.size(), 0);
+}
