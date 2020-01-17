@@ -178,8 +178,6 @@ Instance instantiate(const Module& module)
         else
             throw std::runtime_error("data initialization by imported global is not supported yet");
 
-        // FIXME: assert in parser
-        assert(data.memory_index == 0);
         // NOTE: these instructions can overlap
         assert((offset + data.init.size()) <= (memory_max * page_size));
         std::memcpy(memory.data() + offset, data.init.data(), data.init.size());

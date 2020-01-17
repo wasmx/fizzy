@@ -216,9 +216,9 @@ struct Code
 };
 
 // https://webassembly.github.io/spec/core/binary/modules.html#data-section
+// The memory index is omitted from the structure as the parser ensures it to be 0
 struct Data
 {
-    MemIdx memory_index;
     ConstantExpression offset;
     bytes init;
 };

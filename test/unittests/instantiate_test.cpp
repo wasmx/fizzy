@@ -71,11 +71,9 @@ TEST(instantiate, data_section)
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
     // Memory contents: 0, 0xaa, 0xff, 0, ...
-    module.datasec.emplace_back(
-        Data{MemIdx{0}, {ConstantExpression::Kind::Constant, {1}}, {0xaa, 0xff}});
+    module.datasec.emplace_back(Data{{ConstantExpression::Kind::Constant, {1}}, {0xaa, 0xff}});
     // Memory contents: 0, 0xaa, 0x55, 0x55, 0, ...
-    module.datasec.emplace_back(
-        Data{MemIdx{0}, {ConstantExpression::Kind::Constant, {2}}, {0x55, 0x55}});
+    module.datasec.emplace_back(Data{{ConstantExpression::Kind::Constant, {2}}, {0x55, 0x55}});
 
     auto instance = instantiate(module);
 

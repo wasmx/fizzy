@@ -487,15 +487,12 @@ TEST(parser, data_section)
 
     const auto module = parse(bin);
     ASSERT_EQ(module.datasec.size(), 3);
-    EXPECT_EQ(module.datasec[0].memidx, 0);
     EXPECT_EQ(module.datasec[0].offset.kind, ConstantExpression::Kind::Constant);
     EXPECT_EQ(module.datasec[0].offset.value.constant, 1);
     EXPECT_EQ(module.datasec[0].init, from_hex("aaff"));
-    EXPECT_EQ(module.datasec[1].memidx, 0);
     EXPECT_EQ(module.datasec[1].offset.kind, ConstantExpression::Kind::Constant);
     EXPECT_EQ(module.datasec[1].offset.value.constant, 2);
     EXPECT_EQ(module.datasec[1].init, from_hex("5555"));
-    EXPECT_EQ(module.datasec[2].memidx, 0);
     EXPECT_EQ(module.datasec[2].offset.kind, ConstantExpression::Kind::GlobalGet);
     EXPECT_EQ(module.datasec[2].offset.value.global_index, 0);
     EXPECT_EQ(module.datasec[2].init, from_hex("2424"));

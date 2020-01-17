@@ -189,6 +189,8 @@ struct parser<Data>
     {
         MemIdx memory_index;
         std::tie(memory_index, pos) = leb128u_decode<uint32_t>(pos);
+        if (memory_index != 0)
+            throw parser_error{"unexpected memidx value " + std::to_string(memory_index)};
 
         ConstantExpression offset;
         std::tie(offset, pos) = parser<ConstantExpression>{}(pos);
@@ -196,7 +198,7 @@ struct parser<Data>
         std::vector<uint8_t> init;
         std::tie(init, pos) = parser<std::vector<uint8_t>>{}(pos);
 
-        return {{memory_index, offset, bytes(init.data(), init.size())}, pos};
+        return {{offset, bytes(init.data(), init.size())}, pos};
     }
 };
 
