@@ -423,3 +423,32 @@ TEST(execute_control, br_if_with_result)
         EXPECT_EQ(ret[0], expected_results[param]);
     }
 }
+
+TEST(execute_control, br_if_out_of_function)
+{
+    /*
+    (func (param i32) (result i32)
+      i32.const 1
+      i32.const 2
+      get_local 0
+      br_if 0
+      drop
+    )
+    */
+    const auto bin = from_hex(
+        "0061736d0100000001060160017f017f030201000a0d010b004101410220000d001a0b000c046e616d65020501"
+        "00010000");
+
+    for (const auto param : {0u, 1u})
+    {
+        constexpr uint64_t expected_results[]{
+            1,  // br_if not taken.
+            2,  // br_if taken.
+        };
+
+        const auto [trap, ret] = execute(parse(bin), 0, {param});
+        ASSERT_FALSE(trap);
+        ASSERT_EQ(ret.size(), 1);
+        EXPECT_EQ(ret[0], expected_results[param]);
+    }
+}
