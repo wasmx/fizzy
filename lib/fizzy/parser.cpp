@@ -280,6 +280,9 @@ Module parse(bytes_view input)
 
         if (module.tablesec.size() > 1)
             throw parser_error{"too many table sections (at most one is allowed)"};
+
+        if (module.memorysec.size() > 1)
+            throw parser_error{"too many memory sections (at most one is allowed)"};
     }
 
     return module;

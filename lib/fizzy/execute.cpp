@@ -142,10 +142,11 @@ Instance instantiate(const Module& module, std::vector<ImportedFunction> importe
     size_t memory_min, memory_max;
     if (module.memorysec.size() > 1)
     {
-        // FIXME: better error handling
+        // FIXME: turn this into an assert if instantiate is not exposed externally and it only
+        // takes validated modules
         throw std::runtime_error("Cannot support more than 1 memory section.");
     }
-    else if (module.memorysec.size() > 0)
+    else if (module.memorysec.size() == 1)
     {
         memory_min = module.memorysec[0].limits.min;
         if (module.memorysec[0].limits.max)
