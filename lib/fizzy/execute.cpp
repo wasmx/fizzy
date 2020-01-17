@@ -257,7 +257,17 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
             if (instruction == Instr::br_if && static_cast<uint32_t>(stack.pop()) == 0)
                 break;
 
-            assert(labels.size() > label_idx);
+            assert(label_idx <= labels.size());
+
+            if (label_idx == labels.size())
+            {
+                // This targets the function's implict block.
+                // In the implementation we don't actually add this label, because it is difficult
+                // to get the function's output type. Here the execution is just terminated
+                // without stack unwinding, but the result value is still on the top of the stack.
+                goto end;
+            }
+
             labels.drop(label_idx);  // Drop skipped labels (does nothing for labelidx == 0).
             const auto label = labels.pop();
 

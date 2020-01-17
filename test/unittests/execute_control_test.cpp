@@ -448,7 +448,7 @@ TEST(execute_control, br_if_out_of_function)
 
         const auto [trap, ret] = execute(parse(bin), 0, {param});
         ASSERT_FALSE(trap);
-        ASSERT_EQ(ret.size(), 1);
-        EXPECT_EQ(ret[0], expected_results[param]);
+        ASSERT_GE(ret.size(), 1);
+        EXPECT_EQ(ret.back(), expected_results[param]);
     }
 }
