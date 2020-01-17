@@ -22,6 +22,9 @@ enum class ValType : uint8_t
 /// https://webassembly.github.io/spec/core/binary/types.html#result-types
 constexpr uint8_t BlockTypeEmpty = 0x40;
 
+// https://webassembly.github.io/spec/core/binary/types.html#table-types
+constexpr uint8_t FuncRef = 0x70;
+
 // https://webassembly.github.io/spec/core/binary/types.html#binary-functype
 struct FuncType
 {
@@ -156,6 +159,12 @@ enum class Instr : uint8_t
     i64_extend_i32_u = 0xad,
 };
 
+// https://webassembly.github.io/spec/core/binary/modules.html#table-section
+struct Table
+{
+    Limits limits;
+};
+
 // https://webassembly.github.io/spec/core/binary/modules.html#memory-section
 struct Memory
 {
@@ -262,6 +271,8 @@ struct Module
     std::vector<Import> importsec;
     // https://webassembly.github.io/spec/core/binary/modules.html#function-section
     std::vector<TypeIdx> funcsec;
+    // https://webassembly.github.io/spec/core/binary/modules.html#table-section
+    std::vector<Table> tablesec;
     // https://webassembly.github.io/spec/core/binary/modules.html#memory-section
     std::vector<Memory> memorysec;
     // https://webassembly.github.io/spec/core/binary/modules.html#global-section
