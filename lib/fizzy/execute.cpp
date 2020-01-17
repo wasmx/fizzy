@@ -227,13 +227,6 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
         case Instr::block:
         {
             const auto arity = read<uint8_t>(immediates);
-
-            if (arity != 0)
-            {
-                throw std::runtime_error(
-                    "block instruction with non-empty result type not implemented yet");
-            }
-
             const auto target_pc = read<uint32_t>(immediates);
             const auto target_imm = read<uint32_t>(immediates);
             LabelContext label{code.instructions.data() + target_pc,
@@ -271,12 +264,17 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
             pc = label.pc;
             immediates = label.immediate;
 
-            // FIXME: handle arity
-            assert(label.arity == 0);
-
             // When branch is taken, additional stack items must be dropped.
-            assert(stack.size() >= label.stack_height);
-            stack.resize(label.stack_height);
+            assert(stack.size() >= label.stack_height + label.arity);
+            if (label.arity != 0)
+            {
+                assert(label.arity == 1);
+                const auto result = stack.peek();
+                stack.resize(label.stack_height);
+                stack.push(result);
+            }
+            else
+                stack.resize(label.stack_height);
             break;
         }
         case Instr::call:
