@@ -212,6 +212,50 @@ Instance instantiate(const Module& module)
     return instance;
 }
 
+namespace
+{
+template <typename DstT, typename SrcT>
+inline DstT extend(SrcT in) noexcept
+{
+    if constexpr (std::is_signed<SrcT>::value)
+    {
+        using SignedDstT = typename std::make_signed<DstT>::type;
+        return static_cast<DstT>(SignedDstT{in});
+    }
+    else
+        return DstT{in};
+}
+
+template <typename DstT, typename SrcT = DstT>
+inline bool load_from_memory(bytes_view memory, Stack<uint64_t>& stack, const uint8_t* immediates)
+{
+    const auto address = static_cast<uint32_t>(stack.pop());
+    // NOTE: alignment is dropped by the parser
+    const auto offset = read<uint32_t>(immediates);
+    if ((address + offset + sizeof(SrcT)) > memory.size())
+        return false;
+
+    const auto ret = load<SrcT>(memory, address + offset);
+    stack.push(extend<DstT>(ret));
+    return true;
+}
+
+template <typename DstT>
+inline bool store_into_memory(bytes& memory, Stack<uint64_t>& stack, const uint8_t* immediates)
+{
+    const auto value = static_cast<DstT>(stack.pop());
+    const auto address = static_cast<uint32_t>(stack.pop());
+    // NOTE: alignment is dropped by the parser
+    const auto offset = read<uint32_t>(immediates);
+    if ((address + offset + sizeof(DstT)) > memory.size())
+        return false;
+
+    store<DstT>(memory, address + offset, value);
+    return true;
+}
+
+}  // namespace
+
 execution_result execute(Instance& instance, FuncIdx function, std::vector<uint64_t> args)
 {
     // TODO: handle the case when function index points to import
@@ -376,64 +420,159 @@ execution_result execute(Instance& instance, FuncIdx function, std::vector<uint6
             instance.globals[idx] = stack.pop();
             break;
         }
-        // FIXME: make this into a template?
         case Instr::i32_load:
         {
-            const auto address = static_cast<uint32_t>(stack.pop());
-            // NOTE: alignment is dropped by the parser
-            const auto offset = read<uint32_t>(immediates);
-            if ((address + offset + sizeof(uint32_t)) > instance.memory.size())
+            if (!load_from_memory<uint32_t>(instance.memory, stack, immediates))
             {
                 trap = true;
                 goto end;
             }
-            const auto ret = load<uint32_t>(instance.memory, address + offset);
-            stack.push(ret);
             break;
         }
-        // FIXME: make this into a template?
         case Instr::i64_load:
         {
-            const auto address = static_cast<uint32_t>(stack.pop());
-            // NOTE: alignment is dropped by the parser
-            const auto offset = read<uint32_t>(immediates);
-            if ((address + offset + sizeof(uint64_t)) > instance.memory.size())
+            if (!load_from_memory<uint64_t>(instance.memory, stack, immediates))
             {
                 trap = true;
                 goto end;
             }
-            const auto ret = load<uint64_t>(instance.memory, address + offset);
-            stack.push(ret);
             break;
         }
-        // FIXME: make this into a template?
+        case Instr::i32_load8_s:
+        {
+            if (!load_from_memory<uint32_t, int8_t>(instance.memory, stack, immediates))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
+        case Instr::i32_load8_u:
+        {
+            if (!load_from_memory<uint32_t, uint8_t>(instance.memory, stack, immediates))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
+        case Instr::i32_load16_s:
+        {
+            if (!load_from_memory<uint32_t, int16_t>(instance.memory, stack, immediates))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
+        case Instr::i32_load16_u:
+        {
+            if (!load_from_memory<uint32_t, uint16_t>(instance.memory, stack, immediates))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
+        case Instr::i64_load8_s:
+        {
+            if (!load_from_memory<uint64_t, int8_t>(instance.memory, stack, immediates))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
+        case Instr::i64_load8_u:
+        {
+            if (!load_from_memory<uint64_t, uint8_t>(instance.memory, stack, immediates))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
+        case Instr::i64_load16_s:
+        {
+            if (!load_from_memory<uint64_t, int16_t>(instance.memory, stack, immediates))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
+        case Instr::i64_load16_u:
+        {
+            if (!load_from_memory<uint64_t, uint16_t>(instance.memory, stack, immediates))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
+        case Instr::i64_load32_s:
+        {
+            if (!load_from_memory<uint64_t, int32_t>(instance.memory, stack, immediates))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
+        case Instr::i64_load32_u:
+        {
+            if (!load_from_memory<uint64_t, uint32_t>(instance.memory, stack, immediates))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
         case Instr::i32_store:
         {
-            const auto value = static_cast<uint32_t>(stack.pop());
-            const auto address = static_cast<uint32_t>(stack.pop());
-            // NOTE: alignment is dropped by the parser
-            const auto offset = read<uint32_t>(immediates);
-            if ((address + offset + sizeof(uint32_t)) > instance.memory.size())
+            if (!store_into_memory<uint32_t>(instance.memory, stack, immediates))
             {
                 trap = true;
                 goto end;
             }
-            store<uint32_t>(instance.memory, address + offset, value);
             break;
         }
-        // FIXME: make this into a template?
         case Instr::i64_store:
         {
-            const auto value = static_cast<uint64_t>(stack.pop());
-            const auto address = static_cast<uint32_t>(stack.pop());
-            // NOTE: alignment is dropped by the parser
-            const auto offset = read<uint32_t>(immediates);
-            if ((address + offset + sizeof(uint64_t)) > instance.memory.size())
+            if (!store_into_memory<uint64_t>(instance.memory, stack, immediates))
             {
                 trap = true;
                 goto end;
             }
-            store<uint64_t>(instance.memory, address + offset, value);
+            break;
+        }
+        case Instr::i32_store8:
+        case Instr::i64_store8:
+        {
+            if (!store_into_memory<uint8_t>(instance.memory, stack, immediates))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
+        case Instr::i32_store16:
+        case Instr::i64_store16:
+        {
+            if (!store_into_memory<uint16_t>(instance.memory, stack, immediates))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
+        case Instr::i64_store32:
+        {
+            if (!store_into_memory<uint32_t>(instance.memory, stack, immediates))
+            {
+                trap = true;
+                goto end;
+            }
             break;
         }
         case Instr::memory_size:
