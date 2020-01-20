@@ -15,9 +15,7 @@ TEST(instantiate, imported_functions)
     module.typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
     module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
 
-    auto host_foo = [](Instance&, const std::vector<uint64_t>&) -> execution_result {
-        return {true, {}};
-    };
+    auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result { return {true, {}}; };
     auto instance = instantiate(module, {host_foo});
 
     ASSERT_EQ(instance.imported_functions.size(), 1);
@@ -34,10 +32,10 @@ TEST(instantiate, imported_functions_multiple)
     module.importsec.emplace_back(Import{"mod", "foo1", ExternalKind::Function, {0}});
     module.importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {1}});
 
-    auto host_foo1 = [](Instance&, const std::vector<uint64_t>&) -> execution_result {
+    auto host_foo1 = [](Instance&, std::vector<uint64_t>) -> execution_result {
         return {true, {0}};
     };
-    auto host_foo2 = [](Instance&, const std::vector<uint64_t>&) -> execution_result {
+    auto host_foo2 = [](Instance&, std::vector<uint64_t>) -> execution_result {
         return {true, {}};
     };
     auto instance = instantiate(module, {host_foo1, host_foo2});

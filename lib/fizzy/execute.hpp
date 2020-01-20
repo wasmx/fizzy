@@ -17,7 +17,7 @@ struct execution_result
 
 struct Instance;
 
-using ImportedFunction = execution_result (*)(Instance&, const std::vector<uint64_t>&);
+using ImportedFunction = execution_result (*)(Instance&, std::vector<uint64_t>);
 
 // The module instance.
 struct Instance
