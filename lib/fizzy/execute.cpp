@@ -268,12 +268,12 @@ inline bool store_into_memory(bytes& memory, Stack<uint64_t>& stack, const uint8
 
 }  // namespace
 
-execution_result execute(Instance& instance, FuncIdx function, std::vector<uint64_t> args)
+execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint64_t> args)
 {
-    if (function < instance.imported_functions.size())
-        return instance.imported_functions[function](instance, std::move(args));
+    if (func_idx < instance.imported_functions.size())
+        return instance.imported_functions[func_idx](instance, std::move(args));
 
-    const auto code_idx = function - instance.imported_functions.size();
+    const auto code_idx = func_idx - instance.imported_functions.size();
     assert(code_idx < instance.module.codesec.size());
 
     const auto& code = instance.module.codesec[code_idx];
@@ -1003,10 +1003,10 @@ end:
     return {trap, std::move(stack)};
 }
 
-execution_result execute(const Module& module, FuncIdx function, std::vector<uint64_t> args)
+execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uint64_t> args)
 {
     auto instance = instantiate(module, {});
-    return execute(instance, function, args);
+    return execute(instance, func_idx, args);
 }
 
 std::optional<FuncIdx> find_exported_function(const Module& module, std::string_view name)

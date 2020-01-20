@@ -34,10 +34,10 @@ struct Instance
 Instance instantiate(const Module& module, std::vector<ImportedFunction> imported_functions);
 
 // Execute a function on an instance.
-execution_result execute(Instance& instance, FuncIdx function, std::vector<uint64_t> args);
+execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint64_t> args);
 
 // TODO: remove this helper
-execution_result execute(const Module& module, FuncIdx function, std::vector<uint64_t> args);
+execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uint64_t> args);
 
 // Find exported function index by name.
 std::optional<FuncIdx> find_exported_function(const Module& module, std::string_view name);
