@@ -11,10 +11,15 @@ static const auto functype_i32_to_void = "60017f00"_bytes;
 
 namespace
 {
-bytes make_section(uint8_t id, const bytes& content)
+bytes add_size_prefix(const bytes& content)
 {
     assert(content.size() < 0x80);
-    return bytes{id, static_cast<uint8_t>(content.size())} + content;
+    return bytes{static_cast<uint8_t>(content.size())} + content;
+}
+
+bytes make_section(uint8_t id, const bytes& content)
+{
+    return bytes{id} + add_size_prefix(content);
 }
 }  // namespace
 
@@ -441,8 +446,7 @@ TEST(parser, code_with_empty_expr_2_locals)
 {
     // Func with 2x i32 locals, only 0x0b "end" instruction.
     const auto func_2_locals_bin = "01027f0b"_bytes;
-
-    const auto code_bin = uint8_t(func_2_locals_bin.size()) + func_2_locals_bin;
+    const auto code_bin = add_size_prefix(func_2_locals_bin);
 
     const auto [code_obj, end_pos1] = parser<Code>{}(code_bin.data());
     EXPECT_EQ(code_obj.local_count, 2);
@@ -455,8 +459,7 @@ TEST(parser, code_with_empty_expr_5_locals)
 {
     // Func with 1x i64 + 4x i32 locals , only 0x0b "end" instruction.
     const auto func_5_locals_bin = "02017f047e0b"_bytes;
-
-    const auto code_bin = uint8_t(func_5_locals_bin.size()) + func_5_locals_bin;
+    const auto code_bin = add_size_prefix(func_5_locals_bin);
 
     const auto [code_obj, end_pos1] = parser<Code>{}(code_bin.data());
     EXPECT_EQ(code_obj.local_count, 5);
@@ -468,7 +471,7 @@ TEST(parser, code_with_empty_expr_5_locals)
 TEST(parser, code_section_with_2_trivial_codes)
 {
     const auto func_nolocals_bin = "000b"_bytes;
-    const auto code_bin = uint8_t(func_nolocals_bin.size()) + func_nolocals_bin;
+    const auto code_bin = add_size_prefix(func_nolocals_bin);
     const auto section_contents = uint8_t{2} + code_bin + code_bin;
     const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
 
@@ -488,7 +491,7 @@ TEST(parser, code_section_with_basic_instructions)
     const auto func_bin =
         "00"  // vec(locals)
         "2001210222036a01000b"_bytes;
-    const auto code_bin = uint8_t(func_bin.size()) + func_bin;
+    const auto code_bin = add_size_prefix(func_bin);
     const auto section_contents = uint8_t{1} + code_bin;
     const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
 
