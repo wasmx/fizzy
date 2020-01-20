@@ -431,8 +431,10 @@ TEST(parser, function_section_empty)
 
 TEST(parser, function_section_with_single_function)
 {
-    const auto section_contents = "0100"_bytes;
-    const auto bin = bytes{wasm_prefix} + make_section(3, section_contents);
+    const auto function_section = make_vec({"00"_bytes});
+    const auto code_section = make_vec({"02000b"_bytes});
+    const auto bin =
+        bytes{wasm_prefix} + make_section(3, function_section) + make_section(10, code_section);
     const auto module = parse(bin);
     ASSERT_EQ(module.funcsec.size(), 1);
     EXPECT_EQ(module.funcsec[0], 0);
@@ -440,8 +442,11 @@ TEST(parser, function_section_with_single_function)
 
 TEST(parser, function_section_with_multiple_functions)
 {
-    const auto section_contents = "04000142ff01"_bytes;
-    const auto bin = bytes{wasm_prefix} + make_section(3, section_contents);
+    const auto function_section = "04000142ff01"_bytes;
+    const auto code_section =
+        make_vec({"02000b"_bytes, "02000b"_bytes, "02000b"_bytes, "02000b"_bytes});
+    const auto bin =
+        bytes{wasm_prefix} + make_section(3, function_section) + make_section(10, code_section);
     const auto module = parse(bin);
     ASSERT_EQ(module.funcsec.size(), 4);
     EXPECT_EQ(module.funcsec[0], 0);
@@ -453,8 +458,12 @@ TEST(parser, function_section_with_multiple_functions)
 TEST(parser, function_section_size_128)
 {
     constexpr auto size = 128;
-    const auto section_contents = test::leb128u_encode(size) + bytes(128, 0);
-    const auto wasm_bin = bytes{wasm_prefix} + make_section(3, section_contents);
+    const auto function_section = test::leb128u_encode(size) + bytes(128, 0);
+    bytes code_section = test::leb128u_encode(size);
+    for (auto i = 0; i < size; i++)
+        code_section.append("02000b"_bytes);
+    const auto wasm_bin =
+        bytes{wasm_prefix} + make_section(3, function_section) + make_section(10, code_section);
     const auto module = parse(wasm_bin);
     ASSERT_EQ(module.funcsec.size(), size);
 }
@@ -756,9 +765,10 @@ TEST(parser, export_name_out_of_bounds)
 TEST(parser, start)
 {
     const auto func_section = make_vec({"00"_bytes, "00"_bytes});
+    const auto code_section = make_vec({"02000b"_bytes, "02000b"_bytes});
     const auto start_section = "01"_bytes;
-    const auto bin =
-        bytes{wasm_prefix} + make_section(3, func_section) + make_section(8, start_section);
+    const auto bin = bytes{wasm_prefix} + make_section(3, func_section) +
+                     make_section(8, start_section) + make_section(10, code_section);
 
     const auto module = parse(bin);
     EXPECT_TRUE(module.startfunc);
@@ -768,9 +778,10 @@ TEST(parser, start)
 TEST(parser, start_invalid_index)
 {
     const auto func_section = make_vec({"00"_bytes, "00"_bytes});
+    const auto code_section = make_vec({"02000b"_bytes, "02000b"_bytes});
     const auto start_section = "02"_bytes;
-    const auto bin =
-        bytes{wasm_prefix} + make_section(3, func_section) + make_section(8, start_section);
+    const auto bin = bytes{wasm_prefix} + make_section(3, func_section) +
+                     make_section(8, start_section) + make_section(10, code_section);
 
     EXPECT_THROW_MESSAGE(parse(bin), parser_error, "invalid start function index");
 }
@@ -788,9 +799,11 @@ TEST(parser, start_module_with_imports)
     const auto import_section =
         make_vec({bytes{0x03, 'm', 'o', 'd', 0x03, 'f', 'o', 'o', 0x00, 0x42}});
     const auto func_section = make_vec({"00"_bytes, "00"_bytes});
+    const auto code_section = make_vec({"02000b"_bytes, "02000b"_bytes});
     const auto start_section = "02"_bytes;
     const auto bin = bytes{wasm_prefix} + make_section(2, import_section) +
-                     make_section(3, func_section) + make_section(8, start_section);
+                     make_section(3, func_section) + make_section(8, start_section) +
+                     make_section(10, code_section);
 
     const auto module = parse(bin);
     EXPECT_TRUE(module.startfunc);
@@ -802,9 +815,11 @@ TEST(parser, start_module_with_imports_invalid_index)
     const auto import_section =
         make_vec({bytes{0x03, 'm', 'o', 'd', 0x03, 'f', 'o', 'o', 0x00, 0x42}});
     const auto func_section = make_vec({"00"_bytes, "00"_bytes});
+    const auto code_section = make_vec({"02000b"_bytes, "02000b"_bytes});
     const auto start_section = "03"_bytes;
     const auto bin = bytes{wasm_prefix} + make_section(2, import_section) +
-                     make_section(3, func_section) + make_section(8, start_section);
+                     make_section(3, func_section) + make_section(8, start_section) +
+                     make_section(10, code_section);
 
     EXPECT_THROW_MESSAGE(parse(bin), parser_error, "invalid start function index");
 }
@@ -877,7 +892,7 @@ TEST(parser, code_locals)
 {
     const auto wasm_locals = "81017f"_bytes;  // 0x81 x i32.
     const auto wasm =
-        bytes{wasm_prefix} +
+        bytes{wasm_prefix} + make_section(3, "0100"_bytes) +
         make_section(10, make_vec({add_size_prefix(make_vec({wasm_locals}) + "0b"_bytes)}));
 
     const auto module = parse(wasm);
@@ -892,7 +907,7 @@ TEST(parser, code_locals_2)
     const auto wasm_locals3 = "037e"_bytes;  // 3 x i64.
     const auto wasm_locals4 = "047e"_bytes;  // 4 x i64.
     const auto wasm =
-        bytes{wasm_prefix} +
+        bytes{wasm_prefix} + make_section(3, "0100"_bytes) +
         make_section(10,
             make_vec({add_size_prefix(
                 make_vec({wasm_locals1, wasm_locals2, wasm_locals3, wasm_locals4}) + "0b"_bytes)}));
@@ -906,7 +921,7 @@ TEST(parser, code_locals_invalid_type)
 {
     const auto wasm_locals = "017b"_bytes;  // 1 x <invalid_type>.
     const auto wasm =
-        bytes{wasm_prefix} +
+        bytes{wasm_prefix} + make_section(3, "0100"_bytes) +
         make_section(10, make_vec({add_size_prefix(make_vec({wasm_locals}) + "0b"_bytes)}));
 
     EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "invalid valtype 123");
@@ -921,8 +936,8 @@ TEST(parser, code_locals_too_many)
              make_vec({large_num + "7f"_bytes, large_num + "7f"_bytes})   // large i32 + large i32
          })
     {
-        const auto wasm =
-            bytes{wasm_prefix} + make_section(10, make_vec({add_size_prefix(locals + "0b"_bytes)}));
+        const auto wasm = bytes{wasm_prefix} + make_section(3, "0100"_bytes) +
+                          make_section(10, make_vec({add_size_prefix(locals + "0b"_bytes)}));
 
         EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "too many local variables");
     }
@@ -933,7 +948,8 @@ TEST(parser, code_with_empty_expr_2_locals)
     // Func with 2x i32 locals, only 0x0b "end" instruction.
     const auto func_2_locals_bin = "01027f0b"_bytes;
     const auto code_bin = add_size_prefix(func_2_locals_bin);
-    const auto wasm_bin = bytes{wasm_prefix} + make_section(10, make_vec({code_bin}));
+    const auto wasm_bin =
+        bytes{wasm_prefix} + make_section(3, "0100"_bytes) + make_section(10, make_vec({code_bin}));
 
     const auto module = parse(wasm_bin);
     ASSERT_EQ(module.codesec.size(), 1);
@@ -949,7 +965,8 @@ TEST(parser, code_with_empty_expr_5_locals)
     // Func with 1x i64 + 4x i32 locals , only 0x0b "end" instruction.
     const auto func_5_locals_bin = "02017f047e0b"_bytes;
     const auto code_bin = add_size_prefix(func_5_locals_bin);
-    const auto wasm_bin = bytes{wasm_prefix} + make_section(10, make_vec({code_bin}));
+    const auto wasm_bin =
+        bytes{wasm_prefix} + make_section(3, "0100"_bytes) + make_section(10, make_vec({code_bin}));
 
     const auto module = parse(wasm_bin);
     ASSERT_EQ(module.codesec.size(), 1);
@@ -965,7 +982,8 @@ TEST(parser, code_section_with_2_trivial_codes)
     const auto func_nolocals_bin = "000b"_bytes;
     const auto code_bin = add_size_prefix(func_nolocals_bin);
     const auto section_contents = make_vec({code_bin, code_bin});
-    const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
+    const auto bin =
+        bytes{wasm_prefix} + make_section(3, "020000"_bytes) + make_section(10, section_contents);
 
     const auto module = parse(bin);
     EXPECT_EQ(module.typesec.size(), 0);
@@ -985,7 +1003,8 @@ TEST(parser, code_section_with_basic_instructions)
         "2001210222036a01000b"_bytes;
     const auto code_bin = add_size_prefix(func_bin);
     const auto section_contents = make_vec({code_bin});
-    const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
+    const auto bin =
+        bytes{wasm_prefix} + make_section(3, "0100"_bytes) + make_section(10, section_contents);
 
     const auto module = parse(bin);
     EXPECT_EQ(module.typesec.size(), 0);
@@ -1010,8 +1029,8 @@ TEST(parser, code_section_with_memory_size)
         "3f000b"_bytes;
     const auto code_bin = add_size_prefix(func_bin);
     const auto section_contents = make_vec({code_bin});
-    const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
-
+    const auto bin =
+        bytes{wasm_prefix} + make_section(3, "0100"_bytes) + make_section(10, section_contents);
     const auto module = parse(bin);
     ASSERT_EQ(module.codesec.size(), 1);
     EXPECT_EQ(module.codesec[0].local_count, 0);
@@ -1025,7 +1044,8 @@ TEST(parser, code_section_with_memory_size)
         "3f010b"_bytes;
     const auto code_bin_invalid = add_size_prefix(func_bin_invalid);
     const auto section_contents_invalid = make_vec({code_bin_invalid});
-    const auto bin_invalid = bytes{wasm_prefix} + make_section(10, section_contents_invalid);
+    const auto bin_invalid = bytes{wasm_prefix} + make_section(3, "0100"_bytes) +
+                             make_section(10, section_contents_invalid);
 
     EXPECT_THROW_MESSAGE(parse(bin_invalid), parser_error, "invalid memory index encountered");
 }
@@ -1036,8 +1056,9 @@ TEST(parser, code_section_with_memory_grow)
         "00"  // vec(locals)
         "410040001a0b"_bytes;
     const auto code_bin = add_size_prefix(func_bin);
-    const auto section_contents = make_vec({code_bin});
-    const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
+    const auto code_section = make_vec({code_bin});
+    const auto bin =
+        bytes{wasm_prefix} + make_section(3, "0100"_bytes) + make_section(10, code_section);
 
     const auto module = parse(bin);
     ASSERT_EQ(module.codesec.size(), 1);
@@ -1053,8 +1074,9 @@ TEST(parser, code_section_with_memory_grow)
         "00"  // vec(locals)
         "410040011a0b"_bytes;
     const auto code_bin_invalid = add_size_prefix(func_bin_invalid);
-    const auto section_contents_invalid = make_vec({code_bin_invalid});
-    const auto bin_invalid = bytes{wasm_prefix} + make_section(10, section_contents_invalid);
+    const auto code_section_invalid = make_vec({code_bin_invalid});
+    const auto bin_invalid =
+        bytes{wasm_prefix} + make_section(3, "0100"_bytes) + make_section(10, code_section_invalid);
 
     EXPECT_THROW_MESSAGE(parse(bin_invalid), parser_error, "invalid memory index encountered");
 }
