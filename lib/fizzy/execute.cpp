@@ -388,6 +388,27 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
                 stack.push(ret.stack[0]);
             break;
         }
+        case Instr::return_:
+        {
+            // TODO: Not needed, but satisfies the assert in the end of the main loop.
+            labels.clear();
+
+            assert(code_idx < instance.module.funcsec.size());
+            const auto type_idx = instance.module.funcsec[code_idx];
+            assert(type_idx < instance.module.typesec.size());
+            const bool have_result = !instance.module.typesec[type_idx].outputs.empty();
+
+            if (have_result)
+            {
+                const auto result = stack.peek();
+                stack.clear();
+                stack.push(result);
+            }
+            else
+                stack.clear();
+
+            goto end;
+        }
         case Instr::drop:
         {
             stack.pop();
