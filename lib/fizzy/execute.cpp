@@ -141,7 +141,8 @@ inline uint64_t popcnt64(uint64_t value) noexcept
 }
 }  // namespace
 
-Instance instantiate(const Module& module, std::vector<ImportedFunction> imported_functions)
+Instance instantiate(const Module& module, std::vector<ImportedFunction> imported_functions,
+    std::vector<uint64_t> imported_globals)
 {
     size_t memory_min, memory_max;
     if (module.memorysec.size() > 1)
@@ -183,36 +184,58 @@ Instance instantiate(const Module& module, std::vector<ImportedFunction> importe
         std::memcpy(memory.data() + offset, data.init.data(), data.init.size());
     }
 
-    // TODO: add imported globals first
-    std::vector<uint64_t> globals;
-    globals.reserve(module.globalsec.size());
+    std::vector<TypeIdx> imported_function_types;
+    std::vector<bool> imported_globals_mutability;
+    for (auto const& import : module.importsec)
+    {
+        switch (import.kind)
+        {
+        case ExternalKind::Function:
+            imported_function_types.emplace_back(import.desc.function_type_index);
+            break;
+        case ExternalKind::Global:
+            imported_globals_mutability.emplace_back(import.desc.global_mutable);
+            break;
+        default:
+            throw std::runtime_error("Import of type " +
+                                     std::to_string(static_cast<uint8_t>(import.kind)) +
+                                     " is not supported");
+        }
+    }
+    if (imported_functions.size() != imported_function_types.size())
+        throw std::runtime_error(
+            "Module requires " + std::to_string(imported_function_types.size()) +
+            " imported functions, " + std::to_string(imported_functions.size()) + " provided");
+    if (imported_globals.size() != imported_globals_mutability.size())
+        throw std::runtime_error(
+            "Module requires " + std::to_string(imported_globals_mutability.size()) +
+            " imported globals, " + std::to_string(imported_globals.size()) + " provided");
+
+    // add imported globals first
+    std::vector<uint64_t> globals = std::move(imported_globals);
+    globals.reserve(globals.size() + module.globalsec.size());
+    // init regular globals
     for (auto const& global : module.globalsec)
     {
         if (global.expression.kind == ConstantExpression::Kind::Constant)
             globals.emplace_back(global.expression.value.constant);
         else
         {
-            // TODO: initialize by imported global
-            // Wasm spec section 3.3.7 constrains initialization by another global to imports only
-            // https://webassembly.github.io/spec/core/valid/instructions.html#expressions
-            throw std::runtime_error(
-                "global initialization by imported global is not supported yet");
+            // initialize by imported global
+            const auto global_idx = global.expression.value.global_index;
+            // Wasm spec section 3.3.7 constrains initialization by another global to const imports
+            // only https://webassembly.github.io/spec/core/valid/instructions.html#expressions
+            if (global_idx >= imported_globals_mutability.size() ||
+                imported_globals_mutability[global_idx])
+                throw std::runtime_error(
+                    "global can be initialized by another global only it it's const and imported");
+            globals.emplace_back(globals[global_idx]);
         }
     }
 
-    std::vector<TypeIdx> imported_function_types;
-    for (auto const& import : module.importsec)
-    {
-        if (import.kind == ExternalKind::Function)
-            imported_function_types.emplace_back(import.desc.function_type_index);
-    }
-    if (imported_functions.size() != imported_function_types.size())
-        throw std::runtime_error(
-            "Module requires " + std::to_string(imported_function_types.size()) +
-            " imported functions, " + std::to_string(imported_functions.size()) + " provided");
-
     Instance instance = {module, std::move(memory), memory_max, std::move(globals),
-        std::move(imported_functions), std::move(imported_function_types)};
+        std::move(imported_functions), std::move(imported_function_types),
+        std::move(imported_globals_mutability)};
 
     // Run start function if present
     if (module.startfunc)
@@ -393,7 +416,10 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         {
             const auto idx = read<uint32_t>(immediates);
             assert(idx <= instance.globals.size());
-            assert(instance.module.globalsec[idx].is_mutable);
+            if (idx < instance.imported_globals_mutability.size())
+                assert(instance.imported_globals_mutability[idx]);
+            else
+                assert(instance.module.globalsec[idx].is_mutable);
             instance.globals[idx] = stack.pop();
             break;
         }
@@ -866,7 +892,7 @@ end:
 
 execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uint64_t> args)
 {
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module, {}, {});
     return execute(instance, func_idx, args);
 }
 

@@ -2,6 +2,7 @@
 #include "parser.hpp"
 #include "utils.hpp"
 #include <gtest/gtest.h>
+#include <types.hpp>
 
 using namespace fizzy;
 
@@ -168,7 +169,7 @@ TEST(execute, global_get)
 
     module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module, {}, {});
 
     const auto [trap, ret] = execute(instance, 0, {});
 
@@ -186,7 +187,7 @@ TEST(execute, global_get_two_globals)
     module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
     module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {1, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module, {}, {});
 
     auto [trap, ret] = execute(instance, 0, {});
 
@@ -209,7 +210,7 @@ TEST(execute, global_set)
     module.codesec.emplace_back(
         Code{0, {Instr::i32_const, Instr::global_set, Instr::end}, {42, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module, {}, {});
 
     const auto [trap, ret] = execute(instance, 0, {});
 
@@ -227,7 +228,7 @@ TEST(execute, global_set_two_globals)
         {Instr::i32_const, Instr::global_set, Instr::i32_const, Instr::global_set, Instr::end},
         {44, 0, 0, 0, 0, 0, 0, 0, 45, 0, 0, 0, 1, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module, {}, {});
 
     const auto [trap, ret] = execute(instance, 0, {});
 
@@ -268,7 +269,7 @@ TEST(execute, i32_load)
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i32_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module, {}, {});
     instance.memory[0] = 42;
     const auto [trap, ret] = execute(instance, 0, {0});
 
@@ -284,7 +285,7 @@ TEST(execute, i32_load_trap)
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i32_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module, {}, {});
     const auto [trap, ret] = execute(instance, 0, {65537});
 
     ASSERT_TRUE(trap);
@@ -297,7 +298,7 @@ TEST(execute, i64_load)
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module, {}, {});
     instance.memory[0] = 0x2a;
     instance.memory[4] = 0x2a;
     const auto [trap, ret] = execute(instance, 0, {0});
@@ -314,7 +315,7 @@ TEST(execute, i64_load_trap)
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module, {}, {});
     const auto [trap, ret] = execute(instance, 0, {65537});
 
     ASSERT_TRUE(trap);
@@ -328,7 +329,7 @@ TEST(execute, i32_store)
         Code{0, {Instr::local_get, Instr::local_get, Instr::i32_store, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module, {}, {});
     const auto [trap, ret] = execute(instance, 0, {42, 0});
 
     ASSERT_FALSE(trap);
@@ -344,7 +345,7 @@ TEST(execute, i32_store_trap)
         Code{0, {Instr::local_get, Instr::local_get, Instr::i32_store, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module, {}, {});
     const auto [trap, ret] = execute(instance, 0, {42, 65537});
 
     ASSERT_TRUE(trap);
@@ -358,7 +359,7 @@ TEST(execute, i64_store)
         Code{0, {Instr::local_get, Instr::local_get, Instr::i64_store, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module, {}, {});
     const auto [trap, ret] = execute(instance, 0, {0x2a0000002a, 0});
 
     ASSERT_FALSE(trap);
@@ -374,7 +375,7 @@ TEST(execute, i64_store_trap)
         Code{0, {Instr::local_get, Instr::local_get, Instr::i64_store, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module, {}, {});
     const auto [trap, ret] = execute(instance, 0, {0x2a0000002a, 65537});
 
     ASSERT_TRUE(trap);
@@ -1456,7 +1457,7 @@ TEST(execute, start_section)
         Code{0, {Instr::i32_const, Instr::i32_const, Instr::i32_store, Instr::end},
             {0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module, {}, {});
     // Start function sets this
     ASSERT_EQ(instance.memory.substr(0, 4), from_hex("2a000000"));
 
@@ -1478,7 +1479,7 @@ TEST(execute, imported_function)
         return {false, {args[0] + args[1]}};
     };
 
-    auto instance = instantiate(module, {host_foo});
+    auto instance = instantiate(module, {host_foo}, {});
 
     const auto [trap, ret] = execute(instance, 0, {20, 22});
 
@@ -1501,7 +1502,7 @@ TEST(execute, imported_two_functions)
         return {false, {args[0] * args[1]}};
     };
 
-    auto instance = instantiate(module, {host_foo1, host_foo2});
+    auto instance = instantiate(module, {host_foo1, host_foo2}, {});
 
     const auto [trap1, ret1] = execute(instance, 0, {20, 22});
 
@@ -1532,7 +1533,7 @@ TEST(execute, imported_functions_and_regular_one)
         return {false, {args[0] * args[0]}};
     };
 
-    auto instance = instantiate(module, {host_foo1, host_foo2});
+    auto instance = instantiate(module, {host_foo1, host_foo2}, {});
 
     const auto [trap1, ret1] = execute(instance, 0, {20, 22});
 
@@ -1551,7 +1552,7 @@ TEST(execute, imported_functions_and_regular_one)
         return {false, {args.size()}};
     };
 
-    auto instance_couner = instantiate(module, {count_args, count_args});
+    auto instance_couner = instantiate(module, {count_args, count_args}, {});
 
     const auto [trap3, ret3] = execute(instance_couner, 0, {20, 22});
 
@@ -1582,7 +1583,7 @@ TEST(execute, imported_two_functions_different_type)
         return {false, {args[0] * args[0]}};
     };
 
-    auto instance = instantiate(module, {host_foo1, host_foo2});
+    auto instance = instantiate(module, {host_foo1, host_foo2}, {});
 
     const auto [trap1, ret1] = execute(instance, 0, {20, 22});
 
@@ -1611,7 +1612,7 @@ TEST(execute, imported_function_traps)
 
     auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result { return {true, {}}; };
 
-    auto instance = instantiate(module, {host_foo});
+    auto instance = instantiate(module, {host_foo}, {});
 
     const auto [trap, ret] = execute(instance, 0, {20, 22});
 
@@ -1630,7 +1631,7 @@ TEST(execute, imported_function_call)
         return {false, {42}};
     };
 
-    auto instance = instantiate(module, {host_foo});
+    auto instance = instantiate(module, {host_foo}, {});
 
     const auto [trap, ret] = execute(instance, 1, {});
 
@@ -1653,9 +1654,27 @@ TEST(execute, imported_function_call_with_arguments)
         return {false, {args[0] * 2}};
     };
 
-    auto instance = instantiate(module, {host_foo});
+    auto instance = instantiate(module, {host_foo}, {});
 
     const auto [trap, ret] = execute(instance, 1, {20});
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 42);
+}
+
+TEST(execute, imported_global)
+{
+    Module module;
+    Import imp{"mod", "glob", ExternalKind::Global, {0}};
+    imp.desc.global_mutable = false;
+    module.importsec.emplace_back(imp);
+
+    module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
+
+    auto instance = instantiate(module, {}, {42});
+
+    const auto [trap, ret] = execute(instance, 0, {});
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);

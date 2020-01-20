@@ -25,13 +25,16 @@ struct Instance
     const Module& module;
     bytes memory;
     size_t memory_max_pages = 0;
+    // Includes imported globals
     std::vector<uint64_t> globals;
     std::vector<ImportedFunction> imported_functions;
     std::vector<TypeIdx> imported_function_types;
+    std::vector<bool> imported_globals_mutability;
 };
 
 // Instantiate a module.
-Instance instantiate(const Module& module, std::vector<ImportedFunction> imported_functions);
+Instance instantiate(const Module& module, std::vector<ImportedFunction> imported_functions,
+    std::vector<uint64_t> imported_globals);
 
 // Execute a function on an instance.
 execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint64_t> args);

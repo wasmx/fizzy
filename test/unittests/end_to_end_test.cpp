@@ -69,7 +69,7 @@ TEST(end_to_end, DISABLED_milestone2)
 
     const auto module = parse(bin);
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module, {}, {});
 
     // This performs uint256 x uint256 -> uint512 multiplication.
     // Arg1: 2^255 + 1
@@ -220,7 +220,7 @@ TEST(end_to_end, DISABLED_memset)
 
     const auto module = parse(bin);
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module, {}, {});
     const auto [trap, ret] = execute(instance, 1, {0, 2});
 
     ASSERT_FALSE(trap);
