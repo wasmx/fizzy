@@ -424,6 +424,62 @@ TEST(execute_control, br_if_with_result)
     }
 }
 
+TEST(execute_control, br_if_out_of_function)
+{
+    /*
+    (func (param i32) (result i32)
+      i32.const 1
+      i32.const 2
+      get_local 0
+      br_if 0
+      drop
+    )
+    */
+    const auto bin = from_hex(
+        "0061736d0100000001060160017f017f030201000a0d010b004101410220000d001a0b000c046e616d65020501"
+        "00010000");
+
+    for (const auto param : {0u, 1u})
+    {
+        constexpr uint64_t expected_results[]{
+            1,  // br_if not taken.
+            2,  // br_if taken.
+        };
+
+        const auto [trap, ret] = execute(parse(bin), 0, {param});
+        ASSERT_FALSE(trap);
+        ASSERT_EQ(ret.size(), 1);
+        EXPECT_EQ(ret[0], expected_results[param]);
+    }
+}
+
+TEST(execute_control, br_1_out_of_function_and_imported_function)
+{
+    /*
+    (func (import "imported" "function"))  ;; Imported function affects code index.
+    (func (result i32)
+      (loop
+        i32.const 1
+        br 1
+      )
+      i32.const 0
+    )
+    */
+    const auto bin = from_hex(
+        "0061736d010000000108026000006000017f02150108696d706f727465640866756e6374696f6e000003020101"
+        "0a0d010b00034041010c010b41000b000c046e616d6502050200000100");
+
+    constexpr auto fake_imported_function =
+        [](Instance&, std::vector<uint64_t>) noexcept -> execution_result { return {}; };
+
+    const auto module = parse(bin);
+    auto instance = instantiate(module, {fake_imported_function});
+    const auto [trap, ret] = execute(instance, 1, {});
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 1);
+}
+
 TEST(execute_control, return_from_loop)
 {
     /*
