@@ -5,18 +5,6 @@
 
 namespace fizzy
 {
-// The module instance.
-struct Instance
-{
-    const Module& module;
-    bytes memory;
-    size_t memory_max_pages = 0;
-    std::vector<uint64_t> globals;
-};
-
-// Instantiate a module.
-Instance instantiate(const Module& module);
-
 // The result of an execution.
 struct execution_result
 {
@@ -26,6 +14,24 @@ struct execution_result
     // NOTE: this can be either 0 or 1 items
     std::vector<uint64_t> stack;
 };
+
+struct Instance;
+
+using ImportedFunction = execution_result (*)(Instance&, std::vector<uint64_t>);
+
+// The module instance.
+struct Instance
+{
+    const Module& module;
+    bytes memory;
+    size_t memory_max_pages = 0;
+    std::vector<uint64_t> globals;
+    std::vector<ImportedFunction> imported_functions;
+    std::vector<TypeIdx> imported_function_types;
+};
+
+// Instantiate a module.
+Instance instantiate(const Module& module, std::vector<ImportedFunction> imported_functions);
 
 // Execute a function on an instance.
 execution_result execute(Instance& instance, FuncIdx function, std::vector<uint64_t> args);
