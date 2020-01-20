@@ -202,8 +202,23 @@ parser_result<Code> parse_expr(const uint8_t* pos)
 
         case Instr::i32_load:
         case Instr::i64_load:
+        case Instr::i32_load8_s:
+        case Instr::i32_load8_u:
+        case Instr::i32_load16_s:
+        case Instr::i32_load16_u:
+        case Instr::i64_load8_s:
+        case Instr::i64_load8_u:
+        case Instr::i64_load16_s:
+        case Instr::i64_load16_u:
+        case Instr::i64_load32_s:
+        case Instr::i64_load32_u:
         case Instr::i32_store:
         case Instr::i64_store:
+        case Instr::i32_store8:
+        case Instr::i32_store16:
+        case Instr::i64_store8:
+        case Instr::i64_store16:
+        case Instr::i64_store32:
         {
             // alignment
             std::tie(std::ignore, pos) = leb128u_decode<uint32_t>(pos);
