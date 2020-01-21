@@ -94,7 +94,7 @@ TEST(instantiate, imported_globals_multiple)
     ASSERT_EQ(instance.globals.size(), 0);
 }
 
-TEST(instantiate, imported_globals_not_enough)
+TEST(instantiate, imported_globals_mismatched_count)
 {
     Module module;
     module.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {true}});
@@ -103,6 +103,29 @@ TEST(instantiate, imported_globals_not_enough)
     uint64_t global_value = 42;
     ImportedGlobal g{&global_value, true};
     EXPECT_THROW(instantiate(module, {}, {g}), std::runtime_error);
+}
+
+TEST(instantiate, imported_globals_mismatched_mutability)
+{
+    Module module;
+    module.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {true}});
+    module.importsec.emplace_back(Import{"mod", "g2", ExternalKind::Global, {false}});
+
+    uint64_t global_value1 = 42;
+    ImportedGlobal g1{&global_value1, false};
+    uint64_t global_value2 = 42;
+    ImportedGlobal g2{&global_value2, true};
+    EXPECT_THROW(instantiate(module, {}, {g1, g2}), std::runtime_error);
+}
+
+TEST(instantiate, imported_globals_nullptr)
+{
+    Module module;
+    module.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {false}});
+    module.importsec.emplace_back(Import{"mod", "g2", ExternalKind::Global, {false}});
+
+    ImportedGlobal g{nullptr, false};
+    EXPECT_THROW(instantiate(module, {}, {g, g}), std::runtime_error);
 }
 
 TEST(instantiate, memory_default)
