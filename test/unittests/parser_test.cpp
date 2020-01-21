@@ -1,5 +1,5 @@
+#include "hex.hpp"
 #include "parser.hpp"
-#include "utils.hpp"
 #include <gtest/gtest.h>
 #include <types.hpp>
 

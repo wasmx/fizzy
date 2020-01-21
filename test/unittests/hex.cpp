@@ -1,6 +1,4 @@
-
-#include "utils.hpp"
-#include <ostream>
+#include "hex.hpp"
 #include <stdexcept>
 
 namespace fizzy

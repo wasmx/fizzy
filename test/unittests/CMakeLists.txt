@@ -13,12 +13,12 @@ target_sources(
     end_to_end_test.cpp
     execute_control_test.cpp
     execute_test.cpp
+    hex.cpp
+    hex.hpp
     instantiate_test.cpp
     leb128_test.cpp
     parser_test.cpp
     stack_test.cpp
-    utils.cpp
-    utils.hpp
 )
 
 gtest_discover_tests(
