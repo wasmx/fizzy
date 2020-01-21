@@ -257,6 +257,48 @@ TEST(parser, function_section_with_multiple_functions)
     EXPECT_EQ(module.funcsec[3], 0xff);
 }
 
+TEST(parser, table_single_min_limit)
+{
+    const auto section_contents =
+        bytes{} + uint8_t{0x01} + uint8_t{0x70} + uint8_t{0x00} + uint8_t{0x7f};
+    const auto bin = bytes{wasm_prefix} + make_section(4, section_contents);
+
+    const auto module = parse(bin);
+    ASSERT_EQ(module.tablesec.size(), 1);
+    EXPECT_EQ(module.tablesec[0].limits.min, 0x7f);
+}
+
+TEST(parser, table_single_minmax_limit)
+{
+    const auto section_contents =
+        bytes{} + uint8_t{0x01} + uint8_t{0x70} + uint8_t{0x01} + uint8_t{0x12} + uint8_t{0x7f};
+    const auto bin = bytes{wasm_prefix} + make_section(4, section_contents);
+
+    const auto module = parse(bin);
+    ASSERT_EQ(module.tablesec.size(), 1);
+    EXPECT_EQ(module.tablesec[0].limits.min, 0x12);
+    EXPECT_EQ(module.tablesec[0].limits.max, 0x7f);
+}
+
+// Where minimum exceeds maximum
+TEST(parser, table_single_malformed_minmax)
+{
+    const auto section_contents =
+        bytes{} + uint8_t{0x01} + uint8_t{0x70} + uint8_t{0x01} + uint8_t{0x7f} + uint8_t{0x12};
+    const auto bin = bytes{wasm_prefix} + make_section(4, section_contents);
+
+    EXPECT_THROW(parse(bin), parser_error);
+}
+
+TEST(parser, table_multi_min_limit)
+{
+    const auto section_contents = bytes{} + uint8_t{0x02} + uint8_t{0x70} + uint8_t{0x00} +
+                                  uint8_t{0x7f} + uint8_t{0x70} + uint8_t{0x00} + uint8_t{0x7f};
+    const auto bin = bytes{wasm_prefix} + make_section(4, section_contents);
+
+    EXPECT_THROW(parse(bin), parser_error);
+}
+
 TEST(parser, memory_single_min_limit)
 {
     const auto section_contents = bytes{} + uint8_t{0x01} + uint8_t{0x00} + uint8_t{0x7f};
