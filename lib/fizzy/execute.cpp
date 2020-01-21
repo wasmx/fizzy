@@ -1006,7 +1006,7 @@ end:
 execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uint64_t> args)
 {
     auto instance = instantiate(module, {});
-    return execute(instance, func_idx, args);
+    return execute(instance, func_idx, std::move(args));
 }
 
 std::optional<FuncIdx> find_exported_function(const Module& module, std::string_view name)
