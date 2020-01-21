@@ -2,7 +2,7 @@
 
 set(HUNTER_URL https://github.com/cpp-pm/hunter/archive/v0.23.239.tar.gz)
 set(HUNTER_SHA1 135567a8493ab3499187bce1f2a8df9b449febf3)
-set(HUNTER_PACKAGES GTest)
+set(HUNTER_PACKAGES GTest benchmark)
 
 include(FetchContent)
 FetchContent_Declare(
