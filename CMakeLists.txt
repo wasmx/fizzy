@@ -19,6 +19,12 @@ cable_set_build_type(DEFAULT Release CONFIGURATION_TYPES Debug;Release;Coverage)
 
 project(fizzy LANGUAGES CXX)
 
+include(TestBigEndian)
+test_big_endian(is_big_endian)
+if(is_big_endian)
+    message(FATAL_ERROR "${PROJECT_NAME} currently does not support big endian systems.")
+endif()
+
 cable_configure_compiler()
 
 set(include_dir ${PROJECT_SOURCE_DIR}/include)  # Public include directory.
