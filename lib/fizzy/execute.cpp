@@ -311,6 +311,9 @@ Instance instantiate(const Module& module, std::vector<ImportedFunction> importe
     std::vector<TypeIdx> imported_function_types =
         match_imports(module, imported_functions, imported_globals);
 
+    if (module.tablesec.size() > 0)
+        throw std::runtime_error("table section is not supported yet");
+
     std::vector<uint64_t> globals;
     globals.reserve(module.globalsec.size());
     // init regular globals

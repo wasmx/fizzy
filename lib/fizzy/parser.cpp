@@ -199,6 +199,26 @@ struct parser<Table>
 };
 
 template <>
+struct parser<Element>
+{
+    parser_result<Element> operator()(const uint8_t* pos)
+    {
+        TableIdx table_index;
+        std::tie(table_index, pos) = leb128u_decode<uint32_t>(pos);
+        if (table_index != 0)
+            throw parser_error{"unexpected tableidx value " + std::to_string(table_index)};
+
+        ConstantExpression offset;
+        std::tie(offset, pos) = parser<ConstantExpression>{}(pos);
+
+        std::vector<FuncIdx> init;
+        std::tie(init, pos) = parser<std::vector<FuncIdx>>{}(pos);
+
+        return {{offset, std::move(init)}, pos};
+    }
+};
+
+template <>
 struct parser<Data>
 {
     parser_result<Data> operator()(const uint8_t* pos)
@@ -258,6 +278,9 @@ Module parse(bytes_view input)
         case SectionId::start:
             std::tie(module.startfunc, it) = leb128u_decode<uint32_t>(it);
             break;
+        case SectionId::element:
+            std::tie(module.elementsec, it) = parser<std::vector<Element>>{}(it);
+            break;
         case SectionId::code:
             std::tie(module.codesec, it) = parser<std::vector<Code>>{}(it);
             break;
@@ -265,7 +288,6 @@ Module parse(bytes_view input)
             std::tie(module.datasec, it) = parser<std::vector<Data>>{}(it);
             break;
         case SectionId::custom:
-        case SectionId::element:
             // These sections are ignored for now.
             it += size;
             break;
@@ -283,6 +305,9 @@ Module parse(bytes_view input)
 
         if (module.memorysec.size() > 1)
             throw parser_error{"too many memory sections (at most one is allowed)"};
+
+        if (!module.elementsec.empty() && module.tablesec.empty())
+            throw parser_error("element section encountered without a table section");
     }
 
     return module;

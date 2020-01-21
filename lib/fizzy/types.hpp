@@ -45,6 +45,9 @@ using TypeIdx = uint32_t;
 // https://webassembly.github.io/spec/core/binary/modules.html#binary-funcidx
 using FuncIdx = uint32_t;
 
+// https://webassembly.github.io/spec/core/syntax/modules.html#syntax-tableidx
+using TableIdx = uint32_t;
+
 // https://webassembly.github.io/spec/core/syntax/modules.html#syntax-memidx
 using MemIdx = uint32_t;
 
@@ -227,6 +230,14 @@ struct Export
     uint32_t index = 0;
 };
 
+// https://webassembly.github.io/spec/core/binary/modules.html#element-section
+// The table index is omitted from the structure as the parser ensures it to be 0
+struct Element
+{
+    ConstantExpression offset;
+    std::vector<FuncIdx> init;
+};
+
 // https://webassembly.github.io/spec/core/binary/modules.html#code-section
 struct Code
 {
@@ -283,6 +294,8 @@ struct Module
     std::vector<Export> exportsec;
     // https://webassembly.github.io/spec/core/binary/modules.html#start-section
     std::optional<FuncIdx> startfunc;
+    // https://webassembly.github.io/spec/core/binary/modules.html#element-section
+    std::vector<Element> elementsec;
     // https://webassembly.github.io/spec/core/binary/modules.html#code-section
     std::vector<Code> codesec;
     // https://webassembly.github.io/spec/core/binary/modules.html#data-section
