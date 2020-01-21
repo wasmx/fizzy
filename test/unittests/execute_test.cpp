@@ -168,7 +168,7 @@ TEST(execute, global_get)
 
     module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
 
     const auto [trap, ret] = execute(instance, 0, {});
 
@@ -186,7 +186,7 @@ TEST(execute, global_get_two_globals)
     module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
     module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {1, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
 
     auto [trap, ret] = execute(instance, 0, {});
 
@@ -209,7 +209,7 @@ TEST(execute, global_set)
     module.codesec.emplace_back(
         Code{0, {Instr::i32_const, Instr::global_set, Instr::end}, {42, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
 
     const auto [trap, ret] = execute(instance, 0, {});
 
@@ -227,7 +227,7 @@ TEST(execute, global_set_two_globals)
         {Instr::i32_const, Instr::global_set, Instr::i32_const, Instr::global_set, Instr::end},
         {44, 0, 0, 0, 0, 0, 0, 0, 45, 0, 0, 0, 1, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
 
     const auto [trap, ret] = execute(instance, 0, {});
 
@@ -268,7 +268,7 @@ TEST(execute, i32_load)
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i32_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     instance.memory[0] = 42;
     const auto [trap, ret] = execute(instance, 0, {0});
 
@@ -286,7 +286,7 @@ TEST(execute, i64_load)
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     instance.memory[0] = 0x2a;
     instance.memory[4] = 0x2a;
     const auto [trap, ret] = execute(instance, 0, {0});
@@ -305,7 +305,7 @@ TEST(execute, i32_load8_s)
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i32_load8_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     instance.memory[0] = 0x80;
     instance.memory[1] = 0xf1;
     const auto [trap, ret] = execute(instance, 0, {0});
@@ -324,7 +324,7 @@ TEST(execute, i32_load8_u)
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i32_load8_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     instance.memory[0] = 0x81;
     instance.memory[1] = 0xf1;
     const auto [trap, ret] = execute(instance, 0, {0});
@@ -343,7 +343,7 @@ TEST(execute, i32_load16_s)
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i32_load16_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     instance.memory[0] = 0x00;
     instance.memory[1] = 0x80;
     instance.memory[3] = 0xf1;
@@ -363,7 +363,7 @@ TEST(execute, i32_load16_u)
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i32_load16_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     instance.memory[0] = 0x01;
     instance.memory[1] = 0x80;
     instance.memory[3] = 0xf1;
@@ -383,7 +383,7 @@ TEST(execute, i64_load8_s)
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load8_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     instance.memory[0] = 0x80;
     instance.memory[1] = 0xf1;
     const auto [trap, ret] = execute(instance, 0, {0});
@@ -402,7 +402,7 @@ TEST(execute, i64_load8_u)
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load8_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     instance.memory[0] = 0x81;
     instance.memory[1] = 0xf1;
     const auto [trap, ret] = execute(instance, 0, {0});
@@ -421,7 +421,7 @@ TEST(execute, i64_load16_s)
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load16_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     instance.memory[0] = 0x00;
     instance.memory[1] = 0x80;
     instance.memory[2] = 0xf1;
@@ -441,7 +441,7 @@ TEST(execute, i64_load16_u)
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load16_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     instance.memory[0] = 0x01;
     instance.memory[1] = 0x80;
     instance.memory[2] = 0xf1;
@@ -461,7 +461,7 @@ TEST(execute, i64_load32_s)
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load32_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     instance.memory[0] = 0x00;
     instance.memory[1] = 0x00;
     instance.memory[2] = 0x00;
@@ -483,7 +483,7 @@ TEST(execute, i64_load32_u)
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load32_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     instance.memory[0] = 0x01;
     instance.memory[1] = 0x00;
     instance.memory[2] = 0x00;
@@ -506,7 +506,7 @@ TEST(execute, i32_store)
         Code{0, {Instr::local_get, Instr::local_get, Instr::i32_store, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     const auto [trap, ret] = execute(instance, 0, {42, 0});
 
     ASSERT_FALSE(trap);
@@ -524,7 +524,7 @@ TEST(execute, i64_store)
         Code{0, {Instr::local_get, Instr::local_get, Instr::i64_store, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     const auto [trap, ret] = execute(instance, 0, {0x2a0000002a, 0});
 
     ASSERT_FALSE(trap);
@@ -542,7 +542,7 @@ TEST(execute, i32_store8)
         Code{0, {Instr::local_get, Instr::local_get, Instr::i32_store8, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     const auto [trap, ret] = execute(instance, 0, {0xf1f2f380, 0});
 
     ASSERT_FALSE(trap);
@@ -560,7 +560,7 @@ TEST(execute, i32_store8_trap)
         Code{0, {Instr::local_get, Instr::local_get, Instr::i32_store8, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     const auto [trap, ret] = execute(instance, 0, {0xf1f2f380, 65537});
 
     ASSERT_TRUE(trap);
@@ -574,7 +574,7 @@ TEST(execute, i32_store16)
         Code{0, {Instr::local_get, Instr::local_get, Instr::i32_store16, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     const auto [trap, ret] = execute(instance, 0, {0xf1f28000, 0});
 
     ASSERT_FALSE(trap);
@@ -592,7 +592,7 @@ TEST(execute, i64_store8)
         Code{0, {Instr::local_get, Instr::local_get, Instr::i64_store8, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     const auto [trap, ret] = execute(instance, 0, {0xf1f2f4f5f6f7f880, 0});
 
     ASSERT_FALSE(trap);
@@ -610,7 +610,7 @@ TEST(execute, i64_store16)
         Code{0, {Instr::local_get, Instr::local_get, Instr::i64_store16, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     const auto [trap, ret] = execute(instance, 0, {0xf1f2f4f5f6f78000, 0});
 
     ASSERT_FALSE(trap);
@@ -628,7 +628,7 @@ TEST(execute, i64_store32)
         Code{0, {Instr::local_get, Instr::local_get, Instr::i64_store32, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     const auto [trap, ret] = execute(instance, 0, {0xf1f2f4f580000000, 0});
 
     ASSERT_FALSE(trap);
@@ -1714,7 +1714,7 @@ TEST(execute, start_section)
         Code{0, {Instr::i32_const, Instr::i32_const, Instr::i32_store, Instr::end},
             {0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     // Start function sets this
     ASSERT_EQ(instance.memory.substr(0, 4), from_hex("2a000000"));
 

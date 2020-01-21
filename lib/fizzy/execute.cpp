@@ -1005,7 +1005,7 @@ end:
 
 execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uint64_t> args)
 {
-    auto instance = instantiate(module, {});
+    auto instance = instantiate(module);
     return execute(instance, func_idx, std::move(args));
 }
 
