@@ -334,6 +334,9 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
             if (instruction == Instr::br_if && static_cast<uint32_t>(stack.pop()) == 0)
                 break;
 
+            if (label_idx == labels.size())
+                goto case_return;
+
             assert(labels.size() > label_idx);
             labels.drop(label_idx);  // Drop skipped labels (does nothing for labelidx == 0).
             const auto label = labels.pop();
@@ -389,6 +392,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
             break;
         }
         case Instr::return_:
+        case_return:
         {
             // TODO: Not needed, but satisfies the assert in the end of the main loop.
             labels.clear();
