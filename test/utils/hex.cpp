@@ -1,4 +1,4 @@
-#include "hex.hpp"
+#include <test/utils/hex.hpp>
 #include <stdexcept>
 
 namespace fizzy

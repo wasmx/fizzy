@@ -1,6 +1,6 @@
-#include "hex.hpp"
 #include "parser.hpp"
 #include <gtest/gtest.h>
+#include <test/utils/hex.hpp>
 #include <types.hpp>
 
 using namespace fizzy;

@@ -4,8 +4,7 @@ include(GoogleTest)
 find_package(GTest CONFIG REQUIRED)
 
 add_executable(fizzy-unittests)
-target_link_libraries(fizzy-unittests PRIVATE fizzy::fizzy GTest::gtest_main)
-target_include_directories(fizzy-unittests PRIVATE ${PROJECT_SOURCE_DIR}/lib/fizzy)
+target_link_libraries(fizzy-unittests PRIVATE fizzy::fizzy fizzy::test-utils GTest::gtest_main)
 
 target_sources(
     fizzy-unittests PRIVATE
@@ -13,8 +12,6 @@ target_sources(
     end_to_end_test.cpp
     execute_control_test.cpp
     execute_test.cpp
-    hex.cpp
-    hex.hpp
     instantiate_test.cpp
     leb128_test.cpp
     parser_test.cpp

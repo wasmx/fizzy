@@ -1,6 +1,6 @@
 #include "execute.hpp"
-#include "hex.hpp"
 #include <gtest/gtest.h>
+#include <test/utils/hex.hpp>
 
 using namespace fizzy;
 
