@@ -6,6 +6,7 @@ target_sources(
     execute.cpp
     execute.hpp
     leb128.hpp
+    limits.hpp
     parser.cpp
     parser.hpp
     parser_expr.cpp

@@ -1,4 +1,5 @@
 #include "execute.hpp"
+#include "limits.hpp"
 #include "stack.hpp"
 #include "types.hpp"
 #include <cassert>
@@ -8,11 +9,6 @@ namespace fizzy
 {
 namespace
 {
-constexpr unsigned page_size = 65536;
-// Set hard limit of 256MB of memory.
-constexpr auto memory_pages_limit = (256 * 1024 * 1024ULL) / page_size;
-
-
 struct LabelContext
 {
     const Instr* pc = nullptr;
@@ -155,19 +151,19 @@ Instance instantiate(const Module& module, std::vector<ImportedFunction> importe
         if (module.memorysec[0].limits.max)
             memory_max = *module.memorysec[0].limits.max;
         else
-            memory_max = memory_pages_limit;
+            memory_max = MemoryPagesLimit;
         // FIXME: better error handling
-        if ((memory_min > memory_pages_limit) || (memory_max > memory_pages_limit))
+        if ((memory_min > MemoryPagesLimit) || (memory_max > MemoryPagesLimit))
             throw std::runtime_error("Cannot exceed hard memory limit of " +
-                                     std::to_string(memory_pages_limit * page_size) + " bytes");
+                                     std::to_string(MemoryPagesLimit * PageSize) + " bytes");
     }
     else
     {
         memory_min = 0;
-        memory_max = memory_pages_limit;
+        memory_max = MemoryPagesLimit;
     }
     // NOTE: fill it with zeroes
-    bytes memory(memory_min * page_size, 0);
+    bytes memory(memory_min * PageSize, 0);
 
     // Fill out memory based on data segments
     for (const auto& data : module.datasec)
@@ -179,7 +175,7 @@ Instance instantiate(const Module& module, std::vector<ImportedFunction> importe
             throw std::runtime_error("data initialization by imported global is not supported yet");
 
         // NOTE: these instructions can overlap
-        assert((offset + data.init.size()) <= (memory_max * page_size));
+        assert((offset + data.init.size()) <= (memory_max * PageSize));
         std::memcpy(memory.data() + offset, data.init.data(), data.init.size());
     }
 
@@ -623,13 +619,13 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         }
         case Instr::memory_size:
         {
-            stack.push(static_cast<uint32_t>(instance.memory.size() / page_size));
+            stack.push(static_cast<uint32_t>(instance.memory.size() / PageSize));
             break;
         }
         case Instr::memory_grow:
         {
             const auto delta = static_cast<uint32_t>(stack.pop());
-            const auto cur_pages = instance.memory.size() / page_size;
+            const auto cur_pages = instance.memory.size() / PageSize;
             assert(cur_pages <= size_t(std::numeric_limits<int32_t>::max()));
             const auto new_pages = cur_pages + delta;
             assert(new_pages >= cur_pages);
@@ -638,7 +634,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
             {
                 if (new_pages > instance.memory_max_pages)
                     throw std::bad_alloc();
-                instance.memory.resize(new_pages * page_size);
+                instance.memory.resize(new_pages * PageSize);
             }
             catch (std::bad_alloc const&)
             {
