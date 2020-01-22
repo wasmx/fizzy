@@ -130,14 +130,14 @@ TEST(parser, custom_section_nonempty)
 
 TEST(parser, functype_wrong_prefix)
 {
-    const auto section_contents = uint8_t{0x01} + "610000"_bytes;
+    const auto section_contents = bytes{0x01} + "610000"_bytes;
     const auto bin = bytes{wasm_prefix} + make_section(1, section_contents);
     EXPECT_THROW(parse(bin), parser_error);
 }
 
 TEST(parser, type_section_larger_than_expected)
 {
-    const auto section_contents = uint8_t{0x01} + functype_void_to_void;
+    const auto section_contents = bytes{0x01} + functype_void_to_void;
     const auto bin =
         bytes{wasm_prefix} +
         make_invalid_size_section(1, size_t{section_contents.size() - 1}, section_contents);
@@ -146,7 +146,7 @@ TEST(parser, type_section_larger_than_expected)
 
 TEST(parser, type_section_smaller_than_expected)
 {
-    const auto section_contents = uint8_t{0x01} + functype_void_to_void + uint8_t{0xfe};
+    const auto section_contents = bytes{0x01} + functype_void_to_void + uint8_t{0xfe};
     const auto bin =
         bytes{wasm_prefix} +
         make_invalid_size_section(1, size_t{section_contents.size() + 1}, section_contents);
@@ -156,7 +156,7 @@ TEST(parser, type_section_smaller_than_expected)
 TEST(parser, type_section_with_single_functype)
 {
     // single type [void] -> [void]
-    const auto section_contents = uint8_t{0x01} + functype_void_to_void;
+    const auto section_contents = bytes{0x01} + functype_void_to_void;
     const auto bin = bytes{wasm_prefix} + make_section(1, section_contents);
     const auto module = parse(bin);
     ASSERT_EQ(module.typesec.size(), 1);
@@ -170,7 +170,7 @@ TEST(parser, type_section_with_single_functype)
 TEST(parser, type_section_with_single_functype_params)
 {
     // single type [i32, i64] -> [i32]
-    const auto section_contents = uint8_t{0x01} + functype_i32i64_to_i32;
+    const auto section_contents = bytes{0x01} + functype_i32i64_to_i32;
     const auto bin = bytes{wasm_prefix} + make_section(1, section_contents);
     const auto module = parse(bin);
     ASSERT_EQ(module.typesec.size(), 1);
@@ -190,7 +190,7 @@ TEST(parser, type_section_with_multiple_functypes)
     // type 1 [i32, i64] -> [i32]
     // type 2 [i32] -> []
     const auto section_contents =
-        uint8_t{0x03} + functype_void_to_void + functype_i32i64_to_i32 + functype_i32_to_void;
+        bytes{0x03} + functype_void_to_void + functype_i32i64_to_i32 + functype_i32_to_void;
     const auto bin = bytes{wasm_prefix} + make_section(1, section_contents);
 
     const auto module = parse(bin);
@@ -272,8 +272,7 @@ TEST(parser, function_section_with_multiple_functions)
 
 TEST(parser, table_single_min_limit)
 {
-    const auto section_contents =
-        bytes{} + uint8_t{0x01} + uint8_t{0x70} + uint8_t{0x00} + uint8_t{0x7f};
+    const auto section_contents = bytes{0x01, 0x70, 0x00, 0x7f};
     const auto bin = bytes{wasm_prefix} + make_section(4, section_contents);
 
     const auto module = parse(bin);
@@ -283,8 +282,7 @@ TEST(parser, table_single_min_limit)
 
 TEST(parser, table_single_minmax_limit)
 {
-    const auto section_contents =
-        bytes{} + uint8_t{0x01} + uint8_t{0x70} + uint8_t{0x01} + uint8_t{0x12} + uint8_t{0x7f};
+    const auto section_contents = bytes{0x01, 0x70, 0x01, 0x12, 0x7f};
     const auto bin = bytes{wasm_prefix} + make_section(4, section_contents);
 
     const auto module = parse(bin);
@@ -296,8 +294,7 @@ TEST(parser, table_single_minmax_limit)
 // Where minimum exceeds maximum
 TEST(parser, table_single_malformed_minmax)
 {
-    const auto section_contents =
-        bytes{} + uint8_t{0x01} + uint8_t{0x70} + uint8_t{0x01} + uint8_t{0x7f} + uint8_t{0x12};
+    const auto section_contents = bytes{0x01, 0x70, 0x01, 0x7f, 0x12};
     const auto bin = bytes{wasm_prefix} + make_section(4, section_contents);
 
     EXPECT_THROW(parse(bin), parser_error);
@@ -305,8 +302,7 @@ TEST(parser, table_single_malformed_minmax)
 
 TEST(parser, table_multi_min_limit)
 {
-    const auto section_contents = bytes{} + uint8_t{0x02} + uint8_t{0x70} + uint8_t{0x00} +
-                                  uint8_t{0x7f} + uint8_t{0x70} + uint8_t{0x00} + uint8_t{0x7f};
+    const auto section_contents = bytes{0x02, 0x70, 0x00, 0x7f, 0x70, 0x00, 0x7f};
     const auto bin = bytes{wasm_prefix} + make_section(4, section_contents);
 
     EXPECT_THROW(parse(bin), parser_error);
@@ -314,7 +310,7 @@ TEST(parser, table_multi_min_limit)
 
 TEST(parser, memory_single_min_limit)
 {
-    const auto section_contents = bytes{} + uint8_t{0x01} + uint8_t{0x00} + uint8_t{0x7f};
+    const auto section_contents = bytes{0x01, 0x00, 0x7f};
     const auto bin = bytes{wasm_prefix} + make_section(5, section_contents);
 
     const auto module = parse(bin);
@@ -324,8 +320,7 @@ TEST(parser, memory_single_min_limit)
 
 TEST(parser, memory_single_minmax_limit)
 {
-    const auto section_contents =
-        bytes{} + uint8_t{0x01} + uint8_t{0x01} + uint8_t{0x12} + uint8_t{0x7f};
+    const auto section_contents = bytes{0x01, 0x01, 0x12, 0x7f};
     const auto bin = bytes{wasm_prefix} + make_section(5, section_contents);
 
     const auto module = parse(bin);
@@ -337,8 +332,7 @@ TEST(parser, memory_single_minmax_limit)
 // Where minimum exceeds maximum
 TEST(parser, memory_single_malformed_minmax)
 {
-    const auto section_contents =
-        bytes{} + uint8_t{0x01} + uint8_t{0x01} + uint8_t{0x7f} + uint8_t{0x12};
+    const auto section_contents = bytes{0x01, 0x01, 0x7f, 0x12};
     const auto bin = bytes{wasm_prefix} + make_section(5, section_contents);
 
     EXPECT_THROW(parse(bin), parser_error);
@@ -346,8 +340,7 @@ TEST(parser, memory_single_malformed_minmax)
 
 TEST(parser, memory_multi_min_limit)
 {
-    const auto section_contents =
-        bytes{} + uint8_t{0x02} + uint8_t{0x00} + uint8_t{0x7f} + uint8_t{0x00} + uint8_t{0x7f};
+    const auto section_contents = bytes{0x02, 0x00, 0x7f, 0x00, 0x7f};
     const auto bin = bytes{wasm_prefix} + make_section(5, section_contents);
 
     EXPECT_THROW(parse(bin), parser_error);
@@ -442,7 +435,7 @@ TEST(parser, export_multiple)
 
 TEST(parser, start)
 {
-    const auto section_contents = bytes{} + uint8_t{0x07};
+    const auto section_contents = bytes{0x07};
     const auto bin = bytes{wasm_prefix} + make_section(8, section_contents);
 
     const auto module = parse(bin);
@@ -480,7 +473,7 @@ TEST(parser, code_section_with_2_trivial_codes)
 {
     const auto func_nolocals_bin = "000b"_bytes;
     const auto code_bin = add_size_prefix(func_nolocals_bin);
-    const auto section_contents = uint8_t{2} + code_bin + code_bin;
+    const auto section_contents = bytes{2} + code_bin + code_bin;
     const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
 
     const auto module = parse(bin);
@@ -500,7 +493,7 @@ TEST(parser, code_section_with_basic_instructions)
         "00"  // vec(locals)
         "2001210222036a01000b"_bytes;
     const auto code_bin = add_size_prefix(func_bin);
-    const auto section_contents = uint8_t{1} + code_bin;
+    const auto section_contents = bytes{1} + code_bin;
     const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
 
     const auto module = parse(bin);
