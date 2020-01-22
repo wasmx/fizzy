@@ -34,7 +34,7 @@ TEST(end_to_end, milestone1)
     EXPECT_EQ(ret[0], 20 + 22 + 20);
 }
 
-TEST(end_to_end, DISABLED_milestone2)
+TEST(end_to_end, milestone2)
 {
     // from https://gist.github.com/poemm/356ba2c6826c6f5953db874e37783417#file-mul256_opt0-wat
     // but replaced global with const and removed return statement
@@ -134,7 +134,7 @@ TEST(end_to_end, DISABLED_milestone2_640000_iterations)
     ASSERT_EQ(ret.size(), 0);
 }
 
-TEST(end_to_end, DISABLED_nested_loops_in_c)
+TEST(end_to_end, nested_loops_in_c)
 {
     /*
     int test(int a, int b, int c)
@@ -180,7 +180,7 @@ TEST(end_to_end, DISABLED_nested_loops_in_c)
     EXPECT_EQ(ret[0], 4);
 }
 
-TEST(end_to_end, DISABLED_memset)
+TEST(end_to_end, memset)
 {
     /*
     (func $test (export "test") (type $t1) (param $p0 i32) (param $p1 i32)
