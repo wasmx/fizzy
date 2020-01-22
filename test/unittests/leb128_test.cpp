@@ -1,6 +1,6 @@
 #include "leb128.hpp"
-#include "utils.hpp"
 #include <gtest/gtest.h>
+#include <test/utils/hex.hpp>
 
 using namespace fizzy;
 
