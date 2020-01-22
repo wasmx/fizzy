@@ -21,6 +21,12 @@ bytes make_section(uint8_t id, const bytes& content)
 {
     return bytes{id} + add_size_prefix(content);
 }
+
+bytes make_invalid_size_section(uint8_t id, size_t size, const bytes& content)
+{
+    assert(size < 0x80);
+    return bytes{id, static_cast<uint8_t>(size)} + content;
+}
 }  // namespace
 
 TEST(parser, valtype)
@@ -132,16 +138,18 @@ TEST(parser, functype_wrong_prefix)
 TEST(parser, type_section_larger_than_expected)
 {
     const auto section_contents = uint8_t{0x01} + functype_void_to_void;
-    const auto bin = bytes{wasm_prefix} + uint8_t{0x01} + uint8_t(section_contents.size() - 1) +
-                     section_contents;
+    const auto bin =
+        bytes{wasm_prefix} +
+        make_invalid_size_section(1, size_t{section_contents.size() - 1}, section_contents);
     EXPECT_THROW(parse(bin), parser_error);
 }
 
 TEST(parser, type_section_smaller_than_expected)
 {
     const auto section_contents = uint8_t{0x01} + functype_void_to_void + uint8_t{0xfe};
-    const auto bin = bytes{wasm_prefix} + uint8_t{0x01} + uint8_t(section_contents.size() + 1) +
-                     section_contents;
+    const auto bin =
+        bytes{wasm_prefix} +
+        make_invalid_size_section(1, size_t{section_contents.size() + 1}, section_contents);
     EXPECT_THROW(parse(bin), parser_error);
 }
 
