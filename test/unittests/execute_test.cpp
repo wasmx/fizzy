@@ -1919,3 +1919,46 @@ TEST(execute, imported_function_call_with_arguments)
     ASSERT_EQ(ret.size(), 1);
     EXPECT_EQ(ret[0], 42);
 }
+
+TEST(execute, memory_copy_32bytes)
+{
+    /* copy32(dst, src) - copies 4 x 8 bytes using offset immediate.
+    (memory 1)
+    (func (param i32 i32)
+      get_local 0
+      get_local 1
+      i64.load offset=0
+      i64.store offset=0
+      get_local 0
+      get_local 1
+      i64.load offset=8
+      i64.store offset=8
+      get_local 0
+      get_local 1
+      i64.load offset=16
+      i64.store offset=16
+      get_local 0
+      get_local 1
+      i64.load offset=24
+      i64.store offset=24
+    )
+    */
+
+    const auto bin = from_hex(
+        "0061736d0100000001060160027f7f000302010005030100010a2c012a00200020012903003703002000200129"
+        "030837030820002001290310370310200020012903183703180b000e046e616d65020701000200000100");
+
+    const auto module = parse(bin);
+    auto instance = instantiate(module);
+    ASSERT_EQ(instance.memory.size(), 65536);
+    const auto input = from_hex("0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20");
+    ASSERT_EQ(input.size(), 32);
+    std::copy(input.begin(), input.end(), instance.memory.begin());
+    const auto [trap, ret] = execute(instance, 0, {33, 0});
+    ASSERT_FALSE(trap);
+    EXPECT_EQ(ret.size(), 0);
+    ASSERT_EQ(instance.memory.size(), 65536);
+    bytes output;
+    std::copy_n(&instance.memory[33], input.size(), std::back_inserter(output));
+    EXPECT_EQ(output, input);
+}
