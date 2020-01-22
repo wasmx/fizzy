@@ -27,4 +27,13 @@ inline std::string hex(bytes_view data)
 {
     return hex(data.data(), data.size());
 }
+
+inline namespace literals
+{
+/// Operator for "" literals, e.g. "0a0b0c0d"_bytes.
+inline fizzy::bytes operator""_bytes(const char* literal, size_t /*length*/)
+{
+    return fizzy::from_hex(literal);
+}
+}  // namespace literals
 }  // namespace fizzy
