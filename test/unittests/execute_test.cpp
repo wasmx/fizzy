@@ -201,6 +201,30 @@ TEST(execute, global_get_two_globals)
     EXPECT_EQ(ret2[0], 43);
 }
 
+TEST(execute, global_get_imported)
+{
+    Module module;
+    module.importsec.emplace_back(Import{"mod", "glob", ExternalKind::Global, {false}});
+    module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
+
+    uint64_t global_value = 42;
+    auto instance = instantiate(module, {}, {ImportedGlobal{&global_value, false}});
+
+    const auto [trap, ret] = execute(instance, 0, {});
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 42);
+
+    global_value = 43;
+
+    const auto [trap2, ret2] = execute(instance, 0, {});
+
+    ASSERT_FALSE(trap2);
+    ASSERT_EQ(ret2.size(), 1);
+    EXPECT_EQ(ret2[0], 43);
+}
+
 TEST(execute, global_set)
 {
     Module module;
@@ -234,6 +258,22 @@ TEST(execute, global_set_two_globals)
     ASSERT_FALSE(trap);
     ASSERT_EQ(instance.globals[0], 44);
     ASSERT_EQ(instance.globals[1], 45);
+}
+
+TEST(execute, global_set_imported)
+{
+    Module module;
+    module.importsec.emplace_back(Import{"mod", "glob", ExternalKind::Global, {true}});
+    module.codesec.emplace_back(
+        Code{0, {Instr::i32_const, Instr::global_set, Instr::end}, {42, 0, 0, 0, 0, 0, 0, 0}});
+
+    uint64_t global_value = 41;
+    auto instance = instantiate(module, {}, {ImportedGlobal{&global_value, true}});
+
+    const auto [trap, ret] = execute(instance, 0, {});
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(global_value, 42);
 }
 
 TEST(execute, i32_const)
