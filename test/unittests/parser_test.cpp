@@ -17,6 +17,15 @@ bytes add_size_prefix(const bytes& content)
     return bytes{static_cast<uint8_t>(content.size())} + content;
 }
 
+bytes make_vec(std::initializer_list<bytes_view> contents)
+{
+    assert(contents.size() < 0x80);
+    bytes ret{static_cast<uint8_t>(contents.size())};
+    for (const auto& content : contents)
+        ret.append(content);
+    return ret;
+}
+
 bytes make_section(uint8_t id, const bytes& content)
 {
     return bytes{id} + add_size_prefix(content);
@@ -156,7 +165,7 @@ TEST(parser, type_section_smaller_than_expected)
 TEST(parser, type_section_with_single_functype)
 {
     // single type [void] -> [void]
-    const auto section_contents = bytes{0x01} + functype_void_to_void;
+    const auto section_contents = make_vec({functype_void_to_void});
     const auto bin = bytes{wasm_prefix} + make_section(1, section_contents);
     const auto module = parse(bin);
     ASSERT_EQ(module.typesec.size(), 1);
@@ -170,7 +179,7 @@ TEST(parser, type_section_with_single_functype)
 TEST(parser, type_section_with_single_functype_params)
 {
     // single type [i32, i64] -> [i32]
-    const auto section_contents = bytes{0x01} + functype_i32i64_to_i32;
+    const auto section_contents = make_vec({functype_i32i64_to_i32});
     const auto bin = bytes{wasm_prefix} + make_section(1, section_contents);
     const auto module = parse(bin);
     ASSERT_EQ(module.typesec.size(), 1);
@@ -385,8 +394,9 @@ TEST(parser, global_single_multi_instructions_inited)
 
 TEST(parser, global_multi_const_inited)
 {
-    const auto section_contents = bytes{0x02, 0x7f, 0x00, uint8_t(Instr::i32_const), 0x01, 0x0b,
-        0x7f, 0x01, uint8_t(Instr::i32_const), 0x7f, 0x0b};
+    const auto section_contents =
+        make_vec({bytes{0x7f, 0x00, uint8_t(Instr::i32_const), 0x01, 0x0b},
+            bytes{0x7f, 0x01, uint8_t(Instr::i32_const), 0x7f, 0x0b}});
     const auto bin = bytes{wasm_prefix} + make_section(6, section_contents);
 
     const auto module = parse(bin);
@@ -401,7 +411,7 @@ TEST(parser, global_multi_const_inited)
 
 TEST(parser, export_single_function)
 {
-    const auto section_contents = bytes{0x01, 0x03, 'a', 'b', 'c', 0x00, 0x42};
+    const auto section_contents = make_vec({bytes{0x03, 'a', 'b', 'c', 0x00, 0x42}});
     const auto bin = bytes{wasm_prefix} + make_section(7, section_contents);
 
     const auto module = parse(bin);
@@ -413,8 +423,9 @@ TEST(parser, export_single_function)
 
 TEST(parser, export_multiple)
 {
-    const auto section_contents = bytes{0x04, 0x03, 'a', 'b', 'c', 0x00, 0x42, 0x03, 'f', 'o', 'o',
-        0x01, 0x43, 0x03, 'b', 'a', 'r', 0x02, 0x44, 0x03, 'x', 'y', 'z', 0x03, 0x45};
+    const auto section_contents =
+        make_vec({bytes{0x03, 'a', 'b', 'c', 0x00, 0x42}, bytes{0x03, 'f', 'o', 'o', 0x01, 0x43},
+            bytes{0x03, 'b', 'a', 'r', 0x02, 0x44}, bytes{0x03, 'x', 'y', 'z', 0x03, 0x45}});
     const auto bin = bytes{wasm_prefix} + make_section(7, section_contents);
 
     const auto module = parse(bin);
@@ -473,7 +484,7 @@ TEST(parser, code_section_with_2_trivial_codes)
 {
     const auto func_nolocals_bin = "000b"_bytes;
     const auto code_bin = add_size_prefix(func_nolocals_bin);
-    const auto section_contents = bytes{2} + code_bin + code_bin;
+    const auto section_contents = make_vec({code_bin, code_bin});
     const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
 
     const auto module = parse(bin);
@@ -493,7 +504,7 @@ TEST(parser, code_section_with_basic_instructions)
         "00"  // vec(locals)
         "2001210222036a01000b"_bytes;
     const auto code_bin = add_size_prefix(func_bin);
-    const auto section_contents = bytes{1} + code_bin;
+    const auto section_contents = make_vec({code_bin});
     const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
 
     const auto module = parse(bin);
@@ -514,8 +525,9 @@ TEST(parser, code_section_with_basic_instructions)
 
 TEST(parser, data_section)
 {
-    const auto section_contents = bytes{0x03, 0x00, 0x41, 0x01, 0x0b, 0x02, 0xaa, 0xff, 0x00, 0x41,
-        0x02, 0x0b, 0x02, 0x55, 0x55, 0x00, 0x23, 0x00, 0x0b, 0x02, 0x24, 0x24};
+    const auto section_contents = make_vec({bytes{0x00, 0x41, 0x01, 0x0b, 0x02, 0xaa, 0xff},
+        bytes{0x00, 0x41, 0x02, 0x0b, 0x02, 0x55, 0x55},
+        bytes{0x00, 0x23, 0x00, 0x0b, 0x02, 0x24, 0x24}});
     const auto bin = bytes{wasm_prefix} + make_section(11, section_contents);
 
     const auto module = parse(bin);
@@ -533,7 +545,7 @@ TEST(parser, data_section)
 
 TEST(parser, data_section_memidx_nonzero)
 {
-    const auto section_contents = bytes{0x01, 0x01, 0x41, 0x01, 0x0b, 0x01, 0x00};
+    const auto section_contents = make_vec({bytes{0x01, 0x41, 0x01, 0x0b, 0x01, 0x00}});
     const auto bin = bytes{wasm_prefix} + make_section(11, section_contents);
 
     EXPECT_THROW(parse({}), parser_error);
