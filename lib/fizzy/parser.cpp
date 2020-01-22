@@ -183,6 +183,22 @@ struct parser<Export>
 };
 
 template <>
+struct parser<Table>
+{
+    parser_result<Table> operator()(const uint8_t* pos)
+    {
+        const uint8_t kind = *pos++;
+        if (kind != FuncRef)
+            throw parser_error{"unexpected table elemtype: " + std::to_string(kind)};
+
+        Limits limits;
+        std::tie(limits, pos) = parser<Limits>{}(pos);
+
+        return {{limits}, pos};
+    }
+};
+
+template <>
 struct parser<Data>
 {
     parser_result<Data> operator()(const uint8_t* pos)
@@ -227,6 +243,9 @@ Module parse(bytes_view input)
         case SectionId::function:
             std::tie(module.funcsec, it) = parser<std::vector<TypeIdx>>{}(it);
             break;
+        case SectionId::table:
+            std::tie(module.tablesec, it) = parser<std::vector<Table>>{}(it);
+            break;
         case SectionId::memory:
             std::tie(module.memorysec, it) = parser<std::vector<Memory>>{}(it);
             break;
@@ -246,7 +265,6 @@ Module parse(bytes_view input)
             std::tie(module.datasec, it) = parser<std::vector<Data>>{}(it);
             break;
         case SectionId::custom:
-        case SectionId::table:
         case SectionId::element:
             // These sections are ignored for now.
             it += size;
@@ -259,6 +277,9 @@ Module parse(bytes_view input)
         if (it != expected_end_pos)
             throw parser_error{"incorrect section " + std::to_string(static_cast<int>(id)) +
                                " size, difference: " + std::to_string(it - expected_end_pos)};
+
+        if (module.tablesec.size() > 1)
+            throw parser_error{"too many table sections (at most one is allowed)"};
     }
 
     return module;
