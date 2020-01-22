@@ -31,7 +31,7 @@ struct Instance
 };
 
 // Instantiate a module.
-Instance instantiate(const Module& module, std::vector<ImportedFunction> imported_functions);
+Instance instantiate(const Module& module, std::vector<ImportedFunction> imported_functions = {});
 
 // Execute a function on an instance.
 execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint64_t> args);
