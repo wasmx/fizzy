@@ -454,6 +454,23 @@ TEST(instantiate, data_section_offset_too_large)
         instantiate(module), instantiate_error, "Data segment is out of memory bounds");
 }
 
+TEST(instantiate, data_section_fills_imported_memory)
+{
+    Module module;
+    Import imp{"mod", "m", ExternalKind::Memory, {}};
+    imp.desc.memory = Memory{{1, 1}};
+    module.importsec.emplace_back(imp);
+    // Memory contents: 0, 0xaa, 0xff, 0, ...
+    module.datasec.emplace_back(Data{{ConstantExpression::Kind::Constant, {1}}, {0xaa, 0xff}});
+    // Memory contents: 0, 0xaa, 0x55, 0x55, 0, ...
+    module.datasec.emplace_back(Data{{ConstantExpression::Kind::Constant, {2}}, {0x55, 0x55}});
+
+    bytes memory(PageSize, 0);
+    auto instance = instantiate(module, {}, {}, {{&memory, {1, 1}}});
+
+    EXPECT_EQ(memory.substr(0, 6), from_hex("00aa55550000"));
+}
+
 TEST(instantiate, globals_single)
 {
     Module module;
