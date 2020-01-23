@@ -163,6 +163,7 @@ TEST(leb128, decode_s8)
             {{0x81, 0x00}, 1}, // 1 with leading zero
             {{0xff, 0x01}, -1},
             {{0xfe, 0x01}, -2},
+            {{0x40}, -64},
     };
     // clang-format on
 
