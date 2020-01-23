@@ -1,4 +1,5 @@
 #include "execute.hpp"
+#include "limits.hpp"
 #include "parser.hpp"
 #include <gtest/gtest.h>
 #include <test/utils/asserts.hpp>
@@ -360,6 +361,27 @@ TEST(execute, i32_load)
     ASSERT_TRUE(execute(instance, 0, {65537}).trapped);
 }
 
+TEST(execute, i32_load_imported_memory)
+{
+    Module module;
+    Import imp{"mod", "m", ExternalKind::Memory, {}};
+    imp.desc.memory = Memory{{1, 1}};
+    module.importsec.emplace_back(imp);
+    module.codesec.emplace_back(
+        Code{0, {Instr::local_get, Instr::i32_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
+
+    bytes memory(PageSize, 0);
+    auto instance = instantiate(module, {}, {}, {{&memory, {1, 1}}});
+    memory[0] = 42;
+    const auto [trap, ret] = execute(instance, 0, {0});
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    ASSERT_EQ(ret[0], 42);
+
+    ASSERT_TRUE(execute(instance, 0, {65537}).trapped);
+}
+
 TEST(execute, i64_load)
 {
     Module module;
@@ -595,6 +617,27 @@ TEST(execute, i32_store)
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 0);
     ASSERT_EQ(instance.memory->substr(0, 4), from_hex("2a000000"));
+
+    ASSERT_TRUE(execute(instance, 0, {42, 65537}).trapped);
+}
+
+TEST(execute, i32_store_imported_memory)
+{
+    Module module;
+    Import imp{"mod", "m", ExternalKind::Memory, {}};
+    imp.desc.memory = Memory{{1, 1}};
+    module.importsec.emplace_back(imp);
+    module.codesec.emplace_back(
+        Code{0, {Instr::local_get, Instr::local_get, Instr::i32_store, Instr::end},
+            {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
+
+    bytes memory(PageSize, 0);
+    auto instance = instantiate(module, {}, {}, {{&memory, {1, 1}}});
+    const auto [trap, ret] = execute(instance, 0, {42, 0});
+
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 0);
+    ASSERT_EQ(memory.substr(0, 4), from_hex("2a000000"));
 
     ASSERT_TRUE(execute(instance, 0, {42, 65537}).trapped);
 }
