@@ -337,10 +337,7 @@ TEST(parser, memory_multi_min_limit)
         bytes{} + uint8_t{0x02} + uint8_t{0x00} + uint8_t{0x7f} + uint8_t{0x00} + uint8_t{0x7f};
     const auto bin = bytes{wasm_prefix} + make_section(5, section_contents);
 
-    const auto module = parse(bin);
-    ASSERT_EQ(module.memorysec.size(), 2);
-    EXPECT_EQ(module.memorysec[0].limits.min, 0x7f);
-    EXPECT_EQ(module.memorysec[1].limits.min, 0x7f);
+    EXPECT_THROW(parse(bin), parser_error);
 }
 
 TEST(parser, global_single_mutable_const_inited)
