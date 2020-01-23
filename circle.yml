@@ -58,6 +58,14 @@ commands:
         working_directory: ~/build
         command: ctest -R ${TESTS_FILTER:-'.*'} -j4 --schedule-random --output-on-failure
 
+  benchmark:
+    description: "Run benchmarks"
+    steps:
+      - run:
+          name: "Run benchmarks"
+          working_directory: ~/build
+          command: bin/fizzy-bench ~/project/test/benchmarks
+
 jobs:
 
   lint:
@@ -136,11 +144,12 @@ jobs:
   clang-latest-asan:
     executor: linux-clang-9
     environment:
-      BUILD_TYPE: Release
+      BUILD_TYPE: RelWithDebInfo
       CMAKE_OPTIONS: -DSANITIZE=address
     steps:
       - build
       - test
+      - benchmark
 
   clang-latest-ubsan:
     executor: linux-clang-9
