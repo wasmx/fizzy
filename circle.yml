@@ -151,12 +151,15 @@ jobs:
       - test
       - benchmark
 
-  clang-latest-ubsan:
+  clang-latest-ubsan-tidy:
     executor: linux-clang-9
     environment:
       BUILD_TYPE: Debug
-      CMAKE_OPTIONS: -DSANITIZE=undefined,implicit-conversion,nullability
+      CMAKE_OPTIONS: -DSANITIZE=undefined,implicit-conversion,nullability -DCMAKE_CXX_CLANG_TIDY=clang-tidy-9
     steps:
+      - run:
+          name: "Install clang-tidy"
+          command: sudo apt-get -q update && sudo apt-get -qy install clang-tidy-9
       - build
       - test
 
@@ -169,4 +172,4 @@ workflows:
       - release-macos
       - clang-latest-coverage
       - clang-latest-asan
-      - clang-latest-ubsan
+      - clang-latest-ubsan-tidy
