@@ -142,6 +142,15 @@ jobs:
       - build
       - test
 
+  clang-latest-ubsan:
+    executor: linux-clang-9
+    environment:
+      BUILD_TYPE: Debug
+      CMAKE_OPTIONS: -DSANITIZE=undefined,implicit-conversion,nullability
+    steps:
+      - build
+      - test
+
 workflows:
   version: 2
   fizzy:
@@ -151,3 +160,4 @@ workflows:
       - release-macos
       - clang-latest-coverage
       - clang-latest-asan
+      - clang-latest-ubsan
