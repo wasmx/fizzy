@@ -43,7 +43,8 @@ std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* input)
             // sign extend
             if ((*input & 0x40) != 0)
             {
-                auto const mask = static_cast<T_unsigned>(~T_unsigned{0} << (result_shift + 7));
+                constexpr auto all_ones = std::numeric_limits<T_unsigned>::max();
+                const auto mask = static_cast<T_unsigned>(all_ones << (result_shift + 7));
                 result |= mask;
             }
             return {static_cast<T>(result), input + 1};
