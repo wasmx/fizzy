@@ -185,6 +185,26 @@ TEST(instantiate, memory_multiple)
     EXPECT_THROW(instantiate(module), std::runtime_error);
 }
 
+TEST(instantiate, element_section)
+{
+    Module module;
+    module.tablesec.emplace_back(Table{{4, std::nullopt}});
+    // Memory contents: 0, 0xaa, 0xff, 0, ...
+    module.elementsec.emplace_back(
+        Element{{ConstantExpression::Kind::Constant, {1}}, {0xaa, 0xff}});
+    // Memory contents: 0, 0xaa, 0x55, 0x55, 0, ...
+    module.elementsec.emplace_back(
+        Element{{ConstantExpression::Kind::Constant, {2}}, {0x55, 0x55}});
+
+    auto instance = instantiate(module);
+
+    ASSERT_EQ(instance.table.size(), 4);
+    EXPECT_EQ(instance.table[0], 0);
+    EXPECT_EQ(instance.table[1], 0xaa);
+    EXPECT_EQ(instance.table[2], 0x55);
+    EXPECT_EQ(instance.table[3], 0x55);
+}
+
 TEST(instantiate, data_section)
 {
     Module module;
