@@ -86,8 +86,8 @@ TEST(parser, DISABLED_limits_min_invalid_too_short)
 
 TEST(parser, DISABLED_limits_minmax_invalid_too_short)
 {
-    const auto input = "0120"_bytes;
-    EXPECT_THROW(parser<Limits>{}(input.data()), parser_error);
+    const uint8_t input[] = {0x01, 0x02};
+    EXPECT_THROW(parser<Limits>{}(input), parser_error);
 }
 
 TEST(parser, limits_invalid)
