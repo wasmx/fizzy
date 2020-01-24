@@ -1,0 +1,16 @@
+Checks: >
+  bugprone-*,
+  cert-*,
+  -cert-err58-cpp,
+  clang-analyzer-*,
+  google-global-names-in-headers,
+  google-runtime-int,
+  misc-*,
+  -misc-non-private-member-variables-in-classes,
+  performance-*,
+  -performance-inefficient-string-concatenation,
+  -performance-unnecessary-value-param,
+  portability-*,
+
+WarningsAsErrors:  '*'
+FormatStyle:       file

@@ -28,7 +28,7 @@ void benchmark_parse(benchmark::State& state, const fizzy::bytes& wasm_binary)
 {
     const auto input_size = wasm_binary.size();
     auto num_bytes_parsed = uint64_t{0};
-    for (auto _ : state)
+    for (auto _ : state)  // NOLINT(clang-analyzer-deadcode.DeadStores)
     {
         const auto module = fizzy::parse(wasm_binary);
         benchmark::DoNotOptimize(module);
@@ -42,7 +42,7 @@ void benchmark_parse(benchmark::State& state, const fizzy::bytes& wasm_binary)
 void benchmark_instantiate(benchmark::State& state, const fizzy::bytes& wasm_binary)
 {
     const auto module = fizzy::parse(wasm_binary);
-    for (auto _ : state)
+    for (auto _ : state)  // NOLINT(clang-analyzer-deadcode.DeadStores)
     {
         auto instance = fizzy::instantiate(module);
         benchmark::DoNotOptimize(instance);
@@ -103,12 +103,25 @@ void benchmark_execute(benchmark::State& state, const ExecutionBenchmarkCase& be
             return state.SkipWithError("Incorrect result memory");
     }
 
-    for (auto _ : state)
+    for (auto _ : state)  // NOLINT(clang-analyzer-deadcode.DeadStores)
     {
         instance.memory = initial_memory;  // Restore initial memory.
         const auto result = fizzy::execute(instance, *func_idx, benchmark_case.func_args);
         benchmark::DoNotOptimize(result);
     }
+}
+
+template <typename Lambda>
+void register_benchmark(const std::string& name, Lambda&& fn)
+{
+#ifdef __clang_analyzer__
+    // Clang analyzer reports potential memory leak in benchmark::RegisterBenchmark().
+    // TODO: Upgrade benchmark library to newer version and recheck.
+    (void)name;
+    (void)fn;
+#else
+    benchmark::RegisterBenchmark(name.c_str(), std::forward<Lambda>(fn));
+#endif
 }
 
 void load_benchmark(const fs::path& path, const std::string& name_prefix)
@@ -119,10 +132,10 @@ void load_benchmark(const fs::path& path, const std::string& name_prefix)
     const auto wasm_binary = std::make_shared<const fizzy::bytes>(
         std::istreambuf_iterator<char>{wasm_file}, std::istreambuf_iterator<char>{});
 
-    benchmark::RegisterBenchmark(("parse/" + base_name).c_str(),
+    register_benchmark("parse/" + base_name,
         [wasm_binary](benchmark::State& state) { benchmark_parse(state, *wasm_binary); });
 
-    benchmark::RegisterBenchmark(("instantiate/" + base_name).c_str(),
+    register_benchmark("instantiate/" + base_name,
         [wasm_binary](benchmark::State& state) { benchmark_instantiate(state, *wasm_binary); });
 
     enum class InputsReadingState
@@ -182,7 +195,7 @@ void load_benchmark(const fs::path& path, const std::string& name_prefix)
             case InputsReadingState::ExpectedMemory:
                 benchmark_case.expected_memory = fizzy::from_hex(strip_space(l));
 
-                benchmark::RegisterBenchmark(("execute/" + base_name + '/' + input_name).c_str(),
+                register_benchmark("execute/" + base_name + '/' + input_name,
                     [benchmark_case = std::move(benchmark_case)](
                         benchmark::State& state) { benchmark_execute(state, benchmark_case); });
                 benchmark_case = {};
