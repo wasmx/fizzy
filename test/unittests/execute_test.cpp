@@ -390,7 +390,7 @@ TEST(execute, i64_load8_s)
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
-    ASSERT_EQ(ret[0], -128);
+    ASSERT_EQ(ret[0], uint64_t(-128));
 
     ASSERT_TRUE(execute(instance, 0, {65537}).trapped);
 }
@@ -429,7 +429,7 @@ TEST(execute, i64_load16_s)
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
-    ASSERT_EQ(ret[0], -32768);
+    ASSERT_EQ(ret[0], uint64_t(-32768));
 
     ASSERT_TRUE(execute(instance, 0, {65537}).trapped);
 }
@@ -471,7 +471,7 @@ TEST(execute, i64_load32_s)
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
-    ASSERT_EQ(ret[0], -2147483648);
+    ASSERT_EQ(ret[0], uint64_t(-2147483648));
 
     ASSERT_TRUE(execute(instance, 0, {65537}).trapped);
 }
@@ -1293,7 +1293,7 @@ TEST(execute, i32_div_s)
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], -42);
+    EXPECT_EQ(ret[0], uint64_t(-42));
 }
 
 TEST(execute, i32_div_s_by_zero)
@@ -1333,7 +1333,7 @@ TEST(execute, i32_rem_s)
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], -42);
+    EXPECT_EQ(ret[0], uint64_t(-42));
 }
 
 TEST(execute, i32_rem_s_by_zero)
@@ -1401,7 +1401,7 @@ TEST(execute, i32_shr_s)
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], -42);
+    EXPECT_EQ(ret[0], uint64_t(-42));
 }
 
 TEST(execute, i32_shr_u)
@@ -1563,7 +1563,7 @@ TEST(execute, i64_div_s)
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], -42);
+    EXPECT_EQ(ret[0], uint64_t(-42));
 }
 
 TEST(execute, i64_div_s_by_zero)
@@ -1603,7 +1603,7 @@ TEST(execute, i64_rem_s)
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], -42);
+    EXPECT_EQ(ret[0], uint64_t(-42));
 }
 
 TEST(execute, i64_rem_s_by_zero)
@@ -1671,7 +1671,7 @@ TEST(execute, i64_shr_s)
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], -42);
+    EXPECT_EQ(ret[0], uint64_t(-42));
 }
 
 TEST(execute, i64_shr_u)
