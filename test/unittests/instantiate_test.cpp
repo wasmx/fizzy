@@ -1,5 +1,6 @@
 #include "execute.hpp"
 #include <gtest/gtest.h>
+#include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
 
 using namespace fizzy;
@@ -54,7 +55,8 @@ TEST(instantiate, imported_functions_not_enough)
     module.typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
     module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
 
-    EXPECT_THROW(instantiate(module, {}), std::runtime_error);
+    EXPECT_THROW_MESSAGE(instantiate(module, {}), std::runtime_error,
+        "Module requires 1 imported functions, 0 provided");
 }
 
 TEST(instantiate, memory_default)

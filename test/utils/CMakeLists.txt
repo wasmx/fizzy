@@ -3,6 +3,7 @@ add_library(fizzy::test-utils ALIAS test-utils)
 
 target_sources(
     test-utils PRIVATE
+    asserts.hpp
     hex.cpp
     hex.hpp
 )
