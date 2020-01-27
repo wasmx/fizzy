@@ -17,7 +17,7 @@ TEST(instantiate, imported_functions)
     module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
 
     auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result { return {true, {}}; };
-    auto instance = instantiate(module, {host_foo});
+    auto instance = instantiate(&module, {host_foo});
 
     ASSERT_EQ(instance.imported_functions.size(), 1);
     EXPECT_EQ(instance.imported_functions[0], host_foo);
@@ -39,7 +39,7 @@ TEST(instantiate, imported_functions_multiple)
     auto host_foo2 = [](Instance&, std::vector<uint64_t>) -> execution_result {
         return {true, {}};
     };
-    auto instance = instantiate(module, {host_foo1, host_foo2});
+    auto instance = instantiate(&module, {host_foo1, host_foo2});
 
     ASSERT_EQ(instance.imported_functions.size(), 2);
     EXPECT_EQ(instance.imported_functions[0], host_foo1);
@@ -55,7 +55,7 @@ TEST(instantiate, imported_functions_not_enough)
     module.typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
     module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
 
-    EXPECT_THROW_MESSAGE(instantiate(module, {}), std::runtime_error,
+    EXPECT_THROW_MESSAGE(instantiate(&module, {}), std::runtime_error,
         "Module requires 1 imported functions, 0 provided");
 }
 
@@ -66,7 +66,7 @@ TEST(instantiate, imported_globals)
 
     uint64_t global_value = 42;
     ImportedGlobal g{&global_value, true};
-    auto instance = instantiate(module, {}, {g});
+    auto instance = instantiate(&module, {}, {g});
 
     ASSERT_EQ(instance.imported_globals.size(), 1);
     EXPECT_EQ(instance.imported_globals[0].is_mutable, true);
@@ -84,7 +84,7 @@ TEST(instantiate, imported_globals_multiple)
     ImportedGlobal g1{&global_value1, true};
     uint64_t global_value2 = 43;
     ImportedGlobal g2{&global_value2, false};
-    auto instance = instantiate(module, {}, {g1, g2});
+    auto instance = instantiate(&module, {}, {g1, g2});
 
     ASSERT_EQ(instance.imported_globals.size(), 2);
     EXPECT_EQ(instance.imported_globals[0].is_mutable, true);
@@ -102,7 +102,7 @@ TEST(instantiate, imported_globals_mismatched_count)
 
     uint64_t global_value = 42;
     ImportedGlobal g{&global_value, true};
-    EXPECT_THROW(instantiate(module, {}, {g}), std::runtime_error);
+    EXPECT_THROW(instantiate(&module, {}, {g}), std::runtime_error);
 }
 
 TEST(instantiate, imported_globals_mismatched_mutability)
@@ -115,7 +115,7 @@ TEST(instantiate, imported_globals_mismatched_mutability)
     ImportedGlobal g1{&global_value1, false};
     uint64_t global_value2 = 42;
     ImportedGlobal g2{&global_value2, true};
-    EXPECT_THROW(instantiate(module, {}, {g1, g2}), std::runtime_error);
+    EXPECT_THROW(instantiate(&module, {}, {g1, g2}), std::runtime_error);
 }
 
 TEST(instantiate, imported_globals_nullptr)
@@ -125,14 +125,14 @@ TEST(instantiate, imported_globals_nullptr)
     module.importsec.emplace_back(Import{"mod", "g2", ExternalKind::Global, {false}});
 
     ImportedGlobal g{nullptr, false};
-    EXPECT_THROW(instantiate(module, {}, {g, g}), std::runtime_error);
+    EXPECT_THROW(instantiate(&module, {}, {g, g}), std::runtime_error);
 }
 
 TEST(instantiate, memory_default)
 {
     Module module;
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(&module);
 
     ASSERT_EQ(instance.memory.size(), 0);
     EXPECT_EQ(instance.memory_max_pages * page_size, 256 * 1024 * 1024);
@@ -143,7 +143,7 @@ TEST(instantiate, memory_single)
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(&module);
 
     ASSERT_EQ(instance.memory.size(), page_size);
     EXPECT_EQ(instance.memory_max_pages, 1);
@@ -154,7 +154,7 @@ TEST(instantiate, memory_single_unspecified_maximum)
     Module module;
     module.memorysec.emplace_back(Memory{{1, std::nullopt}});
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(&module);
 
     ASSERT_EQ(instance.memory.size(), page_size);
     EXPECT_EQ(instance.memory_max_pages * page_size, 256 * 1024 * 1024);
@@ -165,7 +165,7 @@ TEST(instantiate, memory_single_large_minimum)
     Module module;
     module.memorysec.emplace_back(Memory{{(1024 * 1024 * 1024) / page_size, std::nullopt}});
 
-    EXPECT_THROW(instantiate(module), std::runtime_error);
+    EXPECT_THROW(instantiate(&module), std::runtime_error);
 }
 
 TEST(instantiate, memory_single_large_maximum)
@@ -173,7 +173,7 @@ TEST(instantiate, memory_single_large_maximum)
     Module module;
     module.memorysec.emplace_back(Memory{{1, (1024 * 1024 * 1024) / page_size}});
 
-    EXPECT_THROW(instantiate(module), std::runtime_error);
+    EXPECT_THROW(instantiate(&module), std::runtime_error);
 }
 
 TEST(instantiate, memory_multiple)
@@ -182,7 +182,7 @@ TEST(instantiate, memory_multiple)
     module.memorysec.emplace_back(Memory{{1, 1}});
     module.memorysec.emplace_back(Memory{{1, 1}});
 
-    EXPECT_THROW(instantiate(module), std::runtime_error);
+    EXPECT_THROW(instantiate(&module), std::runtime_error);
 }
 
 TEST(instantiate, data_section)
@@ -194,7 +194,7 @@ TEST(instantiate, data_section)
     // Memory contents: 0, 0xaa, 0x55, 0x55, 0, ...
     module.datasec.emplace_back(Data{{ConstantExpression::Kind::Constant, {2}}, {0x55, 0x55}});
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(&module);
 
     EXPECT_EQ(instance.memory.substr(0, 6), from_hex("00aa55550000"));
 }
@@ -204,7 +204,7 @@ TEST(instantiate, globals_single)
     Module module;
     module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(&module);
 
     ASSERT_EQ(instance.globals.size(), 1);
     EXPECT_EQ(instance.globals[0], 42);
@@ -216,7 +216,7 @@ TEST(instantiate, globals_multiple)
     module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
     module.globalsec.emplace_back(Global{false, {ConstantExpression::Kind::Constant, {43}}});
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(&module);
 
     ASSERT_EQ(instance.globals.size(), 2);
     EXPECT_EQ(instance.globals[0], 42);
@@ -233,7 +233,7 @@ TEST(instantiate, globals_with_imported)
     uint64_t global_value = 41;
     ImportedGlobal g{&global_value, true};
 
-    auto instance = instantiate(module, {}, {g});
+    auto instance = instantiate(&module, {}, {g});
 
     ASSERT_EQ(instance.imported_globals.size(), 1);
     EXPECT_EQ(*instance.imported_globals[0].value, 41);
@@ -252,7 +252,7 @@ TEST(instantiate, globals_initialized_from_imported)
     uint64_t global_value = 42;
     ImportedGlobal g{&global_value, false};
 
-    auto instance = instantiate(module, {}, {g});
+    auto instance = instantiate(&module, {}, {g});
 
     ASSERT_EQ(instance.globals.size(), 1);
     EXPECT_EQ(instance.globals[0], 42);
@@ -265,7 +265,7 @@ TEST(instantiate, globals_initialized_from_imported)
 
     ImportedGlobal g_mutable{&global_value, true};
 
-    EXPECT_THROW(instantiate(module_invalid1, {}, {g_mutable}), std::runtime_error);
+    EXPECT_THROW(instantiate(&module_invalid1, {}, {g_mutable}), std::runtime_error);
 
     // initializing from non-imported global is not allowed
     Module module_invalid2;
@@ -274,5 +274,5 @@ TEST(instantiate, globals_initialized_from_imported)
     module_invalid2.globalsec.emplace_back(
         Global{true, {ConstantExpression::Kind::GlobalGet, {0}}});
 
-    EXPECT_THROW(instantiate(module_invalid2, {}, {}), std::runtime_error);
+    EXPECT_THROW(instantiate(&module_invalid2, {}, {}), std::runtime_error);
 }

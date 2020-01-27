@@ -44,7 +44,7 @@ void benchmark_instantiate(benchmark::State& state, const fizzy::bytes& wasm_bin
     const auto module = fizzy::parse(wasm_binary);
     for (auto _ : state)  // NOLINT(clang-analyzer-deadcode.DeadStores)
     {
-        auto instance = fizzy::instantiate(module);
+        auto instance = fizzy::instantiate(&module);
         benchmark::DoNotOptimize(instance);
     }
 }
@@ -69,7 +69,7 @@ void benchmark_execute(benchmark::State& state, const ExecutionBenchmarkCase& be
             ("Function \"" + benchmark_case.func_name + "\" not found").c_str());
     }
 
-    auto instance = fizzy::instantiate(module, {});
+    auto instance = fizzy::instantiate(&module, {});
 
     // TODO: Check if memory is exported or imported.
     if (benchmark_case.memory.size() > instance.memory.size())

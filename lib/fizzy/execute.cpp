@@ -202,21 +202,21 @@ inline uint64_t popcnt64(uint64_t value) noexcept
 }
 }  // namespace
 
-Instance instantiate(const Module& module, std::vector<ImportedFunction> imported_functions,
+Instance instantiate(const Module* module, std::vector<ImportedFunction> imported_functions,
     std::vector<ImportedGlobal> imported_globals)
 {
     size_t memory_min, memory_max;
-    if (module.memorysec.size() > 1)
+    if (module->memorysec.size() > 1)
     {
         // FIXME: turn this into an assert if instantiate is not exposed externally and it only
         // takes validated modules
         throw std::runtime_error("Cannot support more than 1 memory section.");
     }
-    else if (module.memorysec.size() == 1)
+    else if (module->memorysec.size() == 1)
     {
-        memory_min = module.memorysec[0].limits.min;
-        if (module.memorysec[0].limits.max)
-            memory_max = *module.memorysec[0].limits.max;
+        memory_min = module->memorysec[0].limits.min;
+        if (module->memorysec[0].limits.max)
+            memory_max = *module->memorysec[0].limits.max;
         else
             memory_max = MemoryPagesLimit;
         // FIXME: better error handling
@@ -233,7 +233,7 @@ Instance instantiate(const Module& module, std::vector<ImportedFunction> importe
     bytes memory(memory_min * PageSize, 0);
 
     // Fill out memory based on data segments
-    for (const auto& data : module.datasec)
+    for (const auto& data : module->datasec)
     {
         uint64_t offset;
         if (data.offset.kind == ConstantExpression::Kind::Constant)
@@ -247,12 +247,12 @@ Instance instantiate(const Module& module, std::vector<ImportedFunction> importe
     }
 
     std::vector<TypeIdx> imported_function_types =
-        match_imports(module, imported_functions, imported_globals);
+        match_imports(*module, imported_functions, imported_globals);
 
     std::vector<uint64_t> globals;
-    globals.reserve(module.globalsec.size());
+    globals.reserve(module->globalsec.size());
     // init regular globals
-    for (auto const& global : module.globalsec)
+    for (auto const& global : module->globalsec)
     {
         if (global.expression.kind == ConstantExpression::Kind::Constant)
             globals.emplace_back(global.expression.value.constant);
@@ -276,9 +276,9 @@ Instance instantiate(const Module& module, std::vector<ImportedFunction> importe
         std::move(imported_globals)};
 
     // Run start function if present
-    if (module.startfunc)
+    if (module->startfunc)
     {
-        if (execute(instance, *module.startfunc, {}).trapped)
+        if (execute(instance, *module->startfunc, {}).trapped)
             throw std::runtime_error("Start function failed to execute");
     }
 
@@ -335,9 +335,9 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         return instance.imported_functions[func_idx](instance, std::move(args));
 
     const auto code_idx = func_idx - instance.imported_functions.size();
-    assert(code_idx < instance.module.codesec.size());
+    assert(code_idx < instance.module->codesec.size());
 
-    const auto& code = instance.module.codesec[code_idx];
+    const auto& code = instance.module->codesec[code_idx];
 
     std::vector<uint64_t> locals = std::move(args);
     locals.resize(locals.size() + code.local_count);
@@ -422,14 +422,14 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         {
             const auto called_func_idx = read<uint32_t>(immediates);
             assert(called_func_idx <
-                   instance.imported_functions.size() + instance.module.funcsec.size());
+                   instance.imported_functions.size() + instance.module->funcsec.size());
             const auto type_idx =
                 called_func_idx < instance.imported_functions.size() ?
                     instance.imported_function_types[called_func_idx] :
-                    instance.module.funcsec[called_func_idx - instance.imported_functions.size()];
-            assert(type_idx < instance.module.typesec.size());
+                    instance.module->funcsec[called_func_idx - instance.imported_functions.size()];
+            assert(type_idx < instance.module->typesec.size());
 
-            const auto num_inputs = instance.module.typesec[type_idx].inputs.size();
+            const auto num_inputs = instance.module->typesec[type_idx].inputs.size();
             assert(stack.size() >= num_inputs);
             std::vector<uint64_t> call_args(
                 stack.rbegin(), stack.rbegin() + static_cast<ptrdiff_t>(num_inputs));
@@ -443,7 +443,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
                 goto end;
             }
 
-            const auto num_outputs = instance.module.typesec[type_idx].outputs.size();
+            const auto num_outputs = instance.module->typesec[type_idx].outputs.size();
             // NOTE: we can assume these two from validation
             assert(ret.stack.size() == num_outputs);
             assert(num_outputs <= 1);
@@ -458,10 +458,10 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
             // TODO: Not needed, but satisfies the assert in the end of the main loop.
             labels.clear();
 
-            assert(code_idx < instance.module.funcsec.size());
-            const auto type_idx = instance.module.funcsec[code_idx];
-            assert(type_idx < instance.module.typesec.size());
-            const bool have_result = !instance.module.typesec[type_idx].outputs.empty();
+            assert(code_idx < instance.module->funcsec.size());
+            const auto type_idx = instance.module->funcsec[code_idx];
+            assert(type_idx < instance.module->typesec.size());
+            const bool have_result = !instance.module->typesec[type_idx].outputs.empty();
 
             if (have_result)
             {
@@ -1109,7 +1109,7 @@ end:
 
 execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uint64_t> args)
 {
-    auto instance = instantiate(module);
+    auto instance = instantiate(&module);
     return execute(instance, func_idx, std::move(args));
 }
 
