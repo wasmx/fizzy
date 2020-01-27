@@ -18,6 +18,71 @@ struct LabelContext
 };
 
 
+void match_imported_functions(const std::vector<TypeIdx>& module_imported_types,
+    const std::vector<ImportedFunction>& imported_functions)
+{
+    if (module_imported_types.size() != imported_functions.size())
+    {
+        throw std::runtime_error("Module requires " + std::to_string(module_imported_types.size()) +
+                                 " imported functions, " +
+                                 std::to_string(imported_functions.size()) + " provided");
+    }
+}
+
+void match_imported_globals(const std::vector<bool>& module_imports_mutability,
+    const std::vector<ImportedGlobal>& imported_globals)
+{
+    if (module_imports_mutability.size() != imported_globals.size())
+    {
+        throw std::runtime_error(
+            "Module requires " + std::to_string(module_imports_mutability.size()) +
+            " imported globals, " + std::to_string(imported_globals.size()) + " provided");
+    }
+
+    for (size_t i = 0; i < imported_globals.size(); ++i)
+    {
+        if (imported_globals[i].is_mutable != module_imports_mutability[i])
+        {
+            throw std::runtime_error("Global " + std::to_string(i) +
+                                     " mutability doesn't match module's global mutability");
+        }
+        if (imported_globals[i].value == nullptr)
+        {
+            throw std::runtime_error(
+                "Global " + std::to_string(i) + " has a null pointer to value");
+        }
+    }
+}
+
+std::vector<TypeIdx> match_imports(const Module& module,
+    const std::vector<ImportedFunction>& imported_functions,
+    const std::vector<ImportedGlobal>& imported_globals)
+{
+    std::vector<TypeIdx> imported_function_types;
+    std::vector<bool> imported_globals_mutability;
+    for (auto const& import : module.importsec)
+    {
+        switch (import.kind)
+        {
+        case ExternalKind::Function:
+            imported_function_types.emplace_back(import.desc.function_type_index);
+            break;
+        case ExternalKind::Global:
+            imported_globals_mutability.emplace_back(import.desc.global_mutable);
+            break;
+        default:
+            throw std::runtime_error("Import of type " +
+                                     std::to_string(static_cast<uint8_t>(import.kind)) +
+                                     " is not supported");
+        }
+    }
+
+    match_imported_functions(imported_function_types, imported_functions);
+    match_imported_globals(imported_globals_mutability, imported_globals);
+
+    return imported_function_types;
+}
+
 template <typename T>
 inline void store(bytes& input, size_t offset, T value) noexcept
 {
@@ -137,7 +202,8 @@ inline uint64_t popcnt64(uint64_t value) noexcept
 }
 }  // namespace
 
-Instance instantiate(const Module& module, std::vector<ImportedFunction> imported_functions)
+Instance instantiate(const Module& module, std::vector<ImportedFunction> imported_functions,
+    std::vector<ImportedGlobal> imported_globals)
 {
     size_t memory_min, memory_max;
     if (module.memorysec.size() > 1)
@@ -180,36 +246,34 @@ Instance instantiate(const Module& module, std::vector<ImportedFunction> importe
         std::memcpy(memory.data() + offset, data.init.data(), data.init.size());
     }
 
-    // TODO: add imported globals first
+    std::vector<TypeIdx> imported_function_types =
+        match_imports(module, imported_functions, imported_globals);
+
     std::vector<uint64_t> globals;
     globals.reserve(module.globalsec.size());
+    // init regular globals
     for (auto const& global : module.globalsec)
     {
         if (global.expression.kind == ConstantExpression::Kind::Constant)
             globals.emplace_back(global.expression.value.constant);
         else
         {
-            // TODO: initialize by imported global
-            // Wasm spec section 3.3.7 constrains initialization by another global to imports only
-            // https://webassembly.github.io/spec/core/valid/instructions.html#expressions
-            throw std::runtime_error(
-                "global initialization by imported global is not supported yet");
+            // initialize by imported global
+            const auto global_idx = global.expression.value.global_index;
+            // Wasm spec section 3.3.7 constrains initialization by another global to const imports
+            // only https://webassembly.github.io/spec/core/valid/instructions.html#expressions
+            if (global_idx >= imported_globals.size() || imported_globals[global_idx].is_mutable)
+            {
+                throw std::runtime_error(
+                    "global can be initialized by another global only if it's const and imported");
+            }
+            globals.emplace_back(*imported_globals[global_idx].value);
         }
     }
 
-    std::vector<TypeIdx> imported_function_types;
-    for (auto const& import : module.importsec)
-    {
-        if (import.kind == ExternalKind::Function)
-            imported_function_types.emplace_back(import.desc.function_type_index);
-    }
-    if (imported_functions.size() != imported_function_types.size())
-        throw std::runtime_error(
-            "Module requires " + std::to_string(imported_function_types.size()) +
-            " imported functions, " + std::to_string(imported_functions.size()) + " provided");
-
     Instance instance = {module, std::move(memory), memory_max, std::move(globals),
-        std::move(imported_functions), std::move(imported_function_types)};
+        std::move(imported_functions), std::move(imported_function_types),
+        std::move(imported_globals)};
 
     // Run start function if present
     if (module.startfunc)
@@ -452,15 +516,33 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         {
             const auto idx = read<uint32_t>(immediates);
             assert(idx <= instance.globals.size());
-            stack.push(instance.globals[idx]);
+            if (idx < instance.imported_globals.size())
+            {
+                stack.push(*instance.imported_globals[idx].value);
+            }
+            else
+            {
+                const auto module_global_idx = idx - instance.imported_globals.size();
+                assert(module_global_idx < instance.module.globalsec.size());
+                stack.push(instance.globals[module_global_idx]);
+            }
             break;
         }
         case Instr::global_set:
         {
             const auto idx = read<uint32_t>(immediates);
-            assert(idx <= instance.globals.size());
-            assert(instance.module.globalsec[idx].is_mutable);
-            instance.globals[idx] = stack.pop();
+            if (idx < instance.imported_globals.size())
+            {
+                assert(instance.imported_globals[idx].is_mutable);
+                *instance.imported_globals[idx].value = stack.pop();
+            }
+            else
+            {
+                const auto module_global_idx = idx - instance.imported_globals.size();
+                assert(module_global_idx < instance.module.globalsec.size());
+                assert(instance.module.globalsec[module_global_idx].is_mutable);
+                instance.globals[module_global_idx] = stack.pop();
+            }
             break;
         }
         case Instr::i32_load:

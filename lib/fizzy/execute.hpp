@@ -19,6 +19,12 @@ struct Instance;
 
 using ImportedFunction = execution_result (*)(Instance&, std::vector<uint64_t>);
 
+struct ImportedGlobal
+{
+    uint64_t* value = nullptr;
+    bool is_mutable = false;
+};
+
 // The module instance.
 struct Instance
 {
@@ -28,10 +34,12 @@ struct Instance
     std::vector<uint64_t> globals;
     std::vector<ImportedFunction> imported_functions;
     std::vector<TypeIdx> imported_function_types;
+    std::vector<ImportedGlobal> imported_globals;
 };
 
 // Instantiate a module.
-Instance instantiate(const Module& module, std::vector<ImportedFunction> imported_functions = {});
+Instance instantiate(const Module& module, std::vector<ImportedFunction> imported_functions = {},
+    std::vector<ImportedGlobal> imported_globals = {});
 
 // Execute a function on an instance.
 execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint64_t> args);
