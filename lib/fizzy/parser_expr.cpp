@@ -185,6 +185,20 @@ parser_result<Code> parse_expr(const uint8_t* pos)
             break;
         }
 
+        case Instr::br_table:
+        {
+            std::vector<uint32_t> label_indices;
+            std::tie(label_indices, pos) = parser<std::vector<uint32_t>>{}(pos);
+            uint32_t default_label_idx;
+            std::tie(default_label_idx, pos) = leb128u_decode<uint32_t>(pos);
+
+            push(code.immediates, static_cast<uint32_t>(label_indices.size()));
+            for (const auto idx : label_indices)
+                push(code.immediates, idx);
+            push(code.immediates, default_label_idx);
+            break;
+        }
+
         case Instr::i32_const:
         {
             int32_t imm;

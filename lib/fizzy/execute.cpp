@@ -17,6 +17,28 @@ struct LabelContext
     size_t stack_height = 0;
 };
 
+void branch(uint32_t label_idx, Stack<LabelContext>& labels, Stack<uint64_t>& stack,
+    const Instr*& pc, const uint8_t*& immediates) noexcept
+{
+    assert(labels.size() > label_idx);
+    labels.drop(label_idx);  // Drop skipped labels (does nothing for labelidx == 0).
+    const auto label = labels.pop();
+
+    pc = label.pc;
+    immediates = label.immediate;
+
+    // When branch is taken, additional stack items must be dropped.
+    assert(stack.size() >= label.stack_height + label.arity);
+    if (label.arity != 0)
+    {
+        assert(label.arity == 1);
+        const auto result = stack.peek();
+        stack.resize(label.stack_height);
+        stack.push(result);
+    }
+    else
+        stack.resize(label.stack_height);
+}
 
 void match_imported_functions(const std::vector<TypeIdx>& module_imported_types,
     const std::vector<ImportedFunction>& imported_functions)
@@ -398,24 +420,26 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
             if (label_idx == labels.size())
                 goto case_return;
 
-            assert(labels.size() > label_idx);
-            labels.drop(label_idx);  // Drop skipped labels (does nothing for labelidx == 0).
-            const auto label = labels.pop();
+            branch(label_idx, labels, stack, pc, immediates);
+            break;
+        }
+        case Instr::br_table:
+        {
+            // immediates are: size of label vector, labels, default label
+            const auto br_table_size = read<uint32_t>(immediates);
+            const auto br_table_idx = stack.pop();
 
-            pc = label.pc;
-            immediates = label.immediate;
+            const auto label_idx_offset = br_table_idx < br_table_size ?
+                                              br_table_idx * sizeof(uint32_t) :
+                                              br_table_size * sizeof(uint32_t);
+            immediates += label_idx_offset;
 
-            // When branch is taken, additional stack items must be dropped.
-            assert(stack.size() >= label.stack_height + label.arity);
-            if (label.arity != 0)
-            {
-                assert(label.arity == 1);
-                const auto result = stack.peek();
-                stack.resize(label.stack_height);
-                stack.push(result);
-            }
-            else
-                stack.resize(label.stack_height);
+            const auto label_idx = read<uint32_t>(immediates);
+
+            if (label_idx == labels.size())
+                goto case_return;
+
+            branch(label_idx, labels, stack, pc, immediates);
             break;
         }
         case Instr::call:
