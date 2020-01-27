@@ -2,6 +2,7 @@
 
 #include "leb128.hpp"
 #include "types.hpp"
+#include <memory>
 #include <stdexcept>
 #include <tuple>
 
@@ -18,7 +19,7 @@ struct parser_error : public std::runtime_error
 template <typename T>
 using parser_result = std::tuple<T, const uint8_t*>;
 
-Module parse(bytes_view input);
+std::shared_ptr<Module> parse(bytes_view input);
 parser_result<Code> parse_expr(const uint8_t* input);
 
 template <typename T>

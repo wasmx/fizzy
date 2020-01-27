@@ -7,21 +7,19 @@ using namespace fizzy;
 
 TEST(execute_control, unreachable)
 {
-    Module module;
-    module.codesec.emplace_back(Code{0, {Instr::unreachable, Instr::end}, {}});
+    auto module = std::make_shared<Module>();
+    module->codesec.emplace_back(Code{0, {Instr::unreachable, Instr::end}, {}});
 
-    const auto [trap, ret] = execute(module, 0, {});
-
-    ASSERT_TRUE(trap);
+    const auto [trap, ret] = execute(std::move(module), 0, {});
+    EXPECT_TRUE(trap);
 }
 
 TEST(execute_control, nop)
 {
-    Module module;
-    module.codesec.emplace_back(Code{0, {Instr::nop, Instr::end}, {}});
+    auto module = std::make_shared<Module>();
+    module->codesec.emplace_back(Code{0, {Instr::nop, Instr::end}, {}});
 
-    const auto [trap, ret] = execute(module, 0, {});
-
+    const auto [trap, ret] = execute(std::move(module), 0, {});
     ASSERT_FALSE(trap);
     EXPECT_EQ(ret.size(), 0);
 }
@@ -38,8 +36,8 @@ TEST(execute_control, block_br)
     // end
     // local.get 1
 
-    Module module;
-    module.codesec.emplace_back(Code{2,
+    auto module = std::make_shared<Module>();
+    module->codesec.emplace_back(Code{2,
         {Instr::block, Instr::i32_const, Instr::local_set, Instr::br, Instr::i32_const,
             Instr::local_set, Instr::end, Instr::local_get, Instr::end},
         from_hex("00"       /* arity */
@@ -63,8 +61,8 @@ TEST(execute_control, block_br)
 TEST(execute_control, loop_void_empty)
 {
     // This wasm code is invalid - loop is not allowed to leave anything on the stack.
-    Module module;
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->codesec.emplace_back(
         Code{0, {Instr::loop, Instr::local_get, Instr::end, Instr::end}, {0, 0, 0, 0, 0}});
 
     const auto [trap, ret] = execute(module, 0, {1});
@@ -77,8 +75,8 @@ TEST(execute_control, loop_void_empty)
 TEST(execute_control, block_void_empty)
 {
     // This wasm code is invalid - block with type [] is not allowed to leave anything on the stack.
-    Module module;
-    module.codesec.emplace_back(Code{0, {Instr::block, Instr::local_get, Instr::end, Instr::end},
+    auto module = std::make_shared<Module>();
+    module->codesec.emplace_back(Code{0, {Instr::block, Instr::local_get, Instr::end, Instr::end},
         from_hex("00"
                  "00000000"
                  "00000000"
@@ -103,8 +101,8 @@ TEST(execute_control, loop_void_br_if_16)
     //   br_if 0
     //   local.get 0
     // end
-    Module module;
-    module.codesec.emplace_back(Code{0,
+    auto module = std::make_shared<Module>();
+    module->codesec.emplace_back(Code{0,
         {Instr::loop, Instr::local_get, Instr::i32_const, Instr::i32_sub, Instr::local_tee,
             Instr::br_if, Instr::local_get, Instr::end, Instr::end},
         {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
@@ -472,8 +470,7 @@ TEST(execute_control, br_1_out_of_function_and_imported_function)
     constexpr auto fake_imported_function =
         [](Instance&, std::vector<uint64_t>) noexcept -> execution_result { return {}; };
 
-    const auto module = parse(bin);
-    auto instance = instantiate(&module, {fake_imported_function});
+    auto instance = instantiate(parse(bin), {fake_imported_function});
     const auto [trap, ret] = execute(instance, 1, {});
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);

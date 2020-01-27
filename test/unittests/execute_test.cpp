@@ -9,16 +9,16 @@ namespace
 {
 execution_result execute_unary_operation(Instr instr, uint64_t arg)
 {
-    Module module;
-    module.codesec.emplace_back(Code{0, {Instr::local_get, instr, Instr::end}, {0, 0, 0, 0}});
+    auto module = std::make_shared<Module>();
+    module->codesec.emplace_back(Code{0, {Instr::local_get, instr, Instr::end}, {0, 0, 0, 0}});
 
     return execute(module, 0, {arg});
 }
 
 execution_result execute_binary_operation(Instr instr, uint64_t lhs, uint64_t rhs)
 {
-    Module module;
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::local_get, instr, Instr::end}, {0, 0, 0, 0, 1, 0, 0, 0}});
 
     return execute(module, 0, {lhs, rhs});
@@ -27,8 +27,8 @@ execution_result execute_binary_operation(Instr instr, uint64_t lhs, uint64_t rh
 
 TEST(execute, end)
 {
-    Module module;
-    module.codesec.emplace_back(Code{0, {Instr::end}, {}});
+    auto module = std::make_shared<Module>();
+    module->codesec.emplace_back(Code{0, {Instr::end}, {}});
 
     const auto [trap, ret] = execute(module, 0, {});
 
@@ -38,12 +38,12 @@ TEST(execute, end)
 
 TEST(execute, call)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{}, {ValType::i32}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(Code{0, {Instr::i32_const, Instr::end}, {42, 0, 42, 0}});
-    module.codesec.emplace_back(Code{0, {Instr::call, Instr::end}, {0, 0, 0, 0}});
+    auto module = std::make_shared<Module>();
+    module->typesec.emplace_back(FuncType{{}, {ValType::i32}});
+    module->funcsec.emplace_back(TypeIdx{0});
+    module->funcsec.emplace_back(TypeIdx{0});
+    module->codesec.emplace_back(Code{0, {Instr::i32_const, Instr::end}, {42, 0, 42, 0}});
+    module->codesec.emplace_back(Code{0, {Instr::call, Instr::end}, {0, 0, 0, 0}});
 
     const auto [trap, ret] = execute(module, 1, {});
 
@@ -54,12 +54,12 @@ TEST(execute, call)
 
 TEST(execute, call_trap)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{}, {ValType::i32}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(Code{0, {Instr::unreachable, Instr::end}, {}});
-    module.codesec.emplace_back(Code{0, {Instr::call, Instr::end}, {0, 0, 0, 0}});
+    auto module = std::make_shared<Module>();
+    module->typesec.emplace_back(FuncType{{}, {ValType::i32}});
+    module->funcsec.emplace_back(TypeIdx{0});
+    module->funcsec.emplace_back(TypeIdx{0});
+    module->codesec.emplace_back(Code{0, {Instr::unreachable, Instr::end}, {}});
+    module->codesec.emplace_back(Code{0, {Instr::call, Instr::end}, {0, 0, 0, 0}});
 
     const auto [trap, ret] = execute(module, 1, {});
 
@@ -68,13 +68,13 @@ TEST(execute, call_trap)
 
 TEST(execute, call_with_arguments)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
-    module.typesec.emplace_back(FuncType{{}, {ValType::i32}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.funcsec.emplace_back(TypeIdx{1});
-    module.codesec.emplace_back(Code{2, {Instr::local_get, Instr::end}, {0, 0, 0, 0}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
+    module->typesec.emplace_back(FuncType{{}, {ValType::i32}});
+    module->funcsec.emplace_back(TypeIdx{0});
+    module->funcsec.emplace_back(TypeIdx{1});
+    module->codesec.emplace_back(Code{2, {Instr::local_get, Instr::end}, {0, 0, 0, 0}});
+    module->codesec.emplace_back(
         Code{0, {Instr::i32_const, Instr::i32_const, Instr::call, Instr::end},
             {1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0}});
 
@@ -87,8 +87,9 @@ TEST(execute, call_with_arguments)
 
 TEST(execute, drop)
 {
-    Module module;
-    module.codesec.emplace_back(Code{1, {Instr::local_get, Instr::drop, Instr::end}, {0, 0, 0, 0}});
+    auto module = std::make_shared<Module>();
+    module->codesec.emplace_back(
+        Code{1, {Instr::local_get, Instr::drop, Instr::end}, {0, 0, 0, 0}});
 
     const auto [trap, ret] = execute(module, 0, {});
 
@@ -98,8 +99,8 @@ TEST(execute, drop)
 
 TEST(execute, select)
 {
-    Module module;
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::local_get, Instr::local_get, Instr::select, Instr::end},
             {0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0}});
 
@@ -124,8 +125,8 @@ TEST(execute, select)
 
 TEST(execute, local_get)
 {
-    Module module;
-    module.codesec.emplace_back(Code{0, {Instr::local_get, Instr::end}, {0, 0, 0, 0}});
+    auto module = std::make_shared<Module>();
+    module->codesec.emplace_back(Code{0, {Instr::local_get, Instr::end}, {0, 0, 0, 0}});
 
     const auto [trap, ret] = execute(module, 0, {42});
 
@@ -136,8 +137,8 @@ TEST(execute, local_get)
 
 TEST(execute, local_set)
 {
-    Module module;
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->codesec.emplace_back(
         Code{1, {Instr::local_get, Instr::local_set, Instr::local_get, Instr::end},
             {0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0}});
 
@@ -150,8 +151,8 @@ TEST(execute, local_set)
 
 TEST(execute, local_tee)
 {
-    Module module;
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->codesec.emplace_back(
         Code{1, {Instr::local_get, Instr::local_tee, Instr::end}, {0, 0, 0, 0, 1, 0, 0, 0}});
 
     const auto [trap, ret] = execute(module, 0, {42});
@@ -163,12 +164,12 @@ TEST(execute, local_tee)
 
 TEST(execute, global_get)
 {
-    Module module;
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
+    auto module = std::make_shared<Module>();
+    module->globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
 
-    module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
+    module->codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
 
     const auto [trap, ret] = execute(instance, 0, {});
 
@@ -179,14 +180,14 @@ TEST(execute, global_get)
 
 TEST(execute, global_get_two_globals)
 {
-    Module module;
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {43}}});
+    auto module = std::make_shared<Module>();
+    module->globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
+    module->globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {43}}});
 
-    module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
-    module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {1, 0, 0, 0}});
+    module->codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
+    module->codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {1, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
 
     auto [trap, ret] = execute(instance, 0, {});
 
@@ -203,12 +204,12 @@ TEST(execute, global_get_two_globals)
 
 TEST(execute, global_get_imported)
 {
-    Module module;
-    module.importsec.emplace_back(Import{"mod", "glob", ExternalKind::Global, {false}});
-    module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
+    auto module = std::make_shared<Module>();
+    module->importsec.emplace_back(Import{"mod", "glob", ExternalKind::Global, {false}});
+    module->codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
 
     uint64_t global_value = 42;
-    auto instance = instantiate(&module, {}, {ImportedGlobal{&global_value, false}});
+    auto instance = instantiate(std::move(module), {}, {ImportedGlobal{&global_value, false}});
 
     const auto [trap, ret] = execute(instance, 0, {});
 
@@ -227,13 +228,13 @@ TEST(execute, global_get_imported)
 
 TEST(execute, global_set)
 {
-    Module module;
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {41}}});
+    auto module = std::make_shared<Module>();
+    module->globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {41}}});
 
-    module.codesec.emplace_back(
+    module->codesec.emplace_back(
         Code{0, {Instr::i32_const, Instr::global_set, Instr::end}, {42, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
 
     const auto [trap, ret] = execute(instance, 0, {});
 
@@ -243,15 +244,15 @@ TEST(execute, global_set)
 
 TEST(execute, global_set_two_globals)
 {
-    Module module;
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {43}}});
+    auto module = std::make_shared<Module>();
+    module->globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
+    module->globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {43}}});
 
-    module.codesec.emplace_back(Code{0,
+    module->codesec.emplace_back(Code{0,
         {Instr::i32_const, Instr::global_set, Instr::i32_const, Instr::global_set, Instr::end},
         {44, 0, 0, 0, 0, 0, 0, 0, 45, 0, 0, 0, 1, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
 
     const auto [trap, ret] = execute(instance, 0, {});
 
@@ -262,13 +263,13 @@ TEST(execute, global_set_two_globals)
 
 TEST(execute, global_set_imported)
 {
-    Module module;
-    module.importsec.emplace_back(Import{"mod", "glob", ExternalKind::Global, {true}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->importsec.emplace_back(Import{"mod", "glob", ExternalKind::Global, {true}});
+    module->codesec.emplace_back(
         Code{0, {Instr::i32_const, Instr::global_set, Instr::end}, {42, 0, 0, 0, 0, 0, 0, 0}});
 
     uint64_t global_value = 41;
-    auto instance = instantiate(&module, {}, {ImportedGlobal{&global_value, true}});
+    auto instance = instantiate(std::move(module), {}, {ImportedGlobal{&global_value, true}});
 
     const auto [trap, ret] = execute(instance, 0, {});
 
@@ -278,8 +279,8 @@ TEST(execute, global_set_imported)
 
 TEST(execute, i32_const)
 {
-    Module module;
-    module.codesec.emplace_back(Code{0, {Instr::i32_const, Instr::end}, {0x42, 0, 0x42, 0}});
+    auto module = std::make_shared<Module>();
+    module->codesec.emplace_back(Code{0, {Instr::i32_const, Instr::end}, {0x42, 0, 0x42, 0}});
 
     const auto [trap, ret] = execute(module, 0, {});
 
@@ -290,8 +291,8 @@ TEST(execute, i32_const)
 
 TEST(execute, i64_const)
 {
-    Module module;
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->codesec.emplace_back(
         Code{0, {Instr::i64_const, Instr::end}, {0x42, 0, 0x42, 0, 0, 0, 0, 1}});
 
     const auto [trap, ret] = execute(module, 0, {});
@@ -303,12 +304,12 @@ TEST(execute, i64_const)
 
 TEST(execute, i32_load)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i32_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     instance.memory[0] = 42;
     const auto [trap, ret] = execute(instance, 0, {0});
 
@@ -321,12 +322,12 @@ TEST(execute, i32_load)
 
 TEST(execute, i64_load)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     instance.memory[0] = 0x2a;
     instance.memory[4] = 0x2a;
     const auto [trap, ret] = execute(instance, 0, {0});
@@ -340,12 +341,12 @@ TEST(execute, i64_load)
 
 TEST(execute, i32_load8_s)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i32_load8_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     instance.memory[0] = 0x80;
     instance.memory[1] = 0xf1;
     const auto [trap, ret] = execute(instance, 0, {0});
@@ -359,12 +360,12 @@ TEST(execute, i32_load8_s)
 
 TEST(execute, i32_load8_u)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i32_load8_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     instance.memory[0] = 0x81;
     instance.memory[1] = 0xf1;
     const auto [trap, ret] = execute(instance, 0, {0});
@@ -378,12 +379,12 @@ TEST(execute, i32_load8_u)
 
 TEST(execute, i32_load16_s)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i32_load16_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     instance.memory[0] = 0x00;
     instance.memory[1] = 0x80;
     instance.memory[3] = 0xf1;
@@ -398,12 +399,12 @@ TEST(execute, i32_load16_s)
 
 TEST(execute, i32_load16_u)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i32_load16_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     instance.memory[0] = 0x01;
     instance.memory[1] = 0x80;
     instance.memory[3] = 0xf1;
@@ -418,12 +419,12 @@ TEST(execute, i32_load16_u)
 
 TEST(execute, i64_load8_s)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load8_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     instance.memory[0] = 0x80;
     instance.memory[1] = 0xf1;
     const auto [trap, ret] = execute(instance, 0, {0});
@@ -437,12 +438,12 @@ TEST(execute, i64_load8_s)
 
 TEST(execute, i64_load8_u)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load8_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     instance.memory[0] = 0x81;
     instance.memory[1] = 0xf1;
     const auto [trap, ret] = execute(instance, 0, {0});
@@ -456,12 +457,12 @@ TEST(execute, i64_load8_u)
 
 TEST(execute, i64_load16_s)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load16_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     instance.memory[0] = 0x00;
     instance.memory[1] = 0x80;
     instance.memory[2] = 0xf1;
@@ -476,12 +477,12 @@ TEST(execute, i64_load16_s)
 
 TEST(execute, i64_load16_u)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load16_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     instance.memory[0] = 0x01;
     instance.memory[1] = 0x80;
     instance.memory[2] = 0xf1;
@@ -496,12 +497,12 @@ TEST(execute, i64_load16_u)
 
 TEST(execute, i64_load32_s)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load32_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     instance.memory[0] = 0x00;
     instance.memory[1] = 0x00;
     instance.memory[2] = 0x00;
@@ -518,12 +519,12 @@ TEST(execute, i64_load32_s)
 
 TEST(execute, i64_load32_u)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load32_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     instance.memory[0] = 0x01;
     instance.memory[1] = 0x00;
     instance.memory[2] = 0x00;
@@ -540,13 +541,13 @@ TEST(execute, i64_load32_u)
 
 TEST(execute, i32_store)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::local_get, Instr::i32_store, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     const auto [trap, ret] = execute(instance, 0, {42, 0});
 
     ASSERT_FALSE(trap);
@@ -558,13 +559,13 @@ TEST(execute, i32_store)
 
 TEST(execute, i64_store)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::local_get, Instr::i64_store, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     const auto [trap, ret] = execute(instance, 0, {0x2a0000002a, 0});
 
     ASSERT_FALSE(trap);
@@ -576,13 +577,13 @@ TEST(execute, i64_store)
 
 TEST(execute, i32_store8)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::local_get, Instr::i32_store8, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     const auto [trap, ret] = execute(instance, 0, {0xf1f2f380, 0});
 
     ASSERT_FALSE(trap);
@@ -594,13 +595,13 @@ TEST(execute, i32_store8)
 
 TEST(execute, i32_store8_trap)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::local_get, Instr::i32_store8, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     const auto [trap, ret] = execute(instance, 0, {0xf1f2f380, 65537});
 
     ASSERT_TRUE(trap);
@@ -608,13 +609,13 @@ TEST(execute, i32_store8_trap)
 
 TEST(execute, i32_store16)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::local_get, Instr::i32_store16, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     const auto [trap, ret] = execute(instance, 0, {0xf1f28000, 0});
 
     ASSERT_FALSE(trap);
@@ -626,13 +627,13 @@ TEST(execute, i32_store16)
 
 TEST(execute, i64_store8)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::local_get, Instr::i64_store8, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     const auto [trap, ret] = execute(instance, 0, {0xf1f2f4f5f6f7f880, 0});
 
     ASSERT_FALSE(trap);
@@ -644,13 +645,13 @@ TEST(execute, i64_store8)
 
 TEST(execute, i64_store16)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::local_get, Instr::i64_store16, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     const auto [trap, ret] = execute(instance, 0, {0xf1f2f4f5f6f78000, 0});
 
     ASSERT_FALSE(trap);
@@ -662,13 +663,13 @@ TEST(execute, i64_store16)
 
 TEST(execute, i64_store32)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::local_get, Instr::i64_store32, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     const auto [trap, ret] = execute(instance, 0, {0xf1f2f4f580000000, 0});
 
     ASSERT_FALSE(trap);
@@ -680,9 +681,9 @@ TEST(execute, i64_store32)
 
 TEST(execute, memory_size)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(Code{0, {Instr::memory_size, Instr::end}, {}});
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(Code{0, {Instr::memory_size, Instr::end}, {}});
 
     const auto [trap, ret] = execute(module, 0, {});
 
@@ -692,9 +693,9 @@ TEST(execute, memory_size)
 
 TEST(execute, memory_grow)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 4096}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->memorysec.emplace_back(Memory{{1, 4096}});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::memory_grow, Instr::end}, {0, 0, 0, 0}});
 
     auto result = execute(module, 0, {0});
@@ -1745,16 +1746,16 @@ TEST(execute, start_section)
 {
     // In this test the start function (index 1) writes a i32 value to the memory
     // and the same is read back in the "main" function (index 0).
-    Module module;
-    module.startfunc = 1;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->startfunc = 1;
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->codesec.emplace_back(
         Code{0, {Instr::i32_const, Instr::i32_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
-    module.codesec.emplace_back(
+    module->codesec.emplace_back(
         Code{0, {Instr::i32_const, Instr::i32_const, Instr::i32_store, Instr::end},
             {0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     // Start function sets this
     ASSERT_EQ(instance.memory.substr(0, 4), from_hex("2a000000"));
 
@@ -1768,15 +1769,15 @@ TEST(execute, start_section)
 
 TEST(execute, imported_function)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
-    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
+    auto module = std::make_shared<Module>();
+    module->typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
+    module->importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
 
     auto host_foo = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] + args[1]}};
     };
 
-    auto instance = instantiate(&module, {host_foo});
+    auto instance = instantiate(std::move(module), {host_foo});
 
     const auto [trap, ret] = execute(instance, 0, {20, 22});
 
@@ -1787,10 +1788,10 @@ TEST(execute, imported_function)
 
 TEST(execute, imported_two_functions)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
-    module.importsec.emplace_back(Import{"mod", "foo1", ExternalKind::Function, {0}});
-    module.importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {0}});
+    auto module = std::make_shared<Module>();
+    module->typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
+    module->importsec.emplace_back(Import{"mod", "foo1", ExternalKind::Function, {0}});
+    module->importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {0}});
 
     auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] + args[1]}};
@@ -1799,7 +1800,7 @@ TEST(execute, imported_two_functions)
         return {false, {args[0] * args[1]}};
     };
 
-    auto instance = instantiate(&module, {host_foo1, host_foo2});
+    auto instance = instantiate(std::move(module), {host_foo1, host_foo2});
 
     const auto [trap1, ret1] = execute(instance, 0, {20, 22});
 
@@ -1816,12 +1817,12 @@ TEST(execute, imported_two_functions)
 
 TEST(execute, imported_functions_and_regular_one)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
-    module.typesec.emplace_back(FuncType{{ValType::i64}, {ValType::i64}});
-    module.importsec.emplace_back(Import{"mod", "foo1", ExternalKind::Function, {0}});
-    module.importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {0}});
-    module.codesec.emplace_back(Code{0, {Instr::i32_const, Instr::end}, {42, 0, 42, 0}});
+    const auto module = std::make_shared<Module>();
+    module->typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
+    module->typesec.emplace_back(FuncType{{ValType::i64}, {ValType::i64}});
+    module->importsec.emplace_back(Import{"mod", "foo1", ExternalKind::Function, {0}});
+    module->importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {0}});
+    module->codesec.emplace_back(Code{0, {Instr::i32_const, Instr::end}, {42, 0, 42, 0}});
 
     auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] + args[1]}};
@@ -1830,7 +1831,7 @@ TEST(execute, imported_functions_and_regular_one)
         return {false, {args[0] * args[0]}};
     };
 
-    auto instance = instantiate(&module, {host_foo1, host_foo2});
+    auto instance = instantiate(module, {host_foo1, host_foo2});
 
     const auto [trap1, ret1] = execute(instance, 0, {20, 22});
 
@@ -1849,7 +1850,7 @@ TEST(execute, imported_functions_and_regular_one)
         return {false, {args.size()}};
     };
 
-    auto instance_couner = instantiate(&module, {count_args, count_args});
+    auto instance_couner = instantiate(module, {count_args, count_args});
 
     const auto [trap3, ret3] = execute(instance_couner, 0, {20, 22});
 
@@ -1866,12 +1867,12 @@ TEST(execute, imported_functions_and_regular_one)
 
 TEST(execute, imported_two_functions_different_type)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
-    module.typesec.emplace_back(FuncType{{ValType::i64}, {ValType::i64}});
-    module.importsec.emplace_back(Import{"mod", "foo1", ExternalKind::Function, {0}});
-    module.importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {0}});
-    module.codesec.emplace_back(Code{0, {Instr::i32_const, Instr::end}, {42, 0, 42, 0}});
+    auto module = std::make_shared<Module>();
+    module->typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
+    module->typesec.emplace_back(FuncType{{ValType::i64}, {ValType::i64}});
+    module->importsec.emplace_back(Import{"mod", "foo1", ExternalKind::Function, {0}});
+    module->importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {0}});
+    module->codesec.emplace_back(Code{0, {Instr::i32_const, Instr::end}, {42, 0, 42, 0}});
 
     auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] + args[1]}};
@@ -1880,7 +1881,7 @@ TEST(execute, imported_two_functions_different_type)
         return {false, {args[0] * args[0]}};
     };
 
-    auto instance = instantiate(&module, {host_foo1, host_foo2});
+    auto instance = instantiate(std::move(module), {host_foo1, host_foo2});
 
     const auto [trap1, ret1] = execute(instance, 0, {20, 22});
 
@@ -1903,13 +1904,13 @@ TEST(execute, imported_two_functions_different_type)
 
 TEST(execute, imported_function_traps)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
-    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
+    auto module = std::make_shared<Module>();
+    module->typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
+    module->importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
 
     auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result { return {true, {}}; };
 
-    auto instance = instantiate(&module, {host_foo});
+    auto instance = instantiate(std::move(module), {host_foo});
 
     const auto [trap, ret] = execute(instance, 0, {20, 22});
 
@@ -1918,17 +1919,17 @@ TEST(execute, imported_function_traps)
 
 TEST(execute, imported_function_call)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{}, {ValType::i32}});
-    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(Code{0, {Instr::call, Instr::end}, {0, 0, 0, 0}});
+    auto module = std::make_shared<Module>();
+    module->typesec.emplace_back(FuncType{{}, {ValType::i32}});
+    module->importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
+    module->funcsec.emplace_back(TypeIdx{0});
+    module->codesec.emplace_back(Code{0, {Instr::call, Instr::end}, {0, 0, 0, 0}});
 
     auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result {
         return {false, {42}};
     };
 
-    auto instance = instantiate(&module, {host_foo});
+    auto instance = instantiate(std::move(module), {host_foo});
 
     const auto [trap, ret] = execute(instance, 1, {});
 
@@ -1939,11 +1940,11 @@ TEST(execute, imported_function_call)
 
 TEST(execute, imported_function_call_with_arguments)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
-    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
+    auto module = std::make_shared<Module>();
+    module->typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
+    module->importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
+    module->funcsec.emplace_back(TypeIdx{0});
+    module->codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::call, Instr::i32_const, Instr::i32_add, Instr::end},
             {0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0}});
 
@@ -1951,7 +1952,7 @@ TEST(execute, imported_function_call_with_arguments)
         return {false, {args[0] * 2}};
     };
 
-    auto instance = instantiate(&module, {host_foo});
+    auto instance = instantiate(std::move(module), {host_foo});
 
     const auto [trap, ret] = execute(instance, 1, {20});
 
@@ -1988,8 +1989,7 @@ TEST(execute, memory_copy_32bytes)
         "0061736d0100000001060160027f7f000302010005030100010a2c012a00200020012903003703002000200129"
         "030837030820002001290310370310200020012903183703180b000e046e616d65020701000200000100");
 
-    const auto module = parse(bin);
-    auto instance = instantiate(&module);
+    auto instance = instantiate(parse(bin));
     ASSERT_EQ(instance.memory.size(), 65536);
     const auto input = from_hex("0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20");
     ASSERT_EQ(input.size(), 32);

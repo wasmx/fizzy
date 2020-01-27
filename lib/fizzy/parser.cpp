@@ -218,14 +218,15 @@ struct parser<Data>
     }
 };
 
-Module parse(bytes_view input)
+std::shared_ptr<Module> parse(bytes_view input)
 {
     if (input.substr(0, wasm_prefix.size()) != wasm_prefix)
         throw parser_error{"invalid wasm module prefix"};
 
     input.remove_prefix(wasm_prefix.size());
 
-    Module module;
+    auto module_ptr = std::make_shared<Module>();
+    auto& module = *module_ptr;
     for (auto it = input.begin(); it != input.end();)
     {
         const auto id = static_cast<SectionId>(*it++);
@@ -285,6 +286,6 @@ Module parse(bytes_view input)
             throw parser_error{"too many memory sections (at most one is allowed)"};
     }
 
-    return module;
+    return module_ptr;
 }
 }  // namespace fizzy

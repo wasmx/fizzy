@@ -202,8 +202,8 @@ inline uint64_t popcnt64(uint64_t value) noexcept
 }
 }  // namespace
 
-Instance instantiate(const Module* module, std::vector<ImportedFunction> imported_functions,
-    std::vector<ImportedGlobal> imported_globals)
+Instance instantiate(std::shared_ptr<const Module> module,
+    std::vector<ImportedFunction> imported_functions, std::vector<ImportedGlobal> imported_globals)
 {
     size_t memory_min, memory_max;
     if (module->memorysec.size() > 1)
@@ -271,14 +271,14 @@ Instance instantiate(const Module* module, std::vector<ImportedFunction> importe
         }
     }
 
-    Instance instance = {module, std::move(memory), memory_max, std::move(globals),
+    Instance instance = {std::move(module), std::move(memory), memory_max, std::move(globals),
         std::move(imported_functions), std::move(imported_function_types),
         std::move(imported_globals)};
 
     // Run start function if present
-    if (module->startfunc)
+    if (instance.module->startfunc)
     {
-        if (execute(instance, *module->startfunc, {}).trapped)
+        if (execute(instance, *instance.module->startfunc, {}).trapped)
             throw std::runtime_error("Start function failed to execute");
     }
 
@@ -523,7 +523,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
             else
             {
                 const auto module_global_idx = idx - instance.imported_globals.size();
-                assert(module_global_idx < instance.module.globalsec.size());
+                assert(module_global_idx < instance.module->globalsec.size());
                 stack.push(instance.globals[module_global_idx]);
             }
             break;
@@ -539,8 +539,8 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
             else
             {
                 const auto module_global_idx = idx - instance.imported_globals.size();
-                assert(module_global_idx < instance.module.globalsec.size());
-                assert(instance.module.globalsec[module_global_idx].is_mutable);
+                assert(module_global_idx < instance.module->globalsec.size());
+                assert(instance.module->globalsec[module_global_idx].is_mutable);
                 instance.globals[module_global_idx] = stack.pop();
             }
             break;
@@ -1107,9 +1107,10 @@ end:
     return {trap, std::move(stack)};
 }
 
-execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uint64_t> args)
+execution_result execute(
+    std::shared_ptr<const Module> module, FuncIdx func_idx, std::vector<uint64_t> args)
 {
-    auto instance = instantiate(&module);
+    auto instance = instantiate(std::move(module));
     return execute(instance, func_idx, std::move(args));
 }
 

@@ -2,6 +2,7 @@
 
 #include "types.hpp"
 #include <cstdint>
+#include <memory>
 
 namespace fizzy
 {
@@ -28,7 +29,7 @@ struct ImportedGlobal
 // The module instance.
 struct Instance
 {
-    const Module* module = nullptr;
+    std::shared_ptr<const Module> module;
     bytes memory;
     size_t memory_max_pages = 0;
     std::vector<uint64_t> globals;
@@ -38,14 +39,16 @@ struct Instance
 };
 
 // Instantiate a module.
-Instance instantiate(const Module* module, std::vector<ImportedFunction> imported_functions = {},
+Instance instantiate(std::shared_ptr<const Module> module,
+    std::vector<ImportedFunction> imported_functions = {},
     std::vector<ImportedGlobal> imported_globals = {});
 
 // Execute a function on an instance.
 execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint64_t> args);
 
 // TODO: remove this helper
-execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uint64_t> args);
+execution_result execute(
+    std::shared_ptr<const Module> module, FuncIdx func_idx, std::vector<uint64_t> args);
 
 // Find exported function index by name.
 std::optional<FuncIdx> find_exported_function(const Module& module, std::string_view name);

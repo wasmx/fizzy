@@ -22,12 +22,10 @@ TEST(end_to_end, milestone1)
       )
     )
     */
-
     const auto bin = from_hex(
         "0061736d0100000001070160027f7f017f030201000a13011101017f200020016a20026a220220006a0b");
-    const auto module = parse(bin);
 
-    const auto [trap, ret] = execute(module, 0, {20, 22});
+    const auto [trap, ret] = execute(parse(bin), 0, {20, 22});
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -67,9 +65,7 @@ TEST(end_to_end, milestone2)
         "2053742154204f20546a21552055204e3602002005280228215641012157"
         "205620576a2158200520583602280c00000b000b0b");
 
-    const auto module = parse(bin);
-
-    auto instance = instantiate(&module);
+    auto instance = instantiate(parse(bin));
 
     // This performs uint256 x uint256 -> uint512 multiplication.
     // Arg1: 2^255 + 1
@@ -123,10 +119,8 @@ TEST(end_to_end, nested_loops_in_c)
         "20056a21050b200441016a22042000480d000b20050f0b41040f0b41000f"
         "0b20000b");
 
-    const auto module = parse(bin);
-
     // Ignore the results for now
-    const auto [trap, ret] = execute(module, 0, {10, 2, 5});
+    const auto [trap, ret] = execute(parse(bin), 0, {10, 2, 5});
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
@@ -171,9 +165,7 @@ TEST(end_to_end, memset)
         "0a2c"
         "0202000b2700024020014101480d000340200041d209360200200041046a21002001417f6a22010d000b0b0b");
 
-    const auto module = parse(bin);
-
-    auto instance = instantiate(&module);
+    auto instance = instantiate(parse(bin));
     const auto [trap, ret] = execute(instance, 1, {0, 2});
 
     ASSERT_FALSE(trap);
