@@ -15,4 +15,5 @@
     catch (...)                                                                              \
     {                                                                                        \
         ADD_FAILURE() << "Unexpected exception type thrown.";                                \
-    }
+    }                                                                                        \
+    (void)0
