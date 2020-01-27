@@ -297,21 +297,18 @@ Instance instantiate(const Module& module, std::vector<ImportedFunction> importe
     globals.reserve(module.globalsec.size());
     for (auto const& global : module.globalsec)
     {
-        if (global.expression.kind == ConstantExpression::Kind::Constant)
-            globals.emplace_back(global.expression.value.constant);
-        else
+        // Wasm spec section 3.3.7 constrains initialization by another global to const imports only
+        // https://webassembly.github.io/spec/core/valid/instructions.html#expressions
+        if (global.expression.kind == ConstantExpression::Kind::GlobalGet &&
+            global.expression.value.global_index >= imported_globals.size())
         {
-            // initialize by imported global
-            const auto global_idx = global.expression.value.global_index;
-            // Wasm spec section 3.3.7 constrains initialization by another global to const imports
-            // only https://webassembly.github.io/spec/core/valid/instructions.html#expressions
-            if (global_idx >= imported_globals.size() || imported_globals[global_idx].is_mutable)
-            {
-                throw std::runtime_error(
-                    "global can be initialized by another global only if it's const and imported");
-            }
-            globals.emplace_back(*imported_globals[global_idx].value);
+            throw std::runtime_error(
+                "Global can be initialized by another const global only if it's imported.");
         }
+
+        const auto value = eval_constant_expression(
+            global.expression, imported_globals, module.globalsec, globals);
+        globals.emplace_back(value);
     }
 
     // Set up tables
