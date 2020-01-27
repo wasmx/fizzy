@@ -1,5 +1,6 @@
 #include "parser.hpp"
 #include <gtest/gtest.h>
+#include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
 #include <types.hpp>
 
@@ -595,10 +596,8 @@ TEST(parser, milestone1)
 TEST(parser, instr_loop)
 {
     const auto loop_without_imm = "030b"_bytes;
-    EXPECT_THROW(parse_expr(loop_without_imm.data()), parser_error);
-
-    const auto loop_missing_end = "03400b"_bytes;
-    EXPECT_THROW(parse_expr(loop_missing_end.data()), parser_error);
+    EXPECT_THROW_MESSAGE(
+        parse_expr(loop_without_imm.data()), parser_error, "loop can only have type arity 0");
 
     const auto loop_void_empty = "03400b0b"_bytes;
     const auto [code1, pos1] = parse_expr(loop_void_empty.data());
@@ -606,16 +605,20 @@ TEST(parser, instr_loop)
     EXPECT_EQ(code1.immediates.size(), 0);
 
     const auto loop_i32_empty = "037f0b0b"_bytes;
-    EXPECT_THROW(parse_expr(loop_i32_empty.data()), parser_error);  // loop arity != 0.
+    EXPECT_THROW_MESSAGE(
+        parse_expr(loop_i32_empty.data()), parser_error, "loop can only have type arity 0");
+}
+
+TEST(parser, DISABLED_instr_loop_input_buffer_overflow)
+{
+    const auto loop_missing_end = "03400b"_bytes;
+    EXPECT_THROW_MESSAGE(parse_expr(loop_missing_end.data()), parser_error, "???");
 }
 
 TEST(parser, instr_block)
 {
     const auto wrong_type = "0200"_bytes;
-    EXPECT_THROW(parse_expr(wrong_type.data()), parser_error);
-
-    const auto block_missing_end = "02400b"_bytes;
-    EXPECT_THROW(parse_expr(block_missing_end.data()), parser_error);
+    EXPECT_THROW_MESSAGE(parse_expr(wrong_type.data()), parser_error, "invalid valtype 0");
 
     const auto empty = "010102400b0b"_bytes;
     const auto [code1, pos1] = parse_expr(empty.data());
@@ -633,6 +636,12 @@ TEST(parser, instr_block)
         "01"
         "02000000"
         "09000000"_bytes);
+}
+
+TEST(parser, DISABLED_instr_block_input_buffer_overflow)
+{
+    const auto block_missing_end = "02400b"_bytes;
+    EXPECT_THROW_MESSAGE(parse_expr(block_missing_end.data()), parser_error, "???");
 }
 
 TEST(parser, block_br)
