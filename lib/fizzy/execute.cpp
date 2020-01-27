@@ -105,6 +105,17 @@ std::vector<TypeIdx> match_imports(const Module& module,
     return imported_function_types;
 }
 
+uint64_t eval_constant_expression(ConstantExpression expr,
+    const std::vector<ImportedGlobal>& imported_globals, const std::vector<Global>& global_types,
+    const std::vector<uint64_t>& globals)
+{
+    uint64_t offset;
+    if (data.offset.kind == ConstantExpression::Kind::Constant)
+        offset = data.offset.value.constant;
+    else
+        throw std::runtime_error("data initialization by imported global is not supported yet");
+}
+
 template <typename T>
 inline void store(bytes& input, size_t offset, T value) noexcept
 {
@@ -344,11 +355,8 @@ Instance instantiate(const Module& module, std::vector<ImportedFunction> importe
     // Fill out memory based on data segments
     for (const auto& data : module.datasec)
     {
-        uint64_t offset;
-        if (data.offset.kind == ConstantExpression::Kind::Constant)
-            offset = data.offset.value.constant;
-        else
-            throw std::runtime_error("data initialization by imported global is not supported yet");
+        const uint64_t offset =
+            eval_constant_expression(data.offset, imported_globals, module.globalsec, globals);
 
         // NOTE: these instructions can overlap
         assert((offset + data.init.size()) <= (memory_max * PageSize));
