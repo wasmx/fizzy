@@ -267,6 +267,37 @@ inline uint64_t popcnt64(uint64_t value) noexcept
 Instance instantiate(const Module& module, std::vector<ImportedFunction> imported_functions,
     std::vector<ImportedGlobal> imported_globals)
 {
+    std::vector<TypeIdx> imported_function_types =
+        match_imports(module, imported_functions, imported_globals);
+
+    // Init globals
+    std::vector<uint64_t> globals;
+    globals.reserve(module.globalsec.size());
+    for (auto const& global : module.globalsec)
+    {
+        if (global.expression.kind == ConstantExpression::Kind::Constant)
+            globals.emplace_back(global.expression.value.constant);
+        else
+        {
+            // initialize by imported global
+            const auto global_idx = global.expression.value.global_index;
+            // Wasm spec section 3.3.7 constrains initialization by another global to const imports
+            // only https://webassembly.github.io/spec/core/valid/instructions.html#expressions
+            if (global_idx >= imported_globals.size() || imported_globals[global_idx].is_mutable)
+            {
+                throw std::runtime_error(
+                    "global can be initialized by another global only if it's const and imported");
+            }
+            globals.emplace_back(*imported_globals[global_idx].value);
+        }
+    }
+
+    // Set up tables
+    std::vector<FuncIdx> table;
+    if (!module.tablesec.empty())
+        table.resize(module.tablesec[0].limits.min);
+
+    // Allocate memory
     size_t memory_min, memory_max;
     if (module.memorysec.size() > 1)
     {
@@ -294,28 +325,7 @@ Instance instantiate(const Module& module, std::vector<ImportedFunction> importe
     // NOTE: fill it with zeroes
     bytes memory(memory_min * PageSize, 0);
 
-    // Fill out memory based on data segments
-    for (const auto& data : module.datasec)
-    {
-        uint64_t offset;
-        if (data.offset.kind == ConstantExpression::Kind::Constant)
-            offset = data.offset.value.constant;
-        else
-            throw std::runtime_error("data initialization by imported global is not supported yet");
-
-        // NOTE: these instructions can overlap
-        assert((offset + data.init.size()) <= (memory_max * PageSize));
-        std::memcpy(memory.data() + offset, data.init.data(), data.init.size());
-    }
-
-    std::vector<TypeIdx> imported_function_types =
-        match_imports(module, imported_functions, imported_globals);
-
-    // Set up tables
-    std::vector<FuncIdx> table;
-    if (!module.tablesec.empty())
-        table.resize(module.tablesec[0].limits.min);
-
+    // Fill the table based on elements segment
     assert(module.elementsec.empty() || !module.tablesec.empty());
     for (const auto& element : module.elementsec)
     {
@@ -331,26 +341,18 @@ Instance instantiate(const Module& module, std::vector<ImportedFunction> importe
         std::copy(element.init.begin(), element.init.end(), &table[offset]);
     }
 
-    std::vector<uint64_t> globals;
-    globals.reserve(module.globalsec.size());
-    // init regular globals
-    for (auto const& global : module.globalsec)
+    // Fill out memory based on data segments
+    for (const auto& data : module.datasec)
     {
-        if (global.expression.kind == ConstantExpression::Kind::Constant)
-            globals.emplace_back(global.expression.value.constant);
+        uint64_t offset;
+        if (data.offset.kind == ConstantExpression::Kind::Constant)
+            offset = data.offset.value.constant;
         else
-        {
-            // initialize by imported global
-            const auto global_idx = global.expression.value.global_index;
-            // Wasm spec section 3.3.7 constrains initialization by another global to const imports
-            // only https://webassembly.github.io/spec/core/valid/instructions.html#expressions
-            if (global_idx >= imported_globals.size() || imported_globals[global_idx].is_mutable)
-            {
-                throw std::runtime_error(
-                    "global can be initialized by another global only if it's const and imported");
-            }
-            globals.emplace_back(*imported_globals[global_idx].value);
-        }
+            throw std::runtime_error("data initialization by imported global is not supported yet");
+
+        // NOTE: these instructions can overlap
+        assert((offset + data.init.size()) <= (memory_max * PageSize));
+        std::memcpy(memory.data() + offset, data.init.data(), data.init.size());
     }
 
     Instance instance = {module, std::move(memory), memory_max, std::move(table),
