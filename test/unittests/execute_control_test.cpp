@@ -480,6 +480,74 @@ TEST(execute_control, br_1_out_of_function_and_imported_function)
     EXPECT_EQ(ret[0], 1);
 }
 
+TEST(execute, br_table)
+{
+    /*
+    (func (param i32) (result i32)
+      (block
+        (block
+          (block
+            (block
+              (block
+                (br_table 3 2 1 0 4 (get_local 0))
+                (return (i32.const 99))
+              )
+              (return (i32.const 100))
+            )
+            (return (i32.const 101))
+          )
+          (return (i32.const 102))
+        )
+        (return (i32.const 103))
+      )
+      (i32.const 104)
+    )
+   */
+    const auto bin = from_hex(
+        "0061736d0100000001060160017f017f030201000a330131000240024002"
+        "400240024020000e04030201000441e3000f0b41e4000f0b41e5000f0b41"
+        "e6000f0b41e7000f0b41e8000b000c046e616d6502050100010000");
+
+    for (const auto param : {0u, 1u, 2u, 3u, 4u, 5u})
+    {
+        constexpr uint64_t expected_results[]{103, 102, 101, 100, 104, 104};
+
+        const auto [trap, ret] = execute(parse(bin), 0, {param});
+        ASSERT_FALSE(trap);
+        ASSERT_EQ(ret.size(), 1);
+        EXPECT_EQ(ret[0], expected_results[param]);
+    }
+
+    const auto [trap, ret] = execute(parse(bin), 0, {42});
+    ASSERT_FALSE(trap);
+    ASSERT_EQ(ret.size(), 1);
+    EXPECT_EQ(ret[0], 104);
+}
+
+TEST(execute, br_table_empty_vector)
+{
+    /*
+    (func (param i32) (result i32)
+      (block
+        (br_table 0 (get_local 0))
+        (return (i32.const 99))
+      )
+      (i32.const 100)
+    )
+   */
+    const auto bin = from_hex(
+        "0061736d0100000001060160017f017f030201000a13011100024020000e"
+        "000041e3000f0b41e4000b000c046e616d6502050100010000");
+
+    for (const auto param : {0u, 1u, 2u})
+    {
+        const auto [trap, ret] = execute(parse(bin), 0, {param});
+        ASSERT_FALSE(trap);
+        ASSERT_EQ(ret.size(), 1);
+        EXPECT_EQ(ret[0], 100);
+    }
+}
+
 TEST(execute_control, return_from_loop)
 {
     /*

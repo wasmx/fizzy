@@ -664,3 +664,77 @@ TEST(parser, block_br)
         "01000000"
         "01000000"_bytes);
 }
+
+TEST(parser, instr_br_table)
+{
+    /*
+     (block
+       (block
+         (block
+           (block
+             (block
+               (br_table 3 2 1 0 4 (get_local 0))
+               (return (i32.const 99))
+             )
+             (return (i32.const 100))
+           )
+           (return (i32.const 101))
+         )
+         (return (i32.const 102))
+       )
+       (return (i32.const 103))
+     )
+     (i32.const 104)
+    */
+
+    const auto code_bin =
+        "0240024002400240024020000e04030201000441e3"
+        "000f0b41e4000f0b41e5000f0b41e6000f0b41e7000f0b41e8000b000c04"
+        "6e616d6502050100010000"_bytes;
+
+    const auto [code, pos] = parse_expr(code_bin.data());
+
+    EXPECT_EQ(code.instructions,
+        (std::vector{Instr::block, Instr::block, Instr::block, Instr::block, Instr::block,
+            Instr::local_get, Instr::br_table, Instr::i32_const, Instr::return_, Instr::end,
+            Instr::i32_const, Instr::return_, Instr::end, Instr::i32_const, Instr::return_,
+            Instr::end, Instr::i32_const, Instr::return_, Instr::end, Instr::i32_const,
+            Instr::return_, Instr::end, Instr::i32_const, Instr::end}));
+
+    // 5 blocks + 1 local_get before br_table
+    const auto br_table_imm_offset = 5 * (1 + 2 * 4) + 4;
+    const auto expected_br_imm =
+        "04000000"
+        "03000000"
+        "02000000"
+        "01000000"
+        "00000000"
+        "04000000"_bytes;
+    EXPECT_EQ(code.immediates.substr(br_table_imm_offset, expected_br_imm.size()), expected_br_imm);
+}
+
+TEST(parser, instr_br_table_empty_vector)
+{
+    /*
+      (block
+        (br_table 0 (get_local 0))
+        (return (i32.const 99))
+      )
+      (i32.const 100)
+    */
+
+    const auto code_bin = "024020000e000041e3000f0b41e4000b000c046e616d6502050100010000"_bytes;
+
+    const auto [code, pos] = parse_expr(code_bin.data());
+
+    EXPECT_EQ(code.instructions,
+        (std::vector{Instr::block, Instr::local_get, Instr::br_table, Instr::i32_const,
+            Instr::return_, Instr::end, Instr::i32_const, Instr::end}));
+
+    // blocks + local_get before br_table
+    const auto br_table_imm_offset = 1 + 2 * 4 + 4;
+    const auto expected_br_imm =
+        "00000000"
+        "00000000"_bytes;
+    EXPECT_EQ(code.immediates.substr(br_table_imm_offset, expected_br_imm.size()), expected_br_imm);
+}
