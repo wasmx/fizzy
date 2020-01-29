@@ -424,6 +424,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
     assert(code_idx < instance.module.codesec.size());
 
     const auto& code = instance.module.codesec[code_idx];
+    auto& memory = instance.memory;
 
     std::vector<uint64_t> locals = std::move(args);
     locals.resize(locals.size() + code.local_count);
@@ -704,7 +705,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         }
         case Instr::i32_load:
         {
-            if (!load_from_memory<uint32_t>(instance.memory, stack, immediates))
+            if (!load_from_memory<uint32_t>(memory, stack, immediates))
             {
                 trap = true;
                 goto end;
@@ -713,7 +714,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         }
         case Instr::i64_load:
         {
-            if (!load_from_memory<uint64_t>(instance.memory, stack, immediates))
+            if (!load_from_memory<uint64_t>(memory, stack, immediates))
             {
                 trap = true;
                 goto end;
@@ -722,7 +723,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         }
         case Instr::i32_load8_s:
         {
-            if (!load_from_memory<uint32_t, int8_t>(instance.memory, stack, immediates))
+            if (!load_from_memory<uint32_t, int8_t>(memory, stack, immediates))
             {
                 trap = true;
                 goto end;
@@ -731,7 +732,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         }
         case Instr::i32_load8_u:
         {
-            if (!load_from_memory<uint32_t, uint8_t>(instance.memory, stack, immediates))
+            if (!load_from_memory<uint32_t, uint8_t>(memory, stack, immediates))
             {
                 trap = true;
                 goto end;
@@ -740,7 +741,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         }
         case Instr::i32_load16_s:
         {
-            if (!load_from_memory<uint32_t, int16_t>(instance.memory, stack, immediates))
+            if (!load_from_memory<uint32_t, int16_t>(memory, stack, immediates))
             {
                 trap = true;
                 goto end;
@@ -749,7 +750,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         }
         case Instr::i32_load16_u:
         {
-            if (!load_from_memory<uint32_t, uint16_t>(instance.memory, stack, immediates))
+            if (!load_from_memory<uint32_t, uint16_t>(memory, stack, immediates))
             {
                 trap = true;
                 goto end;
@@ -758,7 +759,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         }
         case Instr::i64_load8_s:
         {
-            if (!load_from_memory<uint64_t, int8_t>(instance.memory, stack, immediates))
+            if (!load_from_memory<uint64_t, int8_t>(memory, stack, immediates))
             {
                 trap = true;
                 goto end;
@@ -767,7 +768,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         }
         case Instr::i64_load8_u:
         {
-            if (!load_from_memory<uint64_t, uint8_t>(instance.memory, stack, immediates))
+            if (!load_from_memory<uint64_t, uint8_t>(memory, stack, immediates))
             {
                 trap = true;
                 goto end;
@@ -776,7 +777,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         }
         case Instr::i64_load16_s:
         {
-            if (!load_from_memory<uint64_t, int16_t>(instance.memory, stack, immediates))
+            if (!load_from_memory<uint64_t, int16_t>(memory, stack, immediates))
             {
                 trap = true;
                 goto end;
@@ -785,7 +786,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         }
         case Instr::i64_load16_u:
         {
-            if (!load_from_memory<uint64_t, uint16_t>(instance.memory, stack, immediates))
+            if (!load_from_memory<uint64_t, uint16_t>(memory, stack, immediates))
             {
                 trap = true;
                 goto end;
@@ -794,7 +795,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         }
         case Instr::i64_load32_s:
         {
-            if (!load_from_memory<uint64_t, int32_t>(instance.memory, stack, immediates))
+            if (!load_from_memory<uint64_t, int32_t>(memory, stack, immediates))
             {
                 trap = true;
                 goto end;
@@ -803,7 +804,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         }
         case Instr::i64_load32_u:
         {
-            if (!load_from_memory<uint64_t, uint32_t>(instance.memory, stack, immediates))
+            if (!load_from_memory<uint64_t, uint32_t>(memory, stack, immediates))
             {
                 trap = true;
                 goto end;
@@ -812,7 +813,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         }
         case Instr::i32_store:
         {
-            if (!store_into_memory<uint32_t>(instance.memory, stack, immediates))
+            if (!store_into_memory<uint32_t>(memory, stack, immediates))
             {
                 trap = true;
                 goto end;
@@ -821,7 +822,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         }
         case Instr::i64_store:
         {
-            if (!store_into_memory<uint64_t>(instance.memory, stack, immediates))
+            if (!store_into_memory<uint64_t>(memory, stack, immediates))
             {
                 trap = true;
                 goto end;
@@ -831,7 +832,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         case Instr::i32_store8:
         case Instr::i64_store8:
         {
-            if (!store_into_memory<uint8_t>(instance.memory, stack, immediates))
+            if (!store_into_memory<uint8_t>(memory, stack, immediates))
             {
                 trap = true;
                 goto end;
@@ -841,7 +842,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         case Instr::i32_store16:
         case Instr::i64_store16:
         {
-            if (!store_into_memory<uint16_t>(instance.memory, stack, immediates))
+            if (!store_into_memory<uint16_t>(memory, stack, immediates))
             {
                 trap = true;
                 goto end;
@@ -850,7 +851,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         }
         case Instr::i64_store32:
         {
-            if (!store_into_memory<uint32_t>(instance.memory, stack, immediates))
+            if (!store_into_memory<uint32_t>(memory, stack, immediates))
             {
                 trap = true;
                 goto end;
@@ -859,13 +860,13 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         }
         case Instr::memory_size:
         {
-            stack.push(static_cast<uint32_t>(instance.memory.size() / PageSize));
+            stack.push(static_cast<uint32_t>(memory.size() / PageSize));
             break;
         }
         case Instr::memory_grow:
         {
             const auto delta = static_cast<uint32_t>(stack.pop());
-            const auto cur_pages = instance.memory.size() / PageSize;
+            const auto cur_pages = memory.size() / PageSize;
             assert(cur_pages <= size_t(std::numeric_limits<int32_t>::max()));
             const auto new_pages = cur_pages + delta;
             assert(new_pages >= cur_pages);
@@ -874,7 +875,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
             {
                 if (new_pages > instance.memory_max_pages)
                     throw std::bad_alloc();
-                instance.memory.resize(new_pages * PageSize);
+                memory.resize(new_pages * PageSize);
             }
             catch (std::bad_alloc const&)
             {
