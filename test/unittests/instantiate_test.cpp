@@ -219,6 +219,47 @@ TEST(instantiate, data_section)
     EXPECT_EQ(instance.memory.substr(0, 6), from_hex("00aa55550000"));
 }
 
+TEST(instantiate, data_section_offset_from_global)
+{
+    Module module;
+    module.memorysec.emplace_back(Memory{{1, 1}});
+    module.globalsec.emplace_back(Global{false, {ConstantExpression::Kind::Constant, {42}}});
+    // Memory contents: 0, 0xaa, 0xff, 0, ...
+    module.datasec.emplace_back(Data{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
+
+    auto instance = instantiate(module);
+
+    EXPECT_EQ(instance.memory.substr(42, 2), "aaff"_bytes);
+}
+
+TEST(instantiate, data_section_offset_from_imported_global)
+{
+    Module module;
+    module.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {false}});
+    module.memorysec.emplace_back(Memory{{1, 1}});
+    // Memory contents: 0, 0xaa, 0xff, 0, ...
+    module.datasec.emplace_back(Data{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
+
+    uint64_t global_value = 42;
+    ImportedGlobal g{&global_value, false};
+
+    auto instance = instantiate(module, {}, {g});
+
+    EXPECT_EQ(instance.memory.substr(42, 2), "aaff"_bytes);
+}
+
+TEST(instantiate, data_section_offset_from_mutable_global)
+{
+    Module module;
+    module.memorysec.emplace_back(Memory{{1, 1}});
+    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
+    // Memory contents: 0, 0xaa, 0xff, 0, ...
+    module.datasec.emplace_back(Data{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
+
+    EXPECT_THROW_MESSAGE(instantiate(module), std::runtime_error,
+        "Constant expression can use global_get only for const globals.");
+}
+
 TEST(instantiate, globals_single)
 {
     Module module;
