@@ -199,6 +199,18 @@ parser_result<Code> parse_expr(const uint8_t* pos)
             break;
         }
 
+        case Instr::call_indirect:
+        {
+            uint32_t imm;
+            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos);
+            push(code.immediates, imm);
+
+            const uint8_t tableidx{*pos++};
+            if (tableidx != 0)
+                throw parser_error{"invalid tableidx encountered with call_indirect"};
+            break;
+        }
+
         case Instr::i32_const:
         {
             int32_t imm;
