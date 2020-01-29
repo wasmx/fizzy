@@ -109,11 +109,22 @@ uint64_t eval_constant_expression(ConstantExpression expr,
     const std::vector<ImportedGlobal>& imported_globals, const std::vector<Global>& global_types,
     const std::vector<uint64_t>& globals)
 {
-    uint64_t offset;
-    if (data.offset.kind == ConstantExpression::Kind::Constant)
-        offset = data.offset.value.constant;
+    if (expr.kind == ConstantExpression::Kind::Constant)
+        return expr.value.constant;
+
+    assert(expr.kind == ConstantExpression::Kind::GlobalGet);
+
+    const auto global_idx = expr.value.global_index;
+    const bool is_mutable = (global_idx < imported_globals.size() ?
+                                 imported_globals[global_idx].is_mutable :
+                                 global_types[global_idx - imported_globals.size()].is_mutable);
+    if (is_mutable)
+        throw std::runtime_error("Constant expression can use global_get only for const globals.");
+
+    if (global_idx < imported_globals.size())
+        return *imported_globals[global_idx].value;
     else
-        throw std::runtime_error("data initialization by imported global is not supported yet");
+        return globals[global_idx - imported_globals.size()];
 }
 
 template <typename T>
