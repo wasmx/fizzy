@@ -17,54 +17,6 @@ struct LabelContext
     size_t stack_height = 0;
 };
 
-void branch(uint32_t label_idx, Stack<LabelContext>& labels, Stack<uint64_t>& stack,
-    const Instr*& pc, const uint8_t*& immediates) noexcept
-{
-    assert(labels.size() > label_idx);
-    labels.drop(label_idx);  // Drop skipped labels (does nothing for labelidx == 0).
-    const auto label = labels.pop();
-
-    pc = label.pc;
-    immediates = label.immediate;
-
-    // When branch is taken, additional stack items must be dropped.
-    assert(stack.size() >= label.stack_height + label.arity);
-    if (label.arity != 0)
-    {
-        assert(label.arity == 1);
-        const auto result = stack.peek();
-        stack.resize(label.stack_height);
-        stack.push(result);
-    }
-    else
-        stack.resize(label.stack_height);
-}
-
-bool invoke_function(
-    uint32_t type_idx, uint32_t func_idx, Instance& instance, Stack<uint64_t>& stack)
-{
-    const auto num_inputs = instance.module.typesec[type_idx].inputs.size();
-    assert(stack.size() >= num_inputs);
-    std::vector<uint64_t> call_args(
-        stack.rbegin(), stack.rbegin() + static_cast<ptrdiff_t>(num_inputs));
-    stack.resize(stack.size() - num_inputs);
-
-    const auto ret = execute(instance, func_idx, call_args);
-    // Bubble up traps
-    if (ret.trapped)
-        return false;
-
-    const auto num_outputs = instance.module.typesec[type_idx].outputs.size();
-    // NOTE: we can assume these two from validation
-    assert(ret.stack.size() == num_outputs);
-    assert(num_outputs <= 1);
-    // Push back the result
-    if (num_outputs != 0)
-        stack.push(ret.stack[0]);
-
-    return true;
-}
-
 void match_imported_functions(const std::vector<TypeIdx>& module_imported_types,
     const std::vector<ImportedFunction>& imported_functions)
 {
@@ -150,6 +102,54 @@ uint64_t eval_constant_expression(ConstantExpression expr,
         return *imported_globals[global_idx].value;
     else
         return globals[global_idx - imported_globals.size()];
+}
+
+void branch(uint32_t label_idx, Stack<LabelContext>& labels, Stack<uint64_t>& stack,
+    const Instr*& pc, const uint8_t*& immediates) noexcept
+{
+    assert(labels.size() > label_idx);
+    labels.drop(label_idx);  // Drop skipped labels (does nothing for labelidx == 0).
+    const auto label = labels.pop();
+
+    pc = label.pc;
+    immediates = label.immediate;
+
+    // When branch is taken, additional stack items must be dropped.
+    assert(stack.size() >= label.stack_height + label.arity);
+    if (label.arity != 0)
+    {
+        assert(label.arity == 1);
+        const auto result = stack.peek();
+        stack.resize(label.stack_height);
+        stack.push(result);
+    }
+    else
+        stack.resize(label.stack_height);
+}
+
+bool invoke_function(
+    uint32_t type_idx, uint32_t func_idx, Instance& instance, Stack<uint64_t>& stack)
+{
+    const auto num_inputs = instance.module.typesec[type_idx].inputs.size();
+    assert(stack.size() >= num_inputs);
+    std::vector<uint64_t> call_args(
+        stack.rbegin(), stack.rbegin() + static_cast<ptrdiff_t>(num_inputs));
+    stack.resize(stack.size() - num_inputs);
+
+    const auto ret = execute(instance, func_idx, call_args);
+    // Bubble up traps
+    if (ret.trapped)
+        return false;
+
+    const auto num_outputs = instance.module.typesec[type_idx].outputs.size();
+    // NOTE: we can assume these two from validation
+    assert(ret.stack.size() == num_outputs);
+    assert(num_outputs <= 1);
+    // Push back the result
+    if (num_outputs != 0)
+        stack.push(ret.stack[0]);
+
+    return true;
 }
 
 template <typename T>
