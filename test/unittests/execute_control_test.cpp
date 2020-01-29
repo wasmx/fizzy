@@ -751,26 +751,29 @@ TEST(execute_control, if_br_from_branch)
           i32.const -1
           i32.const 21
           br 0
+          i32.const 5
         )
         (else
           i32.const -2
           i32.const -1
           i32.const 2
           br 0
+          i32.const 5
         )
       )
     )
     */
     const auto bin = from_hex(
-        "0061736D0100000001060160017F017F030201000A180116002000047F417F41150C0005417E417F41020C000B"
-        "0B000D046E616D650206010001000178");
+        "0061736D0100000001060160017F017F030201000A1C011A002000047F417F41150C00410505417E417F41020C"
+        "00410"
+        "50B0B000D046E616D650206010001000178");
 
     const auto module = parse(bin);
 
     for (const auto param : {0u, 1u})
     {
         constexpr uint64_t expected_results[]{
-            2,  // else branch.
+            2,   // else branch.
             21,  // if branch.
         };
 

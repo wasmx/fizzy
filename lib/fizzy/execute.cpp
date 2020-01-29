@@ -460,6 +460,53 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
             labels.push_back(label);
             break;
         }
+        case Instr::if_:
+        {
+            const auto arity = read<uint8_t>(immediates);
+            const auto target_pc = read<uint32_t>(immediates);
+            const auto target_imm = read<uint32_t>(immediates);
+
+            if (static_cast<uint32_t>(stack.pop()) != 0)
+            {
+                immediates += 2 * sizeof(uint32_t);  // Skip the immediates for else instruction.
+
+                LabelContext label{code.instructions.data() + target_pc,
+                    code.immediates.data() + target_imm, arity, stack.size()};
+                labels.emplace_back(label);
+            }
+            else
+            {
+                const auto target_else_pc = read<uint32_t>(immediates);
+                const auto target_else_imm = read<uint32_t>(immediates);
+
+                if (target_else_pc != 0)  // If else block defined.
+                {
+                    LabelContext label{code.instructions.data() + target_pc,
+                        code.immediates.data() + target_imm, arity, stack.size()};
+                    labels.emplace_back(label);
+                    pc = code.instructions.data() + target_else_pc;
+                    immediates = code.immediates.data() + target_else_imm;
+                }
+                else  // If else block not defined go to end of if.
+                {
+                    assert(arity == 0);  // if without else cannot have type signature.
+                    pc = code.instructions.data() + target_pc;
+                    immediates = code.immediates.data() + target_imm;
+                }
+            }
+            break;
+        }
+        case Instr::else_:
+        {
+            // We reach else only at the end of if block.
+            assert(!labels.empty());
+            const auto label = labels.pop();
+
+            pc = label.pc;
+            immediates = label.immediate;
+
+            break;
+        }
         case Instr::end:
         {
             if (!labels.empty())

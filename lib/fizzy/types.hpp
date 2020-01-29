@@ -65,6 +65,8 @@ enum class Instr : uint8_t
     nop = 0x01,
     block = 0x02,
     loop = 0x03,
+    if_ = 0x04,
+    else_ = 0x05,
     end = 0x0b,
     br = 0x0c,
     br_if = 0x0d,
