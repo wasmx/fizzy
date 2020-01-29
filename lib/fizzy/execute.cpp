@@ -311,6 +311,26 @@ Instance instantiate(const Module& module, std::vector<ImportedFunction> importe
     std::vector<TypeIdx> imported_function_types =
         match_imports(module, imported_functions, imported_globals);
 
+    // Set up tables
+    std::vector<FuncIdx> table;
+    if (!module.tablesec.empty())
+        table.resize(module.tablesec[0].limits.min);
+
+    assert(module.elementsec.empty() || !module.tablesec.empty());
+    for (const auto& element : module.elementsec)
+    {
+        uint64_t offset;
+        if (element.offset.kind == ConstantExpression::Kind::Constant)
+            offset = element.offset.value.constant;
+        else
+            throw std::runtime_error(
+                "element initialization by imported global is not supported yet");
+
+        // Overwrite table[offset..] with element.init
+        assert((offset + element.init.size()) <= table.size());
+        std::copy(element.init.begin(), element.init.end(), &table[offset]);
+    }
+
     std::vector<uint64_t> globals;
     globals.reserve(module.globalsec.size());
     // init regular globals
@@ -333,8 +353,8 @@ Instance instantiate(const Module& module, std::vector<ImportedFunction> importe
         }
     }
 
-    Instance instance = {module, std::move(memory), memory_max, std::move(globals),
-        std::move(imported_functions), std::move(imported_function_types),
+    Instance instance = {module, std::move(memory), memory_max, std::move(table),
+        std::move(globals), std::move(imported_functions), std::move(imported_function_types),
         std::move(imported_globals)};
 
     // Run start function if present
