@@ -128,6 +128,46 @@ inline T read(const uint8_t*& input) noexcept
     return ret;
 }
 
+template <typename DstT, typename SrcT>
+inline DstT extend(SrcT in) noexcept
+{
+    if constexpr (std::is_signed<SrcT>::value)
+    {
+        using SignedDstT = typename std::make_signed<DstT>::type;
+        return static_cast<DstT>(SignedDstT{in});
+    }
+    else
+        return DstT{in};
+}
+
+template <typename DstT, typename SrcT = DstT>
+inline bool load_from_memory(bytes_view memory, Stack<uint64_t>& stack, const uint8_t*& immediates)
+{
+    const auto address = static_cast<uint32_t>(stack.pop());
+    // NOTE: alignment is dropped by the parser
+    const auto offset = read<uint32_t>(immediates);
+    if ((address + offset + sizeof(SrcT)) > memory.size())
+        return false;
+
+    const auto ret = load<SrcT>(memory, address + offset);
+    stack.push(extend<DstT>(ret));
+    return true;
+}
+
+template <typename DstT>
+inline bool store_into_memory(bytes& memory, Stack<uint64_t>& stack, const uint8_t*& immediates)
+{
+    const auto value = static_cast<DstT>(stack.pop());
+    const auto address = static_cast<uint32_t>(stack.pop());
+    // NOTE: alignment is dropped by the parser
+    const auto offset = read<uint32_t>(immediates);
+    if ((address + offset + sizeof(DstT)) > memory.size())
+        return false;
+
+    store<DstT>(memory, address + offset, value);
+    return true;
+}
+
 template <typename Op>
 inline void unary_op(Stack<uint64_t>& stack, Op op) noexcept
 {
@@ -306,50 +346,6 @@ Instance instantiate(const Module& module, std::vector<ImportedFunction> importe
 
     return instance;
 }
-
-namespace
-{
-template <typename DstT, typename SrcT>
-inline DstT extend(SrcT in) noexcept
-{
-    if constexpr (std::is_signed<SrcT>::value)
-    {
-        using SignedDstT = typename std::make_signed<DstT>::type;
-        return static_cast<DstT>(SignedDstT{in});
-    }
-    else
-        return DstT{in};
-}
-
-template <typename DstT, typename SrcT = DstT>
-inline bool load_from_memory(bytes_view memory, Stack<uint64_t>& stack, const uint8_t*& immediates)
-{
-    const auto address = static_cast<uint32_t>(stack.pop());
-    // NOTE: alignment is dropped by the parser
-    const auto offset = read<uint32_t>(immediates);
-    if ((address + offset + sizeof(SrcT)) > memory.size())
-        return false;
-
-    const auto ret = load<SrcT>(memory, address + offset);
-    stack.push(extend<DstT>(ret));
-    return true;
-}
-
-template <typename DstT>
-inline bool store_into_memory(bytes& memory, Stack<uint64_t>& stack, const uint8_t*& immediates)
-{
-    const auto value = static_cast<DstT>(stack.pop());
-    const auto address = static_cast<uint32_t>(stack.pop());
-    // NOTE: alignment is dropped by the parser
-    const auto offset = read<uint32_t>(immediates);
-    if ((address + offset + sizeof(DstT)) > memory.size())
-        return false;
-
-    store<DstT>(memory, address + offset, value);
-    return true;
-}
-
-}  // namespace
 
 execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint64_t> args)
 {
