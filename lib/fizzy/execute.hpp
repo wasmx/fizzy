@@ -29,13 +29,30 @@ struct ImportedGlobal
 // The module instance.
 struct Instance
 {
-    std::shared_ptr<const Module> module;
+    const Module& module;
     bytes memory;
     size_t memory_max_pages = 0;
     std::vector<uint64_t> globals;
     std::vector<ImportedFunction> imported_functions;
     std::vector<TypeIdx> imported_function_types;
     std::vector<ImportedGlobal> imported_globals;
+
+    Instance(std::shared_ptr<const Module> module_ptr, bytes _memory, size_t _memory_max_pages,
+        std::vector<uint64_t> _globals, std::vector<ImportedFunction> _imported_functions,
+        std::vector<TypeIdx> _imported_function_types,
+        std::vector<ImportedGlobal> _imported_globals)
+      : module{*module_ptr},
+        memory{std::move(_memory)},
+        memory_max_pages{_memory_max_pages},
+        globals{std::move(_globals)},
+        imported_functions{std::move(_imported_functions)},
+        imported_function_types{std::move(_imported_function_types)},
+        imported_globals{std::move(_imported_globals)},
+        m_module_ptr{std::move(module_ptr)}
+    {}
+
+private:
+    std::shared_ptr<const Module> m_module_ptr;
 };
 
 // Instantiate a module.
