@@ -1,3 +1,6 @@
+if(HUNTER_ENABLED)
+    hunter_add_package(benchmark)
+endif()
 find_package(benchmark REQUIRED)
 
 set(fizzy_include_dir ${PROJECT_SOURCE_DIR}/lib/fizzy)
