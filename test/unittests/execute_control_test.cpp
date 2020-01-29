@@ -178,6 +178,7 @@ TEST(execute_control, nested_blocks)
             i32.const 4
             i32.or
             set_local 0
+            i32.const 1
             br <<br_imm>>
             get_local 0
             i32.const 8
@@ -197,21 +198,24 @@ TEST(execute_control, nested_blocks)
     */
 
     auto bin = from_hex(
-        "0061736d010000000105016000017f030201000a41013f01017f"
-        "0240200041017221000240200041027221000240200041047221000c"
+        "0061736d01000000"
+        "0105016000017f"
+        "03020100"
+        "0a43013f01017f"
+        "02402000410172210002402000410272210002402000410472210041010c"
         "77"  // <-- br's immediate value.
         "200041087221000b200041107221000b200041207221000b200041c000720b000c046e"
         "616d6502050100010000");
-    constexpr auto br_imm_offset = 54;
+    constexpr auto br_imm_offset = 56;
 
     constexpr uint32_t expected_results[]{
         0b1110111,
         0b1100111,
         0b1000111,
+        1,
     };
 
-    // TODO: Value 3 can be added if implicit block for functions is implemented.
-    for (auto br_imm : {0, 1, 2})
+    for (auto br_imm : {0, 1, 2, 3})
     {
         bin[br_imm_offset] = static_cast<uint8_t>(br_imm);
 
