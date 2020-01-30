@@ -40,6 +40,31 @@ void branch(uint32_t label_idx, Stack<LabelContext>& labels, Stack<uint64_t>& st
         stack.resize(label.stack_height);
 }
 
+bool invoke_function(
+    uint32_t type_idx, uint32_t func_idx, Instance& instance, Stack<uint64_t>& stack)
+{
+    const auto num_inputs = instance.module.typesec[type_idx].inputs.size();
+    assert(stack.size() >= num_inputs);
+    std::vector<uint64_t> call_args(
+        stack.rbegin(), stack.rbegin() + static_cast<ptrdiff_t>(num_inputs));
+    stack.resize(stack.size() - num_inputs);
+
+    const auto ret = execute(instance, func_idx, call_args);
+    // Bubble up traps
+    if (ret.trapped)
+        return false;
+
+    const auto num_outputs = instance.module.typesec[type_idx].outputs.size();
+    // NOTE: we can assume these two from validation
+    assert(ret.stack.size() == num_outputs);
+    assert(num_outputs <= 1);
+    // Push back the result
+    if (num_outputs != 0)
+        stack.push(ret.stack[0]);
+
+    return true;
+}
+
 void match_imported_functions(const std::vector<TypeIdx>& module_imported_types,
     const std::vector<ImportedFunction>& imported_functions)
 {
@@ -487,27 +512,49 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
                     instance.module.funcsec[called_func_idx - instance.imported_functions.size()];
             assert(type_idx < instance.module.typesec.size());
 
-            const auto num_inputs = instance.module.typesec[type_idx].inputs.size();
-            assert(stack.size() >= num_inputs);
-            std::vector<uint64_t> call_args(
-                stack.rbegin(), stack.rbegin() + static_cast<ptrdiff_t>(num_inputs));
-            stack.resize(stack.size() - num_inputs);
+            if (!invoke_function(type_idx, called_func_idx, instance, stack))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
+        case Instr::call_indirect:
+        {
+            const auto expected_type_idx = read<uint32_t>(immediates);
+            assert(expected_type_idx < instance.module.typesec.size());
 
-            const auto ret = execute(instance, called_func_idx, call_args);
-            // Bubble up traps
-            if (ret.trapped)
+            const auto elem_idx = stack.pop();
+            if (elem_idx >= instance.table.size())
             {
                 trap = true;
                 goto end;
             }
 
-            const auto num_outputs = instance.module.typesec[type_idx].outputs.size();
-            // NOTE: we can assume these two from validation
-            assert(ret.stack.size() == num_outputs);
-            assert(num_outputs <= 1);
-            // Push back the result
-            if (num_outputs != 0)
-                stack.push(ret.stack[0]);
+            const auto called_func_idx = instance.table[elem_idx];
+            assert(called_func_idx <
+                   instance.imported_functions.size() + instance.module.funcsec.size());
+
+            // check actual type against expected type
+            const auto actual_type_idx =
+                called_func_idx < instance.imported_functions.size() ?
+                    instance.imported_function_types[called_func_idx] :
+                    instance.module.funcsec[called_func_idx - instance.imported_functions.size()];
+            assert(actual_type_idx < instance.module.typesec.size());
+            const auto& expected_type = instance.module.typesec[expected_type_idx];
+            const auto& actual_type = instance.module.typesec[actual_type_idx];
+            if (expected_type.inputs != actual_type.inputs ||
+                expected_type.outputs != actual_type.outputs)
+            {
+                trap = true;
+                goto end;
+            }
+
+            if (!invoke_function(actual_type_idx, called_func_idx, instance, stack))
+            {
+                trap = true;
+                goto end;
+            }
             break;
         }
         case Instr::return_:
