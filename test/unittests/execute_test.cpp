@@ -85,6 +85,91 @@ TEST(execute, call_with_arguments)
     EXPECT_EQ(ret[0], 0x2);
 }
 
+TEST(execute, call_indirect)
+{
+    /*
+      (type $out-i32 (func (result i32)))
+
+      (table anyfunc (elem $f3 $f2 $f1 $f4 $f5))
+
+      (func $f1 (result i32) i32.const 1)
+      (func $f2 (result i32) i32.const 2)
+      (func $f3 (result i32) i32.const 3)
+      (func $f4 (result i64) i64.const 4)
+      (func $f5 (result i32) unreachable)
+
+      (func (param i32) (result i32)
+        (call_indirect (type $out-i32) (get_local 0))
+      )
+    */
+    const auto bin = from_hex(
+        "0061736d01000000010e036000017f6000017e60017f017f0307060000000100"
+        "0204050170010505090b010041000b0502010003040a2106040041010b040041"
+        "020b040041030b040042040b0300000b070020001100000b002d046e616d6501"
+        "15050002663101026632020266330302663404026635020f0600000100020003"
+        "00040005010000");
+
+    const Module module = parse(bin);
+
+    for (const auto param : {0u, 1u, 2u})
+    {
+        constexpr uint64_t expected_results[]{3, 2, 1};
+
+        const auto [trap, ret] = execute(module, 5, {param});
+        ASSERT_FALSE(trap);
+        ASSERT_EQ(ret.size(), 1);
+        EXPECT_EQ(ret[0], expected_results[param]);
+    }
+
+    // immediate is incorrect type
+    EXPECT_TRUE(execute(module, 5, {3}).trapped);
+
+    // called function traps
+    EXPECT_TRUE(execute(module, 5, {4}).trapped);
+
+    // argument out of table bounds
+    EXPECT_TRUE(execute(module, 5, {5}).trapped);
+}
+
+TEST(execute, call_indirect_with_argument)
+{
+    /*
+        (type $bin_func (func (param i32 i32) (result i32)))
+        (table anyfunc (elem $f1 $f2 $f3))
+
+        (func $f1 (param i32 i32) (result i32) (i32.add (get_local 0) (get_local 1)))
+        (func $f2 (param i32 i32) (result i32) (i32.sub (get_local 0) (get_local 1)))
+        (func $f3 (param i32) (result i32) (i32.mul (get_local 0) (get_local 0)))
+
+        (func (param i32) (result i32)
+          (i32.const 1)
+          (i32.const 2)
+          (call_indirect (type $bin_func) (get_local 0))
+        )
+    */
+    const auto bin = from_hex(
+        "0061736D01000000010C0260027F7F017F60017F017F03050400000101040501"
+        "700103030909010041000B030001020A25040700200020016A0B070020002001"
+        "6B0B0700200020006C0B0B004101410220001100000B002B046E616D65010D03"
+        "0002663101026632020266330215040002000001000102000001000201000003"
+        "010000");
+
+    const Module module = parse(bin);
+
+    for (const auto param : {0u, 1u})
+    {
+        constexpr uint64_t expected_results[]{3, 1};
+
+        const auto [trap, ret] = execute(module, 3, {param});
+        ASSERT_FALSE(trap);
+        ASSERT_EQ(ret.size(), 1);
+        EXPECT_EQ(ret[0], expected_results[param]);
+    }
+
+    // immediate is incorrect type
+    EXPECT_TRUE(execute(module, 3, {2}).trapped);
+}
+
 TEST(execute, drop)
 {
     Module module;

@@ -71,6 +71,7 @@ enum class Instr : uint8_t
     br_table = 0x0e,
     return_ = 0x0f,
     call = 0x10,
+    call_indirect = 0x11,
     drop = 0x1a,
     select = 0x1b,
     local_get = 0x20,
