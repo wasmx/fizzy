@@ -205,6 +205,58 @@ TEST(instantiate, element_section)
     EXPECT_EQ(instance.table[3], 0x55);
 }
 
+TEST(instantiate, element_section_offset_from_global)
+{
+    Module module;
+    module.tablesec.emplace_back(Table{{4, std::nullopt}});
+    module.globalsec.emplace_back(Global{false, {ConstantExpression::Kind::Constant, {1}}});
+    // Memory contents: 0, 0xaa, 0xff, 0, ...
+    module.elementsec.emplace_back(
+        Element{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
+
+    auto instance = instantiate(module);
+
+    ASSERT_EQ(instance.table.size(), 4);
+    EXPECT_EQ(instance.table[0], 0);
+    EXPECT_EQ(instance.table[1], 0xaa);
+    EXPECT_EQ(instance.table[2], 0xff);
+    EXPECT_EQ(instance.table[3], 0x00);
+}
+
+TEST(instantiate, element_section_offset_from_imported_global)
+{
+    Module module;
+    module.tablesec.emplace_back(Table{{4, std::nullopt}});
+    module.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {false}});
+    // Memory contents: 0, 0xaa, 0xff, 0, ...
+    module.elementsec.emplace_back(
+        Element{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
+
+    uint64_t global_value = 1;
+    ImportedGlobal g{&global_value, false};
+
+    auto instance = instantiate(module, {}, {g});
+
+    ASSERT_EQ(instance.table.size(), 4);
+    EXPECT_EQ(instance.table[0], 0);
+    EXPECT_EQ(instance.table[1], 0xaa);
+    EXPECT_EQ(instance.table[2], 0xff);
+    EXPECT_EQ(instance.table[3], 0x00);
+}
+
+TEST(instantiate, element_section_offset_from_mutable_global)
+{
+    Module module;
+    module.tablesec.emplace_back(Table{{4, std::nullopt}});
+    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
+    // Memory contents: 0, 0xaa, 0xff, 0, ...
+    module.elementsec.emplace_back(
+        Element{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
+
+    EXPECT_THROW_MESSAGE(instantiate(module), std::runtime_error,
+        "Constant expression can use global_get only for const globals.");
+}
+
 TEST(instantiate, data_section)
 {
     Module module;
