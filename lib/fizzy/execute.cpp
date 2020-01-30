@@ -348,12 +348,8 @@ Instance instantiate(const Module& module, std::vector<ImportedFunction> importe
     assert(module.elementsec.empty() || !module.tablesec.empty());
     for (const auto& element : module.elementsec)
     {
-        uint64_t offset;
-        if (element.offset.kind == ConstantExpression::Kind::Constant)
-            offset = element.offset.value.constant;
-        else
-            throw std::runtime_error(
-                "element initialization by imported global is not supported yet");
+        const uint64_t offset =
+            eval_constant_expression(element.offset, imported_globals, module.globalsec, globals);
 
         // Overwrite table[offset..] with element.init
         assert((offset + element.init.size()) <= table.size());
@@ -371,9 +367,9 @@ Instance instantiate(const Module& module, std::vector<ImportedFunction> importe
         std::memcpy(memory.data() + offset, data.init.data(), data.init.size());
     }
 
-    Instance instance = {module, std::move(memory), memory_max, std::move(table),
+    Instance instance = {module.codesec, std::move(memory), memory_max, std::move(table),
         std::move(globals), std::move(imported_functions), std::move(imported_function_types),
-        std::move(imported_globals)};
+        std::move(imported_globals), module.typesec, module.funcsec, module.globalsec};
 
     // Run start function if present
     if (module.startfunc)
@@ -391,9 +387,9 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         return instance.imported_functions[func_idx](instance, std::move(args));
 
     const auto code_idx = func_idx - instance.imported_functions.size();
-    assert(code_idx < instance.module.codesec.size());
+    assert(code_idx < instance.codesec.size());
 
-    const auto& code = instance.module.codesec[code_idx];
+    const auto& code = instance.codesec[code_idx];
 
     std::vector<uint64_t> locals = std::move(args);
     locals.resize(locals.size() + code.local_count);
@@ -479,15 +475,14 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         case Instr::call:
         {
             const auto called_func_idx = read<uint32_t>(immediates);
-            assert(called_func_idx <
-                   instance.imported_functions.size() + instance.module.funcsec.size());
+            assert(called_func_idx < instance.imported_functions.size() + instance.funcsec.size());
             const auto type_idx =
                 called_func_idx < instance.imported_functions.size() ?
                     instance.imported_function_types[called_func_idx] :
-                    instance.module.funcsec[called_func_idx - instance.imported_functions.size()];
-            assert(type_idx < instance.module.typesec.size());
+                    instance.funcsec[called_func_idx - instance.imported_functions.size()];
+            assert(type_idx < instance.typesec.size());
 
-            const auto num_inputs = instance.module.typesec[type_idx].inputs.size();
+            const auto num_inputs = instance.typesec[type_idx].inputs.size();
             assert(stack.size() >= num_inputs);
             std::vector<uint64_t> call_args(
                 stack.rbegin(), stack.rbegin() + static_cast<ptrdiff_t>(num_inputs));
@@ -501,7 +496,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
                 goto end;
             }
 
-            const auto num_outputs = instance.module.typesec[type_idx].outputs.size();
+            const auto num_outputs = instance.typesec[type_idx].outputs.size();
             // NOTE: we can assume these two from validation
             assert(ret.stack.size() == num_outputs);
             assert(num_outputs <= 1);
@@ -516,10 +511,10 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
             // TODO: Not needed, but satisfies the assert in the end of the main loop.
             labels.clear();
 
-            assert(code_idx < instance.module.funcsec.size());
-            const auto type_idx = instance.module.funcsec[code_idx];
-            assert(type_idx < instance.module.typesec.size());
-            const bool have_result = !instance.module.typesec[type_idx].outputs.empty();
+            assert(code_idx < instance.funcsec.size());
+            const auto type_idx = instance.funcsec[code_idx];
+            assert(type_idx < instance.typesec.size());
+            const bool have_result = !instance.typesec[type_idx].outputs.empty();
 
             if (have_result)
             {
@@ -581,7 +576,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
             else
             {
                 const auto module_global_idx = idx - instance.imported_globals.size();
-                assert(module_global_idx < instance.module.globalsec.size());
+                assert(module_global_idx < instance.globalsec.size());
                 stack.push(instance.globals[module_global_idx]);
             }
             break;
@@ -597,8 +592,8 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
             else
             {
                 const auto module_global_idx = idx - instance.imported_globals.size();
-                assert(module_global_idx < instance.module.globalsec.size());
-                assert(instance.module.globalsec[module_global_idx].is_mutable);
+                assert(module_global_idx < instance.globalsec.size());
+                assert(instance.globalsec[module_global_idx].is_mutable);
                 instance.globals[module_global_idx] = stack.pop();
             }
             break;
