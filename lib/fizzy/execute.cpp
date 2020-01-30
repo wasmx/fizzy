@@ -373,12 +373,8 @@ Instance instantiate(const Module& module, std::vector<ImportedFunction> importe
     assert(module.elementsec.empty() || !module.tablesec.empty());
     for (const auto& element : module.elementsec)
     {
-        uint64_t offset;
-        if (element.offset.kind == ConstantExpression::Kind::Constant)
-            offset = element.offset.value.constant;
-        else
-            throw std::runtime_error(
-                "element initialization by imported global is not supported yet");
+        const uint64_t offset =
+            eval_constant_expression(element.offset, imported_globals, module.globalsec, globals);
 
         // Overwrite table[offset..] with element.init
         assert((offset + element.init.size()) <= table.size());
