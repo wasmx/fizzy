@@ -100,6 +100,22 @@ struct parser<Global>
 };
 
 template <>
+struct parser<Table>
+{
+    parser_result<Table> operator()(const uint8_t* pos)
+    {
+        const uint8_t kind = *pos++;
+        if (kind != FuncRef)
+            throw parser_error{"unexpected table elemtype: " + std::to_string(kind)};
+
+        Limits limits;
+        std::tie(limits, pos) = parser<Limits>{}(pos);
+
+        return {{limits}, pos};
+    }
+};
+
+template <>
 struct parser<std::string>
 {
     parser_result<std::string> operator()(const uint8_t* pos)
@@ -131,7 +147,7 @@ struct parser<Import>
             break;
         case 0x01:
             result.kind = ExternalKind::Table;
-            throw parser_error{"importing Tables is not implemented"};
+            std::tie(result.desc.table, pos) = parser<Table>{}(pos);
             break;
         case 0x02:
             result.kind = ExternalKind::Memory;
@@ -179,22 +195,6 @@ struct parser<Export>
         std::tie(result.index, pos) = leb128u_decode<uint32_t>(pos);
 
         return {result, pos};
-    }
-};
-
-template <>
-struct parser<Table>
-{
-    parser_result<Table> operator()(const uint8_t* pos)
-    {
-        const uint8_t kind = *pos++;
-        if (kind != FuncRef)
-            throw parser_error{"unexpected table elemtype: " + std::to_string(kind)};
-
-        Limits limits;
-        std::tie(limits, pos) = parser<Limits>{}(pos);
-
-        return {{limits}, pos};
     }
 };
 
