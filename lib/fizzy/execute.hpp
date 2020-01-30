@@ -28,7 +28,7 @@ struct ImportedGlobal
 // The module instance.
 struct Instance
 {
-    const Module& module;
+    Module module;
     bytes memory;
     size_t memory_max_pages = 0;
     std::vector<FuncIdx> table;
@@ -39,7 +39,7 @@ struct Instance
 };
 
 // Instantiate a module.
-Instance instantiate(const Module& module, std::vector<ImportedFunction> imported_functions = {},
+Instance instantiate(Module module, std::vector<ImportedFunction> imported_functions = {},
     std::vector<ImportedGlobal> imported_globals = {});
 
 // Execute a function on an instance.

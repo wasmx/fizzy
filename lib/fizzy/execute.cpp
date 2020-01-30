@@ -311,7 +311,7 @@ inline uint64_t popcnt64(uint64_t value) noexcept
 }
 }  // namespace
 
-Instance instantiate(const Module& module, std::vector<ImportedFunction> imported_functions,
+Instance instantiate(Module module, std::vector<ImportedFunction> imported_functions,
     std::vector<ImportedGlobal> imported_globals)
 {
     std::vector<TypeIdx> imported_function_types =
@@ -392,14 +392,14 @@ Instance instantiate(const Module& module, std::vector<ImportedFunction> importe
         std::memcpy(memory.data() + offset, data.init.data(), data.init.size());
     }
 
-    Instance instance = {module, std::move(memory), memory_max, std::move(table),
+    Instance instance = {std::move(module), std::move(memory), memory_max, std::move(table),
         std::move(globals), std::move(imported_functions), std::move(imported_function_types),
         std::move(imported_globals)};
 
     // Run start function if present
-    if (module.startfunc)
+    if (instance.module.startfunc)
     {
-        if (execute(instance, *module.startfunc, {}).trapped)
+        if (execute(instance, *instance.module.startfunc, {}).trapped)
             throw std::runtime_error("Start function failed to execute");
     }
 
