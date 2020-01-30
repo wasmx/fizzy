@@ -1,11 +1,18 @@
 # Cable: CMake Bootstrap Library <https://github.com/ethereum/cable>
-# Copyright 2018-2019 Pawel Bylica.
+# Copyright 2018-2020 Pawel Bylica.
 # Licensed under the Apache License, Version 2.0.
 
-# Cable Compiler Settings, version 1.0.0
+# Cable Compiler Settings, version 1.0.1
 #
 # This CMake module provides default configuration (with some options)
 # for C/C++ compilers. Use cable_configure_compiler().
+#
+# CHANGELOG
+#
+# 1.0.1 - 2020-01-30
+# - Do not explicitly set -mtune=generic, this is default anyway.
+#
+# 1.0.0 - 2019-12-20
 
 if(cable_compiler_settings_included)
     return()
@@ -130,9 +137,6 @@ macro(cable_configure_compiler)
             else()
                 add_compile_options(-mtune=native -march=native)
             endif()
-        elseif(NOT MSVC)
-            # Tune for currently most common CPUs.
-            cable_add_cxx_compiler_flag_if_supported(-mtune=generic)
         endif()
 
         # Sanitizers support.
