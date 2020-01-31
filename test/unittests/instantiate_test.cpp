@@ -474,6 +474,30 @@ TEST(instantiate, element_section_offset_too_large)
         instantiate(module), instantiate_error, "Element segment is out of table bounds");
 }
 
+TEST(instantiate, element_section_fills_imported_table)
+{
+    Module module;
+    Import imp{"mod", "t", ExternalKind::Table, {}};
+    imp.desc.table = Table{{4, std::nullopt}};
+    module.importsec.emplace_back(imp);
+    // Table contents: 0, 0xaa, 0xff, 0, ...
+    module.elementsec.emplace_back(
+        Element{{ConstantExpression::Kind::Constant, {1}}, {0xaa, 0xff}});
+    // Table contents: 0, 0xaa, 0x55, 0x55, 0, ...
+    module.elementsec.emplace_back(
+        Element{{ConstantExpression::Kind::Constant, {2}}, {0x55, 0x66}});
+
+    std::vector<FuncIdx> table(4);
+    table[0] = 0xbb;
+    auto instance = instantiate(module, {}, {{&table, {4, std::nullopt}}});
+
+    ASSERT_EQ(instance.table->size(), 4);
+    EXPECT_EQ((*instance.table)[0], 0xbb);
+    EXPECT_EQ((*instance.table)[1], 0xaa);
+    EXPECT_EQ((*instance.table)[2], 0x55);
+    EXPECT_EQ((*instance.table)[3], 0x66);
+}
+
 TEST(instantiate, data_section)
 {
     Module module;
