@@ -485,6 +485,32 @@ TEST(parser, start_missing_funcsec)
     EXPECT_THROW_MESSAGE(parse(bin), parser_error, "invalid start function index");
 }
 
+TEST(parser, start_module_with_imports)
+{
+    const auto import_section =
+        make_vec({bytes{0x03, 'm', 'o', 'd', 0x03, 'f', 'o', 'o', 0x00, 0x42}});
+    const auto func_section = make_vec({"00"_bytes, "00"_bytes});
+    const auto start_section = "02"_bytes;
+    const auto bin = bytes{wasm_prefix} + make_section(2, import_section) +
+                     make_section(3, func_section) + make_section(8, start_section);
+
+    const auto module = parse(bin);
+    EXPECT_TRUE(module.startfunc);
+    EXPECT_EQ(*module.startfunc, 2);
+}
+
+TEST(parser, start_module_with_imports_invalid_index)
+{
+    const auto import_section =
+        make_vec({bytes{0x03, 'm', 'o', 'd', 0x03, 'f', 'o', 'o', 0x00, 0x42}});
+    const auto func_section = make_vec({"00"_bytes, "00"_bytes});
+    const auto start_section = "03"_bytes;
+    const auto bin = bytes{wasm_prefix} + make_section(2, import_section) +
+                     make_section(3, func_section) + make_section(8, start_section);
+
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "invalid start function index");
+}
+
 TEST(parser, element_section)
 {
     const auto table_contents = bytes{0x01, 0x70, 0x00, 0x7f};
