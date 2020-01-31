@@ -219,7 +219,7 @@ struct Import
         TypeIdx function_type_index = 0;
         Memory memory;
         bool global_mutable;
-        // TODO: table
+        Table table;
     } desc;
 };
 

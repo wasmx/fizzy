@@ -1,5 +1,6 @@
 #include "parser.hpp"
 #include <gtest/gtest.h>
+#include <lib/fizzy/types.hpp>
 #include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
 #include <types.hpp>
@@ -239,13 +240,14 @@ TEST(parser, import_single_function)
 
 TEST(parser, import_multiple)
 {
-    const auto section_contents =
-        bytes{0x03, 0x02, 'm', '1', 0x03, 'a', 'b', 'c', 0x00, 0x42, 0x02, 'm', '2', 0x03, 'f', 'o',
-            'o', 0x02, 0x00, 0x7f, 0x02, 'm', '3', 0x03, 'b', 'a', 'r', 0x03, 0x7f, 0x00};
+    const auto section_contents = make_vec({bytes{0x02, 'm', '1', 0x03, 'a', 'b', 'c', 0x00, 0x42},
+        bytes{0x02, 'm', '2', 0x03, 'f', 'o', 'o', 0x02, 0x00, 0x7f},
+        bytes{0x02, 'm', '3', 0x03, 'b', 'a', 'r', 0x03, 0x7f, 0x00},
+        bytes{0x02, 'm', '4', 0x03, 't', 'a', 'b', 0x01, 0x70, 0x01, 0x01, 0x42}});
     const auto bin = bytes{wasm_prefix} + make_section(2, section_contents);
 
     const auto module = parse(bin);
-    ASSERT_EQ(module.importsec.size(), 3);
+    ASSERT_EQ(module.importsec.size(), 4);
     EXPECT_EQ(module.importsec[0].module, "m1");
     EXPECT_EQ(module.importsec[0].name, "abc");
     EXPECT_EQ(module.importsec[0].kind, ExternalKind::Function);
@@ -259,6 +261,12 @@ TEST(parser, import_multiple)
     EXPECT_EQ(module.importsec[2].name, "bar");
     EXPECT_EQ(module.importsec[2].kind, ExternalKind::Global);
     EXPECT_FALSE(module.importsec[2].desc.global_mutable);
+    EXPECT_EQ(module.importsec[3].module, "m4");
+    EXPECT_EQ(module.importsec[3].name, "tab");
+    EXPECT_EQ(module.importsec[3].kind, ExternalKind::Table);
+    EXPECT_EQ(module.importsec[3].desc.table.limits.min, 1);
+    ASSERT_TRUE(module.importsec[3].desc.table.limits.max.has_value());
+    EXPECT_EQ(*module.importsec[3].desc.table.limits.max, 0x42);
 }
 
 TEST(parser, function_section_with_single_function)
