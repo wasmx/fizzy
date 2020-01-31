@@ -54,4 +54,5 @@ public:
 
 std::unique_ptr<WasmEngine> create_fizzy_engine();
 std::unique_ptr<WasmEngine> create_wabt_engine();
+std::unique_ptr<WasmEngine> create_wasm3_engine();
 }  // namespace fizzy::test
