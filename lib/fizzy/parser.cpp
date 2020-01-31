@@ -1,6 +1,7 @@
 #include "parser.hpp"
 #include "leb128.hpp"
 #include "types.hpp"
+#include <algorithm>
 #include <cassert>
 
 namespace fizzy
@@ -310,7 +311,11 @@ Module parse(bytes_view input)
             throw parser_error("element section encountered without a table section");
     }
 
-    if (module.startfunc && (*module.startfunc >= module.funcsec.size()))
+    const auto imported_func_count = std::count_if(module.importsec.begin(), module.importsec.end(),
+        [](const auto& import) noexcept { return import.kind == ExternalKind::Function; });
+    const auto total_func_count = static_cast<size_t>(imported_func_count) + module.funcsec.size();
+
+    if (module.startfunc && *module.startfunc >= total_func_count)
         throw parser_error{"invalid start function index"};
 
     return module;

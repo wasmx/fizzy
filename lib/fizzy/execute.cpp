@@ -399,7 +399,7 @@ Instance instantiate(Module module, std::vector<ImportedFunction> imported_funct
     if (instance.module.startfunc)
     {
         const auto funcidx = *instance.module.startfunc;
-        assert(funcidx < instance.module.funcsec.size());
+        assert(funcidx < instance.imported_functions.size() + instance.module.funcsec.size());
         if (execute(instance, funcidx, {}).trapped)
             throw instantiate_error("Start function failed to execute");
     }
