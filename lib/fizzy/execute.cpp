@@ -375,8 +375,10 @@ Instance instantiate(Module module, std::vector<ImportedFunction> imported_funct
         const uint64_t offset =
             eval_constant_expression(element.offset, imported_globals, module.globalsec, globals);
 
+        if (offset + element.init.size() > table.size())
+            throw instantiate_error("Element segment is out of table bounds");
+
         // Overwrite table[offset..] with element.init
-        assert((offset + element.init.size()) <= table.size());
         std::copy(element.init.begin(), element.init.end(), &table[offset]);
     }
 
@@ -386,8 +388,10 @@ Instance instantiate(Module module, std::vector<ImportedFunction> imported_funct
         const uint64_t offset =
             eval_constant_expression(data.offset, imported_globals, module.globalsec, globals);
 
+        if (offset + data.init.size() > memory.size())
+            throw instantiate_error("Data segment is out of memory bounds");
+
         // NOTE: these instructions can overlap
-        assert((offset + data.init.size()) <= (memory_max * PageSize));
         std::memcpy(memory.data() + offset, data.init.data(), data.init.size());
     }
 
