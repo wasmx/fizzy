@@ -1203,7 +1203,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
     }
 
 end:
-    assert(labels.empty());
+    assert(labels.empty() || trap);
     // move allows to return derived Stack<uint64_t> instance into base vector<uint64_t> value
     return {trap, std::move(stack)};
 }

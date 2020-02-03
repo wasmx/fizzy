@@ -375,6 +375,22 @@ TEST(execute_control, block_with_result)
     EXPECT_EQ(ret[0], uint64_t(-1));
 }
 
+TEST(execute_control, trap_inside_block)
+{
+    /*
+    (func (result i64)
+      (block (result i64)
+        unreachable
+      )
+    )
+    */
+    const auto bin = from_hex(
+        "0061736d010000000105016000017e030201000a08010600027e000b0b000a046e616d650203010000");
+
+    const auto [trap, ret] = execute(parse(bin), 0, {});
+    ASSERT_TRUE(trap);
+}
+
 TEST(execute_control, br_with_result)
 {
     /*
