@@ -55,7 +55,7 @@ TEST(instantiate, imported_functions_not_enough)
     module.typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
     module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
 
-    EXPECT_THROW_MESSAGE(instantiate(module, {}), std::runtime_error,
+    EXPECT_THROW_MESSAGE(instantiate(module, {}), instantiate_error,
         "Module requires 1 imported functions, 0 provided");
 }
 
@@ -102,7 +102,8 @@ TEST(instantiate, imported_globals_mismatched_count)
 
     uint64_t global_value = 42;
     ImportedGlobal g{&global_value, true};
-    EXPECT_THROW(instantiate(module, {}, {g}), std::runtime_error);
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {g}), instantiate_error,
+        "Module requires 2 imported globals, 1 provided");
 }
 
 TEST(instantiate, imported_globals_mismatched_mutability)
@@ -115,7 +116,8 @@ TEST(instantiate, imported_globals_mismatched_mutability)
     ImportedGlobal g1{&global_value1, false};
     uint64_t global_value2 = 42;
     ImportedGlobal g2{&global_value2, true};
-    EXPECT_THROW(instantiate(module, {}, {g1, g2}), std::runtime_error);
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {g1, g2}), instantiate_error,
+        "Global 0 mutability doesn't match module's global mutability");
 }
 
 TEST(instantiate, imported_globals_nullptr)
@@ -125,7 +127,8 @@ TEST(instantiate, imported_globals_nullptr)
     module.importsec.emplace_back(Import{"mod", "g2", ExternalKind::Global, {false}});
 
     ImportedGlobal g{nullptr, false};
-    EXPECT_THROW(instantiate(module, {}, {g, g}), std::runtime_error);
+    EXPECT_THROW_MESSAGE(
+        instantiate(module, {}, {g, g}), instantiate_error, "Global 0 has a null pointer to value");
 }
 
 TEST(instantiate, memory_default)
@@ -165,7 +168,8 @@ TEST(instantiate, memory_single_large_minimum)
     Module module;
     module.memorysec.emplace_back(Memory{{(1024 * 1024 * 1024) / page_size, std::nullopt}});
 
-    EXPECT_THROW(instantiate(module), std::runtime_error);
+    EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
+        "Cannot exceed hard memory limit of 268435456 bytes");
 }
 
 TEST(instantiate, memory_single_large_maximum)
@@ -173,7 +177,8 @@ TEST(instantiate, memory_single_large_maximum)
     Module module;
     module.memorysec.emplace_back(Memory{{1, (1024 * 1024 * 1024) / page_size}});
 
-    EXPECT_THROW(instantiate(module), std::runtime_error);
+    EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
+        "Cannot exceed hard memory limit of 268435456 bytes");
 }
 
 TEST(instantiate, memory_multiple)
@@ -182,7 +187,8 @@ TEST(instantiate, memory_multiple)
     module.memorysec.emplace_back(Memory{{1, 1}});
     module.memorysec.emplace_back(Memory{{1, 1}});
 
-    EXPECT_THROW(instantiate(module), std::runtime_error);
+    EXPECT_THROW_MESSAGE(
+        instantiate(module), instantiate_error, "Cannot support more than 1 memory section.");
 }
 
 TEST(instantiate, element_section)
@@ -253,7 +259,7 @@ TEST(instantiate, element_section_offset_from_mutable_global)
     module.elementsec.emplace_back(
         Element{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
 
-    EXPECT_THROW_MESSAGE(instantiate(module), std::runtime_error,
+    EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
         "Constant expression can use global_get only for const globals.");
 }
 
@@ -308,7 +314,7 @@ TEST(instantiate, data_section_offset_from_mutable_global)
     // Memory contents: 0, 0xaa, 0xff, 0, ...
     module.datasec.emplace_back(Data{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
 
-    EXPECT_THROW_MESSAGE(instantiate(module), std::runtime_error,
+    EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
         "Constant expression can use global_get only for const globals.");
 }
 
@@ -378,7 +384,8 @@ TEST(instantiate, globals_initialized_from_imported)
 
     ImportedGlobal g_mutable{&global_value, true};
 
-    EXPECT_THROW(instantiate(module_invalid1, {}, {g_mutable}), std::runtime_error);
+    EXPECT_THROW_MESSAGE(instantiate(module_invalid1, {}, {g_mutable}), instantiate_error,
+        "Constant expression can use global_get only for const globals.");
 
     // initializing from non-imported global is not allowed
     Module module_invalid2;
@@ -387,5 +394,6 @@ TEST(instantiate, globals_initialized_from_imported)
     module_invalid2.globalsec.emplace_back(
         Global{true, {ConstantExpression::Kind::GlobalGet, {0}}});
 
-    EXPECT_THROW(instantiate(module_invalid2, {}, {}), std::runtime_error);
+    EXPECT_THROW_MESSAGE(instantiate(module_invalid2, {}, {}), instantiate_error,
+        "Global can be initialized by another const global only if it's imported.");
 }

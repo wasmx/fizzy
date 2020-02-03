@@ -22,9 +22,9 @@ void match_imported_functions(const std::vector<TypeIdx>& module_imported_types,
 {
     if (module_imported_types.size() != imported_functions.size())
     {
-        throw std::runtime_error("Module requires " + std::to_string(module_imported_types.size()) +
-                                 " imported functions, " +
-                                 std::to_string(imported_functions.size()) + " provided");
+        throw instantiate_error("Module requires " + std::to_string(module_imported_types.size()) +
+                                " imported functions, " +
+                                std::to_string(imported_functions.size()) + " provided");
     }
 }
 
@@ -33,7 +33,7 @@ void match_imported_globals(const std::vector<bool>& module_imports_mutability,
 {
     if (module_imports_mutability.size() != imported_globals.size())
     {
-        throw std::runtime_error(
+        throw instantiate_error(
             "Module requires " + std::to_string(module_imports_mutability.size()) +
             " imported globals, " + std::to_string(imported_globals.size()) + " provided");
     }
@@ -42,13 +42,12 @@ void match_imported_globals(const std::vector<bool>& module_imports_mutability,
     {
         if (imported_globals[i].is_mutable != module_imports_mutability[i])
         {
-            throw std::runtime_error("Global " + std::to_string(i) +
-                                     " mutability doesn't match module's global mutability");
+            throw instantiate_error("Global " + std::to_string(i) +
+                                    " mutability doesn't match module's global mutability");
         }
         if (imported_globals[i].value == nullptr)
         {
-            throw std::runtime_error(
-                "Global " + std::to_string(i) + " has a null pointer to value");
+            throw instantiate_error("Global " + std::to_string(i) + " has a null pointer to value");
         }
     }
 }
@@ -70,9 +69,9 @@ std::vector<TypeIdx> match_imports(const Module& module,
             imported_globals_mutability.emplace_back(import.desc.global_mutable);
             break;
         default:
-            throw std::runtime_error("Import of type " +
-                                     std::to_string(static_cast<uint8_t>(import.kind)) +
-                                     " is not supported");
+            throw instantiate_error("Import of type " +
+                                    std::to_string(static_cast<uint8_t>(import.kind)) +
+                                    " is not supported");
         }
     }
 
@@ -96,7 +95,7 @@ uint64_t eval_constant_expression(ConstantExpression expr,
                                  imported_globals[global_idx].is_mutable :
                                  global_types[global_idx - imported_globals.size()].is_mutable);
     if (is_mutable)
-        throw std::runtime_error("Constant expression can use global_get only for const globals.");
+        throw instantiate_error("Constant expression can use global_get only for const globals.");
 
     if (global_idx < imported_globals.size())
         return *imported_globals[global_idx].value;
@@ -327,7 +326,7 @@ Instance instantiate(Module module, std::vector<ImportedFunction> imported_funct
         if (global.expression.kind == ConstantExpression::Kind::GlobalGet &&
             global.expression.value.global_index >= imported_globals.size())
         {
-            throw std::runtime_error(
+            throw instantiate_error(
                 "Global can be initialized by another const global only if it's imported.");
         }
 
@@ -347,7 +346,7 @@ Instance instantiate(Module module, std::vector<ImportedFunction> imported_funct
     {
         // FIXME: turn this into an assert if instantiate is not exposed externally and it only
         // takes validated modules
-        throw std::runtime_error("Cannot support more than 1 memory section.");
+        throw instantiate_error("Cannot support more than 1 memory section.");
     }
     else if (module.memorysec.size() == 1)
     {
@@ -358,8 +357,8 @@ Instance instantiate(Module module, std::vector<ImportedFunction> imported_funct
             memory_max = MemoryPagesLimit;
         // FIXME: better error handling
         if ((memory_min > MemoryPagesLimit) || (memory_max > MemoryPagesLimit))
-            throw std::runtime_error("Cannot exceed hard memory limit of " +
-                                     std::to_string(MemoryPagesLimit * PageSize) + " bytes");
+            throw instantiate_error("Cannot exceed hard memory limit of " +
+                                    std::to_string(MemoryPagesLimit * PageSize) + " bytes");
     }
     else
     {
@@ -400,7 +399,7 @@ Instance instantiate(Module module, std::vector<ImportedFunction> imported_funct
     if (instance.module.startfunc)
     {
         if (execute(instance, *instance.module.startfunc, {}).trapped)
-            throw std::runtime_error("Start function failed to execute");
+            throw instantiate_error("Start function failed to execute");
     }
 
     return instance;

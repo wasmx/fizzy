@@ -5,6 +5,11 @@
 
 namespace fizzy
 {
+struct instantiate_error : public std::runtime_error
+{
+    using runtime_error::runtime_error;
+};
+
 // The result of an execution.
 struct execution_result
 {
