@@ -81,6 +81,7 @@ void Wasm3Engine::set_memory(fizzy::bytes_view memory)
 
     uint32_t size;
     const auto data = m3_GetMemory(m_runtime, &size, 0);
+    assert(data != nullptr);
     std::memcpy(data, memory.data(), size);
 }
 

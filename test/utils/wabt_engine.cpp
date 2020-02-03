@@ -53,6 +53,8 @@ void WabtEngine::set_memory(bytes_view memory)
     if (memory.empty())
         return;
 
+    assert(m_env.GetMemoryCount() != 0);
+
     auto& dst = *m_env.GetMemory(0);
     const auto begin = reinterpret_cast<const char*>(memory.data());
     dst.data.assign(begin, begin + memory.size());

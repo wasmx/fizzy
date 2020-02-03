@@ -51,11 +51,18 @@ bool FizzyEngine::instantiate()
 
 bytes_view FizzyEngine::get_memory() const
 {
+    if (!m_instance.memory)
+        return {};
+
     return {m_instance.memory->data(), m_instance.memory->size()};
 }
 
 void FizzyEngine::set_memory(bytes_view memory)
 {
+    if (memory.empty())
+        return;
+
+    assert(m_instance.memory != nullptr);
     *m_instance.memory = memory;
 }
 
