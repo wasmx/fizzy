@@ -11,10 +11,10 @@ namespace
 {
 struct LabelContext
 {
-    const Instr* pc = nullptr;
-    const uint8_t* immediate = nullptr;
-    size_t arity = 0;
-    size_t stack_height = 0;
+    const Instr* pc = nullptr;           ///< The jump target instruction.
+    const uint8_t* immediate = nullptr;  ///< The jump target immediate pointer.
+    size_t arity = 0;                    ///< The type arity of the label instruction.
+    size_t stack_height = 0;             ///< The stack height at the label instruction.
 };
 
 void match_imported_functions(const std::vector<TypeIdx>& module_imported_types,

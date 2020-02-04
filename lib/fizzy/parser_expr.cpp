@@ -18,12 +18,11 @@ inline void push(bytes& b, T value)
     store(&b[b.size() - sizeof(value)], value);
 }
 
-/// The immediates offset for block instructions.
-using LabelPosition = size_t;
-
-/// Sentinel constant to loop labels. They are not interesting for parser.
-constexpr auto LoopLabel = LabelPosition(-1);
-
+struct LabelPosition
+{
+    Instr instruction = Instr::unreachable;  ///< The instruction that created the label.
+    size_t immediates_offset{0};             ///< The immediates offset for block instructions.
+};
 }  // namespace
 
 parser_result<Code> parse_expr(const uint8_t* pos)
@@ -118,13 +117,13 @@ parser_result<Code> parse_expr(const uint8_t* pos)
             if (!label_positions.empty())
             {
                 const auto label_pos = label_positions.pop();
-                if (label_pos != LoopLabel)  // If end of block instruction.
+                if (label_pos.instruction == Instr::block)  // If end of block instruction.
                 {
                     const auto target_pc = static_cast<uint32_t>(code.instructions.size() + 1);
                     const auto target_imm = static_cast<uint32_t>(code.immediates.size());
 
                     // Set the imm values for block instruction.
-                    auto* block_imm = code.immediates.data() + label_pos;
+                    auto* block_imm = code.immediates.data() + label_pos.immediates_offset;
                     store(block_imm, target_pc);
                     block_imm += sizeof(target_pc);
                     store(block_imm, target_imm);
@@ -153,7 +152,8 @@ parser_result<Code> parse_expr(const uint8_t* pos)
 
             code.immediates.push_back(arity);
 
-            label_positions.push_back(code.immediates.size());  // Imm offset after arity.
+            // Push label with immediates offset after arity.
+            label_positions.push_back({Instr::block, code.immediates.size()});
 
             // Placeholders for immediate values, filled at the matching end instruction.
             push(code.immediates, uint32_t{0});  // Diff to the end instruction.
@@ -166,7 +166,7 @@ parser_result<Code> parse_expr(const uint8_t* pos)
             const uint8_t type{*pos++};
             if (type != BlockTypeEmpty)
                 throw parser_error{"loop can only have type arity 0"};
-            label_positions.push_back(LoopLabel);  // Mark as not interested.
+            label_positions.push_back({Instr::loop, 0});  // Mark as not interested.
             break;
         }
 
