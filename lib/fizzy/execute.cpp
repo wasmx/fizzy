@@ -28,6 +28,59 @@ void match_imported_functions(const std::vector<TypeIdx>& module_imported_types,
     }
 }
 
+
+void match_limits(const Limits& external_limits, const Limits& module_limits)
+{
+    if (external_limits.min < module_limits.min)
+    {
+        throw instantiate_error(
+            "Provided memory's min is below imported memory min defined in module.");
+    }
+
+    if (!module_limits.max.has_value())
+        return;
+
+    if (external_limits.max.has_value() && *external_limits.max <= *module_limits.max)
+        return;
+
+    throw instantiate_error(
+        "Provided memory's max is above imported memory max defined in module.");
+}
+
+void match_imported_memories(const std::vector<Memory>& module_imported_memories,
+    const std::vector<ImportedMemory>& imported_memories)
+{
+    assert(module_imported_memories.size() <= 1);
+
+    if (imported_memories.size() > 1)
+        throw instantiate_error("Only 1 imported memory is allowed.");
+
+    if (module_imported_memories.empty())
+    {
+        if (!imported_memories.empty())
+        {
+            throw instantiate_error(
+                "Trying to provide imported memory to a module that doesn't define one.");
+        }
+    }
+    else
+    {
+        if (imported_memories.empty())
+            throw instantiate_error("Module defines an imported memory but none was provided.");
+
+        match_limits(imported_memories[0].limits, module_imported_memories[0].limits);
+
+        if (imported_memories[0].data == nullptr)
+            throw instantiate_error("Provided imported memory has a null pointer to data.");
+
+        const auto size = imported_memories[0].data->size();
+        const auto min = imported_memories[0].limits.min;
+        const auto& max = imported_memories[0].limits.max;
+        if (size < min * PageSize || (max.has_value() && size > *max * PageSize))
+            throw instantiate_error("Provided imported memory doesn't fit provided limits");
+    }
+}
+
 void match_imported_globals(const std::vector<bool>& module_imports_mutability,
     const std::vector<ImportedGlobal>& imported_globals)
 {
@@ -54,9 +107,11 @@ void match_imported_globals(const std::vector<bool>& module_imports_mutability,
 
 std::vector<TypeIdx> match_imports(const Module& module,
     const std::vector<ImportedFunction>& imported_functions,
+    const std::vector<ImportedMemory>& imported_memories,
     const std::vector<ImportedGlobal>& imported_globals)
 {
     std::vector<TypeIdx> imported_function_types;
+    std::vector<Memory> imported_memory_types;
     std::vector<bool> imported_globals_mutability;
     for (auto const& import : module.importsec)
     {
@@ -64,6 +119,9 @@ std::vector<TypeIdx> match_imports(const Module& module,
         {
         case ExternalKind::Function:
             imported_function_types.emplace_back(import.desc.function_type_index);
+            break;
+        case ExternalKind::Memory:
+            imported_memory_types.emplace_back(import.desc.memory);
             break;
         case ExternalKind::Global:
             imported_globals_mutability.emplace_back(import.desc.global_mutable);
@@ -76,9 +134,63 @@ std::vector<TypeIdx> match_imports(const Module& module,
     }
 
     match_imported_functions(imported_function_types, imported_functions);
+    match_imported_memories(imported_memory_types, imported_memories);
     match_imported_globals(imported_globals_mutability, imported_globals);
 
     return imported_function_types;
+}
+
+std::tuple<bytes_ptr, size_t> allocate_memory(const std::vector<Memory>& module_memories,
+    const std::vector<ImportedMemory>& imported_memories)
+{
+    static const auto bytes_delete = [](bytes* b) noexcept { delete b; };
+    static const auto null_delete = [](bytes*) noexcept {};
+
+    if (module_memories.size() + imported_memories.size() > 1)
+    {
+        // FIXME: turn this into an assert if instantiate is not exposed externally and it only
+        // takes validated modules
+        throw instantiate_error("Cannot support more than 1 memory section.");
+    }
+    else if (module_memories.size() == 1)
+    {
+        const size_t memory_min = module_memories[0].limits.min;
+        const size_t memory_max =
+            (module_memories[0].limits.max.has_value() ? *module_memories[0].limits.max :
+                                                         MemoryPagesLimit);
+        // FIXME: better error handling
+        if ((memory_min > MemoryPagesLimit) || (memory_max > MemoryPagesLimit))
+        {
+            throw instantiate_error("Cannot exceed hard memory limit of " +
+                                    std::to_string(MemoryPagesLimit * PageSize) + " bytes.");
+        }
+
+        // NOTE: fill it with zeroes
+        bytes_ptr memory{new bytes(memory_min * PageSize, 0), bytes_delete};
+        return {std::move(memory), memory_max};
+    }
+    else if (imported_memories.size() == 1)
+    {
+        const size_t memory_min = imported_memories[0].limits.min;
+        const size_t memory_max =
+            (imported_memories[0].limits.max.has_value() ? *imported_memories[0].limits.max :
+                                                           MemoryPagesLimit);
+
+        // FIXME: better error handling
+        if ((memory_min > MemoryPagesLimit) || (memory_max > MemoryPagesLimit))
+        {
+            throw instantiate_error("Imported memory limits cannot exceed hard memory limit of " +
+                                    std::to_string(MemoryPagesLimit * PageSize) + " bytes.");
+        }
+
+        bytes_ptr memory{imported_memories[0].data, null_delete};
+        return {std::move(memory), memory_max};
+    }
+    else
+    {
+        bytes_ptr memory{new bytes{}, bytes_delete};
+        return {std::move(memory), MemoryPagesLimit};
+    }
 }
 
 uint64_t eval_constant_expression(ConstantExpression expr,
@@ -315,10 +427,10 @@ inline uint64_t popcnt64(uint64_t value) noexcept
 }  // namespace
 
 Instance instantiate(Module module, std::vector<ImportedFunction> imported_functions,
-    std::vector<ImportedGlobal> imported_globals)
+    std::vector<ImportedGlobal> imported_globals, std::vector<ImportedMemory> imported_memories)
 {
     std::vector<TypeIdx> imported_function_types =
-        match_imports(module, imported_functions, imported_globals);
+        match_imports(module, imported_functions, imported_memories, imported_globals);
 
     // Init globals
     std::vector<uint64_t> globals;
@@ -345,32 +457,7 @@ Instance instantiate(Module module, std::vector<ImportedFunction> imported_funct
         table.resize(module.tablesec[0].limits.min);
 
     // Allocate memory
-    size_t memory_min, memory_max;
-    if (module.memorysec.size() > 1)
-    {
-        // FIXME: turn this into an assert if instantiate is not exposed externally and it only
-        // takes validated modules
-        throw instantiate_error("Cannot support more than 1 memory section.");
-    }
-    else if (module.memorysec.size() == 1)
-    {
-        memory_min = module.memorysec[0].limits.min;
-        if (module.memorysec[0].limits.max)
-            memory_max = *module.memorysec[0].limits.max;
-        else
-            memory_max = MemoryPagesLimit;
-        // FIXME: better error handling
-        if ((memory_min > MemoryPagesLimit) || (memory_max > MemoryPagesLimit))
-            throw instantiate_error("Cannot exceed hard memory limit of " +
-                                    std::to_string(MemoryPagesLimit * PageSize) + " bytes");
-    }
-    else
-    {
-        memory_min = 0;
-        memory_max = MemoryPagesLimit;
-    }
-    // NOTE: fill it with zeroes
-    bytes memory(memory_min * PageSize, 0);
+    auto [memory, memory_max] = allocate_memory(module.memorysec, imported_memories);
 
     // Fill the table based on elements segment
     assert(module.elementsec.empty() || !module.tablesec.empty());
@@ -392,11 +479,11 @@ Instance instantiate(Module module, std::vector<ImportedFunction> imported_funct
         const uint64_t offset =
             eval_constant_expression(data.offset, imported_globals, module.globalsec, globals);
 
-        if (offset + data.init.size() > memory.size())
+        if (offset + data.init.size() > memory->size())
             throw instantiate_error("Data segment is out of memory bounds");
 
         // NOTE: these instructions can overlap
-        std::memcpy(memory.data() + offset, data.init.data(), data.init.size());
+        std::memcpy(memory->data() + offset, data.init.data(), data.init.size());
     }
 
     Instance instance = {std::move(module), std::move(memory), memory_max, std::move(table),
@@ -424,7 +511,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
     assert(code_idx < instance.module.codesec.size());
 
     const auto& code = instance.module.codesec[code_idx];
-    auto& memory = instance.memory;
+    auto& memory = *instance.memory;
 
     std::vector<uint64_t> locals = std::move(args);
     locals.resize(locals.size() + code.local_count);

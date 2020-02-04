@@ -350,7 +350,7 @@ TEST(execute, i32_load)
         Code{0, {Instr::local_get, Instr::i32_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
     auto instance = instantiate(module);
-    instance.memory[0] = 42;
+    (*instance.memory)[0] = 42;
     const auto [trap, ret] = execute(instance, 0, {0});
 
     ASSERT_FALSE(trap);
@@ -368,8 +368,8 @@ TEST(execute, i64_load)
         Code{0, {Instr::local_get, Instr::i64_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
     auto instance = instantiate(module);
-    instance.memory[0] = 0x2a;
-    instance.memory[4] = 0x2a;
+    (*instance.memory)[0] = 0x2a;
+    (*instance.memory)[4] = 0x2a;
     const auto [trap, ret] = execute(instance, 0, {0});
 
     ASSERT_FALSE(trap);
@@ -387,8 +387,8 @@ TEST(execute, i32_load8_s)
         Code{0, {Instr::local_get, Instr::i32_load8_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
     auto instance = instantiate(module);
-    instance.memory[0] = 0x80;
-    instance.memory[1] = 0xf1;
+    (*instance.memory)[0] = 0x80;
+    (*instance.memory)[1] = 0xf1;
     const auto [trap, ret] = execute(instance, 0, {0});
 
     ASSERT_FALSE(trap);
@@ -406,8 +406,8 @@ TEST(execute, i32_load8_u)
         Code{0, {Instr::local_get, Instr::i32_load8_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
     auto instance = instantiate(module);
-    instance.memory[0] = 0x81;
-    instance.memory[1] = 0xf1;
+    (*instance.memory)[0] = 0x81;
+    (*instance.memory)[1] = 0xf1;
     const auto [trap, ret] = execute(instance, 0, {0});
 
     ASSERT_FALSE(trap);
@@ -425,9 +425,9 @@ TEST(execute, i32_load16_s)
         Code{0, {Instr::local_get, Instr::i32_load16_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
     auto instance = instantiate(module);
-    instance.memory[0] = 0x00;
-    instance.memory[1] = 0x80;
-    instance.memory[3] = 0xf1;
+    (*instance.memory)[0] = 0x00;
+    (*instance.memory)[1] = 0x80;
+    (*instance.memory)[3] = 0xf1;
     const auto [trap, ret] = execute(instance, 0, {0});
 
     ASSERT_FALSE(trap);
@@ -445,9 +445,9 @@ TEST(execute, i32_load16_u)
         Code{0, {Instr::local_get, Instr::i32_load16_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
     auto instance = instantiate(module);
-    instance.memory[0] = 0x01;
-    instance.memory[1] = 0x80;
-    instance.memory[3] = 0xf1;
+    (*instance.memory)[0] = 0x01;
+    (*instance.memory)[1] = 0x80;
+    (*instance.memory)[3] = 0xf1;
     const auto [trap, ret] = execute(instance, 0, {0});
 
     ASSERT_FALSE(trap);
@@ -465,8 +465,8 @@ TEST(execute, i64_load8_s)
         Code{0, {Instr::local_get, Instr::i64_load8_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
     auto instance = instantiate(module);
-    instance.memory[0] = 0x80;
-    instance.memory[1] = 0xf1;
+    (*instance.memory)[0] = 0x80;
+    (*instance.memory)[1] = 0xf1;
     const auto [trap, ret] = execute(instance, 0, {0});
 
     ASSERT_FALSE(trap);
@@ -484,8 +484,8 @@ TEST(execute, i64_load8_u)
         Code{0, {Instr::local_get, Instr::i64_load8_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
     auto instance = instantiate(module);
-    instance.memory[0] = 0x81;
-    instance.memory[1] = 0xf1;
+    (*instance.memory)[0] = 0x81;
+    (*instance.memory)[1] = 0xf1;
     const auto [trap, ret] = execute(instance, 0, {0});
 
     ASSERT_FALSE(trap);
@@ -503,9 +503,9 @@ TEST(execute, i64_load16_s)
         Code{0, {Instr::local_get, Instr::i64_load16_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
     auto instance = instantiate(module);
-    instance.memory[0] = 0x00;
-    instance.memory[1] = 0x80;
-    instance.memory[2] = 0xf1;
+    (*instance.memory)[0] = 0x00;
+    (*instance.memory)[1] = 0x80;
+    (*instance.memory)[2] = 0xf1;
     const auto [trap, ret] = execute(instance, 0, {0});
 
     ASSERT_FALSE(trap);
@@ -523,9 +523,9 @@ TEST(execute, i64_load16_u)
         Code{0, {Instr::local_get, Instr::i64_load16_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
     auto instance = instantiate(module);
-    instance.memory[0] = 0x01;
-    instance.memory[1] = 0x80;
-    instance.memory[2] = 0xf1;
+    (*instance.memory)[0] = 0x01;
+    (*instance.memory)[1] = 0x80;
+    (*instance.memory)[2] = 0xf1;
     const auto [trap, ret] = execute(instance, 0, {0});
 
     ASSERT_FALSE(trap);
@@ -543,11 +543,12 @@ TEST(execute, i64_load32_s)
         Code{0, {Instr::local_get, Instr::i64_load32_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
     auto instance = instantiate(module);
-    instance.memory[0] = 0x00;
-    instance.memory[1] = 0x00;
-    instance.memory[2] = 0x00;
-    instance.memory[3] = 0x80;
-    instance.memory[4] = 0xf1;
+    auto& memory = *instance.memory;
+    memory[0] = 0x00;
+    memory[1] = 0x00;
+    memory[2] = 0x00;
+    memory[3] = 0x80;
+    memory[4] = 0xf1;
     const auto [trap, ret] = execute(instance, 0, {0});
 
     ASSERT_FALSE(trap);
@@ -565,11 +566,12 @@ TEST(execute, i64_load32_u)
         Code{0, {Instr::local_get, Instr::i64_load32_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
     auto instance = instantiate(module);
-    instance.memory[0] = 0x01;
-    instance.memory[1] = 0x00;
-    instance.memory[2] = 0x00;
-    instance.memory[3] = 0x80;
-    instance.memory[4] = 0xf1;
+    auto& memory = *instance.memory;
+    memory[0] = 0x01;
+    memory[1] = 0x00;
+    memory[2] = 0x00;
+    memory[3] = 0x80;
+    memory[4] = 0xf1;
     const auto [trap, ret] = execute(instance, 0, {0});
 
     ASSERT_FALSE(trap);
@@ -592,7 +594,7 @@ TEST(execute, i32_store)
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 0);
-    ASSERT_EQ(instance.memory.substr(0, 4), from_hex("2a000000"));
+    ASSERT_EQ(instance.memory->substr(0, 4), from_hex("2a000000"));
 
     ASSERT_TRUE(execute(instance, 0, {42, 65537}).trapped);
 }
@@ -610,7 +612,7 @@ TEST(execute, i64_store)
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 0);
-    ASSERT_EQ(instance.memory.substr(0, 8), from_hex("2a0000002a000000"));
+    ASSERT_EQ(instance.memory->substr(0, 8), from_hex("2a0000002a000000"));
 
     ASSERT_TRUE(execute(instance, 0, {0x2a0000002a, 65537}).trapped);
 }
@@ -628,7 +630,7 @@ TEST(execute, i32_store8)
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 0);
-    ASSERT_EQ(instance.memory.substr(0, 4), from_hex("80000000"));
+    ASSERT_EQ(instance.memory->substr(0, 4), from_hex("80000000"));
 
     ASSERT_TRUE(execute(instance, 0, {0xf1f2f380, 65537}).trapped);
 }
@@ -660,7 +662,7 @@ TEST(execute, i32_store16)
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 0);
-    ASSERT_EQ(instance.memory.substr(0, 4), from_hex("00800000"));
+    ASSERT_EQ(instance.memory->substr(0, 4), from_hex("00800000"));
 
     ASSERT_TRUE(execute(instance, 0, {0xf1f28000, 65537}).trapped);
 }
@@ -678,7 +680,7 @@ TEST(execute, i64_store8)
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 0);
-    ASSERT_EQ(instance.memory.substr(0, 8), from_hex("8000000000000000"));
+    ASSERT_EQ(instance.memory->substr(0, 8), from_hex("8000000000000000"));
 
     ASSERT_TRUE(execute(instance, 0, {0xf1f2f4f5f6f7f880, 65537}).trapped);
 }
@@ -696,7 +698,7 @@ TEST(execute, i64_store16)
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 0);
-    ASSERT_EQ(instance.memory.substr(0, 8), from_hex("0080000000000000"));
+    ASSERT_EQ(instance.memory->substr(0, 8), from_hex("0080000000000000"));
 
     ASSERT_TRUE(execute(instance, 0, {0xf1f2f4f5f6f78000, 65537}).trapped);
 }
@@ -714,7 +716,7 @@ TEST(execute, i64_store32)
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 0);
-    ASSERT_EQ(instance.memory.substr(0, 8), from_hex("0000008000000000"));
+    ASSERT_EQ(instance.memory->substr(0, 8), from_hex("0000008000000000"));
 
     ASSERT_TRUE(execute(instance, 0, {0xf1f2f4f580000000, 65537}).trapped);
 }
@@ -790,14 +792,14 @@ TEST(execute, start_section)
 
     auto instance = instantiate(module);
     // Start function sets this
-    ASSERT_EQ(instance.memory.substr(0, 4), from_hex("2a000000"));
+    ASSERT_EQ(instance.memory->substr(0, 4), from_hex("2a000000"));
 
     const auto [trap, ret] = execute(instance, 0, {});
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
     EXPECT_EQ(ret[0], 42);
-    EXPECT_EQ(instance.memory.substr(0, 4), from_hex("2a000000"));
+    EXPECT_EQ(instance.memory->substr(0, 4), from_hex("2a000000"));
 }
 
 TEST(execute, imported_function)
@@ -1024,15 +1026,15 @@ TEST(execute, memory_copy_32bytes)
 
     const auto module = parse(bin);
     auto instance = instantiate(module);
-    ASSERT_EQ(instance.memory.size(), 65536);
+    ASSERT_EQ(instance.memory->size(), 65536);
     const auto input = from_hex("0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20");
     ASSERT_EQ(input.size(), 32);
-    std::copy(input.begin(), input.end(), instance.memory.begin());
+    std::copy(input.begin(), input.end(), instance.memory->begin());
     const auto [trap, ret] = execute(instance, 0, {33, 0});
     ASSERT_FALSE(trap);
     EXPECT_EQ(ret.size(), 0);
-    ASSERT_EQ(instance.memory.size(), 65536);
+    ASSERT_EQ(instance.memory->size(), 65536);
     bytes output;
-    std::copy_n(&instance.memory[33], input.size(), std::back_inserter(output));
+    std::copy_n(&(*instance.memory)[33], input.size(), std::back_inserter(output));
     EXPECT_EQ(output, input);
 }

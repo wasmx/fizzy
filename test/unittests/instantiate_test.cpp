@@ -137,7 +137,7 @@ TEST(instantiate, memory_default)
 
     auto instance = instantiate(module);
 
-    ASSERT_EQ(instance.memory.size(), 0);
+    ASSERT_EQ(instance.memory->size(), 0);
     EXPECT_EQ(instance.memory_max_pages * page_size, 256 * 1024 * 1024);
 }
 
@@ -148,7 +148,7 @@ TEST(instantiate, memory_single)
 
     auto instance = instantiate(module);
 
-    ASSERT_EQ(instance.memory.size(), page_size);
+    ASSERT_EQ(instance.memory->size(), page_size);
     EXPECT_EQ(instance.memory_max_pages, 1);
 }
 
@@ -159,7 +159,7 @@ TEST(instantiate, memory_single_unspecified_maximum)
 
     auto instance = instantiate(module);
 
-    ASSERT_EQ(instance.memory.size(), page_size);
+    ASSERT_EQ(instance.memory->size(), page_size);
     EXPECT_EQ(instance.memory_max_pages * page_size, 256 * 1024 * 1024);
 }
 
@@ -169,7 +169,7 @@ TEST(instantiate, memory_single_large_minimum)
     module.memorysec.emplace_back(Memory{{(1024 * 1024 * 1024) / page_size, std::nullopt}});
 
     EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
-        "Cannot exceed hard memory limit of 268435456 bytes");
+        "Cannot exceed hard memory limit of 268435456 bytes.");
 }
 
 TEST(instantiate, memory_single_large_maximum)
@@ -178,7 +178,7 @@ TEST(instantiate, memory_single_large_maximum)
     module.memorysec.emplace_back(Memory{{1, (1024 * 1024 * 1024) / page_size}});
 
     EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
-        "Cannot exceed hard memory limit of 268435456 bytes");
+        "Cannot exceed hard memory limit of 268435456 bytes.");
 }
 
 TEST(instantiate, memory_multiple)
@@ -287,7 +287,7 @@ TEST(instantiate, data_section)
 
     auto instance = instantiate(module);
 
-    EXPECT_EQ(instance.memory.substr(0, 6), from_hex("00aa55550000"));
+    EXPECT_EQ(instance.memory->substr(0, 6), from_hex("00aa55550000"));
 }
 
 TEST(instantiate, data_section_offset_from_global)
@@ -300,7 +300,7 @@ TEST(instantiate, data_section_offset_from_global)
 
     auto instance = instantiate(module);
 
-    EXPECT_EQ(instance.memory.substr(42, 2), "aaff"_bytes);
+    EXPECT_EQ(instance.memory->substr(42, 2), "aaff"_bytes);
 }
 
 TEST(instantiate, data_section_offset_from_imported_global)
@@ -316,7 +316,7 @@ TEST(instantiate, data_section_offset_from_imported_global)
 
     auto instance = instantiate(module, {}, {g});
 
-    EXPECT_EQ(instance.memory.substr(42, 2), "aaff"_bytes);
+    EXPECT_EQ(instance.memory->substr(42, 2), "aaff"_bytes);
 }
 
 TEST(instantiate, data_section_offset_from_mutable_global)

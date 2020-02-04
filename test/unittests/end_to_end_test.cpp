@@ -71,19 +71,20 @@ TEST(end_to_end, milestone2)
 
     auto instance = instantiate(module);
 
+    auto& memory = *instance.memory;
     // This performs uint256 x uint256 -> uint512 multiplication.
     // Arg1: 2^255 + 1
-    instance.memory[0] = 1;
-    instance.memory[31] = 0x80;
+    memory[0] = 1;
+    memory[31] = 0x80;
     // Arg2: 2^255 + 2^254 + 0xff
-    instance.memory[32] = 0xff;
-    instance.memory[63] = 0xc0;
+    memory[32] = 0xff;
+    memory[63] = 0xc0;
     // TODO: use find_exported_function
     const auto [trap, ret] = execute(instance, 0, {64, 0, 32});
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 0);
-    EXPECT_EQ(hex(instance.memory.substr(64, 64)),
+    EXPECT_EQ(hex(memory.substr(64, 64)),
         "ff00000000000000000000000000000000000000000000000000000000000040"
         "8000000000000000000000000000000000000000000000000000000000000060");
 }
@@ -185,5 +186,5 @@ TEST(end_to_end, memset)
 
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 0);
-    EXPECT_EQ(hex(instance.memory.substr(0, 2 * sizeof(int))), "d2040000d2040000");
+    EXPECT_EQ(hex(instance.memory->substr(0, 2 * sizeof(int))), "d2040000d2040000");
 }
