@@ -1,14 +1,11 @@
 #include "execute.hpp"
+#include "limits.hpp"
 #include <gtest/gtest.h>
 #include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
 
 using namespace fizzy;
 
-namespace
-{
-constexpr unsigned page_size = 65536;
-}
 
 TEST(instantiate, imported_functions)
 {
@@ -57,6 +54,121 @@ TEST(instantiate, imported_functions_not_enough)
 
     EXPECT_THROW_MESSAGE(instantiate(module, {}), instantiate_error,
         "Module requires 1 imported functions, 0 provided");
+}
+
+TEST(instantiate, imported_memory)
+{
+    Module module;
+    Import imp{"mod", "m", ExternalKind::Memory, {}};
+    imp.desc.memory = Memory{{1, 3}};
+    module.importsec.emplace_back(imp);
+
+    bytes memory(PageSize, 0);
+    auto instance = instantiate(module, {}, {}, {{&memory, {1, 3}}});
+
+    ASSERT_TRUE(instance.memory);
+    EXPECT_EQ(instance.memory->size(), PageSize);
+    EXPECT_EQ(instance.memory->data(), memory.data());
+    EXPECT_EQ(instance.memory_max_pages, 3);
+}
+
+TEST(instantiate, imported_memory_unlimited)
+{
+    Module module;
+    Import imp{"mod", "m", ExternalKind::Memory, {}};
+    imp.desc.memory = Memory{{1, std::nullopt}};
+    module.importsec.emplace_back(imp);
+
+    bytes memory(PageSize, 0);
+    auto instance = instantiate(module, {}, {}, {{&memory, {1, std::nullopt}}});
+
+    ASSERT_TRUE(instance.memory);
+    EXPECT_EQ(instance.memory->size(), PageSize);
+    EXPECT_EQ(instance.memory->data(), memory.data());
+    EXPECT_EQ(instance.memory_max_pages, MemoryPagesLimit);
+}
+
+TEST(instantiate, imported_memory_stricter_limits)
+{
+    Module module;
+    Import imp{"mod", "m", ExternalKind::Memory, {}};
+    imp.desc.memory = Memory{{1, 3}};
+    module.importsec.emplace_back(imp);
+
+    bytes memory(PageSize * 2, 0);
+    auto instance = instantiate(module, {}, {}, {{&memory, {2, 2}}});
+
+    ASSERT_TRUE(instance.memory);
+    EXPECT_EQ(instance.memory->size(), PageSize * 2);
+    EXPECT_EQ(instance.memory->data(), memory.data());
+    EXPECT_EQ(instance.memory_max_pages, 2);
+}
+
+TEST(instantiate, imported_memory_invalid)
+{
+    Module module;
+    Import imp{"mod", "m", ExternalKind::Memory, {}};
+    imp.desc.memory = Memory{{1, 3}};
+    module.importsec.emplace_back(imp);
+
+    bytes memory(PageSize, 0);
+
+    // Providing more than 1 memory
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {1, 3}}, {&memory, {1, 1}}}),
+        instantiate_error, "Only 1 imported memory is allowed.");
+
+    // Providing memory when none expected
+    Module module_no_imported_memory;
+    EXPECT_THROW_MESSAGE(instantiate(module_no_imported_memory, {}, {}, {{&memory, {1, 3}}}),
+        instantiate_error,
+        "Trying to provide imported memory to a module that doesn't define one.");
+
+    // Not providing memory when one is expected
+    EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
+        "Module defines an imported memory but none was provided.");
+
+    // Provided min too low
+    bytes memory_empty;
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory_empty, {0, 3}}}), instantiate_error,
+        "Provided memory's min is below imported memory min defined in module.");
+
+    // Provided max too high
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {1, 4}}}), instantiate_error,
+        "Provided memory's max is above imported memory max defined in module.");
+
+    // Provided max is unlimited
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {1, std::nullopt}}}),
+        instantiate_error, "Provided memory's max is above imported memory max defined in module.");
+
+    // Null pointer
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{nullptr, {1, 3}}}), instantiate_error,
+        "Provided imported memory has a null pointer to data.");
+
+    // Allocated less than min
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory_empty, {1, 3}}}), instantiate_error,
+        "Provided imported memory doesn't fit provided limits");
+
+    // Allocated more than max
+    bytes memory_big(PageSize * 4, 0);
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory_big, {1, 3}}}), instantiate_error,
+        "Provided imported memory doesn't fit provided limits");
+
+    // Provided max exceeds the hard limit
+    Module module_without_max;
+    Import imp_without_max{"mod", "m", ExternalKind::Memory, {}};
+    imp.desc.memory = Memory{{1, std::nullopt}};
+    module_without_max.importsec.emplace_back(imp_without_max);
+    EXPECT_THROW_MESSAGE(
+        instantiate(module_without_max, {}, {}, {{&memory, {1, MemoryPagesLimit + 1}}}),
+        instantiate_error,
+        "Imported memory limits cannot exceed hard memory limit of 268435456 bytes.");
+
+    // Imported memory and regular memory
+    Module module_with_two_memories;
+    module_with_two_memories.memorysec.emplace_back(Memory{{1, 1}});
+    module_with_two_memories.importsec.emplace_back(imp);
+    EXPECT_THROW_MESSAGE(instantiate(module_with_two_memories, {}, {}, {{&memory, {1, 3}}}),
+        instantiate_error, "Cannot support more than 1 memory section.");
 }
 
 TEST(instantiate, imported_globals)
@@ -138,7 +250,7 @@ TEST(instantiate, memory_default)
     auto instance = instantiate(module);
 
     ASSERT_EQ(instance.memory->size(), 0);
-    EXPECT_EQ(instance.memory_max_pages * page_size, 256 * 1024 * 1024);
+    EXPECT_EQ(instance.memory_max_pages * PageSize, 256 * 1024 * 1024);
 }
 
 TEST(instantiate, memory_single)
@@ -148,7 +260,7 @@ TEST(instantiate, memory_single)
 
     auto instance = instantiate(module);
 
-    ASSERT_EQ(instance.memory->size(), page_size);
+    ASSERT_EQ(instance.memory->size(), PageSize);
     EXPECT_EQ(instance.memory_max_pages, 1);
 }
 
@@ -159,14 +271,14 @@ TEST(instantiate, memory_single_unspecified_maximum)
 
     auto instance = instantiate(module);
 
-    ASSERT_EQ(instance.memory->size(), page_size);
-    EXPECT_EQ(instance.memory_max_pages * page_size, 256 * 1024 * 1024);
+    ASSERT_EQ(instance.memory->size(), PageSize);
+    EXPECT_EQ(instance.memory_max_pages * PageSize, 256 * 1024 * 1024);
 }
 
 TEST(instantiate, memory_single_large_minimum)
 {
     Module module;
-    module.memorysec.emplace_back(Memory{{(1024 * 1024 * 1024) / page_size, std::nullopt}});
+    module.memorysec.emplace_back(Memory{{(1024 * 1024 * 1024) / PageSize, std::nullopt}});
 
     EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
         "Cannot exceed hard memory limit of 268435456 bytes.");
@@ -175,7 +287,7 @@ TEST(instantiate, memory_single_large_minimum)
 TEST(instantiate, memory_single_large_maximum)
 {
     Module module;
-    module.memorysec.emplace_back(Memory{{1, (1024 * 1024 * 1024) / page_size}});
+    module.memorysec.emplace_back(Memory{{1, (1024 * 1024 * 1024) / PageSize}});
 
     EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
         "Cannot exceed hard memory limit of 268435456 bytes.");
