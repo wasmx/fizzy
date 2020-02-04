@@ -1833,6 +1833,9 @@ TEST(execute, start_section)
     Module module;
     module.startfunc = 1;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    // TODO: add type section (once enforced)
+    module.funcsec.emplace_back(FuncIdx{0});
+    module.funcsec.emplace_back(FuncIdx{1});
     module.codesec.emplace_back(
         Code{0, {Instr::i32_const, Instr::i32_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
     module.codesec.emplace_back(
