@@ -822,7 +822,7 @@ TEST(execute, start_section)
     // In this test the start function (index 1) writes a i32 value to the memory
     // and the same is read back in the "main" function (index 0).
     Module module;
-    module.startfunc = 1;
+    module.startfunc = FuncIdx{1};
     module.memorysec.emplace_back(Memory{{1, 1}});
     // TODO: add type section (once enforced)
     module.funcsec.emplace_back(FuncIdx{0});
