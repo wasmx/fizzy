@@ -629,3 +629,157 @@ TEST(execute_control, return_from_block_stack_cleanup)
     ASSERT_EQ(ret.size(), 1);
     EXPECT_EQ(ret[0], 1);
 }
+
+TEST(execute_control, if_smoke)
+{
+    /*
+    (func (param $x i32) (result i32)
+      (local $y i32)
+      get_local $x
+      (if
+        (then
+          i32.const 4
+          set_local $y
+        )
+      )
+      get_local $y
+    )
+    */
+    const auto bin = from_hex(
+        "0061736D0100000001060160017F017F030201000A11010F01017F20000440410421010B20010B0010046E616D"
+        "650209010002000178010179");
+
+    const auto module = parse(bin);
+
+    for (const auto param : {0u, 1u})
+    {
+        constexpr uint64_t expected_results[]{
+            0,  // no if branch.
+            4,  // if branch.
+        };
+
+        const auto [trap, ret] = execute(module, 0, {param});
+        ASSERT_FALSE(trap);
+        ASSERT_EQ(ret.size(), 1);
+        EXPECT_EQ(ret[0], expected_results[param]);
+    }
+}
+
+TEST(execute_control, if_else_smoke)
+{
+    /*
+    (func (param $x i32) (result i32)
+      get_local $x
+      (if (result i32)
+        (then
+          i32.const 1
+        )
+        (else
+          i32.const 2
+        )
+      )
+    )
+    */
+    const auto bin = from_hex(
+        "0061736D0100000001060160017F017F030201000A0E010C002000047F41010541020B0B000D046E616D650206"
+        "010001000178");
+
+    const auto module = parse(bin);
+
+    for (const auto param : {0u, 1u})
+    {
+        constexpr uint64_t expected_results[]{
+            2,  // else branch.
+            1,  // if branch.
+        };
+
+        const auto [trap, ret] = execute(module, 0, {param});
+        ASSERT_FALSE(trap);
+        ASSERT_EQ(ret.size(), 1);
+        EXPECT_EQ(ret[0], expected_results[param]);
+    }
+}
+
+
+TEST(execute_control, if_return_from_branch)
+{
+    /*
+    (func (param $x i32) (result i32)
+      get_local $x
+      (if (result i32)
+        (then
+          i32.const -1
+          i32.const 1
+          return
+        )
+        (else
+          i32.const -2
+          i32.const -1
+          i32.const 2
+          return
+        )
+      )
+    )
+    */
+    const auto bin = from_hex(
+        "0061736D0100000001060160017F017F030201000A160114002000047F417F41010F05417E417F41020F0B0B00"
+        "0D046E616D650206010001000178");
+
+    const auto module = parse(bin);
+
+    for (const auto param : {0u, 1u})
+    {
+        constexpr uint64_t expected_results[]{
+            2,  // else branch.
+            1,  // if branch.
+        };
+
+        const auto [trap, ret] = execute(module, 0, {param});
+        ASSERT_FALSE(trap);
+        ASSERT_EQ(ret.size(), 1);
+        EXPECT_EQ(ret[0], expected_results[param]);
+    }
+}
+
+TEST(execute_control, if_br_from_branch)
+{
+    /*
+    (func  (param $x i32) (result i32)
+      get_local $x
+      (if (result i32)
+        (then
+          i32.const -1
+          i32.const 21
+          br 0
+          i32.const 5
+        )
+        (else
+          i32.const -2
+          i32.const -1
+          i32.const 2
+          br 0
+          i32.const 5
+        )
+      )
+    )
+    */
+    const auto bin = from_hex(
+        "0061736D0100000001060160017F017F030201000A1C011A002000047F417F41150C00410505417E417F41020C"
+        "00410"
+        "50B0B000D046E616D650206010001000178");
+
+    const auto module = parse(bin);
+
+    for (const auto param : {0u, 1u})
+    {
+        constexpr uint64_t expected_results[]{
+            2,   // else branch.
+            21,  // if branch.
+        };
+
+        const auto [trap, ret] = execute(module, 0, {param});
+        ASSERT_FALSE(trap);
+        ASSERT_EQ(ret.size(), 1);
+        EXPECT_EQ(ret[0], expected_results[param]);
+    }
+}

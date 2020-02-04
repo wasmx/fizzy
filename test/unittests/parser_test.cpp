@@ -839,3 +839,15 @@ TEST(parser, instr_br_table_empty_vector)
         "00000000"_bytes;
     EXPECT_EQ(code.immediates.substr(br_table_imm_offset, expected_br_imm.size()), expected_br_imm);
 }
+
+TEST(parser, unexpected_else)
+{
+    // (else)
+    const auto code1_bin = "050b0b"_bytes;
+    EXPECT_THROW_MESSAGE(parse_expr(code1_bin.data()), parser_error, "unexpected else instruction");
+
+    // (block (else))
+    const auto code2_bin = "0240050b0b0b"_bytes;
+    EXPECT_THROW_MESSAGE(parse_expr(code2_bin.data()), parser_error,
+        "unexpected else instruction (if instruction missing)");
+}

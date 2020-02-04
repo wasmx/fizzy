@@ -29,8 +29,8 @@ parser_result<Code> parse_expr(const uint8_t* pos)
 {
     Code code;
 
-    // The stack of labels allowing to distinguish between block and label instructions.
-    // For a block instruction the value is the block's immediate offset.
+    // The stack of labels allowing to distinguish between block/if/else and label instructions.
+    // For a block/if/else instruction the value is the block/if/else's immediate offset.
     Stack<LabelPosition> label_positions;
 
     bool continue_parsing = true;
@@ -117,7 +117,7 @@ parser_result<Code> parse_expr(const uint8_t* pos)
             if (!label_positions.empty())
             {
                 const auto label_pos = label_positions.pop();
-                if (label_pos.instruction == Instr::block)  // If end of block instruction.
+                if (label_pos.instruction != Instr::loop)  // If end of block/if/else instruction.
                 {
                     const auto target_pc = static_cast<uint32_t>(code.instructions.size() + 1);
                     const auto target_imm = static_cast<uint32_t>(code.immediates.size());
@@ -167,6 +167,56 @@ parser_result<Code> parse_expr(const uint8_t* pos)
             if (type != BlockTypeEmpty)
                 throw parser_error{"loop can only have type arity 0"};
             label_positions.push_back({Instr::loop, 0});  // Mark as not interested.
+            break;
+        }
+
+        case Instr::if_:
+        {
+            const uint8_t type{*pos};
+            uint8_t arity;
+            if (type == BlockTypeEmpty)
+            {
+                arity = 0;
+                ++pos;
+            }
+            else
+            {
+                // Will throw in case of incorrect type.
+                std::tie(std::ignore, pos) = parser<ValType>{}(pos);
+                arity = 1;
+            }
+
+            code.immediates.push_back(arity);
+
+            label_positions.push_back({Instr::if_, code.immediates.size()});
+
+            // Placeholders for immediate values, filled at the matching end and else instructions.
+            push(code.immediates, uint32_t{0});  // Diff to the end instruction.
+            push(code.immediates, uint32_t{0});  // Diff for the immediates
+
+            push(code.immediates, uint32_t{0});  // Diff to the else instruction
+            push(code.immediates, uint32_t{0});  // Diff for the immediates.
+
+            break;
+        }
+
+        case Instr::else_:
+        {
+            if (label_positions.empty())
+                throw parser_error{"unexpected else instruction"};
+            const auto label_pos = label_positions.peek();
+            if (label_pos.instruction != Instr::if_)
+                throw parser_error{"unexpected else instruction (if instruction missing)"};
+            const auto target_pc = static_cast<uint32_t>(code.instructions.size() + 1);
+            const auto target_imm = static_cast<uint32_t>(code.immediates.size());
+
+            // Set the imm values for else instruction.
+            auto* block_imm = code.immediates.data() + label_pos.immediates_offset +
+                              sizeof(target_pc) + sizeof(target_imm);
+            store(block_imm, target_pc);
+            block_imm += sizeof(target_pc);
+            store(block_imm, target_imm);
+
             break;
         }
 
