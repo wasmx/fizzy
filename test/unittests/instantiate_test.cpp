@@ -263,6 +263,19 @@ TEST(instantiate, element_section_offset_from_mutable_global)
         "Constant expression can use global_get only for const globals.");
 }
 
+TEST(instantiate, element_section_offset_too_large)
+{
+    Module module;
+    module.tablesec.emplace_back(Table{{3, std::nullopt}});
+    module.elementsec.emplace_back(
+        Element{{ConstantExpression::Kind::Constant, {1}}, {0xaa, 0xff}});
+    module.elementsec.emplace_back(
+        Element{{ConstantExpression::Kind::Constant, {2}}, {0x55, 0x55}});
+
+    EXPECT_THROW_MESSAGE(
+        instantiate(module), instantiate_error, "Element segment is out of table bounds");
+}
+
 TEST(instantiate, data_section)
 {
     Module module;
@@ -316,6 +329,17 @@ TEST(instantiate, data_section_offset_from_mutable_global)
 
     EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
         "Constant expression can use global_get only for const globals.");
+}
+
+TEST(instantiate, data_section_offset_too_large)
+{
+    Module module;
+    module.memorysec.emplace_back(Memory{{0, 1}});
+    // Memory contents: 0, 0xaa, 0xff, 0, ...
+    module.datasec.emplace_back(Data{{ConstantExpression::Kind::Constant, {1}}, {0xaa, 0xff}});
+
+    EXPECT_THROW_MESSAGE(
+        instantiate(module), instantiate_error, "Data segment is out of memory bounds");
 }
 
 TEST(instantiate, globals_single)
