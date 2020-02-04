@@ -205,6 +205,8 @@ parser_result<Code> parse_expr(const uint8_t* pos)
             if (label_positions.empty())
                 throw parser_error{"unexpected else instruction"};
             const auto label_pos = label_positions.peek();
+            if (label_pos.instruction != Instr::if_)
+                throw parser_error{"unexpected else instruction (if instruction missing)"};
             const auto target_pc = static_cast<uint32_t>(code.instructions.size() + 1);
             const auto target_imm = static_cast<uint32_t>(code.immediates.size());
 
