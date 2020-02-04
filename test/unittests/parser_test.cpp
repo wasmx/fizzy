@@ -797,6 +797,30 @@ TEST(parser, code_section_with_memory_grow)
     EXPECT_THROW_MESSAGE(parse(bin_invalid), parser_error, "invalid memory index encountered");
 }
 
+TEST(parser, code_section_unsupported_f32_const)
+{
+    const auto func_bin =
+        "00"  // vec(locals)
+        "440b"_bytes;
+    const auto code_bin = add_size_prefix(func_bin);
+    const auto section_contents = make_vec({code_bin});
+    const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
+
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "invalid instruction 68");
+}
+
+TEST(parser, code_section_invalid_instruction)
+{
+    const auto func_bin =
+        "00"  // vec(locals)
+        "ff0b"_bytes;
+    const auto code_bin = add_size_prefix(func_bin);
+    const auto section_contents = make_vec({code_bin});
+    const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
+
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "invalid instruction 255");
+}
+
 TEST(parser, data_section)
 {
     const auto section_contents =
