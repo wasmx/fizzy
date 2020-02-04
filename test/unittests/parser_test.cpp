@@ -45,8 +45,12 @@ TEST(parser, valtype)
     EXPECT_EQ(std::get<0>(parse<ValType>(&b)), ValType::i64);
     b = 0x7f;
     EXPECT_EQ(std::get<0>(parse<ValType>(&b)), ValType::i32);
+    b = 0x7c;
+    EXPECT_THROW_MESSAGE(parse<ValType>(&b), parser_error, "unsupported valtype (floating point)");
     b = 0x7d;
-    EXPECT_THROW(std::get<0>(parse<ValType>(&b)), parser_error);
+    EXPECT_THROW_MESSAGE(parse<ValType>(&b), parser_error, "unsupported valtype (floating point)");
+    b = 0x7a;
+    EXPECT_THROW_MESSAGE(parse<ValType>(&b), parser_error, "invalid valtype 122");
 }
 
 TEST(parser, valtype_vec)

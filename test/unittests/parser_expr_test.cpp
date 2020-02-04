@@ -18,7 +18,8 @@ TEST(parser, instr_loop)
     EXPECT_EQ(code2.immediates.size(), 0);
 
     const auto loop_f32_empty = "037d0b0b"_bytes;
-    EXPECT_THROW_MESSAGE(parse_expr(loop_f32_empty.data()), parser_error, "invalid valtype 125");
+    EXPECT_THROW_MESSAGE(
+        parse_expr(loop_f32_empty.data()), parser_error, "unsupported valtype (floating point)");
 }
 
 TEST(parser, DISABLED_instr_loop_input_buffer_overflow)
@@ -51,7 +52,8 @@ TEST(parser, instr_block)
         "09000000"_bytes);
 
     const auto block_f64_empty = "027c0b0b"_bytes;
-    EXPECT_THROW_MESSAGE(parse_expr(block_f64_empty.data()), parser_error, "invalid valtype 124");
+    EXPECT_THROW_MESSAGE(
+        parse_expr(block_f64_empty.data()), parser_error, "unsupported valtype (floating point)");
 }
 
 TEST(parser, DISABLED_instr_block_input_buffer_overflow)

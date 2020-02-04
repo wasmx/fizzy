@@ -53,6 +53,9 @@ inline parser_result<ValType> parse(const uint8_t* pos)
         return {ValType::i32, pos};
     case 0x7E:
         return {ValType::i64, pos};
+    case 0x7D:  // f32
+    case 0x7C:  // f64
+        throw parser_error{"unsupported valtype (floating point)"};
     default:
         throw parser_error{"invalid valtype " + std::to_string(b)};
     }
