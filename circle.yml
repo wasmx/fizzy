@@ -90,6 +90,10 @@ jobs:
     steps:
       - build
       - test
+      - persist_to_workspace:
+          root: ~/build
+          paths:
+            - bin/fizzy-bench
 
   release-macos:
     executor: macos
@@ -163,6 +167,37 @@ jobs:
       - build
       - test
 
+  benchmark:
+    machine:
+      image: ubuntu-1604:201903-01
+    environment:
+      BUILD_TYPE: Release
+    steps:
+      - run:
+          name: "Install standard libraries"
+          working_directory: "~"
+          command: |
+            export DEBIAN_FRONTEND=noninteractive
+
+            # Remove all default sources
+            sudo rm /etc/apt/sources.list.d/*
+            sudo rm /etc/apt/sources.list
+
+            sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+            sudo apt-get -q update
+            sudo apt-get -qy install libstdc++6
+
+            wget -q http://archive.ubuntu.com/ubuntu/pool/main/g/glibc/libc6_2.29-0ubuntu2_amd64.deb
+            sudo dpkg -i --force-all libc6_2.29-0ubuntu2_amd64.deb
+
+      - attach_workspace:
+          at: "~"
+      - checkout
+      - run:
+          name: "Benchmark"
+          command: |
+            ~/bin/fizzy-bench test/benchmarks --benchmark_color=true --benchmark_repetitions=7 --benchmark_min_time=1
+
 workflows:
   version: 2
   fizzy:
@@ -173,3 +208,6 @@ workflows:
       - clang-latest-coverage
       - clang-latest-asan
       - clang-latest-ubsan-tidy
+      - benchmark:
+          requires:
+            - release-linux
