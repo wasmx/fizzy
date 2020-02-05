@@ -36,7 +36,20 @@ void run_tests_from_file(const fs::path& path)
             const auto wasm_binary = fizzy::bytes(
                 std::istreambuf_iterator<char>{wasm_file}, std::istreambuf_iterator<char>{});
 
-            instance = fizzy::instantiate(fizzy::parse(wasm_binary));
+            try
+            {
+                instance = fizzy::instantiate(fizzy::parse(wasm_binary));
+            }
+            catch (const fizzy::parser_error& ex)
+            {
+                std::cout << "FAILED Parsing failed with error: " << ex.what() << "\n";
+                continue;
+            }
+            catch (const fizzy::instantiate_error& ex)
+            {
+                std::cout << "FAILED Instantiation failed with error: " << ex.what() << "\n";
+                continue;
+            }
         }
         else if (type == "assert_return")
         {
