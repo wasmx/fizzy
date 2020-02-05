@@ -142,6 +142,27 @@ public:
 
                 std::cout << "PASSED\n";
             }
+            else if (type == "assert_invalid")
+            {
+                const auto filename = cmd.at("filename").get<std::string>();
+                std::ifstream wasm_file{fs::path{path}.replace_filename(filename)};
+
+                const auto wasm_binary = fizzy::bytes(
+                    std::istreambuf_iterator<char>{wasm_file}, std::istreambuf_iterator<char>{});
+
+                try
+                {
+                    fizzy::parse(wasm_binary);
+                }
+                catch (fizzy::parser_error const&)
+                {
+                    std::cout << "PASSED\n";
+                    continue;
+                }
+
+                std::cout << "FAILED Invalid module parsed successfully. Expected error: "
+                          << cmd.at("text").get<std::string>() << "\n";
+            }
             else
                 std::cout << "SKIPPED Unsupported command type\n";
         }
