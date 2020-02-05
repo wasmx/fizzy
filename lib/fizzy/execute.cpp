@@ -258,15 +258,17 @@ inline T shift_right(T lhs, T rhs) noexcept
 template <typename T>
 inline T rotl(T lhs, T rhs) noexcept
 {
-    auto const k = rhs % std::numeric_limits<T>::digits;
-    return (lhs << k) | (lhs >> (std::numeric_limits<T>::digits - k));
+    constexpr T num_bits{sizeof(T) * 8};
+    const auto k = rhs % num_bits;
+    return (lhs << k) | (lhs >> (num_bits - k));
 }
 
 template <typename T>
 inline T rotr(T lhs, T rhs) noexcept
 {
-    auto const k = rhs % std::numeric_limits<T>::digits;
-    return (lhs >> k) | (lhs << (std::numeric_limits<T>::digits - k));
+    constexpr T num_bits{sizeof(T) * 8};
+    const auto k = rhs % num_bits;
+    return (lhs >> k) | (lhs << (num_bits - k));
 }
 
 inline uint32_t clz32(uint32_t value) noexcept
