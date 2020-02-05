@@ -43,4 +43,6 @@ public:
     /// Requires instantiate().
     virtual Result execute(FuncIdx func_idx, const std::vector<uint64_t>& args) = 0;
 };
+
+std::unique_ptr<WasmEngine> create_fizzy_engine();
 }  // namespace fizzy::test

@@ -4,6 +4,7 @@ add_library(fizzy::test-utils ALIAS test-utils)
 target_sources(
     test-utils PRIVATE
     asserts.hpp
+    fizzy_engine.cpp
     hex.cpp
     hex.hpp
     wasm_engine.hpp
