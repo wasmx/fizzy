@@ -298,18 +298,45 @@ Module parse(bytes_view input)
         }
 
         if (it != expected_end_pos)
+        {
             throw parser_error{"incorrect section " + std::to_string(static_cast<int>(id)) +
                                " size, difference: " + std::to_string(it - expected_end_pos)};
-
-        if (module.tablesec.size() > 1)
-            throw parser_error{"too many table sections (at most one is allowed)"};
-
-        if (module.memorysec.size() > 1)
-            throw parser_error{"too many memory sections (at most one is allowed)"};
-
-        if (!module.elementsec.empty() && module.tablesec.empty())
-            throw parser_error("element section encountered without a table section");
+        }
     }
+
+    // Validation checks
+    if (module.tablesec.size() > 1)
+        throw parser_error{"too many table sections (at most one is allowed)"};
+
+    if (module.memorysec.size() > 1)
+        throw parser_error{"too many memory sections (at most one is allowed)"};
+
+    const auto imported_mem_count = std::count_if(module.importsec.begin(), module.importsec.end(),
+        [](const auto& import) noexcept { return import.kind == ExternalKind::Memory; });
+
+    if (imported_mem_count > 1)
+        throw parser_error{"too many imported memories (at most one is allowed)"};
+
+    if (!module.memorysec.empty() && imported_mem_count > 0)
+    {
+        throw parser_error{
+            "both module memory and imported memory are defined (at most one of them is allowed)"};
+    }
+
+    const auto imported_tbl_count = std::count_if(module.importsec.begin(), module.importsec.end(),
+        [](const auto& import) noexcept { return import.kind == ExternalKind::Table; });
+
+    if (imported_tbl_count > 1)
+        throw parser_error{"too many imported tables (at most one is allowed)"};
+
+    if (!module.tablesec.empty() && imported_tbl_count > 0)
+    {
+        throw parser_error{
+            "both module table and imported table are defined (at most one of them is allowed)"};
+    }
+
+    if (!module.elementsec.empty() && module.tablesec.empty() && imported_tbl_count == 0)
+        throw parser_error("element section encountered without a table section");
 
     const auto imported_func_count = std::count_if(module.importsec.begin(), module.importsec.end(),
         [](const auto& import) noexcept { return import.kind == ExternalKind::Function; });

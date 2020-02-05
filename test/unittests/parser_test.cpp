@@ -269,6 +269,52 @@ TEST(parser, import_multiple)
     EXPECT_EQ(*module.importsec[3].desc.table.limits.max, 0x42);
 }
 
+TEST(parser, import_memories_multiple)
+{
+    const auto section_contents =
+        make_vec({bytes{0x02, 'm', '1', 0x03, 'a', 'b', 'c', 0x02, 0x00, 0x7f},
+            bytes{0x02, 'm', '2', 0x03, 'd', 'e', 'f', 0x02, 0x00, 0x7f}});
+    const auto bin = bytes{wasm_prefix} + make_section(2, section_contents);
+
+    EXPECT_THROW_MESSAGE(
+        parse(bin), parser_error, "too many imported memories (at most one is allowed)");
+}
+
+TEST(parser, memory_and_imported_memory)
+{
+    // (import "js" "mem"(memory 1))
+    const auto import_section = "020b01026a73036d656d0200010008046e616d65020100"_bytes;
+    // (memory 1)
+    const auto memory_section = "05030100010008046e616d65020100"_bytes;
+    const auto bin = bytes{wasm_prefix} + import_section + memory_section;
+
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error,
+        "both module memory and imported memory are defined (at most one of them is allowed)");
+}
+
+TEST(parser, import_tables_multiple)
+{
+    const auto section_contents =
+        make_vec({bytes{0x02, 'm', '1', 0x03, 'a', 'b', 'c', 0x01, 0x70, 0x00, 0x01},
+            bytes{0x02, 'm', '2', 0x03, 'd', 'e', 'f', 0x01, 0x70, 0x01, 0x01, 0x03}});
+    const auto bin = bytes{wasm_prefix} + make_section(2, section_contents);
+
+    EXPECT_THROW_MESSAGE(
+        parse(bin), parser_error, "too many imported tables (at most one is allowed)");
+}
+
+TEST(parser, table_and_imported_table)
+{
+    // (import "js" "t" (table 1 anyfunc))
+    const auto import_section = "020a01026a730174017000010008046e616d65020100"_bytes;
+    // (table 2 anyfunc)
+    const auto table_section = "0404017000020008046e616d65020100"_bytes;
+    const auto bin = bytes{wasm_prefix} + import_section + table_section;
+
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error,
+        "both module table and imported table are defined (at most one of them is allowed)");
+}
+
 TEST(parser, function_section_with_single_function)
 {
     const auto section_contents = "0100"_bytes;
