@@ -12,6 +12,12 @@ namespace
 {
 constexpr auto JsonExtension = ".json";
 
+template <typename T>
+uint64_t json_to_value(const json& v)
+{
+    return static_cast<uint64_t>(static_cast<T>(std::stoull(v.get<std::string>())));
+}
+
 void run_tests_from_file(const fs::path& path)
 {
     std::cout << "Running tests from " << path << "\n";
@@ -71,8 +77,14 @@ void run_tests_from_file(const fs::path& path)
                     const auto arg_type = arg.at("type").get<std::string>();
                     uint64_t arg_value;
                     if (arg_type == "i32")
-                        arg_value = static_cast<uint64_t>(
-                            static_cast<int32_t>(std::stoll(arg.at("value").get<std::string>())));
+                        arg_value = json_to_value<int32_t>(arg.at("value"));
+                    else if (arg_type == "i64")
+                        arg_value = json_to_value<int64_t>(arg.at("value"));
+                    else
+                    {
+                        std::cout << "SKIPPED Unsupported argument type '" << arg_type << "'.\n";
+                        continue;
+                    }
                     args.push_back(arg_value);
                 }
 
@@ -102,13 +114,17 @@ void run_tests_from_file(const fs::path& path)
                 uint64_t actual_value;
                 if (expected_type == "i32")
                 {
-                    expected_value = static_cast<uint64_t>(static_cast<int32_t>(
-                        std::stoll(expected.at(0).at("value").get<std::string>())));
+                    expected_value = json_to_value<int32_t>(expected.at(0).at("value"));
                     actual_value = static_cast<uint64_t>(static_cast<int32_t>(result.stack[0]));
+                }
+                else if (expected_type == "i64")
+                {
+                    expected_value = json_to_value<int64_t>(expected.at(0).at("value"));
+                    actual_value = result.stack[0];
                 }
                 else
                 {
-                    std::cout << "SKIPPED Unsupported expected type.\n";
+                    std::cout << "SKIPPED Unsupported expected type '" << expected_type << "'.\n";
                     continue;
                 }
 
