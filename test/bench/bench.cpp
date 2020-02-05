@@ -1,7 +1,6 @@
-#include "execute.hpp"
-#include "parser.hpp"
 #include <benchmark/benchmark.h>
 #include <test/utils/hex.hpp>
+#include <test/utils/wasm_engine.hpp>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -16,6 +15,18 @@ namespace
 constexpr auto WasmExtension = ".wasm";
 constexpr auto InputsExtension = ".inputs";
 
+using EngineCreateFn = decltype(&fizzy::test::create_fizzy_engine);
+
+struct EngineRegistryEntry
+{
+    std::string_view name;
+    EngineCreateFn create_fn;
+};
+
+constexpr EngineRegistryEntry engine_registry[] = {
+    {"fizzy", fizzy::test::create_fizzy_engine},
+};
+
 inline std::string strip_space(const std::string& input)
 {
     std::string result;
@@ -24,14 +35,16 @@ inline std::string strip_space(const std::string& input)
     return result;
 }
 
-void benchmark_parse(benchmark::State& state, const fizzy::bytes& wasm_binary)
+void benchmark_parse(
+    benchmark::State& state, EngineCreateFn create_fn, const fizzy::bytes& wasm_binary)
 {
+    const auto engine = create_fn();
+
     const auto input_size = wasm_binary.size();
     auto num_bytes_parsed = uint64_t{0};
     for (auto _ : state)  // NOLINT(clang-analyzer-deadcode.DeadStores)
     {
-        const auto module = fizzy::parse(wasm_binary);
-        benchmark::DoNotOptimize(module);
+        engine->parse(wasm_binary);
         num_bytes_parsed += input_size;
     }
     state.counters["size"] = benchmark::Counter(static_cast<double>(input_size));
@@ -39,13 +52,14 @@ void benchmark_parse(benchmark::State& state, const fizzy::bytes& wasm_binary)
         benchmark::Counter(static_cast<double>(num_bytes_parsed), benchmark::Counter::kIsRate);
 }
 
-void benchmark_instantiate(benchmark::State& state, const fizzy::bytes& wasm_binary)
+void benchmark_instantiate(
+    benchmark::State& state, EngineCreateFn create_fn, const fizzy::bytes& wasm_binary)
 {
-    const auto module = fizzy::parse(wasm_binary);
+    const auto engine = create_fn();
+    engine->parse(wasm_binary);
     for (auto _ : state)  // NOLINT(clang-analyzer-deadcode.DeadStores)
     {
-        auto instance = fizzy::instantiate(module);
-        benchmark::DoNotOptimize(instance);
+        engine->instantiate();
     }
 }
 
@@ -59,54 +73,65 @@ struct ExecutionBenchmarkCase
     fizzy::bytes expected_memory;
 };
 
-void benchmark_execute(benchmark::State& state, const ExecutionBenchmarkCase& benchmark_case)
+void benchmark_execute(
+    benchmark::State& state, EngineCreateFn create_fn, const ExecutionBenchmarkCase& benchmark_case)
 {
-    const auto module = fizzy::parse(*benchmark_case.wasm_binary);
-    const auto func_idx = fizzy::find_exported_function(module, benchmark_case.func_name);
+    const auto engine = create_fn();
+    engine->parse(*benchmark_case.wasm_binary);
+    const auto func_idx = engine->find_function(benchmark_case.func_name);
     if (!func_idx)
     {
         return state.SkipWithError(
             ("Function \"" + benchmark_case.func_name + "\" not found").c_str());
     }
 
-    auto instance = fizzy::instantiate(module, {});
+    engine->instantiate();
+
+    auto initial_memory = fizzy::bytes{engine->get_memory()};
 
     // TODO: Check if memory is exported or imported.
-    if (benchmark_case.memory.size() > instance.memory.size())
+    if (benchmark_case.memory.size() > initial_memory.size())
         return state.SkipWithError("Cannot init memory");
+
     std::copy(std::begin(benchmark_case.memory), std::end(benchmark_case.memory),
-        std::begin(instance.memory));
-    const auto initial_memory = instance.memory;
+        std::begin(initial_memory));
+    engine->set_memory(initial_memory);
 
     {  // Execute once and check results against expectations.
-        const auto result = fizzy::execute(instance, *func_idx, benchmark_case.func_args);
+        const auto result = engine->execute(*func_idx, benchmark_case.func_args);
         if (result.trapped)
             return state.SkipWithError("Trapped");
 
         if (benchmark_case.expected_result)
         {
-            if (result.stack.size() != 1)
-                return state.SkipWithError("Incorrect number of results");
-            else if (result.stack[0] != *benchmark_case.expected_result)
+            if (!result.value)
+                return state.SkipWithError("Missing result value");
+            else if (*result.value != *benchmark_case.expected_result)
                 return state.SkipWithError("Incorrect result");
         }
-        else if (!result.stack.empty())
+        else if (result.value)
             return state.SkipWithError("Unexpected result");
 
-        if (instance.memory.size() < benchmark_case.expected_memory.size())
-            return state.SkipWithError("Result memory is shorted than expected");
+        const auto memory = engine->get_memory();
+        if (memory.size() < benchmark_case.expected_memory.size())
+            return state.SkipWithError("Result memory is shorter than expected");
 
         // Compare _beginning_ segment of the memory with expected.
         // Specifying expected full memory pages is impractical.
         if (!std::equal(std::begin(benchmark_case.expected_memory),
-                std::end(benchmark_case.expected_memory), std::begin(instance.memory)))
+                std::end(benchmark_case.expected_memory), std::begin(memory)))
             return state.SkipWithError("Incorrect result memory");
     }
 
     for (auto _ : state)  // NOLINT(clang-analyzer-deadcode.DeadStores)
     {
-        instance.memory = initial_memory;  // Restore initial memory.
-        const auto result = fizzy::execute(instance, *func_idx, benchmark_case.func_args);
+        // Reset instance to its initial state.
+        // At this point we only reset memory, so this works only while globals
+        // and imports are not used. If this become a problem doing full
+        // instantiate() should be considered.
+        engine->set_memory(initial_memory);
+
+        const auto result = engine->execute(*func_idx, benchmark_case.func_args);
         benchmark::DoNotOptimize(result);
     }
 }
@@ -132,12 +157,20 @@ void load_benchmark(const fs::path& path, const std::string& name_prefix)
     const auto wasm_binary = std::make_shared<const fizzy::bytes>(
         std::istreambuf_iterator<char>{wasm_file}, std::istreambuf_iterator<char>{});
 
-    register_benchmark("parse/" + base_name,
-        [wasm_binary](benchmark::State& state) { benchmark_parse(state, *wasm_binary); });
+    for (const auto& entry : engine_registry)  // Register parse benchmarks.
+    {
+        register_benchmark(std::string{entry.name} + "/parse/" + base_name,
+            [create_fn = entry.create_fn, wasm_binary](
+                benchmark::State& state) { benchmark_parse(state, create_fn, *wasm_binary); });
+    }
 
-    register_benchmark("instantiate/" + base_name,
-        [wasm_binary](benchmark::State& state) { benchmark_instantiate(state, *wasm_binary); });
-
+    for (const auto& entry : engine_registry)  // Register instantiate benchmark.
+    {
+        register_benchmark(std::string{entry.name} + "/instantiate/" + base_name,
+            [create_fn = entry.create_fn, wasm_binary](benchmark::State& state) {
+                benchmark_instantiate(state, create_fn, *wasm_binary);
+            });
+    }
     enum class InputsReadingState
     {
         Name,
@@ -154,7 +187,7 @@ void load_benchmark(const fs::path& path, const std::string& name_prefix)
         auto st = InputsReadingState::Name;
         auto inputs_file = std::ifstream{inputs_path};
         std::string input_name;
-        ExecutionBenchmarkCase benchmark_case;
+        std::shared_ptr<ExecutionBenchmarkCase> benchmark_case;
         for (std::string l; std::getline(inputs_file, l);)
         {
             switch (st)
@@ -163,12 +196,13 @@ void load_benchmark(const fs::path& path, const std::string& name_prefix)
                 if (l.empty())
                     continue;
                 input_name = std::move(l);
-                benchmark_case.wasm_binary = wasm_binary;
+                benchmark_case = std::make_shared<ExecutionBenchmarkCase>();
+                benchmark_case->wasm_binary = wasm_binary;
                 st = InputsReadingState::FuncName;
                 break;
 
             case InputsReadingState::FuncName:
-                benchmark_case.func_name = std::move(l);
+                benchmark_case->func_name = std::move(l);
                 st = InputsReadingState::FuncArguments;
                 break;
 
@@ -176,30 +210,35 @@ void load_benchmark(const fs::path& path, const std::string& name_prefix)
             {
                 std::istringstream iss{l};
                 std::copy(std::istream_iterator<uint64_t>{iss}, std::istream_iterator<uint64_t>{},
-                    std::back_inserter(benchmark_case.func_args));
+                    std::back_inserter(benchmark_case->func_args));
                 st = InputsReadingState::Memory;
                 break;
             }
 
             case InputsReadingState::Memory:
-                benchmark_case.memory = fizzy::from_hex(strip_space(l));
+                benchmark_case->memory = fizzy::from_hex(strip_space(l));
                 st = InputsReadingState::ExpectedResult;
                 break;
 
             case InputsReadingState::ExpectedResult:
                 if (!l.empty())
-                    benchmark_case.expected_result = std::stoull(l);
+                    benchmark_case->expected_result = std::stoull(l);
                 st = InputsReadingState::ExpectedMemory;
                 break;
 
             case InputsReadingState::ExpectedMemory:
-                benchmark_case.expected_memory = fizzy::from_hex(strip_space(l));
+                benchmark_case->expected_memory = fizzy::from_hex(strip_space(l));
 
-                register_benchmark("execute/" + base_name + '/' + input_name,
-                    [benchmark_case = std::move(benchmark_case)](
-                        benchmark::State& state) { benchmark_execute(state, benchmark_case); });
-                benchmark_case = {};
+                for (const auto& entry : engine_registry)
+                {
+                    register_benchmark(
+                        std::string{entry.name} + "/execute/" + base_name + '/' + input_name,
+                        [create_fn = entry.create_fn, benchmark_case](benchmark::State& state) {
+                            benchmark_execute(state, create_fn, *benchmark_case);
+                        });
+                }
 
+                benchmark_case = nullptr;
                 st = InputsReadingState::Name;
                 break;
             }
