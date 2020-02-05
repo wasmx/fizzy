@@ -1,6 +1,7 @@
 #include "execute.hpp"
 #include "parser.hpp"
 #include <gtest/gtest.h>
+#include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
 
 using namespace fizzy;
@@ -1513,29 +1514,17 @@ TEST(execute, i32_xor)
 
 TEST(execute, i32_shl)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_shl, 21, 1);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shl, 21, 1), 42);
 }
 
 TEST(execute, i32_shr_s)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_shr_s, uint64_t(-84), 1);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], uint64_t(-42));
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, uint64_t(-84), 1), uint64_t(-42));
 }
 
 TEST(execute, i32_shr_u)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_shr_u, 84, 1);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_u, 84, 1), 42);
 }
 
 TEST(execute, i32_rotl)
@@ -1783,29 +1772,17 @@ TEST(execute, i64_xor)
 
 TEST(execute, i64_shl)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_shl, 21, 1);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    EXPECT_RESULT(execute_binary_operation(Instr::i64_shl, 21, 1), 42);
 }
 
 TEST(execute, i64_shr_s)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_shr_s, uint64_t(-84), 1);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], uint64_t(-42));
+    EXPECT_RESULT(execute_binary_operation(Instr::i64_shr_s, uint64_t(-84), 1), uint64_t(-42));
 }
 
 TEST(execute, i64_shr_u)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_shr_u, 84, 1);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    EXPECT_RESULT(execute_binary_operation(Instr::i64_shr_u, 84, 1), 42);
 }
 
 TEST(execute, i64_rotl)
