@@ -2,6 +2,15 @@
 
 #include <gtest/gtest.h>
 
+#define EXPECT_RESULT(result, expected)    \
+    do                                     \
+    {                                      \
+        const auto r = (result);           \
+        ASSERT_FALSE(r.trapped);           \
+        ASSERT_EQ(r.stack.size(), 1);      \
+        EXPECT_EQ(r.stack[0], (expected)); \
+    } while (false)
+
 #define EXPECT_THROW_MESSAGE(stmt, ex_type, expected)                                        \
     try                                                                                      \
     {                                                                                        \

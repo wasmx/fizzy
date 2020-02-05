@@ -1,6 +1,7 @@
 #include "execute.hpp"
 #include "parser.hpp"
 #include <gtest/gtest.h>
+#include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
 
 using namespace fizzy;
@@ -1513,29 +1514,43 @@ TEST(execute, i32_xor)
 
 TEST(execute, i32_shl)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_shl, 21, 1);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shl, 21, 1), 42);
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shl, 0xffffffff, 0), 0xffffffff);
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shl, 0xffffffff, 1), 0xfffffffe);
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shl, 0xffffffff, 31), 0x80000000);
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shl, 0xffffffff, 32), 0xffffffff);
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shl, 0xffffffff, 33), 0xfffffffe);
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shl, 0xffffffff, 63), 0x80000000);
 }
 
 TEST(execute, i32_shr_s)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_shr_s, uint64_t(-84), 1);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], uint64_t(-42));
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, uint64_t(-84), 1), uint64_t(-42));
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 0), int32_t(0xffffffff));
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 1), int32_t(0xffffffff));
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 31), int32_t(0xffffffff));
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 32), int32_t(0xffffffff));
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 33), int32_t(0xffffffff));
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 63), int32_t(0xffffffff));
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 0), int32_t(0x7fffffff));
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 1), int32_t(0x3fffffff));
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 30), int32_t(1));
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 31), int32_t(0));
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 32), int32_t(0x7fffffff));
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 33), int32_t(0x3fffffff));
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 62), int32_t(1));
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 63), int32_t(0));
 }
 
 TEST(execute, i32_shr_u)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_shr_u, 84, 1);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_u, 84, 1), 42);
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_u, 0xffffffff, 0), 0xffffffff);
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_u, 0xffffffff, 1), 0x7fffffff);
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_u, 0xffffffff, 31), 1);
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_u, 0xffffffff, 32), 0xffffffff);
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_u, 0xffffffff, 33), 0x7fffffff);
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_u, 0xffffffff, 63), 1);
 }
 
 TEST(execute, i32_rotl)
@@ -1783,29 +1798,46 @@ TEST(execute, i64_xor)
 
 TEST(execute, i64_shl)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_shl, 21, 1);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    constexpr auto ebo = execute_binary_operation;
+    EXPECT_RESULT(ebo(Instr::i64_shl, 21, 1), 42);
+    EXPECT_RESULT(ebo(Instr::i64_shl, 0xffffffffffffffff, 0), 0xffffffffffffffff);
+    EXPECT_RESULT(ebo(Instr::i64_shl, 0xffffffffffffffff, 1), 0xfffffffffffffffe);
+    EXPECT_RESULT(ebo(Instr::i64_shl, 0xffffffffffffffff, 63), 0x8000000000000000);
+    EXPECT_RESULT(ebo(Instr::i64_shl, 0xffffffffffffffff, 64), 0xffffffffffffffff);
+    EXPECT_RESULT(ebo(Instr::i64_shl, 0xffffffffffffffff, 65), 0xfffffffffffffffe);
+    EXPECT_RESULT(ebo(Instr::i64_shl, 0xffffffffffffffff, 127), 0x8000000000000000);
 }
 
 TEST(execute, i64_shr_s)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_shr_s, uint64_t(-84), 1);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], uint64_t(-42));
+    constexpr auto ebo = execute_binary_operation;
+    EXPECT_RESULT(ebo(Instr::i64_shr_s, uint64_t(-84), 1), uint64_t(-42));
+    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0xffffffffffffffff, 0), 0xffffffffffffffff);
+    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0xffffffffffffffff, 1), 0xffffffffffffffff);
+    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0xffffffffffffffff, 63), 0xffffffffffffffff);
+    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0xffffffffffffffff, 64), 0xffffffffffffffff);
+    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0xffffffffffffffff, 65), 0xffffffffffffffff);
+    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0xffffffffffffffff, 127), 0xffffffffffffffff);
+    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 0), 0x7fffffffffffffff);
+    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 1), 0x3fffffffffffffff);
+    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 62), 1);
+    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 63), 0);
+    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 64), 0x7fffffffffffffff);
+    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 65), 0x3fffffffffffffff);
+    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 126), 1);
+    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 127), 0);
 }
 
 TEST(execute, i64_shr_u)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_shr_u, 84, 1);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    constexpr auto ebo = execute_binary_operation;
+    EXPECT_RESULT(ebo(Instr::i64_shr_u, 84, 1), 42);
+    EXPECT_RESULT(ebo(Instr::i64_shr_u, 0xffffffffffffffff, 0), 0xffffffffffffffff);
+    EXPECT_RESULT(ebo(Instr::i64_shr_u, 0xffffffffffffffff, 1), 0x7fffffffffffffff);
+    EXPECT_RESULT(ebo(Instr::i64_shr_u, 0xffffffffffffffff, 63), 1);
+    EXPECT_RESULT(ebo(Instr::i64_shr_u, 0xffffffffffffffff, 64), 0xffffffffffffffff);
+    EXPECT_RESULT(ebo(Instr::i64_shr_u, 0xffffffffffffffff, 65), 0x7fffffffffffffff);
+    EXPECT_RESULT(ebo(Instr::i64_shr_u, 0xffffffffffffffff, 127), 1);
 }
 
 TEST(execute, i64_rotl)

@@ -242,14 +242,16 @@ inline void comparison_op(Stack<uint64_t>& stack, Op<T> op) noexcept
 template <typename T>
 inline T shift_left(T lhs, T rhs) noexcept
 {
-    auto const k = rhs % std::numeric_limits<T>::digits;
+    constexpr T num_bits{sizeof(T) * 8};
+    const auto k = rhs % num_bits;
     return lhs << k;
 }
 
 template <typename T>
 inline T shift_right(T lhs, T rhs) noexcept
 {
-    auto const k = rhs % std::numeric_limits<T>::digits;
+    constexpr T num_bits{sizeof(T) * 8};
+    const auto k = rhs % num_bits;
     return lhs >> k;
 }
 
