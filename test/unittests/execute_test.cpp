@@ -1555,20 +1555,12 @@ TEST(execute, i32_shr_u)
 
 TEST(execute, i32_rotl)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_rotl, 0xff000000, 4);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0xf000000f);
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_rotl, 0xff000000, 4), 0xf000000f);
 }
 
 TEST(execute, i32_rotr)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_rotr, 0x000000ff, 4);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0xf000000f);
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_rotr, 0x000000ff, 4), 0xf000000f);
 }
 
 TEST(execute, i32_wrap_i64)
@@ -1842,20 +1834,14 @@ TEST(execute, i64_shr_u)
 
 TEST(execute, i64_rotl)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_rotl, 0xff00000000000000, 4);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0xf00000000000000f);
+    constexpr auto ebo = execute_binary_operation;
+    EXPECT_RESULT(ebo(Instr::i64_rotl, 0xff00000000000000, 4), 0xf00000000000000f);
 }
 
 TEST(execute, i64_rotr)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_rotr, 0xff, 4);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0xf00000000000000f);
+    constexpr auto ebo = execute_binary_operation;
+    EXPECT_RESULT(ebo(Instr::i64_rotr, 0xff, 4), 0xf00000000000000f);
 }
 
 TEST(execute, start_section)
