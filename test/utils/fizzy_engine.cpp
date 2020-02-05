@@ -11,11 +11,11 @@ class FizzyEngine : public WasmEngine
 
 public:
     void parse(bytes_view input) final;
-    std::optional<uint32_t> find_function(std::string_view name) const final;
+    std::optional<FuncRef> find_function(std::string_view name) const final;
     void instantiate() final;
     bytes_view get_memory() const final;
     void set_memory(bytes_view memory) final;
-    Result execute(FuncIdx func_idx, const std::vector<uint64_t>& args) final;
+    Result execute(FuncRef func_ref, const std::vector<uint64_t>& args) final;
 };
 
 std::unique_ptr<WasmEngine> create_fizzy_engine()
@@ -43,14 +43,16 @@ void FizzyEngine::set_memory(bytes_view memory)
     m_instance.memory = memory;
 }
 
-std::optional<uint32_t> FizzyEngine::find_function(std::string_view name) const
+std::optional<WasmEngine::FuncRef> FizzyEngine::find_function(std::string_view name) const
 {
     return fizzy::find_exported_function(m_instance.module, name);
 }
 
-WasmEngine::Result FizzyEngine::execute(FuncIdx func_idx, const std::vector<uint64_t>& args)
+WasmEngine::Result FizzyEngine::execute(
+    WasmEngine::FuncRef func_ref, const std::vector<uint64_t>& args)
 {
-    const auto [trapped, result_stack] = fizzy::execute(m_instance, func_idx, args);
+    const auto [trapped, result_stack] =
+        fizzy::execute(m_instance, static_cast<uint32_t>(func_ref), args);
     assert(result_stack.size() <= 1);
     return {trapped, !result_stack.empty() ? result_stack.back() : std::optional<uint64_t>{}};
 }

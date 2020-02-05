@@ -78,8 +78,8 @@ void benchmark_execute(
 {
     const auto engine = create_fn();
     engine->parse(*benchmark_case.wasm_binary);
-    const auto func_idx = engine->find_function(benchmark_case.func_name);
-    if (!func_idx)
+    const auto func_ref = engine->find_function(benchmark_case.func_name);
+    if (!func_ref)
     {
         return state.SkipWithError(
             ("Function \"" + benchmark_case.func_name + "\" not found").c_str());
@@ -98,7 +98,7 @@ void benchmark_execute(
     engine->set_memory(initial_memory);
 
     {  // Execute once and check results against expectations.
-        const auto result = engine->execute(*func_idx, benchmark_case.func_args);
+        const auto result = engine->execute(*func_ref, benchmark_case.func_args);
         if (result.trapped)
             return state.SkipWithError("Trapped");
 
@@ -131,7 +131,7 @@ void benchmark_execute(
         // instantiate() should be considered.
         engine->set_memory(initial_memory);
 
-        const auto result = engine->execute(*func_idx, benchmark_case.func_args);
+        const auto result = engine->execute(*func_ref, benchmark_case.func_args);
         benchmark::DoNotOptimize(result);
     }
 }
