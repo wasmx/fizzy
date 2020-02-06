@@ -486,6 +486,9 @@ Instance instantiate(Module module, std::vector<ImportedFunction> imported_funct
         std::memcpy(memory->data() + offset, data.init.data(), data.init.size());
     }
 
+    // FIXME: clang-tidy warns about potential memory leak for moving memory (which is in fact
+    // safe), but also erroneously points this warning to std::move(table)
+    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
     Instance instance = {std::move(module), std::move(memory), memory_max, std::move(table),
         std::move(globals), std::move(imported_functions), std::move(imported_function_types),
         std::move(imported_globals)};
