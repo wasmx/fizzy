@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
 namespace fs = std::filesystem;
 using json = nlohmann::json;
@@ -37,7 +38,7 @@ public:
             if (type == "module")
             {
                 const auto filename = cmd.at("filename").get<std::string>();
-                std::cout << "Instantiating " << filename << "\n";
+                std::cout << "Instantiating " << filename << " ";
 
                 std::ifstream wasm_file{fs::path{path}.replace_filename(filename)};
 
@@ -46,18 +47,20 @@ public:
 
                 try
                 {
+                    // TODO provide dummy imports if needed
                     instance = fizzy::instantiate(fizzy::parse(wasm_binary));
                 }
                 catch (const fizzy::parser_error& ex)
                 {
-                    std::cout << "FAILED Parsing failed with error: " << ex.what() << "\n";
+                    fail(std::string{"Parsing failed with error: "} + ex.what());
                     continue;
                 }
                 catch (const fizzy::instantiate_error& ex)
                 {
-                    std::cout << "FAILED Instantiation failed with error: " << ex.what() << "\n";
+                    fail(std::string{"Instantiation failed with error: "} + ex.what());
                     continue;
                 }
+                pass();
             }
             else if (type == "assert_return")
             {
@@ -71,20 +74,20 @@ public:
 
                     if (result->trapped)
                     {
-                        std::cout << "FAILED Function trapped.\n";
+                        fail("Function trapped.");
                         continue;
                     }
 
                     const auto& expected = cmd.at("expected");
                     if (expected.empty() && !result->stack.empty())
                     {
-                        std::cout << "FAILED Unexpected returned value.\n";
+                        fail("Unexpected returned value.");
                         continue;
                     }
 
                     if (result->stack.size() != 1)
                     {
-                        std::cout << "FAILED More than 1 value returned.\n";
+                        fail("More than 1 value returned.");
                         continue;
                     }
 
@@ -104,31 +107,32 @@ public:
                     }
                     else
                     {
-                        std::cout << "SKIPPED Unsupported expected type '" << expected_type
-                                  << "'.\n";
+                        skip("Unsupported expected type '" + expected_type + "'.");
                         continue;
                     }
 
                     if (expected_value != actual_value)
                     {
-                        std::cout << "FAILED Incorrect returned value. Expected: " << expected_value
-                                  << " (0x" << std::hex << expected_value
-                                  << ") Actual: " << std::dec << actual_value << " (0x" << std::hex
-                                  << actual_value << std::dec << ")\n";
+                        std::stringstream message;
+                        message << "Incorrect returned value. Expected: " << expected_type << " (0x"
+                                << std::hex << expected_value << ") Actual: " << std::dec
+                                << actual_value << " (0x" << std::hex << actual_value << std::dec
+                                << ")";
+                        fail(message.str());
                         continue;
                     }
 
-                    std::cout << "PASSED\n";
+                    pass();
                 }
                 else
-                    std::cout << "SKIPPED Unsupported action type '" << action_type << "'\n";
+                    skip("Unsupported action type '" + action_type + "'");
             }
             else if (type == "assert_trap")
             {
                 const auto& action = cmd.at("action");
                 const auto action_type = action.at("type").get<std::string>();
                 if (action_type != "invoke")
-                    std::cout << "SKIPPED Unsupported action type '" << action_type << "'\n";
+                    skip("Unsupported action type '" + action_type + "'");
 
                 auto result = invoke(action);
                 if (!result.has_value())
@@ -136,11 +140,11 @@ public:
 
                 if (!result->trapped)
                 {
-                    std::cout << "FAILED Function expected to trap, but it didn't.\n";
+                    fail("Function expected to trap, but it didn't.");
                     continue;
                 }
 
-                std::cout << "PASSED\n";
+                pass();
             }
             else if (type == "assert_invalid")
             {
@@ -156,16 +160,20 @@ public:
                 }
                 catch (fizzy::parser_error const&)
                 {
-                    std::cout << "PASSED\n";
+                    pass();
                     continue;
                 }
 
-                std::cout << "FAILED Invalid module parsed successfully. Expected error: "
-                          << cmd.at("text").get<std::string>() << "\n";
+                fail("Invalid module parsed successfully. Expected error: " +
+                     cmd.at("text").get<std::string>());
             }
             else
-                std::cout << "SKIPPED Unsupported command type\n";
+                skip("Unsupported command type");
         }
+
+        std::cout << (passed + failed + skipped) << " tests ran from " << path.filename().string()
+                  << ".\n  PASSED " << passed << ", FAILED " << failed << ", SKIPPED " << skipped
+                  << ".\n\n";
     }
 
 private:
@@ -175,7 +183,7 @@ private:
         const auto func_idx = fizzy::find_exported_function(instance.module, func_name);
         if (!func_idx.has_value())
         {
-            std::cout << "SKIPPED Function '" << func_name << "' not found.\n";
+            skip("Function '" + func_name + "' not found.");
             return std::nullopt;
         }
 
@@ -190,7 +198,7 @@ private:
                 arg_value = json_to_value<int64_t>(arg.at("value"));
             else
             {
-                std::cout << "SKIPPED Unsupported argument type '" << arg_type << "'.\n";
+                skip("Unsupported argument type '" + arg_type + "'.");
                 return std::nullopt;
             }
             args.push_back(arg_value);
@@ -199,7 +207,28 @@ private:
         return fizzy::execute(instance, *func_idx, std::move(args));
     }
 
+    void pass()
+    {
+        ++passed;
+        std::cout << "PASSED\n";
+    }
+
+    void fail(std::string_view message)
+    {
+        ++failed;
+        std::cout << "FAILED " << message << "\n";
+    }
+
+    void skip(std::string_view message)
+    {
+        ++skipped;
+        std::cout << "SKIPPED " << message << "\n";
+    }
+
     fizzy::Instance instance;
+    int passed = 0;
+    int failed = 0;
+    int skipped = 0;
 };
 
 void run_tests_from_dir(const fs::path& path)
