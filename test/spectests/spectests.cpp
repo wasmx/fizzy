@@ -19,6 +19,14 @@ uint64_t json_to_value(const json& v)
     return static_cast<uint64_t>(static_cast<T>(std::stoull(v.get<std::string>())));
 }
 
+fizzy::bytes load_wasm_file(const fs::path& json_file_path, std::string_view filename)
+{
+    std::ifstream wasm_file{fs::path{json_file_path}.replace_filename(filename)};
+
+    return fizzy::bytes(
+        std::istreambuf_iterator<char>{wasm_file}, std::istreambuf_iterator<char>{});
+}
+
 class test_runner
 {
 public:
@@ -40,11 +48,7 @@ public:
                 const auto filename = cmd.at("filename").get<std::string>();
                 log_no_newline("Instantiating " + filename + " ");
 
-                std::ifstream wasm_file{fs::path{path}.replace_filename(filename)};
-
-                const auto wasm_binary = fizzy::bytes(
-                    std::istreambuf_iterator<char>{wasm_file}, std::istreambuf_iterator<char>{});
-
+                const auto wasm_binary = load_wasm_file(path, filename);
                 try
                 {
                     // TODO provide dummy imports if needed
@@ -149,11 +153,7 @@ public:
             else if (type == "assert_invalid")
             {
                 const auto filename = cmd.at("filename").get<std::string>();
-                std::ifstream wasm_file{fs::path{path}.replace_filename(filename)};
-
-                const auto wasm_binary = fizzy::bytes(
-                    std::istreambuf_iterator<char>{wasm_file}, std::istreambuf_iterator<char>{});
-
+                const auto wasm_binary = load_wasm_file(path, filename);
                 try
                 {
                     fizzy::parse(wasm_binary);
