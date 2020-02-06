@@ -10,6 +10,8 @@ namespace fizzy::test
 class WasmEngine
 {
 public:
+    using FuncRef = uintptr_t;
+
     struct Result
     {
         bool trapped = false;
@@ -24,7 +26,7 @@ public:
 
     /// Finds an exported function in the internal instance.
     /// Requires parse().
-    virtual std::optional<FuncIdx> find_function(std::string_view name) const = 0;
+    virtual std::optional<FuncRef> find_function(std::string_view name) const = 0;
 
     /// Instantiates the internal module creating an internal instance.
     /// Consecutive invocations replace the internal instance with a new one.
@@ -41,7 +43,7 @@ public:
 
     /// Executes the function of the given index.
     /// Requires instantiate().
-    virtual Result execute(FuncIdx func_idx, const std::vector<uint64_t>& args) = 0;
+    virtual Result execute(FuncRef func_ref, const std::vector<uint64_t>& args) = 0;
 };
 
 std::unique_ptr<WasmEngine> create_fizzy_engine();
