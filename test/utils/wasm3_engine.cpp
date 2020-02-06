@@ -16,6 +16,7 @@ class Wasm3Engine : public WasmEngine
 {
     IM3Environment m_env{nullptr};
     IM3Runtime m_runtime{nullptr};
+    IM3Module m_module{nullptr};
 
 public:
     Wasm3Engine() : m_env{m3_NewEnvironment()} {}
@@ -50,23 +51,23 @@ bool Wasm3Engine::parse(bytes_view input)
     if (m_runtime == nullptr)
         return false;
 
-    IM3Module module;
-    if (m3_ParseModule(m_env, &module, input.data(), uint32_t(input.size())) != m3Err_none)
+    if (m3_ParseModule(m_env, &m_module, input.data(), uint32_t(input.size())) != m3Err_none)
         return false;
-
-    // Transfers ownership to runtime.
-    if (m3_LoadModule(m_runtime, module) != m3Err_none)
-    {
-        m3_FreeModule(module);
-        return false;
-    }
 
     return true;
 }
 
 bool Wasm3Engine::instantiate()
 {
-    // Already done in parse (with owernship transfer).
+    // Transfers ownership to runtime.
+    if (m3_LoadModule(m_runtime, m_module) != m3Err_none)
+    {
+        m3_FreeModule(m_module);
+        m_module = nullptr;
+        return false;
+    }
+    m_module = nullptr;
+
     return true;
 }
 

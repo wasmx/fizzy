@@ -35,7 +35,7 @@ TEST(wasm_engine, instantiate_error)
     // TODO: parse/instantiate is not properly separated in wabt and wasm3
     // (and wasm3 doesn't care about imports, until execution)
 
-    for (auto engine_create_fn : {create_fizzy_engine})
+    for (auto engine_create_fn : {create_fizzy_engine, create_wasm3_engine})
     {
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
