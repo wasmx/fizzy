@@ -689,11 +689,9 @@ TEST(execute_numeric, i32_div_u_by_zero)
 
 TEST(execute_numeric, i32_rem_s)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_rem_s, uint64_t(-4242), 4200);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], uint64_t(-42));
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_rem_s, uint64_t(-4242), 4200), -42);
+    constexpr auto i32_min = std::numeric_limits<int32_t>::min();
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_rem_s, uint64_t(i32_min), uint64_t(-1)), 0);
 }
 
 TEST(execute_numeric, i32_rem_s_by_zero)
@@ -975,11 +973,9 @@ TEST(execute_numeric, i64_div_u_by_zero)
 
 TEST(execute_numeric, i64_rem_s)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_rem_s, uint64_t(-4242), 4200);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], uint64_t(-42));
+    EXPECT_RESULT(execute_binary_operation(Instr::i64_rem_s, uint64_t(-4242), 4200), -42);
+    constexpr auto i64_min = std::numeric_limits<int64_t>::min();
+    EXPECT_RESULT(execute_binary_operation(Instr::i64_rem_s, uint64_t(i64_min), uint64_t(-1)), 0);
 }
 
 TEST(execute_numeric, i64_rem_s_by_zero)

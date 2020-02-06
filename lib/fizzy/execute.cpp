@@ -1068,7 +1068,14 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
                 trap = true;
                 goto end;
             }
-            binary_op(stack, std::modulus<int32_t>());
+            auto const lhs = static_cast<int32_t>(stack.peek(1));
+            if (lhs == std::numeric_limits<int32_t>::min() && rhs == -1)
+            {
+                stack.drop(2);
+                stack.push(0);
+            }
+            else
+                binary_op(stack, std::modulus<int32_t>());
             break;
         }
         case Instr::i32_rem_u:
@@ -1183,7 +1190,14 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
                 trap = true;
                 goto end;
             }
-            binary_op(stack, std::modulus<int64_t>());
+            auto const lhs = static_cast<int64_t>(stack.peek(1));
+            if (lhs == std::numeric_limits<int64_t>::min() && rhs == -1)
+            {
+                stack.drop(2);
+                stack.push(0);
+            }
+            else
+                binary_op(stack, std::modulus<int64_t>());
             break;
         }
         case Instr::i64_rem_u:
