@@ -24,7 +24,7 @@ class test_runner
 public:
     void run_from_file(const fs::path& path)
     {
-        std::cout << "Running tests from " << path << "\n";
+        log("Running tests from " + path.string());
 
         std::ifstream test_file{path};
         const json j = json::parse(test_file);
@@ -33,12 +33,12 @@ public:
         {
             const auto type = cmd.at("type").get<std::string>();
 
-            std::cout << "Line " << cmd.at("line").get<int>() << ": " << type << " " << std::flush;
+            log_no_newline("Line " + std::to_string(cmd.at("line").get<int>()) + ": " + type + " ");
 
             if (type == "module")
             {
                 const auto filename = cmd.at("filename").get<std::string>();
-                std::cout << "Instantiating " << filename << " ";
+                log_no_newline("Instantiating " + filename + " ");
 
                 std::ifstream wasm_file{fs::path{path}.replace_filename(filename)};
 
@@ -171,9 +171,9 @@ public:
                 skip("Unsupported command type");
         }
 
-        std::cout << (passed + failed + skipped) << " tests ran from " << path.filename().string()
-                  << ".\n  PASSED " << passed << ", FAILED " << failed << ", SKIPPED " << skipped
-                  << ".\n\n";
+        log(std::to_string(passed + failed + skipped) + " tests ran from " +
+            path.filename().string() + ".\n  PASSED " + std::to_string(passed) + ", FAILED " +
+            std::to_string(failed) + ", SKIPPED " + std::to_string(skipped) + ".\n");
     }
 
 private:
@@ -224,6 +224,10 @@ private:
         ++skipped;
         std::cout << "SKIPPED " << message << "\n";
     }
+
+    void log(std::string_view message) const { std::cout << message << "\n"; }
+
+    void log_no_newline(std::string_view message) const { std::cout << message << std::flush; }
 
     fizzy::Instance instance;
     int passed = 0;
