@@ -14,6 +14,7 @@ target_sources(
     api_test.cpp
     end_to_end_test.cpp
     execute_control_test.cpp
+    execute_numeric_test.cpp
     execute_test.cpp
     instantiate_test.cpp
     leb128_test.cpp
