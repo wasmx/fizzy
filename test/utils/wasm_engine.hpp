@@ -30,9 +30,10 @@ public:
     virtual std::optional<FuncRef> find_function(std::string_view name) const = 0;
 
     /// Instantiates the internal module creating an internal instance.
+    /// Returns false on instantiation error.
     /// Consecutive invocations replace the internal instance with a new one.
     /// Requires parse().
-    virtual void instantiate() = 0;
+    virtual bool instantiate() = 0;
 
     /// Returns the entire memory of the internal instance.
     /// It must return memory index 0 and the size must be a multiple of the page size.
