@@ -40,6 +40,10 @@ void benchmark_parse(
 {
     const auto engine = create_fn();
 
+    // Pre-run for validation
+    if (!engine->parse(wasm_binary))
+        return state.SkipWithError("Parsing failed");
+
     const auto input_size = wasm_binary.size();
     auto num_bytes_parsed = uint64_t{0};
     for (auto _ : state)  // NOLINT(clang-analyzer-deadcode.DeadStores)
@@ -56,7 +60,14 @@ void benchmark_instantiate(
     benchmark::State& state, EngineCreateFn create_fn, const fizzy::bytes& wasm_binary)
 {
     const auto engine = create_fn();
-    engine->parse(wasm_binary);
+
+    if (!engine->parse(wasm_binary))
+        return state.SkipWithError("Parsing failed");
+
+    // Pre-run for validation
+    if (!engine->instantiate())
+        return state.SkipWithError("Instantiaton failed");
+
     for (auto _ : state)  // NOLINT(clang-analyzer-deadcode.DeadStores)
     {
         engine->instantiate();
@@ -77,7 +88,8 @@ void benchmark_execute(
     benchmark::State& state, EngineCreateFn create_fn, const ExecutionBenchmarkCase& benchmark_case)
 {
     const auto engine = create_fn();
-    engine->parse(*benchmark_case.wasm_binary);
+    if (!engine->parse(*benchmark_case.wasm_binary))
+        return state.SkipWithError("Parsing failed");
     const auto func_ref = engine->find_function(benchmark_case.func_name);
     if (!func_ref)
     {
@@ -85,7 +97,8 @@ void benchmark_execute(
             ("Function \"" + benchmark_case.func_name + "\" not found").c_str());
     }
 
-    engine->instantiate();
+    if (!engine->instantiate())
+        return state.SkipWithError("Instantiaton failed");
 
     auto initial_memory = fizzy::bytes{engine->get_memory()};
 
