@@ -53,4 +53,5 @@ public:
 };
 
 std::unique_ptr<WasmEngine> create_fizzy_engine();
+std::unique_ptr<WasmEngine> create_wabt_engine();
 }  // namespace fizzy::test

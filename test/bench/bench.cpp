@@ -25,6 +25,7 @@ struct EngineRegistryEntry
 
 constexpr EngineRegistryEntry engine_registry[] = {
     {"fizzy", fizzy::test::create_fizzy_engine},
+    {" wabt", fizzy::test::create_wabt_engine},
 };
 
 inline std::string strip_space(const std::string& input)
