@@ -7,54 +7,46 @@ using namespace fizzy;
 
 TEST(execute_control, unreachable)
 {
-    Module module;
-    module.codesec.emplace_back(Code{0, {Instr::unreachable, Instr::end}, {}});
+    /* wat2wasm
+    (func unreachable)
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a05010300000b");
 
-    const auto [trap, ret] = execute(module, 0, {});
-
-    ASSERT_TRUE(trap);
+    const auto [trap, ret] = execute(parse(wasm), 0, {});
+    EXPECT_TRUE(trap);
 }
 
 TEST(execute_control, nop)
 {
-    Module module;
-    module.codesec.emplace_back(Code{0, {Instr::nop, Instr::end}, {}});
+    /* wat2wasm
+    (func nop)
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a05010300010b");
 
-    const auto [trap, ret] = execute(module, 0, {});
-
+    const auto [trap, ret] = execute(parse(wasm), 0, {});
     ASSERT_FALSE(trap);
     EXPECT_EQ(ret.size(), 0);
 }
 
 TEST(execute_control, block_br)
 {
-    // (local i32 i32)
-    // block
-    //   i32.const 0xa
-    //   local.set 1
-    //   br 0
-    //   i32.const 0xb
-    //   local.set 1
-    // end
-    // local.get 1
+    /* wat2wasm --no-check
+    (func
+        (local i32 i32)
+        (block
+          i32.const 0xa
+          set_local 1
+          br 0
+          i32.const 0xb
+          set_local 1
+        )
+        get_local 1
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010401600000030201000a15011301027f0240410a21010c00410b21010b20010b");
 
-    Module module;
-    module.codesec.emplace_back(Code{2,
-        {Instr::block, Instr::i32_const, Instr::local_set, Instr::br, Instr::i32_const,
-            Instr::local_set, Instr::end, Instr::local_get, Instr::end},
-        from_hex("00"       /* arity */
-                 "07000000" /* target_pc: 7 */
-                 "1d000000" /* target_imm: 29 */
-                 "0a000000" /* i32.const 0xa */
-                 "01000000" /* local.set 1 */
-                 "00000000" /* br 0 */
-                 "0b000000" /* i32.const 0xb */
-                 "01000000" /* local.set 1 */
-                 "01000000" /* local.get 1 */
-            )});
-
-    const auto [trap, ret] = execute(module, 0, {});
-
+    const auto [trap, ret] = execute(parse(wasm), 0, {});
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
     EXPECT_EQ(ret[0], 0xa);
@@ -118,7 +110,7 @@ TEST(execute_control, loop_void_br_if_16)
 
 TEST(execute_control, blocks_without_br)
 {
-    /*
+    /* wat2wasm
     (func (result i32)
       (local i32)
       (block
@@ -150,7 +142,7 @@ TEST(execute_control, blocks_without_br)
     */
     const auto bin = from_hex(
         "0061736d010000000105016000017f030201000a30012e01017f0240200041016a21000340200041016a210002"
-        "40200041016a21000340200041016a21000b0b0b0b20000b000c046e616d6502050100010000");
+        "40200041016a21000340200041016a21000b0b0b0b20000b");
 
     const auto [trap, ret] = execute(parse(bin), 0, {});
     ASSERT_FALSE(trap);
@@ -160,7 +152,7 @@ TEST(execute_control, blocks_without_br)
 
 TEST(execute_control, nested_blocks)
 {
-    /*
+    /* wat2wasm --no-check
     (func (result i32)
       (local i32)
       (block
@@ -228,7 +220,7 @@ TEST(execute_control, nested_blocks)
 
 TEST(execute_control, nested_br_if)
 {
-    /*
+    /* wat2wasm
     (func (param i32) (result i32)
       (local i32)
       (block
@@ -273,7 +265,7 @@ TEST(execute_control, nested_br_if)
     const auto bin = from_hex(
         "0061736d0100000001060160017f017f030201000a4a014801017f02402001418080027221010340200141016a"
         "2101200041016b22000d002001418080017221012000450d0120014180c0007221010b20014180207221010b20"
-        "01418010720b000e046e616d65020701000200000100");
+        "01418010720b");
 
     for (auto loop_count : {1u, 2u})
     {
@@ -286,7 +278,7 @@ TEST(execute_control, nested_br_if)
 
 TEST(execute_control, br_stack_cleanup)
 {
-    /*
+    /* wat2wasm
     (func (result i32)
       i32.const 1
       (block
@@ -296,9 +288,8 @@ TEST(execute_control, br_stack_cleanup)
     )
     */
 
-    const auto bin = from_hex(
-        "0061736d010000000105016000017f030201000a0d010b004101024041020c000b0b000a046e616d6502030100"
-        "00");
+    const auto bin =
+        from_hex("0061736d010000000105016000017f030201000a0d010b004101024041020c000b0b");
 
     const auto [trap, ret] = execute(parse(bin), 0, {});
     ASSERT_FALSE(trap);
@@ -308,7 +299,7 @@ TEST(execute_control, br_stack_cleanup)
 
 TEST(execute_control, br_if_stack_cleanup)
 {
-    /*
+    /* wat2wasm
     (func (param i32) (result i64)
       i64.const 0
       (loop
@@ -324,8 +315,7 @@ TEST(execute_control, br_if_stack_cleanup)
     */
 
     const auto bin = from_hex(
-        "0061736d0100000001060160017f017e030201000a1501130042000340427e417f20006a22000d001a0b0b000c"
-        "046e616d6502050100010000");
+        "0061736d0100000001060160017f017e030201000a1501130042000340427e417f20006a22000d001a0b0b");
 
     const auto [trap, ret] = execute(parse(bin), 0, {7});
     ASSERT_FALSE(trap);
@@ -335,7 +325,7 @@ TEST(execute_control, br_if_stack_cleanup)
 
 TEST(execute_control, br_multiple_blocks_stack_cleanup)
 {
-    /*
+    /* wat2wasm
     (func
       (block
         i32.const 1
@@ -348,9 +338,8 @@ TEST(execute_control, br_multiple_blocks_stack_cleanup)
     )
     */
 
-    const auto bin = from_hex(
-        "0061736d01000000010401600000030201000a11010f0002404101034042020c010b1a0b0b000a046e616d6502"
-        "03010000");
+    const auto bin =
+        from_hex("0061736d01000000010401600000030201000a11010f0002404101034042020c010b1a0b0b");
 
     const auto [trap, ret] = execute(parse(bin), 0, {7});
     ASSERT_FALSE(trap);
@@ -359,15 +348,14 @@ TEST(execute_control, br_multiple_blocks_stack_cleanup)
 
 TEST(execute_control, block_with_result)
 {
-    /*
+    /* wat2wasm
     (func (result i64)
       (block (result i64)
         i64.const -1
       )
     )
     */
-    const auto bin = from_hex(
-        "0061736d010000000105016000017e030201000a09010700027e427f0b0b000a046e616d650203010000");
+    const auto bin = from_hex("0061736d010000000105016000017e030201000a09010700027e427f0b0b");
 
     const auto [trap, ret] = execute(parse(bin), 0, {});
     ASSERT_FALSE(trap);
@@ -377,15 +365,14 @@ TEST(execute_control, block_with_result)
 
 TEST(execute_control, trap_inside_block)
 {
-    /*
+    /* wat2wasm
     (func (result i64)
       (block (result i64)
         unreachable
       )
     )
     */
-    const auto bin = from_hex(
-        "0061736d010000000105016000017e030201000a08010600027e000b0b000a046e616d650203010000");
+    const auto bin = from_hex("0061736d010000000105016000017e030201000a08010600027e000b0b");
 
     const auto [trap, ret] = execute(parse(bin), 0, {});
     ASSERT_TRUE(trap);
@@ -393,7 +380,7 @@ TEST(execute_control, trap_inside_block)
 
 TEST(execute_control, br_with_result)
 {
-    /*
+    /* wat2wasm
     (func (result i32)
       (block (result i32)
         i32.const 1
@@ -403,9 +390,8 @@ TEST(execute_control, br_with_result)
       )
     )
     */
-    const auto bin = from_hex(
-        "0061736d010000000105016000017f03020100070801046d61696e00000a0f010d00027f4101410241030c000b"
-        "0b000a046e616d650203010000");
+    const auto bin =
+        from_hex("0061736d010000000105016000017f030201000a0f010d00027f4101410241030c000b0b");
 
     const auto [trap, ret] = execute(parse(bin), 0, {});
     ASSERT_FALSE(trap);
@@ -415,7 +401,7 @@ TEST(execute_control, br_with_result)
 
 TEST(execute_control, br_if_with_result)
 {
-    /*
+    /* wat2wasm
     (func (param i32) (result i32)
       (block (result i32)
         i32.const 1
@@ -426,9 +412,8 @@ TEST(execute_control, br_if_with_result)
       )
     )
     */
-    const auto bin = from_hex(
-        "0061736d0100000001060160017f017f03020100070801046d61696e00000a10010e00027f4101410220000d00"
-        "730b0b000c046e616d6502050100010000");
+    const auto bin =
+        from_hex("0061736d0100000001060160017f017f030201000a10010e00027f4101410220000d00730b0b");
 
     for (const auto param : {0u, 1u})
     {
@@ -446,7 +431,7 @@ TEST(execute_control, br_if_with_result)
 
 TEST(execute_control, br_if_out_of_function)
 {
-    /*
+    /* wat2wasm
     (func (param i32) (result i32)
       i32.const 1
       i32.const 2
@@ -455,9 +440,8 @@ TEST(execute_control, br_if_out_of_function)
       drop
     )
     */
-    const auto bin = from_hex(
-        "0061736d0100000001060160017f017f030201000a0d010b004101410220000d001a0b000c046e616d65020501"
-        "00010000");
+    const auto bin =
+        from_hex("0061736d0100000001060160017f017f030201000a0d010b004101410220000d001a0b");
 
     for (const auto param : {0u, 1u})
     {
@@ -475,7 +459,7 @@ TEST(execute_control, br_if_out_of_function)
 
 TEST(execute_control, br_1_out_of_function_and_imported_function)
 {
-    /*
+    /* wat2wasm
     (func (import "imported" "function"))  ;; Imported function affects code index.
     (func (result i32)
       (loop
@@ -487,7 +471,7 @@ TEST(execute_control, br_1_out_of_function_and_imported_function)
     */
     const auto bin = from_hex(
         "0061736d010000000108026000006000017f02150108696d706f727465640866756e6374696f6e000003020101"
-        "0a0d010b00034041010c010b41000b000c046e616d6502050200000100");
+        "0a0d010b00034041010c010b41000b");
 
     constexpr auto fake_imported_function =
         [](Instance&, std::vector<uint64_t>) noexcept -> execution_result { return {}; };
@@ -502,7 +486,7 @@ TEST(execute_control, br_1_out_of_function_and_imported_function)
 
 TEST(execute, br_table)
 {
-    /*
+    /* wat2wasm
     (func (param i32) (result i32)
       (block
         (block
@@ -524,9 +508,8 @@ TEST(execute, br_table)
     )
    */
     const auto bin = from_hex(
-        "0061736d0100000001060160017f017f030201000a330131000240024002"
-        "400240024020000e04030201000441e3000f0b41e4000f0b41e5000f0b41"
-        "e6000f0b41e7000f0b41e8000b000c046e616d6502050100010000");
+        "0061736d0100000001060160017f017f030201000a330131000240024002400240024020000e04030201000441"
+        "e3000f0b41e4000f0b41e5000f0b41e6000f0b41e7000f0b41e8000b");
 
     for (const auto param : {0u, 1u, 2u, 3u, 4u, 5u})
     {
@@ -546,7 +529,7 @@ TEST(execute, br_table)
 
 TEST(execute, br_table_empty_vector)
 {
-    /*
+    /* wat2wasm
     (func (param i32) (result i32)
       (block
         (br_table 0 (get_local 0))
@@ -556,8 +539,7 @@ TEST(execute, br_table_empty_vector)
     )
    */
     const auto bin = from_hex(
-        "0061736d0100000001060160017f017f030201000a13011100024020000e"
-        "000041e3000f0b41e4000b000c046e616d6502050100010000");
+        "0061736d0100000001060160017f017f030201000a13011100024020000e000041e3000f0b41e4000b");
 
     for (const auto param : {0u, 1u, 2u})
     {
@@ -570,7 +552,7 @@ TEST(execute, br_table_empty_vector)
 
 TEST(execute_control, return_from_loop)
 {
-    /*
+    /* wat2wasm
     (func (result i32)
       (loop
         i32.const 1
@@ -580,9 +562,8 @@ TEST(execute_control, return_from_loop)
       i32.const 0
     )
     */
-    const auto bin = from_hex(
-        "0061736d010000000105016000017f030201000a0e010c00034041010f0c000b41000b000a046e616d65020301"
-        "0000");
+    const auto bin =
+        from_hex("0061736d010000000105016000017f030201000a0e010c00034041010f0c000b41000b");
 
     const auto [trap, ret] = execute(parse(bin), 0, {});
     ASSERT_FALSE(trap);
@@ -592,7 +573,7 @@ TEST(execute_control, return_from_loop)
 
 TEST(execute_control, return_stack_cleanup)
 {
-    /*
+    /* wat2wasm
     (func
       i32.const 1
       i32.const 2
@@ -600,8 +581,7 @@ TEST(execute_control, return_stack_cleanup)
       return
     )
     */
-    const auto bin = from_hex(
-        "0061736d01000000010401600000030201000a0b0109004101410241030f0b000a046e616d650203010000");
+    const auto bin = from_hex("0061736d01000000010401600000030201000a0b0109004101410241030f0b");
 
     const auto [trap, ret] = execute(parse(bin), 0, {});
     ASSERT_FALSE(trap);
@@ -610,7 +590,7 @@ TEST(execute_control, return_stack_cleanup)
 
 TEST(execute_control, return_from_block_stack_cleanup)
 {
-    /*
+    /* wat2wasm
     (func (result i32)
       (block
         i32.const -1
@@ -620,9 +600,8 @@ TEST(execute_control, return_from_block_stack_cleanup)
       i32.const -2
     )
     */
-    const auto bin = from_hex(
-        "0061736d010000000105016000017f030201000a0e010c000240417f41010f0b417e0b000a046e616d65020301"
-        "0000");
+    const auto bin =
+        from_hex("0061736d010000000105016000017f030201000a0e010c000240417f41010f0b417e0b");
 
     const auto [trap, ret] = execute(parse(bin), 0, {});
     ASSERT_FALSE(trap);
@@ -632,7 +611,7 @@ TEST(execute_control, return_from_block_stack_cleanup)
 
 TEST(execute_control, if_smoke)
 {
-    /*
+    /* wat2wasm
     (func (param $x i32) (result i32)
       (local $y i32)
       get_local $x
@@ -645,9 +624,8 @@ TEST(execute_control, if_smoke)
       get_local $y
     )
     */
-    const auto bin = from_hex(
-        "0061736D0100000001060160017F017F030201000A11010F01017F20000440410421010B20010B0010046E616D"
-        "650209010002000178010179");
+    const auto bin =
+        from_hex("0061736d0100000001060160017f017f030201000a11010f01017f20000440410421010b20010b");
 
     const auto module = parse(bin);
 
@@ -667,7 +645,7 @@ TEST(execute_control, if_smoke)
 
 TEST(execute_control, if_else_smoke)
 {
-    /*
+    /* wat2wasm
     (func (param $x i32) (result i32)
       get_local $x
       (if (result i32)
@@ -680,9 +658,8 @@ TEST(execute_control, if_else_smoke)
       )
     )
     */
-    const auto bin = from_hex(
-        "0061736D0100000001060160017F017F030201000A0E010C002000047F41010541020B0B000D046E616D650206"
-        "010001000178");
+    const auto bin =
+        from_hex("0061736d0100000001060160017f017f030201000a0e010c002000047f41010541020b0b");
 
     const auto module = parse(bin);
 
@@ -703,7 +680,7 @@ TEST(execute_control, if_else_smoke)
 
 TEST(execute_control, if_return_from_branch)
 {
-    /*
+    /* wat2wasm
     (func (param $x i32) (result i32)
       get_local $x
       (if (result i32)
@@ -722,8 +699,7 @@ TEST(execute_control, if_return_from_branch)
     )
     */
     const auto bin = from_hex(
-        "0061736D0100000001060160017F017F030201000A160114002000047F417F41010F05417E417F41020F0B0B00"
-        "0D046E616D650206010001000178");
+        "0061736d0100000001060160017f017f030201000a160114002000047f417f41010f05417e417f41020f0b0b");
 
     const auto module = parse(bin);
 
@@ -743,7 +719,7 @@ TEST(execute_control, if_return_from_branch)
 
 TEST(execute_control, if_br_from_branch)
 {
-    /*
+    /* wat2wasm
     (func  (param $x i32) (result i32)
       get_local $x
       (if (result i32)
@@ -764,9 +740,8 @@ TEST(execute_control, if_br_from_branch)
     )
     */
     const auto bin = from_hex(
-        "0061736D0100000001060160017F017F030201000A1C011A002000047F417F41150C00410505417E417F41020C"
-        "00410"
-        "50B0B000D046E616D650206010001000178");
+        "0061736d0100000001060160017f017f030201000a1c011a002000047f417f41150c00410505417e417f41020c"
+        "0041050b0b");
 
     const auto module = parse(bin);
 
