@@ -33,11 +33,15 @@ public:
     /// Requires parse().
     virtual void instantiate() = 0;
 
-    /// Returns the memory of the internal instance.
+    /// Returns the entire memory of the internal instance.
+    /// It must return memory index 0 and the size must be a multiple of the page size.
+    /// Can return an empty view if no memory is available (exported).
     /// Requires instantiate().
     virtual bytes_view get_memory() const = 0;
 
     /// Replaces the memory of the internal instance with the provided one.
+    /// It must change memory index 0.
+    /// Should not fail if the input is empty (no update) and there is no memory available.
     /// Requires instantiate().
     virtual void set_memory(bytes_view memory) = 0;
 
