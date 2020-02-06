@@ -21,8 +21,9 @@ public:
     virtual ~WasmEngine() noexcept = default;
 
     /// Parses input bytes and creates internal wasm module out of it.
+    /// Returns false on parsing error.
     /// Consecutive invocations replace the internal module and invalidate the internal instance.
-    virtual void parse(bytes_view input) = 0;
+    virtual bool parse(bytes_view input) = 0;
 
     /// Finds an exported function in the internal instance.
     /// Requires parse().

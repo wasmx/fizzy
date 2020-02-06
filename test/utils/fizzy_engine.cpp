@@ -10,7 +10,7 @@ class FizzyEngine : public WasmEngine
     Instance m_instance;
 
 public:
-    void parse(bytes_view input) final;
+    bool parse(bytes_view input) final;
     std::optional<FuncRef> find_function(std::string_view name) const final;
     void instantiate() final;
     bytes_view get_memory() const final;
@@ -23,9 +23,17 @@ std::unique_ptr<WasmEngine> create_fizzy_engine()
     return std::make_unique<FizzyEngine>();
 }
 
-void FizzyEngine::parse(bytes_view input)
+bool FizzyEngine::parse(bytes_view input)
 {
-    m_instance.module = fizzy::parse(input);
+    try
+    {
+        m_instance.module = fizzy::parse(input);
+    }
+    catch (const fizzy::parser_error&)
+    {
+        return false;
+    }
+    return true;
 }
 
 void FizzyEngine::instantiate()
