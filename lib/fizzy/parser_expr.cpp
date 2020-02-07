@@ -145,8 +145,7 @@ parser_result<Code> parse_expr(const uint8_t* pos)
             }
             else
             {
-                // Will throw in case of incorrect type.
-                std::tie(std::ignore, pos) = parser<ValType>{}(pos);
+                std::tie(std::ignore, pos) = parser<ValType>{}(pos);  // Report incorrect type.
                 arity = 1;
             }
 
@@ -163,10 +162,12 @@ parser_result<Code> parse_expr(const uint8_t* pos)
 
         case Instr::loop:
         {
-            const uint8_t type{*pos++};
-            if (type != BlockTypeEmpty)
-                throw parser_error{"loop can only have type arity 0"};
-            label_positions.push_back({Instr::loop, 0});  // Mark as not interested.
+            const uint8_t type{*pos};
+            if (type == BlockTypeEmpty)
+                ++pos;
+            else
+                std::tie(std::ignore, pos) = parser<ValType>{}(pos);  // Report incorrect type.
+            label_positions.push_back({Instr::loop, 0});              // Mark as not interested.
             break;
         }
 
