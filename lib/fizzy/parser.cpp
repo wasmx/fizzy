@@ -109,7 +109,7 @@ struct parser<Table>
             throw parser_error{"unexpected table elemtype: " + std::to_string(kind)};
 
         Limits limits;
-        std::tie(limits, pos) = parser<Limits>{}(pos);
+        std::tie(limits, pos) = parse_limits(pos);
 
         return {{limits}, pos};
     }

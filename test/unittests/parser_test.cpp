@@ -63,7 +63,7 @@ TEST(parser, valtype_vec)
 TEST(parser, limits_min)
 {
     const auto input = "007f"_bytes;
-    const auto [limits, pos] = parser<Limits>{}(input.data());
+    const auto [limits, pos] = parse_limits(input.data());
     EXPECT_EQ(limits.min, 0x7f);
     EXPECT_FALSE(limits.max.has_value());
 }
@@ -71,7 +71,7 @@ TEST(parser, limits_min)
 TEST(parser, limits_minmax)
 {
     const auto input = "01207f"_bytes;
-    const auto [limits, pos] = parser<Limits>{}(input.data());
+    const auto [limits, pos] = parse_limits(input.data());
     EXPECT_EQ(limits.min, 0x20);
     EXPECT_TRUE(limits.max.has_value());
     EXPECT_EQ(*limits.max, 0x7f);
@@ -80,19 +80,19 @@ TEST(parser, limits_minmax)
 TEST(parser, DISABLED_limits_min_invalid_too_short)
 {
     const auto input = "00"_bytes;
-    EXPECT_THROW(parser<Limits>{}(input.data()), parser_error);
+    EXPECT_THROW(parse_limits(input.data()), parser_error);
 }
 
 TEST(parser, DISABLED_limits_minmax_invalid_too_short)
 {
     const auto input = "0120"_bytes;
-    EXPECT_THROW(parser<Limits>{}(input.data()), parser_error);
+    EXPECT_THROW(parse_limits(input.data()), parser_error);
 }
 
 TEST(parser, limits_invalid)
 {
     const auto input = "02"_bytes;
-    EXPECT_THROW(parser<Limits>{}(input.data()), parser_error);
+    EXPECT_THROW(parse_limits(input.data()), parser_error);
 }
 
 TEST(parser, locals)

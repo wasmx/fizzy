@@ -61,29 +61,25 @@ struct parser<ValType>
     }
 };
 
-template <>
-struct parser<Limits>
+inline parser_result<Limits> parse_limits(const uint8_t* pos)
 {
-    parser_result<Limits> operator()(const uint8_t* pos)
+    Limits result;
+    const auto b = *pos++;
+    switch (b)
     {
-        Limits result;
-        const auto b = *pos++;
-        switch (b)
-        {
-        case 0x00:
-            std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos);
-            return {result, pos};
-        case 0x01:
-            std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos);
-            std::tie(result.max, pos) = leb128u_decode<uint32_t>(pos);
-            if (result.min > *result.max)
-                throw parser_error("malformed limits (minimum is larger than maximum)");
-            return {result, pos};
-        default:
-            throw parser_error{"invalid limits " + std::to_string(b)};
-        }
+    case 0x00:
+        std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos);
+        return {result, pos};
+    case 0x01:
+        std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos);
+        std::tie(result.max, pos) = leb128u_decode<uint32_t>(pos);
+        if (result.min > *result.max)
+            throw parser_error("malformed limits (minimum is larger than maximum)");
+        return {result, pos};
+    default:
+        throw parser_error{"invalid limits " + std::to_string(b)};
     }
-};
+}
 
 template <>
 struct parser<Locals>
@@ -117,7 +113,7 @@ struct parser<Memory>
     parser_result<Memory> operator()(const uint8_t* pos)
     {
         Limits limits;
-        std::tie(limits, pos) = parser<Limits>{}(pos);
+        std::tie(limits, pos) = parse_limits(pos);
         return {{limits}, pos};
     }
 };
