@@ -68,7 +68,7 @@ public:
                 }
                 pass();
             }
-            else if (type == "assert_return")
+            else if (type == "assert_return" || type == "action")
             {
                 const auto& action = cmd.at("action");
                 const auto action_type = action.at("type").get<std::string>();
