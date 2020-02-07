@@ -35,56 +35,52 @@ std::tuple<bool, const uint8_t*> parseGlobalType(const uint8_t* pos)
     return {is_mutable, pos};
 }
 
-template <>
-struct parser<ConstantExpression>
+inline parser_result<ConstantExpression> parse_constant_expression(const uint8_t* pos)
 {
-    parser_result<ConstantExpression> operator()(const uint8_t* pos)
+    ConstantExpression result;
+
+    Instr instr;
+    do
     {
-        ConstantExpression result;
-
-        Instr instr;
-        do
+        instr = static_cast<Instr>(*pos++);
+        switch (instr)
         {
-            instr = static_cast<Instr>(*pos++);
-            switch (instr)
-            {
-            default:
-                throw parser_error{"unexpected instruction in the global initializer expression: " +
-                                   std::to_string(*(pos - 1))};
+        default:
+            throw parser_error{"unexpected instruction in the global initializer expression: " +
+                               std::to_string(*(pos - 1))};
 
-            case Instr::end:
-                break;
+        case Instr::end:
+            break;
 
-            case Instr::global_get:
-            {
-                result.kind = ConstantExpression::Kind::GlobalGet;
-                std::tie(result.value.global_index, pos) = leb128u_decode<uint32_t>(pos);
-                break;
-            }
+        case Instr::global_get:
+        {
+            result.kind = ConstantExpression::Kind::GlobalGet;
+            std::tie(result.value.global_index, pos) = leb128u_decode<uint32_t>(pos);
+            break;
+        }
 
-            case Instr::i32_const:
-            {
-                result.kind = ConstantExpression::Kind::Constant;
-                int32_t value;
-                std::tie(value, pos) = leb128s_decode<int32_t>(pos);
-                result.value.constant = static_cast<uint32_t>(value);
-                break;
-            }
+        case Instr::i32_const:
+        {
+            result.kind = ConstantExpression::Kind::Constant;
+            int32_t value;
+            std::tie(value, pos) = leb128s_decode<int32_t>(pos);
+            result.value.constant = static_cast<uint32_t>(value);
+            break;
+        }
 
-            case Instr::i64_const:
-            {
-                result.kind = ConstantExpression::Kind::Constant;
-                int64_t value;
-                std::tie(value, pos) = leb128s_decode<int64_t>(pos);
-                result.value.constant = static_cast<uint64_t>(value);
-                break;
-            }
-            }
-        } while (instr != Instr::end);
+        case Instr::i64_const:
+        {
+            result.kind = ConstantExpression::Kind::Constant;
+            int64_t value;
+            std::tie(value, pos) = leb128s_decode<int64_t>(pos);
+            result.value.constant = static_cast<uint64_t>(value);
+            break;
+        }
+        }
+    } while (instr != Instr::end);
 
-        return {result, pos};
-    }
-};
+    return {result, pos};
+}
 
 template <>
 struct parser<Global>
@@ -93,7 +89,7 @@ struct parser<Global>
     {
         Global result;
         std::tie(result.is_mutable, pos) = parseGlobalType((pos));
-        std::tie(result.expression, pos) = parser<ConstantExpression>{}(pos);
+        std::tie(result.expression, pos) = parse_constant_expression(pos);
 
         return {result, pos};
     }
@@ -209,7 +205,7 @@ struct parser<Element>
             throw parser_error{"unexpected tableidx value " + std::to_string(table_index)};
 
         ConstantExpression offset;
-        std::tie(offset, pos) = parser<ConstantExpression>{}(pos);
+        std::tie(offset, pos) = parse_constant_expression(pos);
 
         std::vector<FuncIdx> init;
         std::tie(init, pos) = parse_vec<FuncIdx>(pos);
@@ -229,7 +225,7 @@ struct parser<Data>
             throw parser_error{"unexpected memidx value " + std::to_string(memory_index)};
 
         ConstantExpression offset;
-        std::tie(offset, pos) = parser<ConstantExpression>{}(pos);
+        std::tie(offset, pos) = parse_constant_expression(pos);
 
         std::vector<uint8_t> init;
         std::tie(init, pos) = parse_vec<uint8_t>(pos);
