@@ -57,11 +57,13 @@ public:
                 catch (const fizzy::parser_error& ex)
                 {
                     fail(std::string{"Parsing failed with error: "} + ex.what());
+                    instance = std::nullopt;
                     continue;
                 }
                 catch (const fizzy::instantiate_error& ex)
                 {
                     fail(std::string{"Instantiation failed with error: "} + ex.what());
+                    instance = std::nullopt;
                     continue;
                 }
                 pass();
@@ -182,8 +184,14 @@ public:
 private:
     std::optional<fizzy::execution_result> invoke(const json& action)
     {
+        if (!instance.has_value())
+        {
+            skip("No instantiated module.");
+            return std::nullopt;
+        }
+
         const auto func_name = action.at("field").get<std::string>();
-        const auto func_idx = fizzy::find_exported_function(instance.module, func_name);
+        const auto func_idx = fizzy::find_exported_function(instance->module, func_name);
         if (!func_idx.has_value())
         {
             skip("Function '" + func_name + "' not found.");
@@ -207,7 +215,7 @@ private:
             args.push_back(arg_value);
         }
 
-        return fizzy::execute(instance, *func_idx, std::move(args));
+        return fizzy::execute(*instance, *func_idx, std::move(args));
     }
 
     void pass()
@@ -232,7 +240,7 @@ private:
 
     void log_no_newline(std::string_view message) const { std::cout << message << std::flush; }
 
-    fizzy::Instance instance;
+    std::optional<fizzy::Instance> instance;
     int passed = 0;
     int failed = 0;
     int skipped = 0;
