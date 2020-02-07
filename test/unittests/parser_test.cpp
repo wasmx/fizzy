@@ -740,6 +740,9 @@ TEST(parser, instr_loop)
     const auto [code2, pos2] = parse_expr(loop_i32_empty.data());
     EXPECT_EQ(code2.instructions, (std::vector{Instr::loop, Instr::end, Instr::end}));
     EXPECT_EQ(code2.immediates.size(), 0);
+
+    const auto loop_f32_empty = "037d0b0b"_bytes;
+    EXPECT_THROW_MESSAGE(parse_expr(loop_f32_empty.data()), parser_error, "invalid valtype 125");
 }
 
 TEST(parser, DISABLED_instr_loop_input_buffer_overflow)
@@ -770,6 +773,9 @@ TEST(parser, instr_block)
         "01"
         "02000000"
         "09000000"_bytes);
+
+    const auto block_f64_empty = "027c0b0b"_bytes;
+    EXPECT_THROW_MESSAGE(parse_expr(block_f64_empty.data()), parser_error, "invalid valtype 124");
 }
 
 TEST(parser, DISABLED_instr_block_input_buffer_overflow)
