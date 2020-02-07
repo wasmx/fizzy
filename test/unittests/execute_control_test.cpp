@@ -109,6 +109,87 @@ TEST(execute_control, loop_void_br_if_16)
     EXPECT_EQ(ret[0], 0);
 }
 
+TEST(execute_control, loop_with_result)
+{
+    /* wat2wasm
+    (func (result i32)
+      (loop (result i32)
+        i32.const 1
+      )
+    )
+    */
+    const auto wasm = from_hex("0061736d010000000105016000017f030201000a09010700037f41010b0b");
+    EXPECT_RESULT(execute(parse(wasm), 0, {}), 1);
+}
+
+TEST(execute_control, loop_with_result_br_if)
+{
+    /* wat2wasm
+    (func (param i32) (result i32)
+      (loop (result i32)
+        i32.const -1
+        get_local 0
+        i32.const 1
+        i32.sub
+        tee_local 0
+        br_if 0
+      )
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017f030201000a12011000037f417f200041016b22000d000b0b");
+    EXPECT_RESULT(execute(parse(wasm), 0, {2}), uint32_t(-1));
+}
+
+TEST(execute_control, loop_with_result_br)
+{
+    /* wat2wasm
+    (func (export "main") (param i32) (result i32)
+      (block (result i32)
+        (loop (result i32)
+          i32.const 999
+          get_local 0
+          i32.const 1
+          i32.sub
+          tee_local 0
+          br_if 1
+
+          drop  ;; Stack height 0.
+          br 0  ;; No stack cleaning.
+        )
+      )
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017f03020100070801046d61696e00000a19011700027f037f41e707200041"
+        "016b22000d011a0c000b0b0b");
+    EXPECT_RESULT(execute(parse(wasm), 0, {3}), 999);
+}
+
+TEST(execute_control, loop_with_result_br_stack_cleanup)
+{
+    /* wat2wasm
+    (func (export "main") (param i32) (result i32)
+      (block (result i32)
+        (loop (result i32)
+          i32.const 999
+          get_local 0
+          i32.const 1
+          i32.sub
+          tee_local 0
+          br_if 1
+
+          i32.const 666  ;; Stack height 2.
+          br 0           ;; Cleans stack to height 0.
+        )
+      )
+    )    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017f03020100070801046d61696e00000a1b011900027f037f41e707200041"
+        "016b22000d01419a050c000b0b0b");
+    EXPECT_RESULT(execute(parse(wasm), 0, {3}), 999);
+}
+
 TEST(execute_control, blocks_without_br)
 {
     /* wat2wasm
