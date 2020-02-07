@@ -83,9 +83,12 @@ public:
                     }
 
                     const auto& expected = cmd.at("expected");
-                    if (expected.empty() && !result->stack.empty())
+                    if (expected.empty())
                     {
-                        fail("Unexpected returned value.");
+                        if (result->stack.empty())
+                            pass();
+                        else
+                            fail("Unexpected returned value.");
                         continue;
                     }
 
