@@ -731,18 +731,18 @@ TEST(parser, milestone1)
 
 TEST(parser, instr_loop)
 {
-    const auto loop_without_imm = "030b"_bytes;
-    EXPECT_THROW_MESSAGE(
-        parse_expr(loop_without_imm.data()), parser_error, "loop can only have type arity 0");
-
     const auto loop_void_empty = "03400b0b"_bytes;
     const auto [code1, pos1] = parse_expr(loop_void_empty.data());
     EXPECT_EQ(code1.instructions, (std::vector{Instr::loop, Instr::end, Instr::end}));
     EXPECT_EQ(code1.immediates.size(), 0);
 
     const auto loop_i32_empty = "037f0b0b"_bytes;
-    EXPECT_THROW_MESSAGE(
-        parse_expr(loop_i32_empty.data()), parser_error, "loop can only have type arity 0");
+    const auto [code2, pos2] = parse_expr(loop_i32_empty.data());
+    EXPECT_EQ(code2.instructions, (std::vector{Instr::loop, Instr::end, Instr::end}));
+    EXPECT_EQ(code2.immediates.size(), 0);
+
+    const auto loop_f32_empty = "037d0b0b"_bytes;
+    EXPECT_THROW_MESSAGE(parse_expr(loop_f32_empty.data()), parser_error, "invalid valtype 125");
 }
 
 TEST(parser, DISABLED_instr_loop_input_buffer_overflow)
@@ -773,6 +773,9 @@ TEST(parser, instr_block)
         "01"
         "02000000"
         "09000000"_bytes);
+
+    const auto block_f64_empty = "027c0b0b"_bytes;
+    EXPECT_THROW_MESSAGE(parse_expr(block_f64_empty.data()), parser_error, "invalid valtype 124");
 }
 
 TEST(parser, DISABLED_instr_block_input_buffer_overflow)
