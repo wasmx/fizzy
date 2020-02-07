@@ -98,21 +98,18 @@ struct parser<Locals>
 };
 
 template <typename T>
-struct parser<std::vector<T>>
+parser_result<std::vector<T>> parse_vec(const uint8_t* pos)
 {
-    parser_result<std::vector<T>> operator()(const uint8_t* pos)
-    {
-        uint32_t size;
-        std::tie(size, pos) = leb128u_decode<uint32_t>(pos);
+    uint32_t size;
+    std::tie(size, pos) = leb128u_decode<uint32_t>(pos);
 
-        std::vector<T> result;
-        result.reserve(size);
-        auto inserter = std::back_inserter(result);
-        for (uint32_t i = 0; i < size; ++i)
-            std::tie(inserter, pos) = parser<T>{}(pos);
-        return {result, pos};
-    }
-};
+    std::vector<T> result;
+    result.reserve(size);
+    auto inserter = std::back_inserter(result);
+    for (uint32_t i = 0; i < size; ++i)
+        std::tie(inserter, pos) = parser<T>{}(pos);
+    return {result, pos};
+}
 
 template <>
 struct parser<Memory>
@@ -132,7 +129,7 @@ struct parser<Code>
     {
         const auto [size, pos1] = leb128u_decode<uint32_t>(pos);
 
-        const auto [locals_vec, pos2] = parser<std::vector<Locals>>{}(pos1);
+        const auto [locals_vec, pos2] = parse_vec<Locals>(pos1);
 
         auto result = parse_expr(pos2);
 

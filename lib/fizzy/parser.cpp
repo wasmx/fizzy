@@ -16,8 +16,8 @@ struct parser<FuncType>
         ++pos;
 
         FuncType result;
-        std::tie(result.inputs, pos) = parser<std::vector<ValType>>{}(pos);
-        std::tie(result.outputs, pos) = parser<std::vector<ValType>>{}(pos);
+        std::tie(result.inputs, pos) = parse_vec<ValType>(pos);
+        std::tie(result.outputs, pos) = parse_vec<ValType>(pos);
         return {result, pos};
     }
 };
@@ -121,7 +121,7 @@ struct parser<std::string>
     parser_result<std::string> operator()(const uint8_t* pos)
     {
         std::vector<uint8_t> value;
-        std::tie(value, pos) = parser<std::vector<uint8_t>>{}(pos);
+        std::tie(value, pos) = parse_vec<uint8_t>(pos);
 
         // FIXME: need to validate that string is a valid UTF-8
 
@@ -212,7 +212,7 @@ struct parser<Element>
         std::tie(offset, pos) = parser<ConstantExpression>{}(pos);
 
         std::vector<FuncIdx> init;
-        std::tie(init, pos) = parser<std::vector<FuncIdx>>{}(pos);
+        std::tie(init, pos) = parse_vec<FuncIdx>(pos);
 
         return {{offset, std::move(init)}, pos};
     }
@@ -232,7 +232,7 @@ struct parser<Data>
         std::tie(offset, pos) = parser<ConstantExpression>{}(pos);
 
         std::vector<uint8_t> init;
-        std::tie(init, pos) = parser<std::vector<uint8_t>>{}(pos);
+        std::tie(init, pos) = parse_vec<uint8_t>(pos);
 
         return {{offset, bytes(init.data(), init.size())}, pos};
     }
@@ -255,37 +255,37 @@ Module parse(bytes_view input)
         switch (id)
         {
         case SectionId::type:
-            std::tie(module.typesec, it) = parser<std::vector<FuncType>>{}(it);
+            std::tie(module.typesec, it) = parse_vec<FuncType>(it);
             break;
         case SectionId::import:
-            std::tie(module.importsec, it) = parser<std::vector<Import>>{}(it);
+            std::tie(module.importsec, it) = parse_vec<Import>(it);
             break;
         case SectionId::function:
-            std::tie(module.funcsec, it) = parser<std::vector<TypeIdx>>{}(it);
+            std::tie(module.funcsec, it) = parse_vec<TypeIdx>(it);
             break;
         case SectionId::table:
-            std::tie(module.tablesec, it) = parser<std::vector<Table>>{}(it);
+            std::tie(module.tablesec, it) = parse_vec<Table>(it);
             break;
         case SectionId::memory:
-            std::tie(module.memorysec, it) = parser<std::vector<Memory>>{}(it);
+            std::tie(module.memorysec, it) = parse_vec<Memory>(it);
             break;
         case SectionId::global:
-            std::tie(module.globalsec, it) = parser<std::vector<Global>>{}(it);
+            std::tie(module.globalsec, it) = parse_vec<Global>(it);
             break;
         case SectionId::export_:
-            std::tie(module.exportsec, it) = parser<std::vector<Export>>{}(it);
+            std::tie(module.exportsec, it) = parse_vec<Export>(it);
             break;
         case SectionId::start:
             std::tie(module.startfunc, it) = leb128u_decode<uint32_t>(it);
             break;
         case SectionId::element:
-            std::tie(module.elementsec, it) = parser<std::vector<Element>>{}(it);
+            std::tie(module.elementsec, it) = parse_vec<Element>(it);
             break;
         case SectionId::code:
-            std::tie(module.codesec, it) = parser<std::vector<Code>>{}(it);
+            std::tie(module.codesec, it) = parse_vec<Code>(it);
             break;
         case SectionId::data:
-            std::tie(module.datasec, it) = parser<std::vector<Data>>{}(it);
+            std::tie(module.datasec, it) = parse_vec<Data>(it);
             break;
         case SectionId::custom:
             // These sections are ignored for now.

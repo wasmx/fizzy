@@ -52,7 +52,7 @@ TEST(parser, valtype)
 TEST(parser, valtype_vec)
 {
     const auto input = "037f7e7fcc"_bytes;
-    const auto [vec, pos] = parser<std::vector<ValType>>{}(input.data());
+    const auto [vec, pos] = parse_vec<ValType>(input.data());
     EXPECT_EQ(pos, input.data() + 4);
     ASSERT_EQ(vec.size(), 3);
     EXPECT_EQ(vec[0], ValType::i32);
