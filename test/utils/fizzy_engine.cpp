@@ -51,12 +51,12 @@ bool FizzyEngine::instantiate()
 
 bytes_view FizzyEngine::get_memory() const
 {
-    return {m_instance.memory.data(), m_instance.memory.size()};
+    return {m_instance.memory->data(), m_instance.memory->size()};
 }
 
 void FizzyEngine::set_memory(bytes_view memory)
 {
-    m_instance.memory = memory;
+    *m_instance.memory = memory;
 }
 
 std::optional<WasmEngine::FuncRef> FizzyEngine::find_function(std::string_view name) const
