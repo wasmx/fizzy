@@ -1,9 +1,7 @@
 #include "parser.hpp"
 #include <gtest/gtest.h>
-#include <lib/fizzy/types.hpp>
 #include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
-#include <types.hpp>
 
 using namespace fizzy;
 
