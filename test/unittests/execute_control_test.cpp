@@ -1,6 +1,7 @@
 #include "execute.hpp"
 #include "parser.hpp"
 #include <gtest/gtest.h>
+#include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
 
 using namespace fizzy;
@@ -150,9 +151,9 @@ TEST(execute_control, blocks_without_br)
     EXPECT_EQ(ret[0], 4);
 }
 
-TEST(execute_control, nested_blocks)
+TEST(execute_control, nested_blocks_0)
 {
-    /* wat2wasm --no-check
+    /* wat2wasm
     (func (result i32)
       (local i32)
       (block
@@ -171,7 +172,7 @@ TEST(execute_control, nested_blocks)
             i32.or
             set_local 0
             i32.const 1
-            br <<br_imm>>
+            br 0
             get_local 0
             i32.const 8
             i32.or
@@ -188,34 +189,146 @@ TEST(execute_control, nested_blocks)
       i32.const 64
       i32.or)
     */
+    const auto wasm = from_hex(
+        "0061736d010000000105016000017f030201000a43014101017f02402000410172210002402000410272210002"
+        "402000410472210041010c00200041087221000b200041107221000b200041207221000b200041c000720b");
 
-    auto bin = from_hex(
-        "0061736d01000000"
-        "0105016000017f"
-        "03020100"
-        "0a43013f01017f"
-        "02402000410172210002402000410272210002402000410472210041010c"
-        "77"  // <-- br's immediate value.
-        "200041087221000b200041107221000b200041207221000b200041c000720b000c046e"
-        "616d6502050100010000");
-    constexpr auto br_imm_offset = 56;
+    EXPECT_RESULT(execute(parse(wasm), 0, {}), 0b1110111);
+}
 
-    constexpr uint32_t expected_results[]{
-        0b1110111,
-        0b1100111,
-        0b1000111,
-        1,
-    };
+TEST(execute_control, nested_blocks_1)
+{
+    /* wat2wasm
+    (func (result i32)
+      (local i32)
+      (block
+        get_local 0
+        i32.const 1
+        i32.or
+        set_local 0
+        (block
+          get_local 0
+          i32.const 2
+          i32.or
+          set_local 0
+          (block
+            get_local 0
+            i32.const 4
+            i32.or
+            set_local 0
+            i32.const 1
+            br 1
+            get_local 0
+            i32.const 8
+            i32.or
+            set_local 0)
+          get_local 0
+          i32.const 16
+          i32.or
+          set_local 0)
+        get_local 0
+        i32.const 32
+        i32.or
+        set_local 0)
+      get_local 0
+      i32.const 64
+      i32.or)
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000105016000017f030201000a43014101017f02402000410172210002402000410272210002"
+        "402000410472210041010c01200041087221000b200041107221000b200041207221000b200041c000720b");
 
-    for (auto br_imm : {0, 1, 2, 3})
-    {
-        bin[br_imm_offset] = static_cast<uint8_t>(br_imm);
+    EXPECT_RESULT(execute(parse(wasm), 0, {}), 0b1100111);
+}
 
-        const auto [trap, ret] = execute(parse(bin), 0, {});
-        ASSERT_FALSE(trap);
-        ASSERT_EQ(ret.size(), 1);
-        EXPECT_EQ(ret[0], expected_results[br_imm]);
-    }
+TEST(execute_control, nested_blocks_2)
+{
+    /* wat2wasm
+    (func (result i32)
+      (local i32)
+      (block
+        get_local 0
+        i32.const 1
+        i32.or
+        set_local 0
+        (block
+          get_local 0
+          i32.const 2
+          i32.or
+          set_local 0
+          (block
+            get_local 0
+            i32.const 4
+            i32.or
+            set_local 0
+            i32.const 1
+            br 2
+            get_local 0
+            i32.const 8
+            i32.or
+            set_local 0)
+          get_local 0
+          i32.const 16
+          i32.or
+          set_local 0)
+        get_local 0
+        i32.const 32
+        i32.or
+        set_local 0)
+      get_local 0
+      i32.const 64
+      i32.or)
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000105016000017f030201000a43014101017f02402000410172210002402000410272210002"
+        "402000410472210041010c02200041087221000b200041107221000b200041207221000b200041c000720b");
+
+    EXPECT_RESULT(execute(parse(wasm), 0, {}), 0b1000111);
+}
+
+TEST(execute_control, nested_blocks_3)
+{
+    /* wat2wasm
+    (func (result i32)
+      (local i32)
+      (block
+        get_local 0
+        i32.const 1
+        i32.or
+        set_local 0
+        (block
+          get_local 0
+          i32.const 2
+          i32.or
+          set_local 0
+          (block
+            get_local 0
+            i32.const 4
+            i32.or
+            set_local 0
+            i32.const 1
+            br 3
+            get_local 0
+            i32.const 8
+            i32.or
+            set_local 0)
+          get_local 0
+          i32.const 16
+          i32.or
+          set_local 0)
+        get_local 0
+        i32.const 32
+        i32.or
+        set_local 0)
+      get_local 0
+      i32.const 64
+      i32.or)
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000105016000017f030201000a43014101017f02402000410172210002402000410272210002"
+        "402000410472210041010c03200041087221000b200041107221000b200041207221000b200041c000720b");
+
+    EXPECT_RESULT(execute(parse(wasm), 0, {}), 1);
 }
 
 TEST(execute_control, nested_br_if)
