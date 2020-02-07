@@ -1,3 +1,5 @@
+#pragma once
+
 namespace fizzy
 {
 constexpr unsigned PageSize = 65536;
