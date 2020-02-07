@@ -53,10 +53,10 @@ commands:
   test:
     description: "Test"
     steps:
-    - run:
-        name: "Test"
-        working_directory: ~/build
-        command: ctest -R ${TESTS_FILTER:-'.*'} -j4 --schedule-random --output-on-failure
+      - run:
+          name: "Test"
+          working_directory: ~/build
+          command: ctest -R ${TESTS_FILTER:-'.*'} -j4 --schedule-random --output-on-failure
 
   benchmark:
     description: "Run benchmarks"
@@ -71,27 +71,27 @@ jobs:
   lint:
     executor: lint
     steps:
-    - checkout
-    - run:
-        name: "Check code format"
-        command: |
-          clang-format --version
-          find . -name '*.hpp' -o -name '*.cpp' -o -name '*.h' -o -name '*.c' | xargs clang-format -i
-          git diff --color --exit-code
-    - run:
-        name: "Run codespell"
-        command: |
-          codespell --quiet-level=4
-    - run:
-        name: "Install wabt"
-        working_directory: ~/bin
-        command: curl -L https://github.com/WebAssembly/wabt/releases/download/1.0.13/wabt-1.0.13-linux.tar.gz | tar xz --strip=1
-    - run:
-        name: "Check wat2wasm4cpp"
-        command: |
-          export PATH=$PATH:~/bin
-          ./wat2wasm4cpp.py test/unittests/execute_control_test.cpp
-          git diff --color --exit-code
+      - checkout
+      - run:
+          name: "Check code format"
+          command: |
+            clang-format --version
+            find . -name '*.hpp' -o -name '*.cpp' -o -name '*.h' -o -name '*.c' | xargs clang-format -i
+            git diff --color --exit-code
+      - run:
+          name: "Run codespell"
+          command: |
+            codespell --quiet-level=4
+      - run:
+          name: "Install wabt"
+          working_directory: ~/bin
+          command: curl -L https://github.com/WebAssembly/wabt/releases/download/1.0.13/wabt-1.0.13-linux.tar.gz | tar xz --strip=1
+      - run:
+          name: "Check wat2wasm4cpp"
+          command: |
+            export PATH=$PATH:~/bin
+            ./wat2wasm4cpp.py test/unittests/execute_control_test.cpp
+            git diff --color --exit-code
 
 
   release-linux:
@@ -219,6 +219,10 @@ workflows:
       - clang-latest-coverage
       - clang-latest-asan
       - clang-latest-ubsan-tidy
-      - benchmark:
+      - hold-benchmark:
+          type: approval
           requires:
             - release-linux
+      - benchmark:
+          requires:
+            - hold-benchmark
