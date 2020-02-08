@@ -6,26 +6,23 @@
 namespace fizzy
 {
 template <>
-struct parser<FuncType>
+inline parser_result<FuncType> parse(const uint8_t* pos)
 {
-    parser_result<FuncType> operator()(const uint8_t* pos)
-    {
-        if (*pos != 0x60)
-            throw parser_error{
-                "unexpected byte value " + std::to_string(*pos) + ", expected 0x60 for functype"};
-        ++pos;
+    if (*pos != 0x60)
+        throw parser_error{
+            "unexpected byte value " + std::to_string(*pos) + ", expected 0x60 for functype"};
+    ++pos;
 
-        FuncType result;
-        std::tie(result.inputs, pos) = parse_vec<ValType>(pos);
-        std::tie(result.outputs, pos) = parse_vec<ValType>(pos);
-        return {result, pos};
-    }
-};
+    FuncType result;
+    std::tie(result.inputs, pos) = parse_vec<ValType>(pos);
+    std::tie(result.outputs, pos) = parse_vec<ValType>(pos);
+    return {result, pos};
+}
 
 std::tuple<bool, const uint8_t*> parse_global_type(const uint8_t* pos)
 {
     // will throw if invalid type
-    std::tie(std::ignore, pos) = parser<ValType>{}(pos);
+    std::tie(std::ignore, pos) = parse<ValType>(pos);
 
     if (*pos != 0x00 && *pos != 0x01)
         throw parser_error{"unexpected byte value " + std::to_string(*pos) +
@@ -83,156 +80,134 @@ inline parser_result<ConstantExpression> parse_constant_expression(const uint8_t
 }
 
 template <>
-struct parser<Global>
+inline parser_result<Global> parse(const uint8_t* pos)
 {
-    parser_result<Global> operator()(const uint8_t* pos)
-    {
-        Global result;
-        std::tie(result.is_mutable, pos) = parse_global_type(pos);
-        std::tie(result.expression, pos) = parse_constant_expression(pos);
+    Global result;
+    std::tie(result.is_mutable, pos) = parse_global_type((pos));
+    std::tie(result.expression, pos) = parse_constant_expression(pos);
 
-        return {result, pos};
-    }
-};
+    return {result, pos};
+}
 
 template <>
-struct parser<Table>
+inline parser_result<Table> parse(const uint8_t* pos)
 {
-    parser_result<Table> operator()(const uint8_t* pos)
-    {
-        const uint8_t kind = *pos++;
-        if (kind != FuncRef)
-            throw parser_error{"unexpected table elemtype: " + std::to_string(kind)};
+    const uint8_t kind = *pos++;
+    if (kind != FuncRef)
+        throw parser_error{"unexpected table elemtype: " + std::to_string(kind)};
 
-        Limits limits;
-        std::tie(limits, pos) = parse_limits(pos);
+    Limits limits;
+    std::tie(limits, pos) = parse_limits(pos);
 
-        return {{limits}, pos};
-    }
-};
+    return {{limits}, pos};
+}
+
+inline parser_result<std::string> parse_string(const uint8_t* pos)
+{
+    std::vector<uint8_t> value;
+    std::tie(value, pos) = parse_vec<uint8_t>(pos);
+
+    // FIXME: need to validate that string is a valid UTF-8
+
+    return {std::string(value.begin(), value.end()), pos};
+}
 
 template <>
-struct parser<std::string>
+inline parser_result<Import> parse(const uint8_t* pos)
 {
-    parser_result<std::string> operator()(const uint8_t* pos)
+    Import result{};
+    std::tie(result.module, pos) = parse_string(pos);
+    std::tie(result.name, pos) = parse_string(pos);
+
+    const uint8_t kind = *pos++;
+    switch (kind)
     {
-        std::vector<uint8_t> value;
-        std::tie(value, pos) = parse_vec<uint8_t>(pos);
-
-        // FIXME: need to validate that string is a valid UTF-8
-
-        return {std::string(value.begin(), value.end()), pos};
+    case 0x00:
+        result.kind = ExternalKind::Function;
+        std::tie(result.desc.function_type_index, pos) = leb128u_decode<uint32_t>(pos);
+        break;
+    case 0x01:
+        result.kind = ExternalKind::Table;
+        std::tie(result.desc.table, pos) = parse<Table>(pos);
+        break;
+    case 0x02:
+        result.kind = ExternalKind::Memory;
+        std::tie(result.desc.memory, pos) = parse<Memory>(pos);
+        break;
+    case 0x03:
+        result.kind = ExternalKind::Global;
+        std::tie(result.desc.global_mutable, pos) = parse_global_type(pos);
+        break;
+    default:
+        throw parser_error{"unexpected import kind value " + std::to_string(kind)};
     }
-};
+
+    return {result, pos};
+}
 
 template <>
-struct parser<Import>
+inline parser_result<Export> parse(const uint8_t* pos)
 {
-    parser_result<Import> operator()(const uint8_t* pos)
+    Export result;
+    std::tie(result.name, pos) = parse_string(pos);
+
+    const uint8_t kind = *pos++;
+    switch (kind)
     {
-        Import result{};
-        std::tie(result.module, pos) = parser<std::string>{}(pos);
-        std::tie(result.name, pos) = parser<std::string>{}(pos);
-
-        const uint8_t kind = *pos++;
-        switch (kind)
-        {
-        case 0x00:
-            result.kind = ExternalKind::Function;
-            std::tie(result.desc.function_type_index, pos) = leb128u_decode<uint32_t>(pos);
-            break;
-        case 0x01:
-            result.kind = ExternalKind::Table;
-            std::tie(result.desc.table, pos) = parser<Table>{}(pos);
-            break;
-        case 0x02:
-            result.kind = ExternalKind::Memory;
-            std::tie(result.desc.memory, pos) = parser<Memory>{}(pos);
-            break;
-        case 0x03:
-            result.kind = ExternalKind::Global;
-            std::tie(result.desc.global_mutable, pos) = parse_global_type(pos);
-            break;
-        default:
-            throw parser_error{"unexpected import kind value " + std::to_string(kind)};
-        }
-
-        return {result, pos};
+    case 0x00:
+        result.kind = ExternalKind::Function;
+        break;
+    case 0x01:
+        result.kind = ExternalKind::Table;
+        break;
+    case 0x02:
+        result.kind = ExternalKind::Memory;
+        break;
+    case 0x03:
+        result.kind = ExternalKind::Global;
+        break;
+    default:
+        throw parser_error{"unexpected export kind value " + std::to_string(kind)};
     }
-};
+
+    std::tie(result.index, pos) = leb128u_decode<uint32_t>(pos);
+
+    return {result, pos};
+}
 
 template <>
-struct parser<Export>
+inline parser_result<Element> parse(const uint8_t* pos)
 {
-    parser_result<Export> operator()(const uint8_t* pos)
-    {
-        Export result;
-        std::tie(result.name, pos) = parser<std::string>{}(pos);
+    TableIdx table_index;
+    std::tie(table_index, pos) = leb128u_decode<uint32_t>(pos);
+    if (table_index != 0)
+        throw parser_error{"unexpected tableidx value " + std::to_string(table_index)};
 
-        const uint8_t kind = *pos++;
-        switch (kind)
-        {
-        case 0x00:
-            result.kind = ExternalKind::Function;
-            break;
-        case 0x01:
-            result.kind = ExternalKind::Table;
-            break;
-        case 0x02:
-            result.kind = ExternalKind::Memory;
-            break;
-        case 0x03:
-            result.kind = ExternalKind::Global;
-            break;
-        default:
-            throw parser_error{"unexpected export kind value " + std::to_string(kind)};
-        }
+    ConstantExpression offset;
+    std::tie(offset, pos) = parse_constant_expression(pos);
 
-        std::tie(result.index, pos) = leb128u_decode<uint32_t>(pos);
+    std::vector<FuncIdx> init;
+    std::tie(init, pos) = parse_vec<FuncIdx>(pos);
 
-        return {result, pos};
-    }
-};
+    return {{offset, std::move(init)}, pos};
+}
 
 template <>
-struct parser<Element>
+inline parser_result<Data> parse(const uint8_t* pos)
 {
-    parser_result<Element> operator()(const uint8_t* pos)
-    {
-        TableIdx table_index;
-        std::tie(table_index, pos) = leb128u_decode<uint32_t>(pos);
-        if (table_index != 0)
-            throw parser_error{"unexpected tableidx value " + std::to_string(table_index)};
+    MemIdx memory_index;
+    std::tie(memory_index, pos) = leb128u_decode<uint32_t>(pos);
+    if (memory_index != 0)
+        throw parser_error{"unexpected memidx value " + std::to_string(memory_index)};
 
-        ConstantExpression offset;
-        std::tie(offset, pos) = parse_constant_expression(pos);
+    ConstantExpression offset;
+    std::tie(offset, pos) = parse_constant_expression(pos);
 
-        std::vector<FuncIdx> init;
-        std::tie(init, pos) = parse_vec<FuncIdx>(pos);
+    std::vector<uint8_t> init;
+    std::tie(init, pos) = parse_vec<uint8_t>(pos);
 
-        return {{offset, std::move(init)}, pos};
-    }
-};
-
-template <>
-struct parser<Data>
-{
-    parser_result<Data> operator()(const uint8_t* pos)
-    {
-        MemIdx memory_index;
-        std::tie(memory_index, pos) = leb128u_decode<uint32_t>(pos);
-        if (memory_index != 0)
-            throw parser_error{"unexpected memidx value " + std::to_string(memory_index)};
-
-        ConstantExpression offset;
-        std::tie(offset, pos) = parse_constant_expression(pos);
-
-        std::vector<uint8_t> init;
-        std::tie(init, pos) = parse_vec<uint8_t>(pos);
-
-        return {{offset, bytes(init.data(), init.size())}, pos};
-    }
-};
+    return {{offset, bytes(init.data(), init.size())}, pos};
+}
 
 Module parse(bytes_view input)
 {

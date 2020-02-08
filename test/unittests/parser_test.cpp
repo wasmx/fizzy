@@ -42,11 +42,11 @@ TEST(parser, valtype)
 {
     uint8_t b;
     b = 0x7e;
-    EXPECT_EQ(std::get<0>(parser<ValType>{}(&b)), ValType::i64);
+    EXPECT_EQ(std::get<0>(parse<ValType>(&b)), ValType::i64);
     b = 0x7f;
-    EXPECT_EQ(std::get<0>(parser<ValType>{}(&b)), ValType::i32);
+    EXPECT_EQ(std::get<0>(parse<ValType>(&b)), ValType::i32);
     b = 0x7d;
-    EXPECT_THROW(std::get<0>(parser<ValType>{}(&b)), parser_error);
+    EXPECT_THROW(std::get<0>(parse<ValType>(&b)), parser_error);
 }
 
 TEST(parser, valtype_vec)
@@ -98,7 +98,7 @@ TEST(parser, limits_invalid)
 TEST(parser, locals)
 {
     const auto input = "81017f"_bytes;
-    const auto [l, p] = parser<Locals>{}(input.data());
+    const auto [l, p] = parse<Locals>(input.data());
     EXPECT_EQ(l.count, 0x81);
     EXPECT_EQ(l.type, ValType::i32);
 }
@@ -597,7 +597,7 @@ TEST(parser, code_with_empty_expr_2_locals)
     const auto func_2_locals_bin = "01027f0b"_bytes;
     const auto code_bin = add_size_prefix(func_2_locals_bin);
 
-    const auto [code_obj, end_pos1] = parser<Code>{}(code_bin.data());
+    const auto [code_obj, end_pos1] = parse<Code>(code_bin.data());
     EXPECT_EQ(code_obj.local_count, 2);
     ASSERT_EQ(code_obj.instructions.size(), 1);
     EXPECT_EQ(code_obj.instructions[0], Instr::end);
@@ -610,7 +610,7 @@ TEST(parser, code_with_empty_expr_5_locals)
     const auto func_5_locals_bin = "02017f047e0b"_bytes;
     const auto code_bin = add_size_prefix(func_5_locals_bin);
 
-    const auto [code_obj, end_pos1] = parser<Code>{}(code_bin.data());
+    const auto [code_obj, end_pos1] = parse<Code>(code_bin.data());
     EXPECT_EQ(code_obj.local_count, 5);
     ASSERT_EQ(code_obj.instructions.size(), 1);
     EXPECT_EQ(code_obj.instructions[0], Instr::end);
