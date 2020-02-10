@@ -123,8 +123,8 @@ public:
                     if (expected_value != actual_value)
                     {
                         std::stringstream message;
-                        message << "Incorrect returned value. Expected: " << expected_type << " (0x"
-                                << std::hex << expected_value << ") Actual: " << std::dec
+                        message << "Incorrect returned value. Expected: " << expected_value
+                                << " (0x" << std::hex << expected_value << ") Actual: " << std::dec
                                 << actual_value << " (0x" << std::hex << actual_value << std::dec
                                 << ")";
                         fail(message.str());
