@@ -143,7 +143,7 @@ parser_result<Code> parse_expr(const uint8_t* pos)
             }
             else
             {
-                std::tie(std::ignore, pos) = parser<ValType>{}(pos);  // Report incorrect type.
+                std::tie(std::ignore, pos) = parse<ValType>(pos);  // Report incorrect type.
                 arity = 1;
             }
 
@@ -164,8 +164,8 @@ parser_result<Code> parse_expr(const uint8_t* pos)
             if (type == BlockTypeEmpty)
                 ++pos;
             else
-                std::tie(std::ignore, pos) = parser<ValType>{}(pos);  // Report incorrect type.
-            label_positions.push_back({Instr::loop, 0});              // Mark as not interested.
+                std::tie(std::ignore, pos) = parse<ValType>(pos);  // Report incorrect type.
+            label_positions.push_back({Instr::loop, 0});           // Mark as not interested.
             break;
         }
 
@@ -181,7 +181,7 @@ parser_result<Code> parse_expr(const uint8_t* pos)
             else
             {
                 // Will throw in case of incorrect type.
-                std::tie(std::ignore, pos) = parser<ValType>{}(pos);
+                std::tie(std::ignore, pos) = parse<ValType>(pos);
                 arity = 1;
             }
 
@@ -237,7 +237,7 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         case Instr::br_table:
         {
             std::vector<uint32_t> label_indices;
-            std::tie(label_indices, pos) = parser<std::vector<uint32_t>>{}(pos);
+            std::tie(label_indices, pos) = parse_vec<uint32_t>(pos);
             uint32_t default_label_idx;
             std::tie(default_label_idx, pos) = leb128u_decode<uint32_t>(pos);
 

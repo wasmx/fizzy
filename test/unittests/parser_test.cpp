@@ -42,17 +42,17 @@ TEST(parser, valtype)
 {
     uint8_t b;
     b = 0x7e;
-    EXPECT_EQ(std::get<0>(parser<ValType>{}(&b)), ValType::i64);
+    EXPECT_EQ(std::get<0>(parse<ValType>(&b)), ValType::i64);
     b = 0x7f;
-    EXPECT_EQ(std::get<0>(parser<ValType>{}(&b)), ValType::i32);
+    EXPECT_EQ(std::get<0>(parse<ValType>(&b)), ValType::i32);
     b = 0x7d;
-    EXPECT_THROW(std::get<0>(parser<ValType>{}(&b)), parser_error);
+    EXPECT_THROW(std::get<0>(parse<ValType>(&b)), parser_error);
 }
 
 TEST(parser, valtype_vec)
 {
     const auto input = "037f7e7fcc"_bytes;
-    const auto [vec, pos] = parser<std::vector<ValType>>{}(input.data());
+    const auto [vec, pos] = parse_vec<ValType>(input.data());
     EXPECT_EQ(pos, input.data() + 4);
     ASSERT_EQ(vec.size(), 3);
     EXPECT_EQ(vec[0], ValType::i32);
@@ -63,7 +63,7 @@ TEST(parser, valtype_vec)
 TEST(parser, limits_min)
 {
     const auto input = "007f"_bytes;
-    const auto [limits, pos] = parser<Limits>{}(input.data());
+    const auto [limits, pos] = parse_limits(input.data());
     EXPECT_EQ(limits.min, 0x7f);
     EXPECT_FALSE(limits.max.has_value());
 }
@@ -71,7 +71,7 @@ TEST(parser, limits_min)
 TEST(parser, limits_minmax)
 {
     const auto input = "01207f"_bytes;
-    const auto [limits, pos] = parser<Limits>{}(input.data());
+    const auto [limits, pos] = parse_limits(input.data());
     EXPECT_EQ(limits.min, 0x20);
     EXPECT_TRUE(limits.max.has_value());
     EXPECT_EQ(*limits.max, 0x7f);
@@ -80,25 +80,25 @@ TEST(parser, limits_minmax)
 TEST(parser, DISABLED_limits_min_invalid_too_short)
 {
     const auto input = "00"_bytes;
-    EXPECT_THROW(parser<Limits>{}(input.data()), parser_error);
+    EXPECT_THROW(parse_limits(input.data()), parser_error);
 }
 
 TEST(parser, DISABLED_limits_minmax_invalid_too_short)
 {
     const auto input = "0120"_bytes;
-    EXPECT_THROW(parser<Limits>{}(input.data()), parser_error);
+    EXPECT_THROW(parse_limits(input.data()), parser_error);
 }
 
 TEST(parser, limits_invalid)
 {
     const auto input = "02"_bytes;
-    EXPECT_THROW(parser<Limits>{}(input.data()), parser_error);
+    EXPECT_THROW(parse_limits(input.data()), parser_error);
 }
 
 TEST(parser, locals)
 {
     const auto input = "81017f"_bytes;
-    const auto [l, p] = parser<Locals>{}(input.data());
+    const auto [l, p] = parse<Locals>(input.data());
     EXPECT_EQ(l.count, 0x81);
     EXPECT_EQ(l.type, ValType::i32);
 }
@@ -597,7 +597,7 @@ TEST(parser, code_with_empty_expr_2_locals)
     const auto func_2_locals_bin = "01027f0b"_bytes;
     const auto code_bin = add_size_prefix(func_2_locals_bin);
 
-    const auto [code_obj, end_pos1] = parser<Code>{}(code_bin.data());
+    const auto [code_obj, end_pos1] = parse<Code>(code_bin.data());
     EXPECT_EQ(code_obj.local_count, 2);
     ASSERT_EQ(code_obj.instructions.size(), 1);
     EXPECT_EQ(code_obj.instructions[0], Instr::end);
@@ -610,7 +610,7 @@ TEST(parser, code_with_empty_expr_5_locals)
     const auto func_5_locals_bin = "02017f047e0b"_bytes;
     const auto code_bin = add_size_prefix(func_5_locals_bin);
 
-    const auto [code_obj, end_pos1] = parser<Code>{}(code_bin.data());
+    const auto [code_obj, end_pos1] = parse<Code>(code_bin.data());
     EXPECT_EQ(code_obj.local_count, 5);
     ASSERT_EQ(code_obj.instructions.size(), 1);
     EXPECT_EQ(code_obj.instructions[0], Instr::end);
