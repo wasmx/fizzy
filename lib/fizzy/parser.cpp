@@ -22,7 +22,7 @@ struct parser<FuncType>
     }
 };
 
-std::tuple<bool, const uint8_t*> parseGlobalType(const uint8_t* pos)
+std::tuple<bool, const uint8_t*> parse_global_type(const uint8_t* pos)
 {
     // will throw if invalid type
     std::tie(std::ignore, pos) = parser<ValType>{}(pos);
@@ -88,7 +88,7 @@ struct parser<Global>
     parser_result<Global> operator()(const uint8_t* pos)
     {
         Global result;
-        std::tie(result.is_mutable, pos) = parseGlobalType((pos));
+        std::tie(result.is_mutable, pos) = parse_global_type(pos);
         std::tie(result.expression, pos) = parse_constant_expression(pos);
 
         return {result, pos};
@@ -151,7 +151,7 @@ struct parser<Import>
             break;
         case 0x03:
             result.kind = ExternalKind::Global;
-            std::tie(result.desc.global_mutable, pos) = parseGlobalType((pos));
+            std::tie(result.desc.global_mutable, pos) = parse_global_type(pos);
             break;
         default:
             throw parser_error{"unexpected import kind value " + std::to_string(kind)};
