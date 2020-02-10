@@ -660,6 +660,62 @@ TEST(parser, code_section_with_basic_instructions)
     EXPECT_EQ(module.codesec[0].immediates, "010000000200000003000000"_bytes);
 }
 
+TEST(parser, code_section_with_memory_size)
+{
+    const auto func_bin =
+        "00"  // vec(locals)
+        "3f000b"_bytes;
+    const auto code_bin = add_size_prefix(func_bin);
+    const auto section_contents = make_vec({code_bin});
+    const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
+
+    const auto module = parse(bin);
+    ASSERT_EQ(module.codesec.size(), 1);
+    EXPECT_EQ(module.codesec[0].local_count, 0);
+    ASSERT_EQ(module.codesec[0].instructions.size(), 2);
+    EXPECT_EQ(module.codesec[0].instructions[0], Instr::memory_size);
+    EXPECT_EQ(module.codesec[0].instructions[1], Instr::end);
+    EXPECT_TRUE(module.codesec[0].immediates.empty());
+
+    const auto func_bin_invalid =
+        "00"  // vec(locals)
+        "3f010b"_bytes;
+    const auto code_bin_invalid = add_size_prefix(func_bin_invalid);
+    const auto section_contents_invalid = make_vec({code_bin_invalid});
+    const auto bin_invalid = bytes{wasm_prefix} + make_section(10, section_contents_invalid);
+
+    EXPECT_THROW_MESSAGE(parse(bin_invalid), parser_error, "invalid memory index encountered");
+}
+
+TEST(parser, code_section_with_memory_grow)
+{
+    const auto func_bin =
+        "00"  // vec(locals)
+        "410040001a0b"_bytes;
+    const auto code_bin = add_size_prefix(func_bin);
+    const auto section_contents = make_vec({code_bin});
+    const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
+
+    const auto module = parse(bin);
+    ASSERT_EQ(module.codesec.size(), 1);
+    EXPECT_EQ(module.codesec[0].local_count, 0);
+    ASSERT_EQ(module.codesec[0].instructions.size(), 4);
+    EXPECT_EQ(module.codesec[0].instructions[0], Instr::i32_const);
+    EXPECT_EQ(module.codesec[0].instructions[1], Instr::memory_grow);
+    EXPECT_EQ(module.codesec[0].instructions[2], Instr::drop);
+    EXPECT_EQ(module.codesec[0].instructions[3], Instr::end);
+    EXPECT_EQ(module.codesec[0].immediates, "00000000"_bytes);
+
+    const auto func_bin_invalid =
+        "00"  // vec(locals)
+        "410040011a0b"_bytes;
+    const auto code_bin_invalid = add_size_prefix(func_bin_invalid);
+    const auto section_contents_invalid = make_vec({code_bin_invalid});
+    const auto bin_invalid = bytes{wasm_prefix} + make_section(10, section_contents_invalid);
+
+    EXPECT_THROW_MESSAGE(parse(bin_invalid), parser_error, "invalid memory index encountered");
+}
+
 TEST(parser, data_section)
 {
     const auto section_contents =
