@@ -47,8 +47,6 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         case Instr::return_:
         case Instr::drop:
         case Instr::select:
-        case Instr::memory_size:
-        case Instr::memory_grow:
         case Instr::i32_eq:
         case Instr::i32_eqz:
         case Instr::i32_ne:
@@ -305,6 +303,14 @@ parser_result<Code> parse_expr(const uint8_t* pos)
             uint32_t imm;
             std::tie(imm, pos) = leb128u_decode<uint32_t>(pos);
             push(code.immediates, imm);
+            break;
+        }
+        case Instr::memory_size:
+        case Instr::memory_grow:
+        {
+            const uint8_t memory_idx{*pos++};
+            if (memory_idx != 0)
+                throw parser_error{"invalid memory index encountered"};
             break;
         }
         }
