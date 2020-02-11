@@ -313,6 +313,12 @@ TEST(parser, import_memories_multiple)
         parse(bin), parser_error, "too many imported memories (at most one is allowed)");
 }
 
+TEST(parser, import_invalid_kind)
+{
+    const auto wasm = bytes{wasm_prefix} + make_section(2, make_vec({"000004"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected import kind value 4");
+}
+
 TEST(parser, memory_and_imported_memory)
 {
     // (import "js" "mem"(memory 1))
@@ -405,6 +411,12 @@ TEST(parser, table_multi_min_limit)
     const auto bin = bytes{wasm_prefix} + make_section(4, section_contents);
 
     EXPECT_THROW(parse(bin), parser_error);
+}
+
+TEST(parser, table_invalid_elemtype)
+{
+    const auto wasm = bytes{wasm_prefix} + make_section(4, make_vec({"71"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected table elemtype: 113");
 }
 
 TEST(parser, memory_single_min_limit)
@@ -548,6 +560,12 @@ TEST(parser, export_multiple)
     EXPECT_EQ(module.exportsec[3].index, 0x45);
 }
 
+TEST(parser, export_invalid_kind)
+{
+    const auto wasm = bytes{wasm_prefix} + make_section(7, make_vec({"0004"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected export kind value 4");
+}
+
 TEST(parser, start)
 {
     const auto func_section = make_vec({"00"_bytes, "00"_bytes});
@@ -638,6 +656,14 @@ TEST(parser, element_section_tableidx_nonzero)
     const auto bin = bytes{wasm_prefix} + make_section(9, section_contents);
 
     EXPECT_THROW_MESSAGE(parse(bin), parser_error, "unexpected tableidx value 1");
+}
+
+TEST(parser, element_section_no_table_section)
+{
+    const auto wasm =
+        bytes{wasm_prefix} + make_section(9, make_vec({"000b"_bytes + make_vec({"00"_bytes})}));
+    EXPECT_THROW_MESSAGE(
+        parse(wasm), parser_error, "element section encountered without a table section");
 }
 
 TEST(parser, code_with_empty_expr_2_locals)
