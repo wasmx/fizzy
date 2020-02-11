@@ -495,6 +495,13 @@ TEST(parser, global_multi_const_inited)
     EXPECT_EQ(module.globalsec[1].expression.value.constant, uint32_t(-1));
 }
 
+TEST(parser, global_invalid_mutability)
+{
+    const auto wasm = bytes{wasm_prefix} + make_section(6, make_vec({"7f02"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error,
+        "unexpected byte value 2, expected 0x00 or 0x01 for global mutability");
+}
+
 TEST(parser, export_single_function)
 {
     const auto section_contents = make_vec({bytes{0x03, 'a', 'b', 'c', 0x00, 0x42}});
