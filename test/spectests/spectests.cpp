@@ -141,7 +141,10 @@ public:
                 const auto& action = cmd.at("action");
                 const auto action_type = action.at("type").get<std::string>();
                 if (action_type != "invoke")
+                {
                     skip("Unsupported action type '" + action_type + "'");
+                    continue;
+                }
 
                 auto result = invoke(action);
                 if (!result.has_value())
