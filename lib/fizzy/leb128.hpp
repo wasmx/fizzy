@@ -33,7 +33,7 @@ std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* input)
 
     using T_unsigned = typename std::make_unsigned<T>::type;
     T_unsigned result = 0;
-    int result_shift = 0;
+    size_t result_shift = 0;
 
     for (; result_shift < std::numeric_limits<T_unsigned>::digits; ++input, result_shift += 7)
     {
@@ -41,7 +41,7 @@ std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* input)
         if ((*input & 0x80) == 0)
         {
             // sign extend
-            if ((*input & 0x40) != 0)
+            if ((*input & 0x40) != 0 && (result_shift + 7 < sizeof(T_unsigned) * 8))
             {
                 constexpr auto all_ones = std::numeric_limits<T_unsigned>::max();
                 const auto mask = static_cast<T_unsigned>(all_ones << (result_shift + 7));

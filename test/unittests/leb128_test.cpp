@@ -142,6 +142,8 @@ TEST(leb128, decode_s32)
             {{0xe5, 0x8e, 0xa6, 0x80, 0x00}, 624485}, // 624485 with leading zeroes
             {{0xc0, 0xbb, 0x78}, -123456},
             {{0x9b, 0xf1, 0x59}, -624485},
+            {{0x81, 0x80, 0x80, 0x80, 0x78}, -2147483647},
+            {{0x80, 0x80, 0x80, 0x80, 0x78}, std::numeric_limits<int32_t>::min()},
     };
     // clang-format on
 
@@ -164,6 +166,8 @@ TEST(leb128, decode_s8)
             {{0xff, 0x01}, -1},
             {{0xfe, 0x01}, -2},
             {{0x40}, -64},
+            {{0x81, 0x7f}, -127},
+            {{0x80, 0x7f}, std::numeric_limits<int8_t>::min()},
     };
     // clang-format on
 
