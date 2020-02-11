@@ -554,6 +554,12 @@ TEST(parser, export_multiple)
     EXPECT_EQ(module.exportsec[3].index, 0x45);
 }
 
+TEST(parser, export_invalid_kind)
+{
+    const auto wasm = bytes{wasm_prefix} + make_section(7, make_vec({"0004"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected export kind value 4");
+}
+
 TEST(parser, start)
 {
     const auto func_section = make_vec({"00"_bytes, "00"_bytes});
