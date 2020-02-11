@@ -61,6 +61,7 @@ struct Locals
 
 enum class Instr : uint8_t
 {
+    // 5.4.1 Control instructions
     unreachable = 0x00,
     nop = 0x01,
     block = 0x02,
@@ -74,13 +75,19 @@ enum class Instr : uint8_t
     return_ = 0x0f,
     call = 0x10,
     call_indirect = 0x11,
+
+    // 5.4.2 Parametric instructions
     drop = 0x1a,
     select = 0x1b,
+
+    // 5.4.3 Variable instructions
     local_get = 0x20,
     local_set = 0x21,
     local_tee = 0x22,
     global_get = 0x23,
     global_set = 0x24,
+
+    // 5.4.4 Memory instructions
     i32_load = 0x28,
     i64_load = 0x29,
     i32_load8_s = 0x2c,
@@ -102,8 +109,11 @@ enum class Instr : uint8_t
     i64_store32 = 0x3e,
     memory_size = 0x3f,
     memory_grow = 0x40,
+
+    // 5.4.5 Numeric instructions
     i32_const = 0x41,
     i64_const = 0x42,
+
     i32_eqz = 0x45,
     i32_eq = 0x46,
     i32_ne = 0x47,
@@ -115,6 +125,7 @@ enum class Instr : uint8_t
     i32_le_u = 0x4d,
     i32_ge_s = 0x4e,
     i32_ge_u = 0x4f,
+
     i64_eqz = 0x50,
     i64_eq = 0x51,
     i64_ne = 0x52,
@@ -126,6 +137,7 @@ enum class Instr : uint8_t
     i64_le_u = 0x58,
     i64_ge_s = 0x59,
     i64_ge_u = 0x5a,
+
     i32_clz = 0x67,
     i32_ctz = 0x68,
     i32_popcnt = 0x69,
@@ -144,6 +156,7 @@ enum class Instr : uint8_t
     i32_shr_u = 0x76,
     i32_rotl = 0x77,
     i32_rotr = 0x78,
+
     i64_clz = 0x79,
     i64_ctz = 0x7a,
     i64_popcnt = 0x7b,
@@ -162,6 +175,7 @@ enum class Instr : uint8_t
     i64_shr_u = 0x88,
     i64_rotl = 0x89,
     i64_rotr = 0x8a,
+
     i32_wrap_i64 = 0xa7,
     i64_extend_i32_s = 0xac,
     i64_extend_i32_u = 0xad,
