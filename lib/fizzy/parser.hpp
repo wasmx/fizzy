@@ -20,14 +20,6 @@ template <typename T>
 parser_result<T> parse(const uint8_t* pos);
 
 template <>
-inline parser_result<uint8_t> parse(const uint8_t* pos)
-{
-    const auto result = *pos;
-    ++pos;
-    return {result, pos};
-}
-
-template <>
 inline parser_result<uint32_t> parse(const uint8_t* pos)
 {
     return leb128u_decode<uint32_t>(pos);

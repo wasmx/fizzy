@@ -6,6 +6,14 @@
 namespace fizzy
 {
 template <>
+inline parser_result<uint8_t> parse(const uint8_t* pos)
+{
+    const auto result = *pos;
+    ++pos;
+    return {result, pos};
+}
+
+template <>
 inline parser_result<FuncType> parse(const uint8_t* pos)
 {
     if (*pos != 0x60)
