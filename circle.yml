@@ -207,7 +207,7 @@ jobs:
       - run:
           name: "Benchmark"
           command: |
-            ~/bin/fizzy-bench test/benchmarks --benchmark_color=true --benchmark_repetitions=7 --benchmark_min_time=1
+            ~/bin/fizzy-bench test/benchmarks --benchmark_color=true --benchmark_repetitions=3 --benchmark_min_time=1
 
 workflows:
   version: 2
