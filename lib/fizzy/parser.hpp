@@ -101,19 +101,4 @@ inline parser_result<Memory> parse(const uint8_t* pos)
     std::tie(limits, pos) = parse_limits(pos);
     return {{limits}, pos};
 }
-
-template <>
-inline parser_result<Code> parse(const uint8_t* pos)
-{
-    const auto [size, pos1] = leb128u_decode<uint32_t>(pos);
-
-    const auto [locals_vec, pos2] = parse_vec<Locals>(pos1);
-
-    auto result = parse_expr(pos2);
-
-    for (const auto& l : locals_vec)
-        std::get<0>(result).local_count += l.count;
-
-    return result;
-}
 }  // namespace fizzy
