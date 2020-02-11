@@ -20,6 +20,10 @@ IV) First class support for determistic applications (*blockchain*)
 - Support the bigint API
 - Support runtime metering in the interpreter
 
+## Testing
+
+To read about testing see [fizzy-spectests](./test/spectests/README.md).
+
 ## License
 
 Apache 2.0
