@@ -71,15 +71,6 @@ inline parser_result<Limits> parse_limits(const uint8_t* pos)
     }
 }
 
-template <>
-inline parser_result<Locals> parse(const uint8_t* pos)
-{
-    Locals result;
-    std::tie(result.count, pos) = leb128u_decode<uint32_t>(pos);
-    std::tie(result.type, pos) = parse<ValType>(pos);
-    return {result, pos};
-}
-
 template <typename T>
 parser_result<std::vector<T>> parse_vec(const uint8_t* pos)
 {

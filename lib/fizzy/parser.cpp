@@ -201,6 +201,15 @@ inline parser_result<Element> parse(const uint8_t* pos)
 }
 
 template <>
+inline parser_result<Locals> parse(const uint8_t* pos)
+{
+    Locals result;
+    std::tie(result.count, pos) = leb128u_decode<uint32_t>(pos);
+    std::tie(result.type, pos) = parse<ValType>(pos);
+    return {result, pos};
+}
+
+template <>
 inline parser_result<Code> parse(const uint8_t* pos)
 {
     const auto [size, pos1] = leb128u_decode<uint32_t>(pos);
