@@ -75,6 +75,27 @@ commands:
           working_directory: ~/build
           command: bin/fizzy-bench-internal
 
+  spectest:
+    description: "Run spectest"
+    steps:
+      - run:
+          name: "Download spectest files"
+          working_directory: ~/build
+          command: |
+            git clone https://github.com/wasmx/wasm-spec --branch vanilla-json --depth 1
+      - run:
+          name: "Run spectest"
+          working_directory: ~/build
+          command: |
+            set +e
+            # TODO: Make UBSan warnings fatal.
+            # export UBSAN_OPTIONS=halt_on_error=1
+            expected="  PASSED 2857, FAILED 142, SKIPPED 8814."
+            result=$(bin/fizzy-spectests --skip-validation wasm-spec/test/core/json | tail -1)
+            echo "Expected: $expected"
+            echo "Result: $result"
+            if [ "$expected" != "$result" ]; then exit 1; fi
+
 jobs:
 
   lint:
@@ -109,7 +130,6 @@ jobs:
           ./wat2wasm4cpp.py test/unittests/wasm_engine_test.cpp
           git diff --color --exit-code
 
-
   release-linux:
     executor: linux-gcc-9
     environment:
@@ -121,6 +141,7 @@ jobs:
           root: ~/build
           paths:
             - bin/fizzy-bench
+            - bin/fizzy-spectests
 
   release-macos:
     executor: macos
@@ -190,12 +211,11 @@ jobs:
       - build
       - test
       - benchmark
+      - spectest
 
   benchmark:
     machine:
       image: ubuntu-1604:201903-01
-    environment:
-      BUILD_TYPE: Release
     steps:
       - run:
           name: "Install standard libraries"
@@ -249,6 +269,12 @@ jobs:
           paths:
             - ~/build/corpus
 
+  spectest:
+    executor: linux-gcc-9
+    steps:
+      - attach_workspace:
+          at: ~/build
+      - spectest
 
 workflows:
   version: 2
@@ -261,5 +287,8 @@ workflows:
       - sanitizers
       - fuzzing
       - benchmark:
+          requires:
+            - release-linux
+      - spectest:
           requires:
             - release-linux
