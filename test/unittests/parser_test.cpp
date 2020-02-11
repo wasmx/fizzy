@@ -640,6 +640,14 @@ TEST(parser, element_section_tableidx_nonzero)
     EXPECT_THROW_MESSAGE(parse(bin), parser_error, "unexpected tableidx value 1");
 }
 
+TEST(parser, element_section_no_table_section)
+{
+    const auto wasm =
+        bytes{wasm_prefix} + make_section(9, make_vec({"000b"_bytes + make_vec({"00"_bytes})}));
+    EXPECT_THROW_MESSAGE(
+        parse(wasm), parser_error, "element section encountered without a table section");
+}
+
 TEST(parser, code_with_empty_expr_2_locals)
 {
     // Func with 2x i32 locals, only 0x0b "end" instruction.
