@@ -155,8 +155,16 @@ public:
 
                 pass();
             }
-            else if (type == "assert_invalid")
+            else if (type == "assert_invalid" || type == "assert_malformed")
             {
+                // NOTE: assert_malformed should result in a parser error and
+                //       assert_invalid should result in a validation error
+                const auto module_type = cmd.at("module_type").get<std::string>();
+                if (module_type != "binary")
+                {
+                    skip("Only binary modules are supported.");
+                    continue;
+                }
                 const auto filename = cmd.at("filename").get<std::string>();
                 const auto wasm_binary = load_wasm_file(path, filename);
                 try
