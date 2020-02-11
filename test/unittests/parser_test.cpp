@@ -495,6 +495,20 @@ TEST(parser, global_multi_const_inited)
     EXPECT_EQ(module.globalsec[1].expression.value.constant, uint32_t(-1));
 }
 
+TEST(parser, global_invalid_mutability)
+{
+    const auto wasm = bytes{wasm_prefix} + make_section(6, make_vec({"7f02"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error,
+        "unexpected byte value 2, expected 0x00 or 0x01 for global mutability");
+}
+
+TEST(parser, global_initializer_expression_invalid_instruction)
+{
+    const auto wasm = bytes{wasm_prefix} + make_section(6, make_vec({"7f0000"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error,
+        "unexpected instruction in the global initializer expression: 0");
+}
+
 TEST(parser, export_single_function)
 {
     const auto section_contents = make_vec({bytes{0x03, 'a', 'b', 'c', 0x00, 0x42}});
@@ -627,8 +641,11 @@ TEST(parser, code_with_empty_expr_2_locals)
     // Func with 2x i32 locals, only 0x0b "end" instruction.
     const auto func_2_locals_bin = "01027f0b"_bytes;
     const auto code_bin = add_size_prefix(func_2_locals_bin);
+    const auto wasm_bin = bytes{wasm_prefix} + make_section(10, make_vec({code_bin}));
 
-    const auto [code_obj, end_pos1] = parse<Code>(code_bin.data());
+    const auto module = parse(wasm_bin);
+    ASSERT_EQ(module.codesec.size(), 1);
+    const auto& code_obj = module.codesec[0];
     EXPECT_EQ(code_obj.local_count, 2);
     ASSERT_EQ(code_obj.instructions.size(), 1);
     EXPECT_EQ(code_obj.instructions[0], Instr::end);
@@ -640,8 +657,11 @@ TEST(parser, code_with_empty_expr_5_locals)
     // Func with 1x i64 + 4x i32 locals , only 0x0b "end" instruction.
     const auto func_5_locals_bin = "02017f047e0b"_bytes;
     const auto code_bin = add_size_prefix(func_5_locals_bin);
+    const auto wasm_bin = bytes{wasm_prefix} + make_section(10, make_vec({code_bin}));
 
-    const auto [code_obj, end_pos1] = parse<Code>(code_bin.data());
+    const auto module = parse(wasm_bin);
+    ASSERT_EQ(module.codesec.size(), 1);
+    const auto& code_obj = module.codesec[0];
     EXPECT_EQ(code_obj.local_count, 5);
     ASSERT_EQ(code_obj.instructions.size(), 1);
     EXPECT_EQ(code_obj.instructions[0], Instr::end);
