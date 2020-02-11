@@ -35,16 +35,15 @@ TEST(leb128, decode_u64_invalid)
 {
     // buffer overrun is not caught
     //    bytes encoded_624485_invalid{0xe5, 0x8e, 0xa6};
-    //    EXPECT_THROW(leb128_decode_u64(encoded_624485_invalid.data()), std::runtime_error);
+    //    EXPECT_THROW(leb128_decode_u64(encoded_624485_invalid.data()), parser_error);
 
     bytes encoded_1_too_many_leading_zeroes{
         0x81, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80};
-    EXPECT_THROW(
-        leb128u_decode<uint64_t>(encoded_1_too_many_leading_zeroes.data()), std::runtime_error);
+    EXPECT_THROW(leb128u_decode<uint64_t>(encoded_1_too_many_leading_zeroes.data()), parser_error);
 
     bytes encoded_max_leading_zeroes{
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x81, 0x00};
-    EXPECT_THROW(leb128u_decode<uint64_t>(encoded_max_leading_zeroes.data()), std::runtime_error);
+    EXPECT_THROW(leb128u_decode<uint64_t>(encoded_max_leading_zeroes.data()), parser_error);
 }
 
 TEST(leb128, decode_u8)
@@ -73,11 +72,10 @@ TEST(leb128, decode_u8)
 TEST(leb128, decode_u8_invalid)
 {
     bytes encoded_1_too_many_leading_zeroes{0x81, 0x80, 0x80};
-    EXPECT_THROW(
-        leb128u_decode<uint8_t>(encoded_1_too_many_leading_zeroes.data()), std::runtime_error);
+    EXPECT_THROW(leb128u_decode<uint8_t>(encoded_1_too_many_leading_zeroes.data()), parser_error);
 
     bytes encoded_too_big{0xe5, 0x8e, 0x26};
-    EXPECT_THROW(leb128u_decode<uint8_t>(encoded_too_big.data()), std::runtime_error);
+    EXPECT_THROW(leb128u_decode<uint8_t>(encoded_too_big.data()), parser_error);
 }
 
 TEST(leb128, decode_s64)
@@ -115,13 +113,11 @@ TEST(leb128, decode_s64_invalid)
 {
     bytes encoded_1_too_many_leading_zeroes{
         0x81, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80};
-    EXPECT_THROW(
-        leb128s_decode<int64_t>(encoded_1_too_many_leading_zeroes.data()), std::runtime_error);
+    EXPECT_THROW(leb128s_decode<int64_t>(encoded_1_too_many_leading_zeroes.data()), parser_error);
 
     bytes encoded_minus1_too_many_leading_1s{
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01};
-    EXPECT_THROW(
-        leb128s_decode<int64_t>(encoded_minus1_too_many_leading_1s.data()), std::runtime_error);
+    EXPECT_THROW(leb128s_decode<int64_t>(encoded_minus1_too_many_leading_1s.data()), parser_error);
 }
 
 TEST(leb128, decode_s32)
@@ -182,9 +178,8 @@ TEST(leb128, decode_s8)
 TEST(leb128, decode_s8_invalid)
 {
     bytes encoded_1_too_many_leading_zeroes{0x81, 0x80, 0x80};
-    EXPECT_THROW(
-        leb128s_decode<int8_t>(encoded_1_too_many_leading_zeroes.data()), std::runtime_error);
+    EXPECT_THROW(leb128s_decode<int8_t>(encoded_1_too_many_leading_zeroes.data()), parser_error);
 
     bytes encoded_too_big{0xe5, 0x8e, 0x26};
-    EXPECT_THROW(leb128s_decode<int8_t>(encoded_too_big.data()), std::runtime_error);
+    EXPECT_THROW(leb128s_decode<int8_t>(encoded_too_big.data()), parser_error);
 }
