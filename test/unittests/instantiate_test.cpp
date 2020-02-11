@@ -550,3 +550,15 @@ TEST(instantiate, globals_initialized_from_imported)
     EXPECT_THROW_MESSAGE(instantiate(module_invalid2, {}, {}), instantiate_error,
         "Global can be initialized by another const global only if it's imported.");
 }
+
+TEST(execute, start_unreachable)
+{
+    Module module;
+    module.startfunc = FuncIdx{0};
+    // TODO: add type section (once enforced)
+    module.funcsec.emplace_back(FuncIdx{0});
+    module.codesec.emplace_back(Code{0, {Instr::unreachable}, {}});
+
+    EXPECT_THROW_MESSAGE(
+        instantiate(module), instantiate_error, "Start function failed to execute");
+}
