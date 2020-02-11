@@ -102,6 +102,14 @@ inline parser_result<Table> parse(const uint8_t* pos)
     return {{limits}, pos};
 }
 
+template <>
+inline parser_result<Memory> parse(const uint8_t* pos)
+{
+    Limits limits;
+    std::tie(limits, pos) = parse_limits(pos);
+    return {{limits}, pos};
+}
+
 inline parser_result<std::string> parse_string(const uint8_t* pos)
 {
     std::vector<uint8_t> value;

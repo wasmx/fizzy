@@ -93,12 +93,4 @@ parser_result<std::vector<T>> parse_vec(const uint8_t* pos)
         std::tie(inserter, pos) = parse<T>(pos);
     return {result, pos};
 }
-
-template <>
-inline parser_result<Memory> parse(const uint8_t* pos)
-{
-    Limits limits;
-    std::tie(limits, pos) = parse_limits(pos);
-    return {{limits}, pos};
-}
 }  // namespace fizzy
