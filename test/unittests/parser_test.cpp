@@ -313,6 +313,12 @@ TEST(parser, import_memories_multiple)
         parse(bin), parser_error, "too many imported memories (at most one is allowed)");
 }
 
+TEST(parser, import_invalid_kind)
+{
+    const auto wasm = bytes{wasm_prefix} + make_section(2, make_vec({"000004"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected import kind value 4");
+}
+
 TEST(parser, memory_and_imported_memory)
 {
     // (import "js" "mem"(memory 1))
