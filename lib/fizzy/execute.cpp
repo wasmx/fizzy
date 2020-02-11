@@ -161,9 +161,7 @@ std::vector<TypeIdx> match_imports(const Module& module,
             imported_globals_mutability.emplace_back(import.desc.global_mutable);
             break;
         default:
-            throw instantiate_error("Import of type " +
-                                    std::to_string(static_cast<uint8_t>(import.kind)) +
-                                    " is not supported");
+            assert(false);
         }
     }
 
