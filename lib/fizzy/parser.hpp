@@ -19,11 +19,6 @@ parser_result<Code> parse_expr(const uint8_t* input);
 template <typename T>
 parser_result<T> parse(const uint8_t* pos);
 
-template <typename T>
-struct parser
-{
-};
-
 template <>
 inline parser_result<uint8_t> parse(const uint8_t* pos)
 {
