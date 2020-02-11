@@ -502,6 +502,13 @@ TEST(parser, global_invalid_mutability)
         "unexpected byte value 2, expected 0x00 or 0x01 for global mutability");
 }
 
+TEST(parser, global_initializer_expression_invalid_instruction)
+{
+    const auto wasm = bytes{wasm_prefix} + make_section(6, make_vec({"7f0000"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error,
+        "unexpected instruction in the global initializer expression: 0");
+}
+
 TEST(parser, export_single_function)
 {
     const auto section_contents = make_vec({bytes{0x03, 'a', 'b', 'c', 0x00, 0x42}});
