@@ -1,19 +1,14 @@
 #pragma once
 
+#include "exceptions.hpp"
 #include "leb128.hpp"
 #include "types.hpp"
-#include <stdexcept>
 #include <tuple>
 
 namespace fizzy
 {
 constexpr uint8_t wasm_prefix_data[] = {0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00};
 constexpr bytes_view wasm_prefix{wasm_prefix_data, sizeof(wasm_prefix_data)};
-
-struct parser_error : public std::runtime_error
-{
-    using runtime_error::runtime_error;
-};
 
 template <typename T>
 using parser_result = std::tuple<T, const uint8_t*>;
