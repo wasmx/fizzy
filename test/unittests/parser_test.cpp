@@ -407,6 +407,12 @@ TEST(parser, table_multi_min_limit)
     EXPECT_THROW(parse(bin), parser_error);
 }
 
+TEST(parser, table_invalid_elemtype)
+{
+    const auto wasm = bytes{wasm_prefix} + make_section(4, make_vec({"71"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected table elemtype: 113");
+}
+
 TEST(parser, memory_single_min_limit)
 {
     const auto section_contents = "01007f"_bytes;
