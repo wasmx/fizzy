@@ -27,10 +27,17 @@ fizzy::bytes load_wasm_file(const fs::path& json_file_path, std::string_view fil
         std::istreambuf_iterator<char>{wasm_file}, std::istreambuf_iterator<char>{});
 }
 
+struct test_results
+{
+    int passed = 0;
+    int failed = 0;
+    int skipped = 0;
+};
+
 class test_runner
 {
 public:
-    void run_from_file(const fs::path& path)
+    test_results run_from_file(const fs::path& path)
     {
         log("Running tests from " + path.string());
 
@@ -187,9 +194,12 @@ public:
                 skip("Unsupported command type");
         }
 
-        log(std::to_string(passed + failed + skipped) + " tests ran from " +
-            path.filename().string() + ".\n  PASSED " + std::to_string(passed) + ", FAILED " +
-            std::to_string(failed) + ", SKIPPED " + std::to_string(skipped) + ".\n");
+        log(std::to_string(results.passed + results.failed + results.skipped) + " tests ran from " +
+            path.filename().string() + ".\n  PASSED " + std::to_string(results.passed) +
+            ", FAILED " + std::to_string(results.failed) + ", SKIPPED " +
+            std::to_string(results.skipped) + ".\n");
+
+        return results;
     }
 
 private:
@@ -231,19 +241,19 @@ private:
 
     void pass()
     {
-        ++passed;
+        ++results.passed;
         std::cout << "PASSED\n";
     }
 
     void fail(std::string_view message)
     {
-        ++failed;
+        ++results.failed;
         std::cout << "FAILED " << message << "\n";
     }
 
     void skip(std::string_view message)
     {
-        ++skipped;
+        ++results.skipped;
         std::cout << "SKIPPED " << message << "\n";
     }
 
@@ -252,9 +262,7 @@ private:
     void log_no_newline(std::string_view message) const { std::cout << message << std::flush; }
 
     std::optional<fizzy::Instance> instance;
-    int passed = 0;
-    int failed = 0;
-    int skipped = 0;
+    test_results results;
 };
 
 void run_tests_from_dir(const fs::path& path)
@@ -268,17 +276,26 @@ void run_tests_from_dir(const fs::path& path)
 
     std::sort(std::begin(files), std::end(files));
 
+    test_results total;
     for (const auto& f : files)
     {
         try
         {
-            test_runner{}.run_from_file(f);
+            const auto res = test_runner{}.run_from_file(f);
+
+            total.passed += res.passed;
+            total.failed += res.failed;
+            total.skipped += res.skipped;
         }
         catch (const std::exception& ex)
         {
             std::cerr << "Exception: " << ex.what() << "\n\n";
         }
     }
+
+    std::cout << "TOTAL " << (total.passed + total.failed + total.skipped) << " tests ran from "
+              << path << ".\n  PASSED " << total.passed << ", FAILED " << total.failed
+              << ", SKIPPED " << total.skipped << ".\n";
 }
 
 }  // namespace
