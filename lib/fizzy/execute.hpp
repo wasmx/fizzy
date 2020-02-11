@@ -1,16 +1,12 @@
 #pragma once
 
+#include "exceptions.hpp"
 #include "types.hpp"
 #include <cstdint>
 #include <memory>
 
 namespace fizzy
 {
-struct instantiate_error : public std::runtime_error
-{
-    using runtime_error::runtime_error;
-};
-
 // The result of an execution.
 struct execution_result
 {

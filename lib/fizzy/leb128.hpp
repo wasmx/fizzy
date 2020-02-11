@@ -1,8 +1,8 @@
 #pragma once
 
+#include "exceptions.hpp"
 #include "types.hpp"
 #include <cstdint>
-#include <stdexcept>
 
 namespace fizzy
 {
@@ -23,7 +23,7 @@ std::pair<T, const uint8_t*> leb128u_decode(const uint8_t* input)
             return {result, input + 1};
     }
 
-    throw std::runtime_error("Invalid LEB128 encoding: too many bytes.");
+    throw parser_error("Invalid LEB128 encoding: too many bytes.");
 }
 
 template <typename T>
@@ -51,7 +51,7 @@ std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* input)
         }
     }
 
-    throw std::runtime_error("Invalid LEB128 encoding: too many bytes.");
+    throw parser_error("Invalid LEB128 encoding: too many bytes.");
 }
 
 }  // namespace fizzy
