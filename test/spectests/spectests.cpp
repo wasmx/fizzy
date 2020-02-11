@@ -27,6 +27,11 @@ fizzy::bytes load_wasm_file(const fs::path& json_file_path, std::string_view fil
         std::istreambuf_iterator<char>{wasm_file}, std::istreambuf_iterator<char>{});
 }
 
+struct test_settings
+{
+    bool skip_validation = false;
+};
+
 struct test_results
 {
     int passed = 0;
@@ -37,6 +42,8 @@ struct test_results
 class test_runner
 {
 public:
+    explicit test_runner(const test_settings& ts) : settings{ts} {}
+
     test_results run_from_file(const fs::path& path)
     {
         log("Running tests from " + path.string());
@@ -169,12 +176,19 @@ public:
             {
                 // NOTE: assert_malformed should result in a parser error and
                 //       assert_invalid should result in a validation error
+                if (type == "assert_invalid" && settings.skip_validation)
+                {
+                    skip("Validation tests disabled.");
+                    continue;
+                }
+
                 const auto module_type = cmd.at("module_type").get<std::string>();
                 if (module_type != "binary")
                 {
                     skip("Only binary modules are supported.");
                     continue;
                 }
+
                 const auto filename = cmd.at("filename").get<std::string>();
                 const auto wasm_binary = load_wasm_file(path, filename);
                 try
@@ -261,11 +275,12 @@ private:
 
     void log_no_newline(std::string_view message) const { std::cout << message << std::flush; }
 
+    test_settings settings;
     std::optional<fizzy::Instance> instance;
     test_results results;
 };
 
-bool run_tests_from_dir(const fs::path& path)
+bool run_tests_from_dir(const fs::path& path, const test_settings& settings)
 {
     std::vector<fs::path> files;
     for (const auto& e : fs::recursive_directory_iterator{path})
@@ -282,7 +297,7 @@ bool run_tests_from_dir(const fs::path& path)
     {
         try
         {
-            const auto res = test_runner{}.run_from_file(f);
+            const auto res = test_runner{settings}.run_from_file(f);
 
             total.passed += res.passed;
             total.failed += res.failed;
@@ -308,18 +323,32 @@ int main(int argc, char** argv)
 {
     try
     {
-        if (argc < 2)
+        std::string dir;
+        test_settings settings;
+
+        for (auto i = 1; i < argc; ++i)
+        {
+            if (argv[i][0] == '-')
+            {
+                if (argv[i] == std::string{"--skip-validation"})
+                    settings.skip_validation = true;
+                else
+                {
+                    std::cerr << "Unknown argument: " << argv[i] << "\n";
+                    return -1;
+                }
+            }
+            else
+                dir = argv[i];
+        }
+
+        if (dir.empty())
         {
             std::cerr << "Missing DIR argument\n";
             return -1;
         }
-        else if (argc > 2)
-        {
-            std::cerr << "Too many arguments\n";
-            return -1;
-        }
 
-        const bool res = run_tests_from_dir(argv[1]);
+        const bool res = run_tests_from_dir(dir, settings);
         return res ? 0 : 1;
     }
     catch (const std::exception& ex)
