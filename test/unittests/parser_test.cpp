@@ -743,6 +743,19 @@ TEST(parser, data_section_memidx_nonzero)
     EXPECT_THROW_MESSAGE(parse(bin), parser_error, "unexpected memidx value 1");
 }
 
+TEST(parser, unknown_section_empty)
+{
+    const auto bin = bytes{wasm_prefix} + make_section(12, bytes{});
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "unknown section encountered 12");
+}
+
+TEST(parser, unknown_section_nonempty)
+{
+    const auto bin =
+        bytes{wasm_prefix} + make_section(13, "ff"_bytes) + make_section(12, "ff42ff"_bytes);
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "unknown section encountered 13");
+}
+
 TEST(parser, milestone1)
 {
     /*
