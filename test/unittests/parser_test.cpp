@@ -743,6 +743,35 @@ TEST(parser, data_section_memidx_nonzero)
     EXPECT_THROW_MESSAGE(parse(bin), parser_error, "unexpected memidx value 1");
 }
 
+TEST(parser, unknown_section_empty)
+{
+    const auto bin = bytes{wasm_prefix} + make_section(12, bytes{});
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "unknown section encountered 12");
+}
+
+TEST(parser, unknown_section_nonempty)
+{
+    const auto bin =
+        bytes{wasm_prefix} + make_section(13, "ff"_bytes) + make_section(12, "ff42ff"_bytes);
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "unknown section encountered 13");
+}
+
+TEST(parser, interleaved_custom_section)
+{
+    const auto type_section = make_vec({functype_void_to_void});
+    const auto func_section = make_vec({"00"_bytes});
+    const auto code_section = make_vec({add_size_prefix("000b"_bytes)});
+    const auto bin = bytes{wasm_prefix} + make_section(0, bytes{4}) +
+                     make_section(1, type_section) + make_section(0, bytes{5}) +
+                     make_section(3, func_section) + make_section(0, bytes{6}) +
+                     make_section(10, code_section);
+
+    const auto module = parse(bin);
+    EXPECT_EQ(module.typesec.size(), 1);
+    EXPECT_EQ(module.funcsec.size(), 1);
+    EXPECT_EQ(module.codesec.size(), 1);
+}
+
 TEST(parser, milestone1)
 {
     /*
