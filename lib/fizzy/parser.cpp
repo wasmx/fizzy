@@ -186,9 +186,11 @@ inline parser_result<Import> parse(const uint8_t* pos, const uint8_t* end)
 template <>
 inline parser_result<Export> parse(const uint8_t* pos, const uint8_t* end)
 {
-    (void)end;  // FIXME: Bounds checking.
     Export result;
     std::tie(result.name, pos) = parse_string(pos, end);
+
+    if (pos == end)
+        throw parser_error{"Unexpected EOF"};
 
     const uint8_t kind = *pos++;
     switch (kind)
