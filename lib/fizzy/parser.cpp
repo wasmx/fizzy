@@ -22,8 +22,8 @@ inline parser_result<FuncType> parse(const uint8_t* pos)
     ++pos;
 
     FuncType result;
-    std::tie(result.inputs, pos) = parse_vec<ValType>(pos);
-    std::tie(result.outputs, pos) = parse_vec<ValType>(pos);
+    std::tie(result.inputs, pos) = parse_vec<ValType>(pos, pos + 1000);   // FIXME: Bounds checking.
+    std::tie(result.outputs, pos) = parse_vec<ValType>(pos, pos + 1000);  // FIXME: Bounds checking.
     return {result, pos};
 }
 
@@ -122,7 +122,7 @@ inline parser_result<Memory> parse(const uint8_t* pos)
 inline parser_result<std::string> parse_string(const uint8_t* pos)
 {
     std::vector<uint8_t> value;
-    std::tie(value, pos) = parse_vec<uint8_t>(pos);
+    std::tie(value, pos) = parse_vec<uint8_t>(pos, pos + 1000);  // FIXME: Bounds checking.
 
     // FIXME: need to validate that string is a valid UTF-8
 
@@ -206,7 +206,7 @@ inline parser_result<Element> parse(const uint8_t* pos)
     std::tie(offset, pos) = parse_constant_expression(pos);
 
     std::vector<FuncIdx> init;
-    std::tie(init, pos) = parse_vec<FuncIdx>(pos);
+    std::tie(init, pos) = parse_vec<FuncIdx>(pos, pos + 1000);  // FIXME: Bounds checking.
 
     return {{offset, std::move(init)}, pos};
 }
@@ -226,7 +226,8 @@ inline parser_result<Code> parse(const uint8_t* pos)
 {
     const auto [size, pos1] = leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
 
-    const auto [locals_vec, pos2] = parse_vec<Locals>(pos1);
+    const auto [locals_vec, pos2] =
+        parse_vec<Locals>(pos1, pos1 + 1000);  // FIXME: Bounds checking.
 
     auto result = parse_expr(pos2);
 
@@ -249,7 +250,7 @@ inline parser_result<Data> parse(const uint8_t* pos)
     std::tie(offset, pos) = parse_constant_expression(pos);
 
     std::vector<uint8_t> init;
-    std::tie(init, pos) = parse_vec<uint8_t>(pos);
+    std::tie(init, pos) = parse_vec<uint8_t>(pos, pos + 1000);  // FIXME: Bounds checking.
 
     return {{offset, bytes(init.data(), init.size())}, pos};
 }
@@ -275,37 +276,37 @@ Module parse(bytes_view input)
         switch (id)
         {
         case SectionId::type:
-            std::tie(module.typesec, it) = parse_vec<FuncType>(it);
+            std::tie(module.typesec, it) = parse_vec<FuncType>(it, input.end());
             break;
         case SectionId::import:
-            std::tie(module.importsec, it) = parse_vec<Import>(it);
+            std::tie(module.importsec, it) = parse_vec<Import>(it, input.end());
             break;
         case SectionId::function:
-            std::tie(module.funcsec, it) = parse_vec<TypeIdx>(it);
+            std::tie(module.funcsec, it) = parse_vec<TypeIdx>(it, input.end());
             break;
         case SectionId::table:
-            std::tie(module.tablesec, it) = parse_vec<Table>(it);
+            std::tie(module.tablesec, it) = parse_vec<Table>(it, input.end());
             break;
         case SectionId::memory:
-            std::tie(module.memorysec, it) = parse_vec<Memory>(it);
+            std::tie(module.memorysec, it) = parse_vec<Memory>(it, input.end());
             break;
         case SectionId::global:
-            std::tie(module.globalsec, it) = parse_vec<Global>(it);
+            std::tie(module.globalsec, it) = parse_vec<Global>(it, input.end());
             break;
         case SectionId::export_:
-            std::tie(module.exportsec, it) = parse_vec<Export>(it);
+            std::tie(module.exportsec, it) = parse_vec<Export>(it, input.end());
             break;
         case SectionId::start:
             std::tie(module.startfunc, it) = leb128u_decode<uint32_t>(it, input.end());
             break;
         case SectionId::element:
-            std::tie(module.elementsec, it) = parse_vec<Element>(it);
+            std::tie(module.elementsec, it) = parse_vec<Element>(it, input.end());
             break;
         case SectionId::code:
-            std::tie(module.codesec, it) = parse_vec<Code>(it);
+            std::tie(module.codesec, it) = parse_vec<Code>(it, input.end());
             break;
         case SectionId::data:
-            std::tie(module.datasec, it) = parse_vec<Data>(it);
+            std::tie(module.datasec, it) = parse_vec<Data>(it, input.end());
             break;
         case SectionId::custom:
             // These sections are ignored for now.

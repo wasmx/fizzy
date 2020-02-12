@@ -66,10 +66,10 @@ inline parser_result<Limits> parse_limits(const uint8_t* pos)
 }
 
 template <typename T>
-parser_result<std::vector<T>> parse_vec(const uint8_t* pos)
+inline parser_result<std::vector<T>> parse_vec(const uint8_t* pos, const uint8_t* end)
 {
     uint32_t size;
-    std::tie(size, pos) = leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
+    std::tie(size, pos) = leb128u_decode<uint32_t>(pos, end);
 
     std::vector<T> result;
     result.reserve(size);

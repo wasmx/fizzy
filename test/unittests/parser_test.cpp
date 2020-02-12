@@ -56,7 +56,7 @@ TEST(parser, valtype)
 TEST(parser, valtype_vec)
 {
     const auto input = "037f7e7fcc"_bytes;
-    const auto [vec, pos] = parse_vec<ValType>(input.data());
+    const auto [vec, pos] = parse_vec<ValType>(input.data(), input.data() + input.size());
     EXPECT_EQ(pos, input.data() + 4);
     ASSERT_EQ(vec.size(), 3);
     EXPECT_EQ(vec[0], ValType::i32);
@@ -154,6 +154,16 @@ TEST(parser, module_with_wrong_prefix)
         parse("006173d600000000"_bytes), parser_error, "invalid wasm module prefix");
     EXPECT_THROW_MESSAGE(
         parse("006173d602000000"_bytes), parser_error, "invalid wasm module prefix");
+}
+
+TEST(parser, section_vec_size_out_of_bounds)
+{
+    const auto malformed_vec_size = "81"_bytes;
+    for (auto secid : {1, 2, 3, 4, 5, 6, 7, 9, 10, 11})
+    {
+        const auto wasm = bytes{wasm_prefix} + make_section(uint8_t(secid), malformed_vec_size);
+        EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+    }
 }
 
 TEST(parser, custom_section_empty)
