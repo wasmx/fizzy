@@ -635,6 +635,12 @@ TEST(parser, start_module_with_imports_invalid_index)
     EXPECT_THROW_MESSAGE(parse(bin), parser_error, "invalid start function index");
 }
 
+TEST(parser, start_index_decode_out_of_bounds)
+{
+    const auto wasm = bytes{wasm_prefix} + make_section(8, "ff"_bytes);
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+}
+
 TEST(parser, element_section)
 {
     const auto table_contents = bytes{0x01, 0x70, 0x00, 0x7f};

@@ -292,8 +292,7 @@ Module parse(bytes_view input)
             std::tie(module.exportsec, it) = parse_vec<Export>(it);
             break;
         case SectionId::start:
-            std::tie(module.startfunc, it) =
-                leb128u_decode<uint32_t>(it, it + 4);  // FIXME: Bounds checking.
+            std::tie(module.startfunc, it) = leb128u_decode<uint32_t>(it, input.end());
             break;
         case SectionId::element:
             std::tie(module.elementsec, it) = parse_vec<Element>(it);
