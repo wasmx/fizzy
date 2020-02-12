@@ -35,15 +35,20 @@ inline parser_result<FuncType> parse(const uint8_t* pos, const uint8_t* end)
 
 inline std::tuple<bool, const uint8_t*> parse_global_type(const uint8_t* pos, const uint8_t* end)
 {
-    (void)end;  // FIXME: Bounds checking.
     // will throw if invalid type
     std::tie(std::ignore, pos) = parse<ValType>(pos, end);
 
-    if (*pos != 0x00 && *pos != 0x01)
-        throw parser_error{"unexpected byte value " + std::to_string(*pos) +
+    if (pos == end)
+        throw parser_error{"Unexpected EOF"};
+
+    const uint8_t mutability = *pos++;
+    if (mutability != 0x00 && mutability != 0x01)
+    {
+        throw parser_error{"unexpected byte value " + std::to_string(mutability) +
                            ", expected 0x00 or 0x01 for global mutability"};
-    const bool is_mutable = (*pos == 0x01);
-    ++pos;
+    }
+
+    const bool is_mutable = (mutability == 0x01);
     return {is_mutable, pos};
 }
 
