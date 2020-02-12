@@ -22,7 +22,7 @@ parser_result<T> parse(const uint8_t* pos);
 template <>
 inline parser_result<uint32_t> parse(const uint8_t* pos)
 {
-    return leb128u_decode<uint32_t>(pos);
+    return leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
 }
 
 template <>
@@ -50,11 +50,13 @@ inline parser_result<Limits> parse_limits(const uint8_t* pos)
     switch (b)
     {
     case 0x00:
-        std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos);
+        // FIXME: Bounds checking.
+        std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos, pos + 4);
         return {result, pos};
     case 0x01:
-        std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos);
-        std::tie(result.max, pos) = leb128u_decode<uint32_t>(pos);
+        // FIXME: Bounds checking.
+        std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos, pos + 4);
+        std::tie(result.max, pos) = leb128u_decode<uint32_t>(pos, pos + 4);
         if (result.min > *result.max)
             throw parser_error("malformed limits (minimum is larger than maximum)");
         return {result, pos};
@@ -67,7 +69,7 @@ template <typename T>
 parser_result<std::vector<T>> parse_vec(const uint8_t* pos)
 {
     uint32_t size;
-    std::tie(size, pos) = leb128u_decode<uint32_t>(pos);
+    std::tie(size, pos) = leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
 
     std::vector<T> result;
     result.reserve(size);

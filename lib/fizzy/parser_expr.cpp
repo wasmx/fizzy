@@ -301,7 +301,7 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         case Instr::call:
         {
             uint32_t imm;
-            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos);
+            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
             push(code.immediates, imm);
             break;
         }
@@ -311,7 +311,8 @@ parser_result<Code> parse_expr(const uint8_t* pos)
             std::vector<uint32_t> label_indices;
             std::tie(label_indices, pos) = parse_vec<uint32_t>(pos);
             uint32_t default_label_idx;
-            std::tie(default_label_idx, pos) = leb128u_decode<uint32_t>(pos);
+            std::tie(default_label_idx, pos) =
+                leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
 
             push(code.immediates, static_cast<uint32_t>(label_indices.size()));
             for (const auto idx : label_indices)
@@ -323,7 +324,7 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         case Instr::call_indirect:
         {
             uint32_t imm;
-            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos);
+            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
             push(code.immediates, imm);
 
             const uint8_t tableidx{*pos++};
@@ -369,11 +370,12 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         case Instr::i64_store32:
         {
             // alignment
-            std::tie(std::ignore, pos) = leb128u_decode<uint32_t>(pos);
+            std::tie(std::ignore, pos) =
+                leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
 
             // offset
             uint32_t imm;
-            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos);
+            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
             push(code.immediates, imm);
             break;
         }

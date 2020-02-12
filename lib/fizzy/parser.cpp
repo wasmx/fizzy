@@ -60,7 +60,8 @@ inline parser_result<ConstantExpression> parse_constant_expression(const uint8_t
         case Instr::global_get:
         {
             result.kind = ConstantExpression::Kind::GlobalGet;
-            std::tie(result.value.global_index, pos) = leb128u_decode<uint32_t>(pos);
+            std::tie(result.value.global_index, pos) =
+                leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
             break;
         }
 
@@ -140,7 +141,8 @@ inline parser_result<Import> parse(const uint8_t* pos)
     {
     case 0x00:
         result.kind = ExternalKind::Function;
-        std::tie(result.desc.function_type_index, pos) = leb128u_decode<uint32_t>(pos);
+        std::tie(result.desc.function_type_index, pos) =
+            leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
         break;
     case 0x01:
         result.kind = ExternalKind::Table;
@@ -186,7 +188,8 @@ inline parser_result<Export> parse(const uint8_t* pos)
         throw parser_error{"unexpected export kind value " + std::to_string(kind)};
     }
 
-    std::tie(result.index, pos) = leb128u_decode<uint32_t>(pos);
+    std::tie(result.index, pos) =
+        leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
 
     return {result, pos};
 }
@@ -195,7 +198,7 @@ template <>
 inline parser_result<Element> parse(const uint8_t* pos)
 {
     TableIdx table_index;
-    std::tie(table_index, pos) = leb128u_decode<uint32_t>(pos);
+    std::tie(table_index, pos) = leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
     if (table_index != 0)
         throw parser_error{"unexpected tableidx value " + std::to_string(table_index)};
 
@@ -212,7 +215,8 @@ template <>
 inline parser_result<Locals> parse(const uint8_t* pos)
 {
     Locals result;
-    std::tie(result.count, pos) = leb128u_decode<uint32_t>(pos);
+    std::tie(result.count, pos) =
+        leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
     std::tie(result.type, pos) = parse<ValType>(pos);
     return {result, pos};
 }
@@ -220,7 +224,7 @@ inline parser_result<Locals> parse(const uint8_t* pos)
 template <>
 inline parser_result<Code> parse(const uint8_t* pos)
 {
-    const auto [size, pos1] = leb128u_decode<uint32_t>(pos);
+    const auto [size, pos1] = leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
 
     const auto [locals_vec, pos2] = parse_vec<Locals>(pos1);
 
@@ -236,7 +240,8 @@ template <>
 inline parser_result<Data> parse(const uint8_t* pos)
 {
     MemIdx memory_index;
-    std::tie(memory_index, pos) = leb128u_decode<uint32_t>(pos);
+    std::tie(memory_index, pos) =
+        leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
     if (memory_index != 0)
         throw parser_error{"unexpected memidx value " + std::to_string(memory_index)};
 
@@ -261,7 +266,7 @@ Module parse(bytes_view input)
     {
         const auto id = static_cast<SectionId>(*it++);
         uint32_t size;
-        std::tie(size, it) = leb128u_decode<uint32_t>(it);
+        std::tie(size, it) = leb128u_decode<uint32_t>(it, it + 4);  // FIXME: Bounds checking.
         const auto expected_end_pos = it + size;
         switch (id)
         {
@@ -287,7 +292,8 @@ Module parse(bytes_view input)
             std::tie(module.exportsec, it) = parse_vec<Export>(it);
             break;
         case SectionId::start:
-            std::tie(module.startfunc, it) = leb128u_decode<uint32_t>(it);
+            std::tie(module.startfunc, it) =
+                leb128u_decode<uint32_t>(it, it + 4);  // FIXME: Bounds checking.
             break;
         case SectionId::element:
             std::tie(module.elementsec, it) = parse_vec<Element>(it);
