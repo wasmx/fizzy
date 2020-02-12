@@ -197,3 +197,10 @@ TEST(parser, call_indirect_table_index)
     EXPECT_THROW_MESSAGE(
         parse_expr(code2_bin), parser_error, "invalid tableidx encountered with call_indirect");
 }
+
+TEST(parser, control_instr_out_of_bounds)
+{
+    EXPECT_THROW_MESSAGE(parse_expr("02"_bytes), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse_expr("03"_bytes), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse_expr("04"_bytes), parser_error, "Unexpected EOF");
+}

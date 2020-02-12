@@ -28,11 +28,14 @@ struct LabelPosition
 ///
 /// Spec: https://webassembly.github.io/spec/core/binary/types.html#binary-blocktype.
 /// @return The type arity (can be 0 or 1).
-parser_result<uint8_t> parse_blocktype(const uint8_t* pos)
+parser_result<uint8_t> parse_blocktype(const uint8_t* pos, const uint8_t* end)
 {
     // The byte meaning an empty wasm result type.
     // https://webassembly.github.io/spec/core/binary/types.html#result-types
     constexpr uint8_t BlockTypeEmpty = 0x40;
+
+    if (pos == end)
+        throw parser_error{"Unexpected EOF"};
 
     const uint8_t type{*pos};
 
@@ -40,7 +43,7 @@ parser_result<uint8_t> parse_blocktype(const uint8_t* pos)
         return {0, pos + 1};
 
     // Validate type.
-    std::tie(std::ignore, pos) = parse<ValType>(pos, pos + 1);  // FIXME: Bounds checking.
+    std::tie(std::ignore, pos) = parse<ValType>(pos, end);
     return {1, pos};
 }
 }  // namespace
@@ -230,7 +233,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end)
         case Instr::block:
         {
             uint8_t arity;
-            std::tie(arity, pos) = parse_blocktype(pos);
+            std::tie(arity, pos) = parse_blocktype(pos, end);
             code.immediates.push_back(arity);
 
             // Push label with immediates offset after arity.
@@ -244,7 +247,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end)
 
         case Instr::loop:
         {
-            std::tie(std::ignore, pos) = parse_blocktype(pos);
+            std::tie(std::ignore, pos) = parse_blocktype(pos, end);
             label_positions.push_back({Instr::loop, 0});  // Mark as not interested.
             break;
         }
@@ -252,7 +255,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end)
         case Instr::if_:
         {
             uint8_t arity;
-            std::tie(arity, pos) = parse_blocktype(pos);
+            std::tie(arity, pos) = parse_blocktype(pos, end);
             code.immediates.push_back(arity);
 
             label_positions.push_back({Instr::if_, code.immediates.size()});
