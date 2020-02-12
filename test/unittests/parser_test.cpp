@@ -809,16 +809,26 @@ TEST(parser, code_section_unsupported_f32_const)
     EXPECT_THROW_MESSAGE(parse(bin), parser_error, "invalid instruction 68");
 }
 
-TEST(parser, code_section_invalid_instruction)
+TEST(parser, code_section_invalid_instructions)
 {
-    const auto func_bin =
-        "00"  // vec(locals)
-        "ff0b"_bytes;
-    const auto code_bin = add_size_prefix(func_bin);
-    const auto section_contents = make_vec({code_bin});
-    const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
+    const uint8_t invalid_instructions[] = {0x06, 0x07, 0x08, 0x09, 0x0a, 0x12, 0x13, 0x14, 0x15,
+        0x16, 0x17, 0x18, 0x19, 0x25, 0x26, 0x27, 0xc0, 0xc1, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7,
+        0xc8, 0xc9, 0xca, 0xcb, 0xcc, 0xcd, 0xce, 0xcf, 0xd0, 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6,
+        0xd7, 0xd8, 0xd9, 0xda, 0xdb, 0xdc, 0xdd, 0xde, 0xdf, 0xe0, 0xe1, 0xe2, 0xe3, 0xe4, 0xe5,
+        0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xeb, 0xec, 0xed, 0xee, 0xef, 0xf0, 0xf1, 0xf2, 0xf3, 0xf4,
+        0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff};
 
-    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "invalid instruction 255");
+    for (const auto instr : invalid_instructions)
+    {
+        const auto func_bin = "00"_bytes  // vec(locals)
+                              + bytes{instr};
+        const auto code_bin = add_size_prefix(func_bin);
+        const auto section_contents = make_vec({code_bin});
+        const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
+
+        const auto expected_msg = std::string{"invalid instruction "} + std::to_string(instr);
+        EXPECT_THROW_MESSAGE(parse(bin), parser_error, expected_msg.c_str());
+    }
 }
 
 TEST(parser, data_section)
