@@ -567,6 +567,12 @@ TEST(parser, global_initializer_expression_invalid_instruction)
         "unexpected instruction in the global initializer expression: 0");
 }
 
+TEST(parser, global_valtype_out_of_bounds)
+{
+    const auto wasm = bytes{wasm_prefix} + make_section(6, make_vec({""_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+}
+
 TEST(parser, export_single_function)
 {
     const auto section_contents = make_vec({bytes{0x03, 'a', 'b', 'c', 0x00, 0x42}});
