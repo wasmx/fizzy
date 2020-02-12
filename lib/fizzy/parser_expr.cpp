@@ -340,7 +340,7 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         case Instr::i32_const:
         {
             int32_t imm;
-            std::tie(imm, pos) = leb128s_decode<int32_t>(pos);
+            std::tie(imm, pos) = leb128s_decode<int32_t>(pos, pos + 5);  // FIXME: Bounds checking.
             push(code.immediates, static_cast<uint32_t>(imm));
             break;
         }
@@ -348,7 +348,7 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         case Instr::i64_const:
         {
             int64_t imm;
-            std::tie(imm, pos) = leb128s_decode<int64_t>(pos);
+            std::tie(imm, pos) = leb128s_decode<int64_t>(pos, pos + 10);  // FIXME: Bounds checking.
             push(code.immediates, static_cast<uint64_t>(imm));
             break;
         }

@@ -30,7 +30,7 @@ std::pair<T, const uint8_t*> leb128u_decode(const uint8_t* input, const uint8_t*
 }
 
 template <typename T>
-std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* input)
+std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* input, const uint8_t* end)
 {
     static_assert(std::numeric_limits<T>::is_signed);
 
@@ -40,6 +40,9 @@ std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* input)
 
     for (; result_shift < std::numeric_limits<T_unsigned>::digits; ++input, result_shift += 7)
     {
+        if (input == end)
+            throw parser_error("Unexpected EOF");
+
         result |= static_cast<T_unsigned>((static_cast<T_unsigned>(*input) & 0x7F) << result_shift);
         if ((*input & 0x80) == 0)
         {

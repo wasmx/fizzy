@@ -84,7 +84,7 @@ inline parser_result<ConstantExpression> parse_constant_expression(
         {
             result.kind = ConstantExpression::Kind::Constant;
             int32_t value;
-            std::tie(value, pos) = leb128s_decode<int32_t>(pos);  // FIXME: Bounds checking.
+            std::tie(value, pos) = leb128s_decode<int32_t>(pos, end);
             result.value.constant = static_cast<uint32_t>(value);
             break;
         }
@@ -93,7 +93,7 @@ inline parser_result<ConstantExpression> parse_constant_expression(
         {
             result.kind = ConstantExpression::Kind::Constant;
             int64_t value;
-            std::tie(value, pos) = leb128s_decode<int64_t>(pos);  // FIXME: Bounds checking.
+            std::tie(value, pos) = leb128s_decode<int64_t>(pos, end);
             result.value.constant = static_cast<uint64_t>(value);
             break;
         }
