@@ -180,6 +180,12 @@ TEST(parser, custom_section_size_out_of_bounds)
     EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
 }
 
+TEST(parser, custom_section_out_of_bounds)
+{
+    const auto wasm = bytes{wasm_prefix} + make_invalid_size_section(0, 31, {});
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+}
+
 TEST(parser, functype_wrong_prefix)
 {
     const auto section_contents =
@@ -204,7 +210,8 @@ TEST(parser, type_section_smaller_than_expected)
     const auto section_contents = "01"_bytes + functype_void_to_void + "fe"_bytes;
     const auto bin =
         bytes{wasm_prefix} +
-        make_invalid_size_section(1, size_t{section_contents.size() + 1}, section_contents);
+        make_invalid_size_section(1, size_t{section_contents.size() + 1}, section_contents) +
+        "00"_bytes;
     EXPECT_THROW_MESSAGE(parse(bin), parser_error, "incorrect section 1 size, difference: -2");
 }
 
@@ -382,6 +389,12 @@ TEST(parser, function_section_with_multiple_functions)
     EXPECT_EQ(module.funcsec[1], 1);
     EXPECT_EQ(module.funcsec[2], 0x42);
     EXPECT_EQ(module.funcsec[3], 0xff);
+}
+
+TEST(parser, function_section_end_out_of_bounds)
+{
+    const auto wasm = bytes{wasm_prefix} + make_invalid_size_section(3, 2, {});
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
 }
 
 TEST(parser, table_single_min_limit)

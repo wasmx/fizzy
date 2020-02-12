@@ -267,7 +267,11 @@ Module parse(bytes_view input)
         const auto id = static_cast<SectionId>(*it++);
         uint32_t size;
         std::tie(size, it) = leb128u_decode<uint32_t>(it, input.end());
-        const auto expected_end_pos = it + size;
+
+        const auto expected_section_end = it + size;
+        if (expected_section_end > input.end())
+            throw parser_error("Unexpected EOF");
+
         switch (id)
         {
         case SectionId::type:
@@ -312,10 +316,10 @@ Module parse(bytes_view input)
                 "unknown section encountered " + std::to_string(static_cast<int>(id))};
         }
 
-        if (it != expected_end_pos)
+        if (it != expected_section_end)
         {
             throw parser_error{"incorrect section " + std::to_string(static_cast<int>(id)) +
-                               " size, difference: " + std::to_string(it - expected_end_pos)};
+                               " size, difference: " + std::to_string(it - expected_section_end)};
         }
     }
 
