@@ -325,6 +325,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end)
             std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, end);
             push(code.immediates, imm);
 
+            if (pos == end)
+                throw parser_error{"Unexpected EOF"};
+
             const uint8_t tableidx{*pos++};
             if (tableidx != 0)
                 throw parser_error{"invalid tableidx encountered with call_indirect"};
@@ -379,6 +382,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end)
         case Instr::memory_size:
         case Instr::memory_grow:
         {
+            if (pos == end)
+                throw parser_error{"Unexpected EOF"};
+
             const uint8_t memory_idx{*pos++};
             if (memory_idx != 0)
                 throw parser_error{"invalid memory index encountered"};

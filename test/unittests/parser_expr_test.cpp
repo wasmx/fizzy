@@ -238,3 +238,17 @@ TEST(parser, br_table_out_of_bounds)
     EXPECT_THROW_MESSAGE(parse_expr("0e0201"_bytes), parser_error, "Unexpected EOF");
     EXPECT_THROW_MESSAGE(parse_expr("0e02018f"_bytes), parser_error, "Unexpected EOF");
 }
+
+TEST(parser, call_indirect_out_of_bounds)
+{
+    EXPECT_THROW_MESSAGE(parse_expr("1100"_bytes), parser_error, "Unexpected EOF");
+}
+
+TEST(parser, memory_grow_out_of_bounds)
+{
+    for (const auto instr : {Instr::memory_size, Instr::memory_grow})
+    {
+        const auto code = bytes{uint8_t(instr)};
+        EXPECT_THROW_MESSAGE(parse_expr(code), parser_error, "Unexpected EOF");
+    }
+}
