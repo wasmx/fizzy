@@ -178,3 +178,14 @@ TEST(parser, unexpected_else)
     EXPECT_THROW_MESSAGE(parse_expr(code2_bin.data()), parser_error,
         "unexpected else instruction (if instruction missing)");
 }
+
+TEST(parser, call_indirect_table_index)
+{
+    const auto code1_bin = "1122000b"_bytes;
+    const auto [code, pos] = parse_expr(code1_bin.data());
+    EXPECT_EQ(code.instructions, (std::vector{Instr::call_indirect, Instr::end}));
+
+    const auto code2_bin = "1122010b"_bytes;
+    EXPECT_THROW_MESSAGE(parse_expr(code2_bin.data()), parser_error,
+        "invalid tableidx encountered with call_indirect");
+}
