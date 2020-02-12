@@ -6,6 +6,14 @@
 namespace fizzy
 {
 template <>
+inline parser_result<uint8_t> parse(const uint8_t* pos)
+{
+    const auto result = *pos;
+    ++pos;
+    return {result, pos};
+}
+
+template <>
 inline parser_result<FuncType> parse(const uint8_t* pos)
 {
     if (*pos != 0x60)
@@ -102,6 +110,14 @@ inline parser_result<Table> parse(const uint8_t* pos)
     return {{limits}, pos};
 }
 
+template <>
+inline parser_result<Memory> parse(const uint8_t* pos)
+{
+    Limits limits;
+    std::tie(limits, pos) = parse_limits(pos);
+    return {{limits}, pos};
+}
+
 inline parser_result<std::string> parse_string(const uint8_t* pos)
 {
     std::vector<uint8_t> value;
@@ -190,6 +206,30 @@ inline parser_result<Element> parse(const uint8_t* pos)
     std::tie(init, pos) = parse_vec<FuncIdx>(pos);
 
     return {{offset, std::move(init)}, pos};
+}
+
+template <>
+inline parser_result<Locals> parse(const uint8_t* pos)
+{
+    Locals result;
+    std::tie(result.count, pos) = leb128u_decode<uint32_t>(pos);
+    std::tie(result.type, pos) = parse<ValType>(pos);
+    return {result, pos};
+}
+
+template <>
+inline parser_result<Code> parse(const uint8_t* pos)
+{
+    const auto [size, pos1] = leb128u_decode<uint32_t>(pos);
+
+    const auto [locals_vec, pos2] = parse_vec<Locals>(pos1);
+
+    auto result = parse_expr(pos2);
+
+    for (const auto& l : locals_vec)
+        std::get<0>(result).local_count += l.count;
+
+    return result;
 }
 
 template <>

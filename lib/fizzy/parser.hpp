@@ -19,19 +19,6 @@ parser_result<Code> parse_expr(const uint8_t* input);
 template <typename T>
 parser_result<T> parse(const uint8_t* pos);
 
-template <typename T>
-struct parser
-{
-};
-
-template <>
-inline parser_result<uint8_t> parse(const uint8_t* pos)
-{
-    const auto result = *pos;
-    ++pos;
-    return {result, pos};
-}
-
 template <>
 inline parser_result<uint32_t> parse(const uint8_t* pos)
 {
@@ -76,15 +63,6 @@ inline parser_result<Limits> parse_limits(const uint8_t* pos)
     }
 }
 
-template <>
-inline parser_result<Locals> parse(const uint8_t* pos)
-{
-    Locals result;
-    std::tie(result.count, pos) = leb128u_decode<uint32_t>(pos);
-    std::tie(result.type, pos) = parse<ValType>(pos);
-    return {result, pos};
-}
-
 template <typename T>
 parser_result<std::vector<T>> parse_vec(const uint8_t* pos)
 {
@@ -97,28 +75,5 @@ parser_result<std::vector<T>> parse_vec(const uint8_t* pos)
     for (uint32_t i = 0; i < size; ++i)
         std::tie(inserter, pos) = parse<T>(pos);
     return {result, pos};
-}
-
-template <>
-inline parser_result<Memory> parse(const uint8_t* pos)
-{
-    Limits limits;
-    std::tie(limits, pos) = parse_limits(pos);
-    return {{limits}, pos};
-}
-
-template <>
-inline parser_result<Code> parse(const uint8_t* pos)
-{
-    const auto [size, pos1] = leb128u_decode<uint32_t>(pos);
-
-    const auto [locals_vec, pos2] = parse_vec<Locals>(pos1);
-
-    auto result = parse_expr(pos2);
-
-    for (const auto& l : locals_vec)
-        std::get<0>(result).local_count += l.count;
-
-    return result;
 }
 }  // namespace fizzy
