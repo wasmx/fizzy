@@ -290,6 +290,12 @@ TEST(parser, type_section_with_multiple_functypes)
     EXPECT_EQ(module.codesec.size(), 0);
 }
 
+TEST(parser, type_section_functype_out_of_bounds)
+{
+    const auto wasm = bytes{wasm_prefix} + make_section(1, make_vec({""_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+}
+
 TEST(parser, import_single_function)
 {
     const auto section_contents = bytes{0x01, 0x03, 'm', 'o', 'd', 0x03, 'f', 'o', 'o', 0x00, 0x42};

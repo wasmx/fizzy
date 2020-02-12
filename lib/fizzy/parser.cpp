@@ -17,11 +17,15 @@ inline parser_result<uint8_t> parse(const uint8_t* pos, const uint8_t* end)
 template <>
 inline parser_result<FuncType> parse(const uint8_t* pos, const uint8_t* end)
 {
-    (void)end;  // FIXME: Bounds checking.
-    if (*pos != 0x60)
+    if (pos == end)
+        throw parser_error{"Unexpected EOF"};
+
+    const uint8_t kind = *pos++;
+    if (kind != 0x60)
+    {
         throw parser_error{
-            "unexpected byte value " + std::to_string(*pos) + ", expected 0x60 for functype"};
-    ++pos;
+            "unexpected byte value " + std::to_string(kind) + ", expected 0x60 for functype"};
+    }
 
     FuncType result;
     std::tie(result.inputs, pos) = parse_vec<ValType>(pos, end);
