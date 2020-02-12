@@ -499,6 +499,12 @@ TEST(parser, memory_multi_min_limit)
         parse(bin), parser_error, "too many memory sections (at most one is allowed)");
 }
 
+TEST(parser, memory_limits_kind_out_of_bounds)
+{
+    const auto wasm = bytes{wasm_prefix} + make_section(5, make_vec({""_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+}
+
 TEST(parser, global_single_mutable_const_inited)
 {
     const auto section_contents = bytes{0x01, 0x7f, 0x01, uint8_t(Instr::i32_const), 0x10, 0x0b};

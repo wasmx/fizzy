@@ -48,7 +48,9 @@ inline parser_result<ValType> parse(const uint8_t* pos, const uint8_t* end)
 
 inline parser_result<Limits> parse_limits(const uint8_t* pos, const uint8_t* end)
 {
-    (void)end;  // FIXME: Bounds checking.
+    if (pos == end)
+        throw parser_error{"Unexpected EOF"};
+
     Limits result;
     const auto b = *pos++;
     switch (b)
