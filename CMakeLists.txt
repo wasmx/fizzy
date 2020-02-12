@@ -18,7 +18,7 @@ endif()
 
 cable_set_build_type(DEFAULT Release CONFIGURATION_TYPES Debug;Release;Coverage)
 
-project(fizzy LANGUAGES CXX)
+project(fizzy LANGUAGES CXX C)
 
 include(TestBigEndian)
 test_big_endian(is_big_endian)
