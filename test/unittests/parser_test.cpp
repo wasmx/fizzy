@@ -84,19 +84,19 @@ TEST(parser, limits_minmax)
 TEST(parser, DISABLED_limits_min_invalid_too_short)
 {
     const auto input = "00"_bytes;
-    EXPECT_THROW(parse_limits(input.data()), parser_error);
+    EXPECT_THROW_MESSAGE(parse_limits(input.data()), parser_error, "??");
 }
 
 TEST(parser, DISABLED_limits_minmax_invalid_too_short)
 {
     const auto input = "0120"_bytes;
-    EXPECT_THROW(parse_limits(input.data()), parser_error);
+    EXPECT_THROW_MESSAGE(parse_limits(input.data()), parser_error, "??");
 }
 
 TEST(parser, limits_invalid)
 {
     const auto input = "02"_bytes;
-    EXPECT_THROW(parse_limits(input.data()), parser_error);
+    EXPECT_THROW_MESSAGE(parse_limits(input.data()), parser_error, "invalid limits 2");
 }
 
 TEST(parser, code_locals)
@@ -148,10 +148,12 @@ TEST(parser, empty_module)
 
 TEST(parser, module_with_wrong_prefix)
 {
-    EXPECT_THROW(parse({}), parser_error);
-    EXPECT_THROW(parse("006173d6"_bytes), parser_error);
-    EXPECT_THROW(parse("006173d600000000"_bytes), parser_error);
-    EXPECT_THROW(parse("006173d602000000"_bytes), parser_error);
+    EXPECT_THROW_MESSAGE(parse({}), parser_error, "invalid wasm module prefix");
+    EXPECT_THROW_MESSAGE(parse("006173d6"_bytes), parser_error, "invalid wasm module prefix");
+    EXPECT_THROW_MESSAGE(
+        parse("006173d600000000"_bytes), parser_error, "invalid wasm module prefix");
+    EXPECT_THROW_MESSAGE(
+        parse("006173d602000000"_bytes), parser_error, "invalid wasm module prefix");
 }
 
 TEST(parser, custom_section_empty)
@@ -178,7 +180,8 @@ TEST(parser, functype_wrong_prefix)
         "01"
         "610000"_bytes;
     const auto bin = bytes{wasm_prefix} + make_section(1, section_contents);
-    EXPECT_THROW(parse(bin), parser_error);
+    EXPECT_THROW_MESSAGE(
+        parse(bin), parser_error, "unexpected byte value 97, expected 0x60 for functype");
 }
 
 TEST(parser, type_section_larger_than_expected)
@@ -187,7 +190,7 @@ TEST(parser, type_section_larger_than_expected)
     const auto bin =
         bytes{wasm_prefix} +
         make_invalid_size_section(1, size_t{section_contents.size() - 1}, section_contents);
-    EXPECT_THROW(parse(bin), parser_error);
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "incorrect section 1 size, difference: 1");
 }
 
 TEST(parser, type_section_smaller_than_expected)
@@ -196,7 +199,7 @@ TEST(parser, type_section_smaller_than_expected)
     const auto bin =
         bytes{wasm_prefix} +
         make_invalid_size_section(1, size_t{section_contents.size() + 1}, section_contents);
-    EXPECT_THROW(parse(bin), parser_error);
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "incorrect section 1 size, difference: -2");
 }
 
 TEST(parser, type_section_with_single_functype)
@@ -402,7 +405,8 @@ TEST(parser, table_single_malformed_minmax)
     const auto section_contents = "0170017f12"_bytes;
     const auto bin = bytes{wasm_prefix} + make_section(4, section_contents);
 
-    EXPECT_THROW(parse(bin), parser_error);
+    EXPECT_THROW_MESSAGE(
+        parse(bin), parser_error, "malformed limits (minimum is larger than maximum)");
 }
 
 TEST(parser, table_multi_min_limit)
@@ -410,7 +414,8 @@ TEST(parser, table_multi_min_limit)
     const auto section_contents = "0270007f70007f"_bytes;
     const auto bin = bytes{wasm_prefix} + make_section(4, section_contents);
 
-    EXPECT_THROW(parse(bin), parser_error);
+    EXPECT_THROW_MESSAGE(
+        parse(bin), parser_error, "too many table sections (at most one is allowed)");
 }
 
 TEST(parser, table_invalid_elemtype)
@@ -446,7 +451,8 @@ TEST(parser, memory_single_malformed_minmax)
     const auto section_contents = "01017f12"_bytes;
     const auto bin = bytes{wasm_prefix} + make_section(5, section_contents);
 
-    EXPECT_THROW(parse(bin), parser_error);
+    EXPECT_THROW_MESSAGE(
+        parse(bin), parser_error, "malformed limits (minimum is larger than maximum)");
 }
 
 TEST(parser, memory_multi_min_limit)
@@ -454,7 +460,8 @@ TEST(parser, memory_multi_min_limit)
     const auto section_contents = "02007f007f"_bytes;
     const auto bin = bytes{wasm_prefix} + make_section(5, section_contents);
 
-    EXPECT_THROW(parse(bin), parser_error);
+    EXPECT_THROW_MESSAGE(
+        parse(bin), parser_error, "too many memory sections (at most one is allowed)");
 }
 
 TEST(parser, global_single_mutable_const_inited)
