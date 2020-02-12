@@ -266,7 +266,7 @@ Module parse(bytes_view input)
     {
         const auto id = static_cast<SectionId>(*it++);
         uint32_t size;
-        std::tie(size, it) = leb128u_decode<uint32_t>(it, it + 4);  // FIXME: Bounds checking.
+        std::tie(size, it) = leb128u_decode<uint32_t>(it, input.end());
         const auto expected_end_pos = it + size;
         switch (id)
         {

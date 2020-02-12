@@ -138,7 +138,7 @@ TEST(parser, code_locals_invalid_type)
     EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "invalid valtype 123");
 }
 
-TEST(parser, empty_module)
+TEST(parser, module_empty)
 {
     const auto module = parse(wasm_prefix);
     EXPECT_EQ(module.typesec.size(), 0);
@@ -172,6 +172,12 @@ TEST(parser, custom_section_nonempty)
     EXPECT_EQ(module.typesec.size(), 0);
     EXPECT_EQ(module.funcsec.size(), 0);
     EXPECT_EQ(module.codesec.size(), 0);
+}
+
+TEST(parser, custom_section_size_out_of_bounds)
+{
+    const auto wasm = bytes{wasm_prefix} + "0080"_bytes;
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
 }
 
 TEST(parser, functype_wrong_prefix)
