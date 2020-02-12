@@ -608,6 +608,15 @@ TEST(parser, export_invalid_kind)
     EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected export kind value 4");
 }
 
+TEST(parser, export_name_out_of_bounds)
+{
+    const auto wasm1 = bytes{wasm_prefix} + make_section(7, make_vec({"01"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm1), parser_error, "Unexpected EOF");
+
+    const auto wasm2 = bytes{wasm_prefix} + make_section(7, make_vec({"7faabbccddeeff"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm2), parser_error, "Unexpected EOF");
+}
+
 TEST(parser, start)
 {
     const auto func_section = make_vec({"00"_bytes, "00"_bytes});

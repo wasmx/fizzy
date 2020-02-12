@@ -8,10 +8,10 @@ namespace fizzy
 template <>
 inline parser_result<uint8_t> parse(const uint8_t* pos, const uint8_t* end)
 {
-    (void)end;  // FIXME: Bounds checking.
-    const auto result = *pos;
-    ++pos;
-    return {result, pos};
+    if (pos == end)
+        throw parser_error{"Unexpected EOF"};
+
+    return {*pos, pos + 1};
 }
 
 template <>
@@ -126,7 +126,6 @@ inline parser_result<Memory> parse(const uint8_t* pos, const uint8_t* end)
 
 inline parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end)
 {
-    // FIXME: Add bounds checking test, the implementation is likely to be changed.
     std::vector<uint8_t> value;
     std::tie(value, pos) = parse_vec<uint8_t>(pos, end);
 
