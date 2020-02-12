@@ -797,16 +797,25 @@ TEST(parser, code_section_with_memory_grow)
     EXPECT_THROW_MESSAGE(parse(bin_invalid), parser_error, "invalid memory index encountered");
 }
 
-TEST(parser, code_section_unsupported_f32_const)
+TEST(parser, code_section_unsupported_fp_instructions)
 {
-    const auto func_bin =
-        "00"  // vec(locals)
-        "440b"_bytes;
-    const auto code_bin = add_size_prefix(func_bin);
-    const auto section_contents = make_vec({code_bin});
-    const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
+    const uint8_t fp_instructions[] = {0x2a, 0x2b, 0x38, 0x39, 0x43, 0x44, 0x5b, 0x5c, 0x5d, 0x5e,
+        0x5f, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f, 0x90, 0x91,
+        0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9a, 0x9b, 0x9c, 0x9d, 0x9e, 0x9f, 0xa0,
+        0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa8, 0xa9, 0xaa, 0xab, 0xae, 0xaf, 0xb0, 0xb1, 0xb2,
+        0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf};
 
-    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "invalid instruction 68");
+    for (const auto instr : fp_instructions)
+    {
+        const auto func_bin = "00"_bytes  // vec(locals)
+                              + bytes{instr};
+        const auto code_bin = add_size_prefix(func_bin);
+        const auto section_contents = make_vec({code_bin});
+        const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
+
+        const auto expected_msg = std::string{"invalid instruction "} + std::to_string(instr);
+        EXPECT_THROW_MESSAGE(parse(bin), parser_error, expected_msg.c_str());
+    }
 }
 
 TEST(parser, code_section_invalid_instructions)
