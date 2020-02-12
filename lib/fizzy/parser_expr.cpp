@@ -1,5 +1,6 @@
 #include "parser.hpp"
 #include "stack.hpp"
+#include <cassert>
 
 namespace fizzy
 {
@@ -393,8 +394,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end)
         }
         code.instructions.emplace_back(instr);
     }
-    if (!label_positions.empty())
-        throw parser_error{"code is not balanced (missing end statements)"};
+    assert(label_positions.empty());
     return {code, pos};
 }
 }  // namespace fizzy
