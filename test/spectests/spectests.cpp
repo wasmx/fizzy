@@ -265,7 +265,7 @@ private:
     test_results results;
 };
 
-void run_tests_from_dir(const fs::path& path)
+bool run_tests_from_dir(const fs::path& path)
 {
     std::vector<fs::path> files;
     for (const auto& e : fs::recursive_directory_iterator{path})
@@ -277,6 +277,7 @@ void run_tests_from_dir(const fs::path& path)
     std::sort(std::begin(files), std::end(files));
 
     test_results total;
+    bool exception_thrown = false;
     for (const auto& f : files)
     {
         try
@@ -290,12 +291,15 @@ void run_tests_from_dir(const fs::path& path)
         catch (const std::exception& ex)
         {
             std::cerr << "Exception: " << ex.what() << "\n\n";
+            exception_thrown = true;
         }
     }
 
     std::cout << "TOTAL " << (total.passed + total.failed + total.skipped) << " tests ran from "
               << path << ".\n  PASSED " << total.passed << ", FAILED " << total.failed
               << ", SKIPPED " << total.skipped << ".\n";
+
+    return (total.failed == 0 && !exception_thrown);
 }
 
 }  // namespace
@@ -315,8 +319,8 @@ int main(int argc, char** argv)
             return -1;
         }
 
-        run_tests_from_dir(argv[1]);
-        return 0;
+        const bool res = run_tests_from_dir(argv[1]);
+        return res ? 0 : 1;
     }
     catch (const std::exception& ex)
     {
