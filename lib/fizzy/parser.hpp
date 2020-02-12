@@ -14,7 +14,8 @@ template <typename T>
 using parser_result = std::tuple<T, const uint8_t*>;
 
 Module parse(bytes_view input);
-parser_result<Code> parse_expr(const uint8_t* input);
+
+parser_result<Code> parse_expr(const uint8_t* input, const uint8_t* end);
 
 template <typename T>
 parser_result<T> parse(const uint8_t* pos, const uint8_t* end);

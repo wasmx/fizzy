@@ -45,7 +45,7 @@ parser_result<uint8_t> parse_blocktype(const uint8_t* pos)
 }
 }  // namespace
 
-parser_result<Code> parse_expr(const uint8_t* pos)
+parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end)
 {
     Code code;
 
@@ -56,6 +56,9 @@ parser_result<Code> parse_expr(const uint8_t* pos)
     bool continue_parsing = true;
     while (continue_parsing)
     {
+        if (pos == end)
+            throw parser_error{"Unexpected EOF"};
+
         const auto instr = static_cast<Instr>(*pos++);
         switch (instr)
         {
