@@ -300,7 +300,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end)
         case Instr::call:
         {
             uint32_t imm;
-            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
+            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, end);
             push(code.immediates, imm);
             break;
         }
@@ -324,7 +324,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end)
         case Instr::call_indirect:
         {
             uint32_t imm;
-            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
+            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, end);
             push(code.immediates, imm);
 
             const uint8_t tableidx{*pos++};
@@ -336,7 +336,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end)
         case Instr::i32_const:
         {
             int32_t imm;
-            std::tie(imm, pos) = leb128s_decode<int32_t>(pos, pos + 5);  // FIXME: Bounds checking.
+            std::tie(imm, pos) = leb128s_decode<int32_t>(pos, end);
             push(code.immediates, static_cast<uint32_t>(imm));
             break;
         }
@@ -344,7 +344,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end)
         case Instr::i64_const:
         {
             int64_t imm;
-            std::tie(imm, pos) = leb128s_decode<int64_t>(pos, pos + 10);  // FIXME: Bounds checking.
+            std::tie(imm, pos) = leb128s_decode<int64_t>(pos, end);
             push(code.immediates, static_cast<uint64_t>(imm));
             break;
         }

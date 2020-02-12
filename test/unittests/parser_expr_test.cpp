@@ -204,3 +204,14 @@ TEST(parser, control_instr_out_of_bounds)
     EXPECT_THROW_MESSAGE(parse_expr("03"_bytes), parser_error, "Unexpected EOF");
     EXPECT_THROW_MESSAGE(parse_expr("04"_bytes), parser_error, "Unexpected EOF");
 }
+
+TEST(parser, immediate_leb128_out_of_bounds)
+{
+    for (const auto instr : {Instr::local_get, Instr::local_set, Instr::local_tee,
+             Instr::global_get, Instr::global_set, Instr::br, Instr::br_if, Instr::call,
+             Instr::call_indirect, Instr::i32_const, Instr::i64_const})
+    {
+        const auto code = bytes{uint8_t(instr), 0x99};
+        EXPECT_THROW_MESSAGE(parse_expr(code), parser_error, "Unexpected EOF");
+    }
+}
