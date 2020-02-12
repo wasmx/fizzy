@@ -55,12 +55,14 @@ inline std::tuple<bool, const uint8_t*> parse_global_type(const uint8_t* pos, co
 inline parser_result<ConstantExpression> parse_constant_expression(
     const uint8_t* pos, const uint8_t* end)
 {
-    (void)end;  // FIXME: Bounds checking.
     ConstantExpression result;
 
     Instr instr;
     do
     {
+        if (pos == end)
+            throw parser_error{"Unexpected EOF"};
+
         instr = static_cast<Instr>(*pos++);
         switch (instr)
         {

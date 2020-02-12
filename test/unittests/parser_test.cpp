@@ -591,6 +591,17 @@ TEST(parser, global_mutability_out_of_bounds)
     EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
 }
 
+TEST(parser, global_constant_expression_out_of_bounds)
+{
+    // i32, immutable, EOF.
+    const auto wasm1 = bytes{wasm_prefix} + make_section(6, make_vec({"7f00"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm1), parser_error, "Unexpected EOF");
+
+    // i32, immutable, i32_const, 0, EOF.
+    const auto wasm2 = bytes{wasm_prefix} + make_section(6, make_vec({"7f004100"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm2), parser_error, "Unexpected EOF");
+}
+
 TEST(parser, export_single_function)
 {
     const auto section_contents = make_vec({bytes{0x03, 'a', 'b', 'c', 0x00, 0x42}});
