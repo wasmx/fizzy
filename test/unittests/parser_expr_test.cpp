@@ -215,3 +215,26 @@ TEST(parser, immediate_leb128_out_of_bounds)
         EXPECT_THROW_MESSAGE(parse_expr(code), parser_error, "Unexpected EOF");
     }
 }
+
+TEST(parser, load_store_immediates_out_of_bounds)
+{
+    for (const auto instr : {Instr::i32_load, Instr::i64_load, Instr::i32_load8_s,
+             Instr::i32_load8_u, Instr::i32_load16_s, Instr::i32_load16_u, Instr::i64_load8_s,
+             Instr::i64_load8_u, Instr::i64_load16_s, Instr::i64_load16_u, Instr::i64_load32_s,
+             Instr::i64_load32_u, Instr::i32_store, Instr::i64_store, Instr::i32_store8,
+             Instr::i32_store16, Instr::i64_store8, Instr::i64_store16, Instr::i64_store32})
+    {
+        const auto code_imm1 = bytes{uint8_t(instr), 0xa0};
+        EXPECT_THROW_MESSAGE(parse_expr(code_imm1), parser_error, "Unexpected EOF");
+        const auto code_imm2 = bytes{uint8_t(instr), 0x00, 0xb0};
+        EXPECT_THROW_MESSAGE(parse_expr(code_imm2), parser_error, "Unexpected EOF");
+    }
+}
+
+TEST(parser, br_table_out_of_bounds)
+{
+    EXPECT_THROW_MESSAGE(parse_expr("0e008f"_bytes), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse_expr("0e018f"_bytes), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse_expr("0e0201"_bytes), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse_expr("0e02018f"_bytes), parser_error, "Unexpected EOF");
+}
