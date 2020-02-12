@@ -28,14 +28,10 @@ void match_imported_functions(const std::vector<TypeIdx>& module_imported_types,
     }
 }
 
-
 void match_limits(const Limits& external_limits, const Limits& module_limits)
 {
     if (external_limits.min < module_limits.min)
-    {
-        throw instantiate_error(
-            "Provided memory's min is below imported memory min defined in module.");
-    }
+        throw instantiate_error("Provided import's min is below import's min defined in module.");
 
     if (!module_limits.max.has_value())
         return;
@@ -43,8 +39,41 @@ void match_limits(const Limits& external_limits, const Limits& module_limits)
     if (external_limits.max.has_value() && *external_limits.max <= *module_limits.max)
         return;
 
-    throw instantiate_error(
-        "Provided memory's max is above imported memory max defined in module.");
+    throw instantiate_error("Provided import's max is above import's max defined in module.");
+}
+
+void match_imported_tables(const std::vector<Table>& module_imported_tables,
+    const std::vector<ImportedTable>& imported_tables)
+{
+    assert(module_imported_tables.size() <= 1);
+
+    if (imported_tables.size() > 1)
+        throw instantiate_error("Only 1 imported table is allowed.");
+
+    if (module_imported_tables.empty())
+    {
+        if (!imported_tables.empty())
+        {
+            throw instantiate_error(
+                "Trying to provide imported table to a module that doesn't define one.");
+        }
+    }
+    else
+    {
+        if (imported_tables.empty())
+            throw instantiate_error("Module defines an imported table but none was provided.");
+
+        match_limits(imported_tables[0].limits, module_imported_tables[0].limits);
+
+        if (imported_tables[0].table == nullptr)
+            throw instantiate_error("Provided imported table has a null pointer to data.");
+
+        const auto size = imported_tables[0].table->size();
+        const auto min = imported_tables[0].limits.min;
+        const auto& max = imported_tables[0].limits.max;
+        if (size < min || (max.has_value() && size > *max))
+            throw instantiate_error("Provided imported table doesn't fit provided limits");
+    }
 }
 
 void match_imported_memories(const std::vector<Memory>& module_imported_memories,
@@ -107,10 +136,12 @@ void match_imported_globals(const std::vector<bool>& module_imports_mutability,
 
 std::vector<TypeIdx> match_imports(const Module& module,
     const std::vector<ImportedFunction>& imported_functions,
+    const std::vector<ImportedTable>& imported_tables,
     const std::vector<ImportedMemory>& imported_memories,
     const std::vector<ImportedGlobal>& imported_globals)
 {
     std::vector<TypeIdx> imported_function_types;
+    std::vector<Table> imported_table_types;
     std::vector<Memory> imported_memory_types;
     std::vector<bool> imported_globals_mutability;
     for (auto const& import : module.importsec)
@@ -120,6 +151,9 @@ std::vector<TypeIdx> match_imports(const Module& module,
         case ExternalKind::Function:
             imported_function_types.emplace_back(import.desc.function_type_index);
             break;
+        case ExternalKind::Table:
+            imported_table_types.emplace_back(import.desc.table);
+            break;
         case ExternalKind::Memory:
             imported_memory_types.emplace_back(import.desc.memory);
             break;
@@ -127,17 +161,36 @@ std::vector<TypeIdx> match_imports(const Module& module,
             imported_globals_mutability.emplace_back(import.desc.global_mutable);
             break;
         default:
-            throw instantiate_error("Import of type " +
-                                    std::to_string(static_cast<uint8_t>(import.kind)) +
-                                    " is not supported");
+            assert(false);
         }
     }
 
     match_imported_functions(imported_function_types, imported_functions);
+    match_imported_tables(imported_table_types, imported_tables);
     match_imported_memories(imported_memory_types, imported_memories);
     match_imported_globals(imported_globals_mutability, imported_globals);
 
     return imported_function_types;
+}
+
+table_ptr allocate_table(
+    const std::vector<Table>& module_tables, const std::vector<ImportedTable>& imported_tables)
+{
+    static const auto table_delete = [](std::vector<FuncIdx>* t) noexcept { delete t; };
+    static const auto null_delete = [](std::vector<FuncIdx>*) noexcept {};
+
+    if (module_tables.size() + imported_tables.size() > 1)
+    {
+        // FIXME: turn this into an assert if instantiate is not exposed externally and it only
+        // takes validated modules
+        throw instantiate_error("Cannot support more than 1 table section.");
+    }
+    else if (module_tables.size() == 1)
+        return {new std::vector<FuncIdx>(module_tables[0].limits.min), table_delete};
+    else if (imported_tables.size() == 1)
+        return {imported_tables[0].table, null_delete};
+    else
+        return {nullptr, null_delete};
 }
 
 std::tuple<bytes_ptr, size_t> allocate_memory(const std::vector<Memory>& module_memories,
@@ -427,10 +480,11 @@ inline uint64_t popcnt64(uint64_t value) noexcept
 }  // namespace
 
 Instance instantiate(Module module, std::vector<ImportedFunction> imported_functions,
-    std::vector<ImportedGlobal> imported_globals, std::vector<ImportedMemory> imported_memories)
+    std::vector<ImportedTable> imported_tables, std::vector<ImportedMemory> imported_memories,
+    std::vector<ImportedGlobal> imported_globals)
 {
-    std::vector<TypeIdx> imported_function_types =
-        match_imports(module, imported_functions, imported_memories, imported_globals);
+    std::vector<TypeIdx> imported_function_types = match_imports(
+        module, imported_functions, imported_tables, imported_memories, imported_globals);
 
     // Init globals
     std::vector<uint64_t> globals;
@@ -451,26 +505,23 @@ Instance instantiate(Module module, std::vector<ImportedFunction> imported_funct
         globals.emplace_back(value);
     }
 
-    // Set up tables
-    std::vector<FuncIdx> table;
-    if (!module.tablesec.empty())
-        table.resize(module.tablesec[0].limits.min);
+    auto table = allocate_table(module.tablesec, imported_tables);
 
     // Allocate memory
     auto [memory, memory_max] = allocate_memory(module.memorysec, imported_memories);
 
     // Fill the table based on elements segment
-    assert(module.elementsec.empty() || !module.tablesec.empty());
+    assert(module.elementsec.empty() || table != nullptr);
     for (const auto& element : module.elementsec)
     {
         const uint64_t offset =
             eval_constant_expression(element.offset, imported_globals, module.globalsec, globals);
 
-        if (offset + element.init.size() > table.size())
+        if (offset + element.init.size() > table->size())
             throw instantiate_error("Element segment is out of table bounds");
 
         // Overwrite table[offset..] with element.init
-        std::copy(element.init.begin(), element.init.end(), &table[offset]);
+        std::copy(element.init.begin(), element.init.end(), table->data() + offset);
     }
 
     // Fill out memory based on data segments
@@ -664,17 +715,19 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         }
         case Instr::call_indirect:
         {
+            assert(instance.table != nullptr);
+
             const auto expected_type_idx = read<uint32_t>(immediates);
             assert(expected_type_idx < instance.module.typesec.size());
 
             const auto elem_idx = stack.pop();
-            if (elem_idx >= instance.table.size())
+            if (elem_idx >= instance.table->size())
             {
                 trap = true;
                 goto end;
             }
 
-            const auto called_func_idx = instance.table[elem_idx];
+            const auto called_func_idx = (*instance.table)[elem_idx];
             assert(called_func_idx <
                    instance.imported_functions.size() + instance.module.funcsec.size());
 

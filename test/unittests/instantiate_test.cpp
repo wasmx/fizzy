@@ -56,6 +56,92 @@ TEST(instantiate, imported_functions_not_enough)
         "Module requires 1 imported functions, 0 provided");
 }
 
+TEST(instantiate, imported_table)
+{
+    Module module;
+    Import imp{"mod", "t", ExternalKind::Table, {}};
+    imp.desc.table = Table{{10, 30}};
+    module.importsec.emplace_back(imp);
+
+    std::vector<FuncIdx> table(10);
+    auto instance = instantiate(module, {}, {{&table, {10, 30}}});
+
+    ASSERT_TRUE(instance.table);
+    EXPECT_EQ(instance.table->size(), 10);
+    EXPECT_EQ(instance.table->data(), table.data());
+}
+
+TEST(instantiate, imported_table_stricter_limits)
+{
+    Module module;
+    Import imp{"mod", "t", ExternalKind::Table, {}};
+    imp.desc.table = Table{{10, 30}};
+    module.importsec.emplace_back(imp);
+
+    std::vector<FuncIdx> table(20);
+    auto instance = instantiate(module, {}, {{&table, {20, 20}}});
+
+    ASSERT_TRUE(instance.table);
+    EXPECT_EQ(instance.table->size(), 20);
+    EXPECT_EQ(instance.table->data(), table.data());
+}
+
+TEST(instantiate, imported_table_invalid)
+{
+    Module module;
+    Import imp{"mod", "t", ExternalKind::Table, {}};
+    imp.desc.table = Table{{10, 30}};
+    module.importsec.emplace_back(imp);
+
+    std::vector<FuncIdx> table(10);
+
+    // Providing more than 1 table
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table, {10, 30}}, {&table, {10, 10}}}),
+        instantiate_error, "Only 1 imported table is allowed.");
+
+    // Providing table when none expected
+    Module module_no_imported_table;
+    EXPECT_THROW_MESSAGE(instantiate(module_no_imported_table, {}, {{&table, {10, 30}}}),
+        instantiate_error, "Trying to provide imported table to a module that doesn't define one.");
+
+    // Not providing table when one is expected
+    EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
+        "Module defines an imported table but none was provided.");
+
+    // Provided min too low
+    std::vector<FuncIdx> table_empty;
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table_empty, {0, 3}}}), instantiate_error,
+        "Provided import's min is below import's min defined in module.");
+
+    // Provided max too high
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table, {10, 40}}}), instantiate_error,
+        "Provided import's max is above import's max defined in module.");
+
+    // Provided max is unlimited
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table, {10, std::nullopt}}}), instantiate_error,
+        "Provided import's max is above import's max defined in module.");
+
+    // Null pointer
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{nullptr, {10, 30}}}), instantiate_error,
+        "Provided imported table has a null pointer to data.");
+
+    // Allocated less than min
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table_empty, {10, 30}}}), instantiate_error,
+        "Provided imported table doesn't fit provided limits");
+
+    // Allocated more than max
+    std::vector<FuncIdx> table_big(40, 0);
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table_big, {10, 30}}}), instantiate_error,
+        "Provided imported table doesn't fit provided limits");
+
+    // Imported table and regular table
+    Module module_with_two_tables;
+    module_with_two_tables.tablesec.emplace_back(Table{{10, 10}});
+    module_with_two_tables.importsec.emplace_back(imp);
+    EXPECT_THROW_MESSAGE(instantiate(module_with_two_tables, {}, {{&table, {10, 30}}}),
+        instantiate_error, "Cannot support more than 1 table section.");
+}
+
 TEST(instantiate, imported_memory)
 {
     Module module;
@@ -130,15 +216,15 @@ TEST(instantiate, imported_memory_invalid)
     // Provided min too low
     bytes memory_empty;
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory_empty, {0, 3}}}), instantiate_error,
-        "Provided memory's min is below imported memory min defined in module.");
+        "Provided import's min is below import's min defined in module.");
 
     // Provided max too high
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {1, 4}}}), instantiate_error,
-        "Provided memory's max is above imported memory max defined in module.");
+        "Provided import's max is above import's max defined in module.");
 
     // Provided max is unlimited
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {1, std::nullopt}}}),
-        instantiate_error, "Provided memory's max is above imported memory max defined in module.");
+        instantiate_error, "Provided import's max is above import's max defined in module.");
 
     // Null pointer
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{nullptr, {1, 3}}}), instantiate_error,
@@ -178,7 +264,7 @@ TEST(instantiate, imported_globals)
 
     uint64_t global_value = 42;
     ImportedGlobal g{&global_value, true};
-    auto instance = instantiate(module, {}, {g});
+    auto instance = instantiate(module, {}, {}, {}, {g});
 
     ASSERT_EQ(instance.imported_globals.size(), 1);
     EXPECT_EQ(instance.imported_globals[0].is_mutable, true);
@@ -196,7 +282,7 @@ TEST(instantiate, imported_globals_multiple)
     ImportedGlobal g1{&global_value1, true};
     uint64_t global_value2 = 43;
     ImportedGlobal g2{&global_value2, false};
-    auto instance = instantiate(module, {}, {g1, g2});
+    auto instance = instantiate(module, {}, {}, {}, {g1, g2});
 
     ASSERT_EQ(instance.imported_globals.size(), 2);
     EXPECT_EQ(instance.imported_globals[0].is_mutable, true);
@@ -214,7 +300,7 @@ TEST(instantiate, imported_globals_mismatched_count)
 
     uint64_t global_value = 42;
     ImportedGlobal g{&global_value, true};
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {g}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {g}), instantiate_error,
         "Module requires 2 imported globals, 1 provided");
 }
 
@@ -228,7 +314,7 @@ TEST(instantiate, imported_globals_mismatched_mutability)
     ImportedGlobal g1{&global_value1, false};
     uint64_t global_value2 = 42;
     ImportedGlobal g2{&global_value2, true};
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {g1, g2}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {g1, g2}), instantiate_error,
         "Global 0 mutability doesn't match module's global mutability");
 }
 
@@ -239,8 +325,8 @@ TEST(instantiate, imported_globals_nullptr)
     module.importsec.emplace_back(Import{"mod", "g2", ExternalKind::Global, {false}});
 
     ImportedGlobal g{nullptr, false};
-    EXPECT_THROW_MESSAGE(
-        instantiate(module, {}, {g, g}), instantiate_error, "Global 0 has a null pointer to value");
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {g, g}), instantiate_error,
+        "Global 0 has a null pointer to value");
 }
 
 TEST(instantiate, memory_default)
@@ -307,20 +393,20 @@ TEST(instantiate, element_section)
 {
     Module module;
     module.tablesec.emplace_back(Table{{4, std::nullopt}});
-    // Memory contents: 0, 0xaa, 0xff, 0, ...
+    // Table contents: 0, 0xaa, 0xff, 0, ...
     module.elementsec.emplace_back(
         Element{{ConstantExpression::Kind::Constant, {1}}, {0xaa, 0xff}});
-    // Memory contents: 0, 0xaa, 0x55, 0x55, 0, ...
+    // Table contents: 0, 0xaa, 0x55, 0x55, 0, ...
     module.elementsec.emplace_back(
         Element{{ConstantExpression::Kind::Constant, {2}}, {0x55, 0x55}});
 
     auto instance = instantiate(module);
 
-    ASSERT_EQ(instance.table.size(), 4);
-    EXPECT_EQ(instance.table[0], 0);
-    EXPECT_EQ(instance.table[1], 0xaa);
-    EXPECT_EQ(instance.table[2], 0x55);
-    EXPECT_EQ(instance.table[3], 0x55);
+    ASSERT_EQ(instance.table->size(), 4);
+    EXPECT_EQ((*instance.table)[0], 0);
+    EXPECT_EQ((*instance.table)[1], 0xaa);
+    EXPECT_EQ((*instance.table)[2], 0x55);
+    EXPECT_EQ((*instance.table)[3], 0x55);
 }
 
 TEST(instantiate, element_section_offset_from_global)
@@ -328,17 +414,17 @@ TEST(instantiate, element_section_offset_from_global)
     Module module;
     module.tablesec.emplace_back(Table{{4, std::nullopt}});
     module.globalsec.emplace_back(Global{false, {ConstantExpression::Kind::Constant, {1}}});
-    // Memory contents: 0, 0xaa, 0xff, 0, ...
+    // Table contents: 0, 0xaa, 0xff, 0, ...
     module.elementsec.emplace_back(
         Element{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
 
     auto instance = instantiate(module);
 
-    ASSERT_EQ(instance.table.size(), 4);
-    EXPECT_EQ(instance.table[0], 0);
-    EXPECT_EQ(instance.table[1], 0xaa);
-    EXPECT_EQ(instance.table[2], 0xff);
-    EXPECT_EQ(instance.table[3], 0x00);
+    ASSERT_EQ(instance.table->size(), 4);
+    EXPECT_EQ((*instance.table)[0], 0);
+    EXPECT_EQ((*instance.table)[1], 0xaa);
+    EXPECT_EQ((*instance.table)[2], 0xff);
+    EXPECT_EQ((*instance.table)[3], 0x00);
 }
 
 TEST(instantiate, element_section_offset_from_imported_global)
@@ -346,20 +432,20 @@ TEST(instantiate, element_section_offset_from_imported_global)
     Module module;
     module.tablesec.emplace_back(Table{{4, std::nullopt}});
     module.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {false}});
-    // Memory contents: 0, 0xaa, 0xff, 0, ...
+    // Table contents: 0, 0xaa, 0xff, 0, ...
     module.elementsec.emplace_back(
         Element{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
 
     uint64_t global_value = 1;
     ImportedGlobal g{&global_value, false};
 
-    auto instance = instantiate(module, {}, {g});
+    auto instance = instantiate(module, {}, {}, {}, {g});
 
-    ASSERT_EQ(instance.table.size(), 4);
-    EXPECT_EQ(instance.table[0], 0);
-    EXPECT_EQ(instance.table[1], 0xaa);
-    EXPECT_EQ(instance.table[2], 0xff);
-    EXPECT_EQ(instance.table[3], 0x00);
+    ASSERT_EQ(instance.table->size(), 4);
+    EXPECT_EQ((*instance.table)[0], 0);
+    EXPECT_EQ((*instance.table)[1], 0xaa);
+    EXPECT_EQ((*instance.table)[2], 0xff);
+    EXPECT_EQ((*instance.table)[3], 0x00);
 }
 
 TEST(instantiate, element_section_offset_from_mutable_global)
@@ -367,7 +453,7 @@ TEST(instantiate, element_section_offset_from_mutable_global)
     Module module;
     module.tablesec.emplace_back(Table{{4, std::nullopt}});
     module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
-    // Memory contents: 0, 0xaa, 0xff, 0, ...
+    // Table contents: 0, 0xaa, 0xff, 0, ...
     module.elementsec.emplace_back(
         Element{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
 
@@ -386,6 +472,30 @@ TEST(instantiate, element_section_offset_too_large)
 
     EXPECT_THROW_MESSAGE(
         instantiate(module), instantiate_error, "Element segment is out of table bounds");
+}
+
+TEST(instantiate, element_section_fills_imported_table)
+{
+    Module module;
+    Import imp{"mod", "t", ExternalKind::Table, {}};
+    imp.desc.table = Table{{4, std::nullopt}};
+    module.importsec.emplace_back(imp);
+    // Table contents: 0, 0xaa, 0xff, 0, ...
+    module.elementsec.emplace_back(
+        Element{{ConstantExpression::Kind::Constant, {1}}, {0xaa, 0xff}});
+    // Table contents: 0, 0xaa, 0x55, 0x55, 0, ...
+    module.elementsec.emplace_back(
+        Element{{ConstantExpression::Kind::Constant, {2}}, {0x55, 0x66}});
+
+    std::vector<FuncIdx> table(4);
+    table[0] = 0xbb;
+    auto instance = instantiate(module, {}, {{&table, {4, std::nullopt}}});
+
+    ASSERT_EQ(instance.table->size(), 4);
+    EXPECT_EQ((*instance.table)[0], 0xbb);
+    EXPECT_EQ((*instance.table)[1], 0xaa);
+    EXPECT_EQ((*instance.table)[2], 0x55);
+    EXPECT_EQ((*instance.table)[3], 0x66);
 }
 
 TEST(instantiate, data_section)
@@ -426,7 +536,7 @@ TEST(instantiate, data_section_offset_from_imported_global)
     uint64_t global_value = 42;
     ImportedGlobal g{&global_value, false};
 
-    auto instance = instantiate(module, {}, {g});
+    auto instance = instantiate(module, {}, {}, {}, {g});
 
     EXPECT_EQ(instance.memory->substr(42, 2), "aaff"_bytes);
 }
@@ -505,7 +615,7 @@ TEST(instantiate, globals_with_imported)
     uint64_t global_value = 41;
     ImportedGlobal g{&global_value, true};
 
-    auto instance = instantiate(module, {}, {g});
+    auto instance = instantiate(module, {}, {}, {}, {g});
 
     ASSERT_EQ(instance.imported_globals.size(), 1);
     EXPECT_EQ(*instance.imported_globals[0].value, 41);
@@ -524,7 +634,7 @@ TEST(instantiate, globals_initialized_from_imported)
     uint64_t global_value = 42;
     ImportedGlobal g{&global_value, false};
 
-    auto instance = instantiate(module, {}, {g});
+    auto instance = instantiate(module, {}, {}, {}, {g});
 
     ASSERT_EQ(instance.globals.size(), 1);
     EXPECT_EQ(instance.globals[0], 42);
@@ -537,7 +647,7 @@ TEST(instantiate, globals_initialized_from_imported)
 
     ImportedGlobal g_mutable{&global_value, true};
 
-    EXPECT_THROW_MESSAGE(instantiate(module_invalid1, {}, {g_mutable}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(module_invalid1, {}, {}, {}, {g_mutable}), instantiate_error,
         "Constant expression can use global_get only for const globals.");
 
     // initializing from non-imported global is not allowed

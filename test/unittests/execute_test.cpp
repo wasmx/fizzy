@@ -152,6 +152,55 @@ TEST(execute, call_indirect_with_argument)
     EXPECT_TRUE(execute(module, 3, {2}).trapped);
 }
 
+TEST(execute, call_indirect_imported_table)
+{
+    /*
+    (module
+      (type $out_i32 (func (result i32)))
+      (import "m" "t" (table 5 20 anyfunc))
+
+      (func $f1 (result i32) i32.const 1)
+      (func $f2 (result i32) i32.const 2)
+      (func $f3 (result i32) i32.const 3)
+      (func $f4 (result i64) i64.const 4)
+      (func $f5 (result i32) unreachable)
+
+      (func (param i32) (result i32)
+        (call_indirect (type $out_i32) (get_local 0))
+      )
+    )
+    */
+    const auto bin = from_hex(
+        "0061736d01000000010e036000017f6000017e60017f017f020a01016d017401"
+        "700105140307060000000100020a2106040041010b040041020b040041030b04"
+        "0042040b0300000b070020001100000b002d046e616d65011505000266310102"
+        "6632020266330302663404026635020f060000010002000300040005010000");
+
+    const Module module = parse(bin);
+
+    std::vector<FuncIdx> table{2, 1, 0, 3, 4};
+    auto instance = instantiate(module, {}, {{&table, {5, 20}}});
+
+    for (const auto param : {0u, 1u, 2u})
+    {
+        constexpr uint64_t expected_results[]{3, 2, 1};
+
+        const auto [trap, ret] = execute(instance, 5, {param});
+        ASSERT_FALSE(trap);
+        ASSERT_EQ(ret.size(), 1);
+        EXPECT_EQ(ret[0], expected_results[param]);
+    }
+
+    // immediate is incorrect type
+    EXPECT_TRUE(execute(instance, 5, {3}).trapped);
+
+    // called function traps
+    EXPECT_TRUE(execute(instance, 5, {4}).trapped);
+
+    // argument out of table bounds
+    EXPECT_TRUE(execute(instance, 5, {5}).trapped);
+}
+
 TEST(execute, drop)
 {
     Module module;
@@ -275,7 +324,7 @@ TEST(execute, global_get_imported)
     module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
 
     uint64_t global_value = 42;
-    auto instance = instantiate(module, {}, {ImportedGlobal{&global_value, false}});
+    auto instance = instantiate(module, {}, {}, {}, {ImportedGlobal{&global_value, false}});
 
     const auto [trap, ret] = execute(instance, 0, {});
 
@@ -335,7 +384,7 @@ TEST(execute, global_set_imported)
         Code{0, {Instr::i32_const, Instr::global_set, Instr::end}, {42, 0, 0, 0, 0, 0, 0, 0}});
 
     uint64_t global_value = 41;
-    auto instance = instantiate(module, {}, {ImportedGlobal{&global_value, true}});
+    auto instance = instantiate(module, {}, {}, {}, {ImportedGlobal{&global_value, true}});
 
     const auto [trap, ret] = execute(instance, 0, {});
 
