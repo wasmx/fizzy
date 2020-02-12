@@ -27,10 +27,24 @@ fizzy::bytes load_wasm_file(const fs::path& json_file_path, std::string_view fil
         std::istreambuf_iterator<char>{wasm_file}, std::istreambuf_iterator<char>{});
 }
 
+struct test_settings
+{
+    bool skip_validation = false;
+};
+
+struct test_results
+{
+    int passed = 0;
+    int failed = 0;
+    int skipped = 0;
+};
+
 class test_runner
 {
 public:
-    void run_from_file(const fs::path& path)
+    explicit test_runner(const test_settings& ts) : settings{ts} {}
+
+    test_results run_from_file(const fs::path& path)
     {
         log("Running tests from " + path.string());
 
@@ -162,12 +176,19 @@ public:
             {
                 // NOTE: assert_malformed should result in a parser error and
                 //       assert_invalid should result in a validation error
+                if (type == "assert_invalid" && settings.skip_validation)
+                {
+                    skip("Validation tests disabled.");
+                    continue;
+                }
+
                 const auto module_type = cmd.at("module_type").get<std::string>();
                 if (module_type != "binary")
                 {
                     skip("Only binary modules are supported.");
                     continue;
                 }
+
                 const auto filename = cmd.at("filename").get<std::string>();
                 const auto wasm_binary = load_wasm_file(path, filename);
                 try
@@ -187,9 +208,12 @@ public:
                 skip("Unsupported command type");
         }
 
-        log(std::to_string(passed + failed + skipped) + " tests ran from " +
-            path.filename().string() + ".\n  PASSED " + std::to_string(passed) + ", FAILED " +
-            std::to_string(failed) + ", SKIPPED " + std::to_string(skipped) + ".\n");
+        log(std::to_string(results.passed + results.failed + results.skipped) + " tests ran from " +
+            path.filename().string() + ".\n  PASSED " + std::to_string(results.passed) +
+            ", FAILED " + std::to_string(results.failed) + ", SKIPPED " +
+            std::to_string(results.skipped) + ".\n");
+
+        return results;
     }
 
 private:
@@ -231,19 +255,19 @@ private:
 
     void pass()
     {
-        ++passed;
+        ++results.passed;
         std::cout << "PASSED\n";
     }
 
     void fail(std::string_view message)
     {
-        ++failed;
+        ++results.failed;
         std::cout << "FAILED " << message << "\n";
     }
 
     void skip(std::string_view message)
     {
-        ++skipped;
+        ++results.skipped;
         std::cout << "SKIPPED " << message << "\n";
     }
 
@@ -251,13 +275,12 @@ private:
 
     void log_no_newline(std::string_view message) const { std::cout << message << std::flush; }
 
+    test_settings settings;
     std::optional<fizzy::Instance> instance;
-    int passed = 0;
-    int failed = 0;
-    int skipped = 0;
+    test_results results;
 };
 
-void run_tests_from_dir(const fs::path& path)
+bool run_tests_from_dir(const fs::path& path, const test_settings& settings)
 {
     std::vector<fs::path> files;
     for (const auto& e : fs::recursive_directory_iterator{path})
@@ -268,17 +291,30 @@ void run_tests_from_dir(const fs::path& path)
 
     std::sort(std::begin(files), std::end(files));
 
+    test_results total;
+    bool exception_thrown = false;
     for (const auto& f : files)
     {
         try
         {
-            test_runner{}.run_from_file(f);
+            const auto res = test_runner{settings}.run_from_file(f);
+
+            total.passed += res.passed;
+            total.failed += res.failed;
+            total.skipped += res.skipped;
         }
         catch (const std::exception& ex)
         {
             std::cerr << "Exception: " << ex.what() << "\n\n";
+            exception_thrown = true;
         }
     }
+
+    std::cout << "TOTAL " << (total.passed + total.failed + total.skipped) << " tests ran from "
+              << path << ".\n  PASSED " << total.passed << ", FAILED " << total.failed
+              << ", SKIPPED " << total.skipped << ".\n";
+
+    return (total.failed == 0 && !exception_thrown);
 }
 
 }  // namespace
@@ -287,19 +323,33 @@ int main(int argc, char** argv)
 {
     try
     {
-        if (argc < 2)
+        std::string dir;
+        test_settings settings;
+
+        for (auto i = 1; i < argc; ++i)
+        {
+            if (argv[i][0] == '-')
+            {
+                if (argv[i] == std::string{"--skip-validation"})
+                    settings.skip_validation = true;
+                else
+                {
+                    std::cerr << "Unknown argument: " << argv[i] << "\n";
+                    return -1;
+                }
+            }
+            else
+                dir = argv[i];
+        }
+
+        if (dir.empty())
         {
             std::cerr << "Missing DIR argument\n";
             return -1;
         }
-        else if (argc > 2)
-        {
-            std::cerr << "Too many arguments\n";
-            return -1;
-        }
 
-        run_tests_from_dir(argv[1]);
-        return 0;
+        const bool res = run_tests_from_dir(dir, settings);
+        return res ? 0 : 1;
     }
     catch (const std::exception& ex)
     {
