@@ -130,15 +130,15 @@ TEST(instantiate, imported_memory_invalid)
     // Provided min too low
     bytes memory_empty;
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory_empty, {0, 3}}}), instantiate_error,
-        "Provided memory's min is below imported memory min defined in module.");
+        "Provided import's min is below import's min defined in module.");
 
     // Provided max too high
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {1, 4}}}), instantiate_error,
-        "Provided memory's max is above imported memory max defined in module.");
+        "Provided import's max is above import's max defined in module.");
 
     // Provided max is unlimited
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {1, std::nullopt}}}),
-        instantiate_error, "Provided memory's max is above imported memory max defined in module.");
+        instantiate_error, "Provided import's max is above import's max defined in module.");
 
     // Null pointer
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{nullptr, {1, 3}}}), instantiate_error,
@@ -178,7 +178,7 @@ TEST(instantiate, imported_globals)
 
     uint64_t global_value = 42;
     ImportedGlobal g{&global_value, true};
-    auto instance = instantiate(module, {}, {g});
+    auto instance = instantiate(module, {}, {}, {}, {g});
 
     ASSERT_EQ(instance.imported_globals.size(), 1);
     EXPECT_EQ(instance.imported_globals[0].is_mutable, true);
@@ -196,7 +196,7 @@ TEST(instantiate, imported_globals_multiple)
     ImportedGlobal g1{&global_value1, true};
     uint64_t global_value2 = 43;
     ImportedGlobal g2{&global_value2, false};
-    auto instance = instantiate(module, {}, {g1, g2});
+    auto instance = instantiate(module, {}, {}, {}, {g1, g2});
 
     ASSERT_EQ(instance.imported_globals.size(), 2);
     EXPECT_EQ(instance.imported_globals[0].is_mutable, true);
@@ -214,7 +214,7 @@ TEST(instantiate, imported_globals_mismatched_count)
 
     uint64_t global_value = 42;
     ImportedGlobal g{&global_value, true};
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {g}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {g}), instantiate_error,
         "Module requires 2 imported globals, 1 provided");
 }
 
@@ -228,7 +228,7 @@ TEST(instantiate, imported_globals_mismatched_mutability)
     ImportedGlobal g1{&global_value1, false};
     uint64_t global_value2 = 42;
     ImportedGlobal g2{&global_value2, true};
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {g1, g2}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {g1, g2}), instantiate_error,
         "Global 0 mutability doesn't match module's global mutability");
 }
 
@@ -239,8 +239,8 @@ TEST(instantiate, imported_globals_nullptr)
     module.importsec.emplace_back(Import{"mod", "g2", ExternalKind::Global, {false}});
 
     ImportedGlobal g{nullptr, false};
-    EXPECT_THROW_MESSAGE(
-        instantiate(module, {}, {g, g}), instantiate_error, "Global 0 has a null pointer to value");
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {g, g}), instantiate_error,
+        "Global 0 has a null pointer to value");
 }
 
 TEST(instantiate, memory_default)
@@ -307,20 +307,20 @@ TEST(instantiate, element_section)
 {
     Module module;
     module.tablesec.emplace_back(Table{{4, std::nullopt}});
-    // Memory contents: 0, 0xaa, 0xff, 0, ...
+    // Table contents: 0, 0xaa, 0xff, 0, ...
     module.elementsec.emplace_back(
         Element{{ConstantExpression::Kind::Constant, {1}}, {0xaa, 0xff}});
-    // Memory contents: 0, 0xaa, 0x55, 0x55, 0, ...
+    // Table contents: 0, 0xaa, 0x55, 0x55, 0, ...
     module.elementsec.emplace_back(
         Element{{ConstantExpression::Kind::Constant, {2}}, {0x55, 0x55}});
 
     auto instance = instantiate(module);
 
-    ASSERT_EQ(instance.table.size(), 4);
-    EXPECT_EQ(instance.table[0], 0);
-    EXPECT_EQ(instance.table[1], 0xaa);
-    EXPECT_EQ(instance.table[2], 0x55);
-    EXPECT_EQ(instance.table[3], 0x55);
+    ASSERT_EQ(instance.table->size(), 4);
+    EXPECT_EQ((*instance.table)[0], 0);
+    EXPECT_EQ((*instance.table)[1], 0xaa);
+    EXPECT_EQ((*instance.table)[2], 0x55);
+    EXPECT_EQ((*instance.table)[3], 0x55);
 }
 
 TEST(instantiate, element_section_offset_from_global)
@@ -328,17 +328,17 @@ TEST(instantiate, element_section_offset_from_global)
     Module module;
     module.tablesec.emplace_back(Table{{4, std::nullopt}});
     module.globalsec.emplace_back(Global{false, {ConstantExpression::Kind::Constant, {1}}});
-    // Memory contents: 0, 0xaa, 0xff, 0, ...
+    // Table contents: 0, 0xaa, 0xff, 0, ...
     module.elementsec.emplace_back(
         Element{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
 
     auto instance = instantiate(module);
 
-    ASSERT_EQ(instance.table.size(), 4);
-    EXPECT_EQ(instance.table[0], 0);
-    EXPECT_EQ(instance.table[1], 0xaa);
-    EXPECT_EQ(instance.table[2], 0xff);
-    EXPECT_EQ(instance.table[3], 0x00);
+    ASSERT_EQ(instance.table->size(), 4);
+    EXPECT_EQ((*instance.table)[0], 0);
+    EXPECT_EQ((*instance.table)[1], 0xaa);
+    EXPECT_EQ((*instance.table)[2], 0xff);
+    EXPECT_EQ((*instance.table)[3], 0x00);
 }
 
 TEST(instantiate, element_section_offset_from_imported_global)
@@ -346,20 +346,20 @@ TEST(instantiate, element_section_offset_from_imported_global)
     Module module;
     module.tablesec.emplace_back(Table{{4, std::nullopt}});
     module.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {false}});
-    // Memory contents: 0, 0xaa, 0xff, 0, ...
+    // Table contents: 0, 0xaa, 0xff, 0, ...
     module.elementsec.emplace_back(
         Element{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
 
     uint64_t global_value = 1;
     ImportedGlobal g{&global_value, false};
 
-    auto instance = instantiate(module, {}, {g});
+    auto instance = instantiate(module, {}, {}, {}, {g});
 
-    ASSERT_EQ(instance.table.size(), 4);
-    EXPECT_EQ(instance.table[0], 0);
-    EXPECT_EQ(instance.table[1], 0xaa);
-    EXPECT_EQ(instance.table[2], 0xff);
-    EXPECT_EQ(instance.table[3], 0x00);
+    ASSERT_EQ(instance.table->size(), 4);
+    EXPECT_EQ((*instance.table)[0], 0);
+    EXPECT_EQ((*instance.table)[1], 0xaa);
+    EXPECT_EQ((*instance.table)[2], 0xff);
+    EXPECT_EQ((*instance.table)[3], 0x00);
 }
 
 TEST(instantiate, element_section_offset_from_mutable_global)
@@ -367,7 +367,7 @@ TEST(instantiate, element_section_offset_from_mutable_global)
     Module module;
     module.tablesec.emplace_back(Table{{4, std::nullopt}});
     module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
-    // Memory contents: 0, 0xaa, 0xff, 0, ...
+    // Table contents: 0, 0xaa, 0xff, 0, ...
     module.elementsec.emplace_back(
         Element{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
 
@@ -426,7 +426,7 @@ TEST(instantiate, data_section_offset_from_imported_global)
     uint64_t global_value = 42;
     ImportedGlobal g{&global_value, false};
 
-    auto instance = instantiate(module, {}, {g});
+    auto instance = instantiate(module, {}, {}, {}, {g});
 
     EXPECT_EQ(instance.memory->substr(42, 2), "aaff"_bytes);
 }
@@ -505,7 +505,7 @@ TEST(instantiate, globals_with_imported)
     uint64_t global_value = 41;
     ImportedGlobal g{&global_value, true};
 
-    auto instance = instantiate(module, {}, {g});
+    auto instance = instantiate(module, {}, {}, {}, {g});
 
     ASSERT_EQ(instance.imported_globals.size(), 1);
     EXPECT_EQ(*instance.imported_globals[0].value, 41);
@@ -524,7 +524,7 @@ TEST(instantiate, globals_initialized_from_imported)
     uint64_t global_value = 42;
     ImportedGlobal g{&global_value, false};
 
-    auto instance = instantiate(module, {}, {g});
+    auto instance = instantiate(module, {}, {}, {}, {g});
 
     ASSERT_EQ(instance.globals.size(), 1);
     EXPECT_EQ(instance.globals[0], 42);
@@ -537,7 +537,7 @@ TEST(instantiate, globals_initialized_from_imported)
 
     ImportedGlobal g_mutable{&global_value, true};
 
-    EXPECT_THROW_MESSAGE(instantiate(module_invalid1, {}, {g_mutable}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(module_invalid1, {}, {}, {}, {g_mutable}), instantiate_error,
         "Constant expression can use global_get only for const globals.");
 
     // initializing from non-imported global is not allowed

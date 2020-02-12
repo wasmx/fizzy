@@ -21,6 +21,14 @@ struct Instance;
 
 using ImportedFunction = execution_result (*)(Instance&, std::vector<uint64_t>);
 
+using table_ptr = std::unique_ptr<std::vector<FuncIdx>, void (*)(std::vector<FuncIdx>*)>;
+
+struct ImportedTable
+{
+    std::vector<FuncIdx>* table = nullptr;
+    Limits limits;
+};
+
 struct ImportedMemory
 {
     bytes* data = nullptr;
@@ -44,7 +52,9 @@ struct Instance
     // For these cases unique_ptr would either have a normal deleter or noop deleter respectively
     bytes_ptr memory = {nullptr, [](bytes*) {}};
     size_t memory_max_pages = 0;
-    std::vector<FuncIdx> table;
+    // Table is either allocated and owned by the instance or imported and owned externally.
+    // For these cases unique_ptr would either have a normal deleter or noop deleter respectively.
+    table_ptr table = {nullptr, [](std::vector<FuncIdx>*) {}};
     std::vector<uint64_t> globals;
     std::vector<ImportedFunction> imported_functions;
     std::vector<TypeIdx> imported_function_types;
@@ -53,8 +63,9 @@ struct Instance
 
 // Instantiate a module.
 Instance instantiate(Module module, std::vector<ImportedFunction> imported_functions = {},
-    std::vector<ImportedGlobal> imported_globals = {},
-    std::vector<ImportedMemory> imported_memories = {});
+    std::vector<ImportedTable> imported_tables = {},
+    std::vector<ImportedMemory> imported_memories = {},
+    std::vector<ImportedGlobal> imported_globals = {});
 
 // Execute a function on an instance.
 execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint64_t> args);
