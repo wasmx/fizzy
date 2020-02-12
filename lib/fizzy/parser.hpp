@@ -17,17 +17,18 @@ Module parse(bytes_view input);
 parser_result<Code> parse_expr(const uint8_t* input);
 
 template <typename T>
-parser_result<T> parse(const uint8_t* pos);
+parser_result<T> parse(const uint8_t* pos, const uint8_t* end);
 
 template <>
-inline parser_result<uint32_t> parse(const uint8_t* pos)
+inline parser_result<uint32_t> parse(const uint8_t* pos, const uint8_t* end)
 {
-    return leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
+    return leb128u_decode<uint32_t>(pos, end);
 }
 
 template <>
-inline parser_result<ValType> parse(const uint8_t* pos)
+inline parser_result<ValType> parse(const uint8_t* pos, const uint8_t* end)
 {
+    (void)end;  // FIXME: Bounds checking.
     const auto b = *pos++;
     switch (b)
     {
@@ -43,20 +44,19 @@ inline parser_result<ValType> parse(const uint8_t* pos)
     }
 }
 
-inline parser_result<Limits> parse_limits(const uint8_t* pos)
+inline parser_result<Limits> parse_limits(const uint8_t* pos, const uint8_t* end)
 {
+    (void)end;  // FIXME: Bounds checking.
     Limits result;
     const auto b = *pos++;
     switch (b)
     {
     case 0x00:
-        // FIXME: Bounds checking.
-        std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos, pos + 4);
+        std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos, end);
         return {result, pos};
     case 0x01:
-        // FIXME: Bounds checking.
-        std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos, pos + 4);
-        std::tie(result.max, pos) = leb128u_decode<uint32_t>(pos, pos + 4);
+        std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos, end);
+        std::tie(result.max, pos) = leb128u_decode<uint32_t>(pos, end);
         if (result.min > *result.max)
             throw parser_error("malformed limits (minimum is larger than maximum)");
         return {result, pos};
@@ -75,7 +75,7 @@ inline parser_result<std::vector<T>> parse_vec(const uint8_t* pos, const uint8_t
     result.reserve(size);
     auto inserter = std::back_inserter(result);
     for (uint32_t i = 0; i < size; ++i)
-        std::tie(inserter, pos) = parse<T>(pos);
+        std::tie(inserter, pos) = parse<T>(pos, end);
     return {result, pos};
 }
 }  // namespace fizzy

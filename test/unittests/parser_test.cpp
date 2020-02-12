@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 #include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
+#include <array>
 
 using namespace fizzy;
 
@@ -40,17 +41,19 @@ bytes make_invalid_size_section(uint8_t id, size_t size, const bytes& content)
 
 TEST(parser, valtype)
 {
-    uint8_t b;
-    b = 0x7e;
-    EXPECT_EQ(std::get<0>(parse<ValType>(&b)), ValType::i64);
-    b = 0x7f;
-    EXPECT_EQ(std::get<0>(parse<ValType>(&b)), ValType::i32);
-    b = 0x7c;
-    EXPECT_THROW_MESSAGE(parse<ValType>(&b), parser_error, "unsupported valtype (floating point)");
-    b = 0x7d;
-    EXPECT_THROW_MESSAGE(parse<ValType>(&b), parser_error, "unsupported valtype (floating point)");
-    b = 0x7a;
-    EXPECT_THROW_MESSAGE(parse<ValType>(&b), parser_error, "invalid valtype 122");
+    std::array<uint8_t, 1> b{};
+    b[0] = 0x7e;
+    EXPECT_EQ(std::get<0>(parse<ValType>(b.begin(), b.end())), ValType::i64);
+    b[0] = 0x7f;
+    EXPECT_EQ(std::get<0>(parse<ValType>(b.begin(), b.end())), ValType::i32);
+    b[0] = 0x7c;
+    EXPECT_THROW_MESSAGE(
+        parse<ValType>(b.begin(), b.end()), parser_error, "unsupported valtype (floating point)");
+    b[0] = 0x7d;
+    EXPECT_THROW_MESSAGE(
+        parse<ValType>(b.begin(), b.end()), parser_error, "unsupported valtype (floating point)");
+    b[0] = 0x7a;
+    EXPECT_THROW_MESSAGE(parse<ValType>(b.begin(), b.end()), parser_error, "invalid valtype 122");
 }
 
 TEST(parser, valtype_vec)
@@ -67,7 +70,7 @@ TEST(parser, valtype_vec)
 TEST(parser, limits_min)
 {
     const auto input = "007f"_bytes;
-    const auto [limits, pos] = parse_limits(input.data());
+    const auto [limits, pos] = parse_limits(input.data(), input.data() + input.size());
     EXPECT_EQ(limits.min, 0x7f);
     EXPECT_FALSE(limits.max.has_value());
 }
@@ -75,28 +78,31 @@ TEST(parser, limits_min)
 TEST(parser, limits_minmax)
 {
     const auto input = "01207f"_bytes;
-    const auto [limits, pos] = parse_limits(input.data());
+    const auto [limits, pos] = parse_limits(input.data(), input.data() + input.size());
     EXPECT_EQ(limits.min, 0x20);
     EXPECT_TRUE(limits.max.has_value());
     EXPECT_EQ(*limits.max, 0x7f);
 }
 
-TEST(parser, DISABLED_limits_min_invalid_too_short)
+TEST(parser, limits_min_invalid_too_short)
 {
     const auto input = "00"_bytes;
-    EXPECT_THROW_MESSAGE(parse_limits(input.data()), parser_error, "??");
+    EXPECT_THROW_MESSAGE(
+        parse_limits(input.data(), input.data() + input.size()), parser_error, "Unexpected EOF");
 }
 
-TEST(parser, DISABLED_limits_minmax_invalid_too_short)
+TEST(parser, limits_minmax_invalid_too_short)
 {
     const auto input = "0120"_bytes;
-    EXPECT_THROW_MESSAGE(parse_limits(input.data()), parser_error, "??");
+    EXPECT_THROW_MESSAGE(
+        parse_limits(input.data(), input.data() + input.size()), parser_error, "Unexpected EOF");
 }
 
 TEST(parser, limits_invalid)
 {
     const auto input = "02"_bytes;
-    EXPECT_THROW_MESSAGE(parse_limits(input.data()), parser_error, "invalid limits 2");
+    EXPECT_THROW_MESSAGE(
+        parse_limits(input.data(), input.data() + input.size()), parser_error, "invalid limits 2");
 }
 
 TEST(parser, code_locals)

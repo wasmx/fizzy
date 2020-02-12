@@ -6,31 +6,34 @@
 namespace fizzy
 {
 template <>
-inline parser_result<uint8_t> parse(const uint8_t* pos)
+inline parser_result<uint8_t> parse(const uint8_t* pos, const uint8_t* end)
 {
+    (void)end;  // FIXME: Bounds checking.
     const auto result = *pos;
     ++pos;
     return {result, pos};
 }
 
 template <>
-inline parser_result<FuncType> parse(const uint8_t* pos)
+inline parser_result<FuncType> parse(const uint8_t* pos, const uint8_t* end)
 {
+    (void)end;  // FIXME: Bounds checking.
     if (*pos != 0x60)
         throw parser_error{
             "unexpected byte value " + std::to_string(*pos) + ", expected 0x60 for functype"};
     ++pos;
 
     FuncType result;
-    std::tie(result.inputs, pos) = parse_vec<ValType>(pos, pos + 1000);   // FIXME: Bounds checking.
-    std::tie(result.outputs, pos) = parse_vec<ValType>(pos, pos + 1000);  // FIXME: Bounds checking.
+    std::tie(result.inputs, pos) = parse_vec<ValType>(pos, end);
+    std::tie(result.outputs, pos) = parse_vec<ValType>(pos, end);
     return {result, pos};
 }
 
-std::tuple<bool, const uint8_t*> parse_global_type(const uint8_t* pos)
+inline std::tuple<bool, const uint8_t*> parse_global_type(const uint8_t* pos, const uint8_t* end)
 {
+    (void)end;  // FIXME: Bounds checking.
     // will throw if invalid type
-    std::tie(std::ignore, pos) = parse<ValType>(pos);
+    std::tie(std::ignore, pos) = parse<ValType>(pos, end);
 
     if (*pos != 0x00 && *pos != 0x01)
         throw parser_error{"unexpected byte value " + std::to_string(*pos) +
@@ -40,8 +43,10 @@ std::tuple<bool, const uint8_t*> parse_global_type(const uint8_t* pos)
     return {is_mutable, pos};
 }
 
-inline parser_result<ConstantExpression> parse_constant_expression(const uint8_t* pos)
+inline parser_result<ConstantExpression> parse_constant_expression(
+    const uint8_t* pos, const uint8_t* end)
 {
+    (void)end;  // FIXME: Bounds checking.
     ConstantExpression result;
 
     Instr instr;
@@ -60,8 +65,7 @@ inline parser_result<ConstantExpression> parse_constant_expression(const uint8_t
         case Instr::global_get:
         {
             result.kind = ConstantExpression::Kind::GlobalGet;
-            std::tie(result.value.global_index, pos) =
-                leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
+            std::tie(result.value.global_index, pos) = leb128u_decode<uint32_t>(pos, end);
             break;
         }
 
@@ -69,7 +73,7 @@ inline parser_result<ConstantExpression> parse_constant_expression(const uint8_t
         {
             result.kind = ConstantExpression::Kind::Constant;
             int32_t value;
-            std::tie(value, pos) = leb128s_decode<int32_t>(pos);
+            std::tie(value, pos) = leb128s_decode<int32_t>(pos);  // FIXME: Bounds checking.
             result.value.constant = static_cast<uint32_t>(value);
             break;
         }
@@ -78,7 +82,7 @@ inline parser_result<ConstantExpression> parse_constant_expression(const uint8_t
         {
             result.kind = ConstantExpression::Kind::Constant;
             int64_t value;
-            std::tie(value, pos) = leb128s_decode<int64_t>(pos);
+            std::tie(value, pos) = leb128s_decode<int64_t>(pos);  // FIXME: Bounds checking.
             result.value.constant = static_cast<uint64_t>(value);
             break;
         }
@@ -89,40 +93,42 @@ inline parser_result<ConstantExpression> parse_constant_expression(const uint8_t
 }
 
 template <>
-inline parser_result<Global> parse(const uint8_t* pos)
+inline parser_result<Global> parse(const uint8_t* pos, const uint8_t* end)
 {
     Global result;
-    std::tie(result.is_mutable, pos) = parse_global_type((pos));
-    std::tie(result.expression, pos) = parse_constant_expression(pos);
+    std::tie(result.is_mutable, pos) = parse_global_type(pos, end);
+    std::tie(result.expression, pos) = parse_constant_expression(pos, end);
 
     return {result, pos};
 }
 
 template <>
-inline parser_result<Table> parse(const uint8_t* pos)
+inline parser_result<Table> parse(const uint8_t* pos, const uint8_t* end)
 {
+    (void)end;  // FIXME: Bounds checking.
     const uint8_t kind = *pos++;
     if (kind != FuncRef)
         throw parser_error{"unexpected table elemtype: " + std::to_string(kind)};
 
     Limits limits;
-    std::tie(limits, pos) = parse_limits(pos);
+    std::tie(limits, pos) = parse_limits(pos, end);
 
     return {{limits}, pos};
 }
 
 template <>
-inline parser_result<Memory> parse(const uint8_t* pos)
+inline parser_result<Memory> parse(const uint8_t* pos, const uint8_t* end)
 {
     Limits limits;
-    std::tie(limits, pos) = parse_limits(pos);
+    std::tie(limits, pos) = parse_limits(pos, end);
     return {{limits}, pos};
 }
 
-inline parser_result<std::string> parse_string(const uint8_t* pos)
+inline parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end)
 {
+    // FIXME: Add bounds checking test, the implementation is likely to be changed.
     std::vector<uint8_t> value;
-    std::tie(value, pos) = parse_vec<uint8_t>(pos, pos + 1000);  // FIXME: Bounds checking.
+    std::tie(value, pos) = parse_vec<uint8_t>(pos, end);
 
     // FIXME: need to validate that string is a valid UTF-8
 
@@ -130,31 +136,31 @@ inline parser_result<std::string> parse_string(const uint8_t* pos)
 }
 
 template <>
-inline parser_result<Import> parse(const uint8_t* pos)
+inline parser_result<Import> parse(const uint8_t* pos, const uint8_t* end)
 {
+    (void)end;  // FIXME: Bounds checking.
     Import result{};
-    std::tie(result.module, pos) = parse_string(pos);
-    std::tie(result.name, pos) = parse_string(pos);
+    std::tie(result.module, pos) = parse_string(pos, end);
+    std::tie(result.name, pos) = parse_string(pos, end);
 
     const uint8_t kind = *pos++;
     switch (kind)
     {
     case 0x00:
         result.kind = ExternalKind::Function;
-        std::tie(result.desc.function_type_index, pos) =
-            leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
+        std::tie(result.desc.function_type_index, pos) = leb128u_decode<uint32_t>(pos, end);
         break;
     case 0x01:
         result.kind = ExternalKind::Table;
-        std::tie(result.desc.table, pos) = parse<Table>(pos);
+        std::tie(result.desc.table, pos) = parse<Table>(pos, end);
         break;
     case 0x02:
         result.kind = ExternalKind::Memory;
-        std::tie(result.desc.memory, pos) = parse<Memory>(pos);
+        std::tie(result.desc.memory, pos) = parse<Memory>(pos, end);
         break;
     case 0x03:
         result.kind = ExternalKind::Global;
-        std::tie(result.desc.global_mutable, pos) = parse_global_type(pos);
+        std::tie(result.desc.global_mutable, pos) = parse_global_type(pos, end);
         break;
     default:
         throw parser_error{"unexpected import kind value " + std::to_string(kind)};
@@ -164,10 +170,11 @@ inline parser_result<Import> parse(const uint8_t* pos)
 }
 
 template <>
-inline parser_result<Export> parse(const uint8_t* pos)
+inline parser_result<Export> parse(const uint8_t* pos, const uint8_t* end)
 {
+    (void)end;  // FIXME: Bounds checking.
     Export result;
-    std::tie(result.name, pos) = parse_string(pos);
+    std::tie(result.name, pos) = parse_string(pos, end);
 
     const uint8_t kind = *pos++;
     switch (kind)
@@ -188,46 +195,43 @@ inline parser_result<Export> parse(const uint8_t* pos)
         throw parser_error{"unexpected export kind value " + std::to_string(kind)};
     }
 
-    std::tie(result.index, pos) =
-        leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
+    std::tie(result.index, pos) = leb128u_decode<uint32_t>(pos, end);
 
     return {result, pos};
 }
 
 template <>
-inline parser_result<Element> parse(const uint8_t* pos)
+inline parser_result<Element> parse(const uint8_t* pos, const uint8_t* end)
 {
     TableIdx table_index;
-    std::tie(table_index, pos) = leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
+    std::tie(table_index, pos) = leb128u_decode<uint32_t>(pos, end);
     if (table_index != 0)
         throw parser_error{"unexpected tableidx value " + std::to_string(table_index)};
 
     ConstantExpression offset;
-    std::tie(offset, pos) = parse_constant_expression(pos);
+    std::tie(offset, pos) = parse_constant_expression(pos, end);
 
     std::vector<FuncIdx> init;
-    std::tie(init, pos) = parse_vec<FuncIdx>(pos, pos + 1000);  // FIXME: Bounds checking.
+    std::tie(init, pos) = parse_vec<FuncIdx>(pos, end);
 
     return {{offset, std::move(init)}, pos};
 }
 
 template <>
-inline parser_result<Locals> parse(const uint8_t* pos)
+inline parser_result<Locals> parse(const uint8_t* pos, const uint8_t* end)
 {
     Locals result;
-    std::tie(result.count, pos) =
-        leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
-    std::tie(result.type, pos) = parse<ValType>(pos);
+    std::tie(result.count, pos) = leb128u_decode<uint32_t>(pos, end);
+    std::tie(result.type, pos) = parse<ValType>(pos, end);
     return {result, pos};
 }
 
 template <>
-inline parser_result<Code> parse(const uint8_t* pos)
+inline parser_result<Code> parse(const uint8_t* pos, const uint8_t* end)
 {
-    const auto [size, pos1] = leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
+    const auto [size, pos1] = leb128u_decode<uint32_t>(pos, end);
 
-    const auto [locals_vec, pos2] =
-        parse_vec<Locals>(pos1, pos1 + 1000);  // FIXME: Bounds checking.
+    const auto [locals_vec, pos2] = parse_vec<Locals>(pos1, end);
 
     auto result = parse_expr(pos2);
 
@@ -238,19 +242,18 @@ inline parser_result<Code> parse(const uint8_t* pos)
 }
 
 template <>
-inline parser_result<Data> parse(const uint8_t* pos)
+inline parser_result<Data> parse(const uint8_t* pos, const uint8_t* end)
 {
     MemIdx memory_index;
-    std::tie(memory_index, pos) =
-        leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
+    std::tie(memory_index, pos) = leb128u_decode<uint32_t>(pos, end);
     if (memory_index != 0)
         throw parser_error{"unexpected memidx value " + std::to_string(memory_index)};
 
     ConstantExpression offset;
-    std::tie(offset, pos) = parse_constant_expression(pos);
+    std::tie(offset, pos) = parse_constant_expression(pos, end);
 
     std::vector<uint8_t> init;
-    std::tie(init, pos) = parse_vec<uint8_t>(pos, pos + 1000);  // FIXME: Bounds checking.
+    std::tie(init, pos) = parse_vec<uint8_t>(pos, end);
 
     return {{offset, bytes(init.data(), init.size())}, pos};
 }
