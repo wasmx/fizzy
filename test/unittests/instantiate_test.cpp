@@ -56,6 +56,92 @@ TEST(instantiate, imported_functions_not_enough)
         "Module requires 1 imported functions, 0 provided");
 }
 
+TEST(instantiate, imported_table)
+{
+    Module module;
+    Import imp{"mod", "t", ExternalKind::Table, {}};
+    imp.desc.table = Table{{10, 30}};
+    module.importsec.emplace_back(imp);
+
+    std::vector<FuncIdx> table(10);
+    auto instance = instantiate(module, {}, {{&table, {10, 30}}});
+
+    ASSERT_TRUE(instance.table);
+    EXPECT_EQ(instance.table->size(), 10);
+    EXPECT_EQ(instance.table->data(), table.data());
+}
+
+TEST(instantiate, imported_table_stricter_limits)
+{
+    Module module;
+    Import imp{"mod", "t", ExternalKind::Table, {}};
+    imp.desc.table = Table{{10, 30}};
+    module.importsec.emplace_back(imp);
+
+    std::vector<FuncIdx> table(20);
+    auto instance = instantiate(module, {}, {{&table, {20, 20}}});
+
+    ASSERT_TRUE(instance.table);
+    EXPECT_EQ(instance.table->size(), 20);
+    EXPECT_EQ(instance.table->data(), table.data());
+}
+
+TEST(instantiate, imported_table_invalid)
+{
+    Module module;
+    Import imp{"mod", "t", ExternalKind::Table, {}};
+    imp.desc.table = Table{{10, 30}};
+    module.importsec.emplace_back(imp);
+
+    std::vector<FuncIdx> table(10);
+
+    // Providing more than 1 table
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table, {10, 30}}, {&table, {10, 10}}}),
+        instantiate_error, "Only 1 imported table is allowed.");
+
+    // Providing table when none expected
+    Module module_no_imported_table;
+    EXPECT_THROW_MESSAGE(instantiate(module_no_imported_table, {}, {{&table, {10, 30}}}),
+        instantiate_error, "Trying to provide imported table to a module that doesn't define one.");
+
+    // Not providing table when one is expected
+    EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
+        "Module defines an imported table but none was provided.");
+
+    // Provided min too low
+    std::vector<FuncIdx> table_empty;
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table_empty, {0, 3}}}), instantiate_error,
+        "Provided import's min is below import's min defined in module.");
+
+    // Provided max too high
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table, {10, 40}}}), instantiate_error,
+        "Provided import's max is above import's max defined in module.");
+
+    // Provided max is unlimited
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table, {10, std::nullopt}}}), instantiate_error,
+        "Provided import's max is above import's max defined in module.");
+
+    // Null pointer
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{nullptr, {10, 30}}}), instantiate_error,
+        "Provided imported table has a null pointer to data.");
+
+    // Allocated less than min
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table_empty, {10, 30}}}), instantiate_error,
+        "Provided imported table doesn't fit provided limits");
+
+    // Allocated more than max
+    std::vector<FuncIdx> table_big(40, 0);
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table_big, {10, 30}}}), instantiate_error,
+        "Provided imported table doesn't fit provided limits");
+
+    // Imported table and regular table
+    Module module_with_two_tables;
+    module_with_two_tables.tablesec.emplace_back(Table{{10, 10}});
+    module_with_two_tables.importsec.emplace_back(imp);
+    EXPECT_THROW_MESSAGE(instantiate(module_with_two_tables, {}, {{&table, {10, 30}}}),
+        instantiate_error, "Cannot support more than 1 table section.");
+}
+
 TEST(instantiate, imported_memory)
 {
     Module module;
