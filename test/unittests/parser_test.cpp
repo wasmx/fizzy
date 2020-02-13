@@ -820,7 +820,8 @@ TEST(parser, code_section_unsupported_fp_instructions)
         const auto section_contents = make_vec({code_bin});
         const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
 
-        const auto expected_msg = std::string{"invalid instruction "} + std::to_string(instr);
+        const auto expected_msg =
+            std::string{"unsupported floating point instruction "} + std::to_string(instr);
         EXPECT_THROW_MESSAGE(parse(bin), parser_error, expected_msg.c_str());
     }
 }
