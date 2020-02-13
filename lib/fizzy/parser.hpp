@@ -15,6 +15,14 @@ using parser_result = std::tuple<T, const uint8_t*>;
 
 Module parse(bytes_view input);
 
+inline const uint8_t* skip(size_t num_bytes, const uint8_t* input, const uint8_t* end)
+{
+    const uint8_t* ret = input + num_bytes;
+    if (ret >= end)
+        throw parser_error{"Unexpected EOF"};
+    return ret;
+}
+
 parser_result<Code> parse_expr(const uint8_t* input, const uint8_t* end);
 
 parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end);
