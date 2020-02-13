@@ -357,6 +357,12 @@ TEST(parser, import_invalid_kind)
     EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected import kind value 4");
 }
 
+TEST(parser, import_kind_out_of_bounds)
+{
+    const auto wasm = bytes{wasm_prefix} + make_section(2, make_vec({"0000"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+}
+
 TEST(parser, memory_and_imported_memory)
 {
     // (import "js" "mem"(memory 1))
