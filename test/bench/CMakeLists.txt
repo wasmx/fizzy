@@ -1,8 +1,3 @@
-if(HUNTER_ENABLED)
-    hunter_add_package(benchmark)
-endif()
-find_package(benchmark REQUIRED)
-
 add_executable(fizzy-bench bench.cpp)
 target_compile_features(fizzy-bench PRIVATE cxx_std_17)
 target_link_libraries(fizzy-bench PRIVATE fizzy::fizzy fizzy::test-utils benchmark::benchmark)
