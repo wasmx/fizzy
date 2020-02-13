@@ -7,7 +7,7 @@
 namespace fizzy
 {
 template <typename T>
-std::pair<T, const uint8_t*> leb128u_decode(const uint8_t* input)
+std::pair<T, const uint8_t*> leb128u_decode(const uint8_t* input, const uint8_t* end)
 {
     static_assert(!std::numeric_limits<T>::is_signed);
 
@@ -16,6 +16,9 @@ std::pair<T, const uint8_t*> leb128u_decode(const uint8_t* input)
 
     for (; result_shift < std::numeric_limits<T>::digits; ++input, result_shift += 7)
     {
+        if (input == end)
+            throw parser_error("Unexpected EOF");
+
         // TODO this ignores the bits in the last byte other than the least significant one
         // So would not reject some invalid encoding with those bits set.
         result |= static_cast<T>((static_cast<T>(*input) & 0x7F) << result_shift);
@@ -27,7 +30,7 @@ std::pair<T, const uint8_t*> leb128u_decode(const uint8_t* input)
 }
 
 template <typename T>
-std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* input)
+std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* input, const uint8_t* end)
 {
     static_assert(std::numeric_limits<T>::is_signed);
 
@@ -37,6 +40,9 @@ std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* input)
 
     for (; result_shift < std::numeric_limits<T_unsigned>::digits; ++input, result_shift += 7)
     {
+        if (input == end)
+            throw parser_error("Unexpected EOF");
+
         result |= static_cast<T_unsigned>((static_cast<T_unsigned>(*input) & 0x7F) << result_shift);
         if ((*input & 0x80) == 0)
         {

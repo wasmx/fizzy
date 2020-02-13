@@ -6,47 +6,63 @@
 namespace fizzy
 {
 template <>
-inline parser_result<uint8_t> parse(const uint8_t* pos)
+inline parser_result<uint8_t> parse(const uint8_t* pos, const uint8_t* end)
 {
-    const auto result = *pos;
-    ++pos;
-    return {result, pos};
+    if (pos == end)
+        throw parser_error{"Unexpected EOF"};
+
+    return {*pos, pos + 1};
 }
 
 template <>
-inline parser_result<FuncType> parse(const uint8_t* pos)
+inline parser_result<FuncType> parse(const uint8_t* pos, const uint8_t* end)
 {
-    if (*pos != 0x60)
+    if (pos == end)
+        throw parser_error{"Unexpected EOF"};
+
+    const uint8_t kind = *pos++;
+    if (kind != 0x60)
+    {
         throw parser_error{
-            "unexpected byte value " + std::to_string(*pos) + ", expected 0x60 for functype"};
-    ++pos;
+            "unexpected byte value " + std::to_string(kind) + ", expected 0x60 for functype"};
+    }
 
     FuncType result;
-    std::tie(result.inputs, pos) = parse_vec<ValType>(pos);
-    std::tie(result.outputs, pos) = parse_vec<ValType>(pos);
+    std::tie(result.inputs, pos) = parse_vec<ValType>(pos, end);
+    std::tie(result.outputs, pos) = parse_vec<ValType>(pos, end);
     return {result, pos};
 }
 
-std::tuple<bool, const uint8_t*> parse_global_type(const uint8_t* pos)
+inline std::tuple<bool, const uint8_t*> parse_global_type(const uint8_t* pos, const uint8_t* end)
 {
     // will throw if invalid type
-    std::tie(std::ignore, pos) = parse<ValType>(pos);
+    std::tie(std::ignore, pos) = parse<ValType>(pos, end);
 
-    if (*pos != 0x00 && *pos != 0x01)
-        throw parser_error{"unexpected byte value " + std::to_string(*pos) +
+    if (pos == end)
+        throw parser_error{"Unexpected EOF"};
+
+    const uint8_t mutability = *pos++;
+    if (mutability != 0x00 && mutability != 0x01)
+    {
+        throw parser_error{"unexpected byte value " + std::to_string(mutability) +
                            ", expected 0x00 or 0x01 for global mutability"};
-    const bool is_mutable = (*pos == 0x01);
-    ++pos;
+    }
+
+    const bool is_mutable = (mutability == 0x01);
     return {is_mutable, pos};
 }
 
-inline parser_result<ConstantExpression> parse_constant_expression(const uint8_t* pos)
+inline parser_result<ConstantExpression> parse_constant_expression(
+    const uint8_t* pos, const uint8_t* end)
 {
     ConstantExpression result;
 
     Instr instr;
     do
     {
+        if (pos == end)
+            throw parser_error{"Unexpected EOF"};
+
         instr = static_cast<Instr>(*pos++);
         switch (instr)
         {
@@ -60,7 +76,7 @@ inline parser_result<ConstantExpression> parse_constant_expression(const uint8_t
         case Instr::global_get:
         {
             result.kind = ConstantExpression::Kind::GlobalGet;
-            std::tie(result.value.global_index, pos) = leb128u_decode<uint32_t>(pos);
+            std::tie(result.value.global_index, pos) = leb128u_decode<uint32_t>(pos, end);
             break;
         }
 
@@ -68,7 +84,7 @@ inline parser_result<ConstantExpression> parse_constant_expression(const uint8_t
         {
             result.kind = ConstantExpression::Kind::Constant;
             int32_t value;
-            std::tie(value, pos) = leb128s_decode<int32_t>(pos);
+            std::tie(value, pos) = leb128s_decode<int32_t>(pos, end);
             result.value.constant = static_cast<uint32_t>(value);
             break;
         }
@@ -77,7 +93,7 @@ inline parser_result<ConstantExpression> parse_constant_expression(const uint8_t
         {
             result.kind = ConstantExpression::Kind::Constant;
             int64_t value;
-            std::tie(value, pos) = leb128s_decode<int64_t>(pos);
+            std::tie(value, pos) = leb128s_decode<int64_t>(pos, end);
             result.value.constant = static_cast<uint64_t>(value);
             break;
         }
@@ -88,40 +104,43 @@ inline parser_result<ConstantExpression> parse_constant_expression(const uint8_t
 }
 
 template <>
-inline parser_result<Global> parse(const uint8_t* pos)
+inline parser_result<Global> parse(const uint8_t* pos, const uint8_t* end)
 {
     Global result;
-    std::tie(result.is_mutable, pos) = parse_global_type((pos));
-    std::tie(result.expression, pos) = parse_constant_expression(pos);
+    std::tie(result.is_mutable, pos) = parse_global_type(pos, end);
+    std::tie(result.expression, pos) = parse_constant_expression(pos, end);
 
     return {result, pos};
 }
 
 template <>
-inline parser_result<Table> parse(const uint8_t* pos)
+inline parser_result<Table> parse(const uint8_t* pos, const uint8_t* end)
 {
-    const uint8_t kind = *pos++;
-    if (kind != FuncRef)
-        throw parser_error{"unexpected table elemtype: " + std::to_string(kind)};
+    if (pos == end)
+        throw parser_error{"Unexpected EOF"};
+
+    const uint8_t elemtype = *pos++;
+    if (elemtype != FuncRef)
+        throw parser_error{"unexpected table elemtype: " + std::to_string(elemtype)};
 
     Limits limits;
-    std::tie(limits, pos) = parse_limits(pos);
+    std::tie(limits, pos) = parse_limits(pos, end);
 
     return {{limits}, pos};
 }
 
 template <>
-inline parser_result<Memory> parse(const uint8_t* pos)
+inline parser_result<Memory> parse(const uint8_t* pos, const uint8_t* end)
 {
     Limits limits;
-    std::tie(limits, pos) = parse_limits(pos);
+    std::tie(limits, pos) = parse_limits(pos, end);
     return {{limits}, pos};
 }
 
-inline parser_result<std::string> parse_string(const uint8_t* pos)
+inline parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end)
 {
     std::vector<uint8_t> value;
-    std::tie(value, pos) = parse_vec<uint8_t>(pos);
+    std::tie(value, pos) = parse_vec<uint8_t>(pos, end);
 
     // FIXME: need to validate that string is a valid UTF-8
 
@@ -129,30 +148,33 @@ inline parser_result<std::string> parse_string(const uint8_t* pos)
 }
 
 template <>
-inline parser_result<Import> parse(const uint8_t* pos)
+inline parser_result<Import> parse(const uint8_t* pos, const uint8_t* end)
 {
     Import result{};
-    std::tie(result.module, pos) = parse_string(pos);
-    std::tie(result.name, pos) = parse_string(pos);
+    std::tie(result.module, pos) = parse_string(pos, end);
+    std::tie(result.name, pos) = parse_string(pos, end);
+
+    if (pos == end)
+        throw parser_error{"Unexpected EOF"};
 
     const uint8_t kind = *pos++;
     switch (kind)
     {
     case 0x00:
         result.kind = ExternalKind::Function;
-        std::tie(result.desc.function_type_index, pos) = leb128u_decode<uint32_t>(pos);
+        std::tie(result.desc.function_type_index, pos) = leb128u_decode<uint32_t>(pos, end);
         break;
     case 0x01:
         result.kind = ExternalKind::Table;
-        std::tie(result.desc.table, pos) = parse<Table>(pos);
+        std::tie(result.desc.table, pos) = parse<Table>(pos, end);
         break;
     case 0x02:
         result.kind = ExternalKind::Memory;
-        std::tie(result.desc.memory, pos) = parse<Memory>(pos);
+        std::tie(result.desc.memory, pos) = parse<Memory>(pos, end);
         break;
     case 0x03:
         result.kind = ExternalKind::Global;
-        std::tie(result.desc.global_mutable, pos) = parse_global_type(pos);
+        std::tie(result.desc.global_mutable, pos) = parse_global_type(pos, end);
         break;
     default:
         throw parser_error{"unexpected import kind value " + std::to_string(kind)};
@@ -162,10 +184,13 @@ inline parser_result<Import> parse(const uint8_t* pos)
 }
 
 template <>
-inline parser_result<Export> parse(const uint8_t* pos)
+inline parser_result<Export> parse(const uint8_t* pos, const uint8_t* end)
 {
     Export result;
-    std::tie(result.name, pos) = parse_string(pos);
+    std::tie(result.name, pos) = parse_string(pos, end);
+
+    if (pos == end)
+        throw parser_error{"Unexpected EOF"};
 
     const uint8_t kind = *pos++;
     switch (kind)
@@ -186,43 +211,43 @@ inline parser_result<Export> parse(const uint8_t* pos)
         throw parser_error{"unexpected export kind value " + std::to_string(kind)};
     }
 
-    std::tie(result.index, pos) = leb128u_decode<uint32_t>(pos);
+    std::tie(result.index, pos) = leb128u_decode<uint32_t>(pos, end);
 
     return {result, pos};
 }
 
 template <>
-inline parser_result<Element> parse(const uint8_t* pos)
+inline parser_result<Element> parse(const uint8_t* pos, const uint8_t* end)
 {
     TableIdx table_index;
-    std::tie(table_index, pos) = leb128u_decode<uint32_t>(pos);
+    std::tie(table_index, pos) = leb128u_decode<uint32_t>(pos, end);
     if (table_index != 0)
         throw parser_error{"unexpected tableidx value " + std::to_string(table_index)};
 
     ConstantExpression offset;
-    std::tie(offset, pos) = parse_constant_expression(pos);
+    std::tie(offset, pos) = parse_constant_expression(pos, end);
 
     std::vector<FuncIdx> init;
-    std::tie(init, pos) = parse_vec<FuncIdx>(pos);
+    std::tie(init, pos) = parse_vec<FuncIdx>(pos, end);
 
     return {{offset, std::move(init)}, pos};
 }
 
 template <>
-inline parser_result<Locals> parse(const uint8_t* pos)
+inline parser_result<Locals> parse(const uint8_t* pos, const uint8_t* end)
 {
     Locals result;
-    std::tie(result.count, pos) = leb128u_decode<uint32_t>(pos);
-    std::tie(result.type, pos) = parse<ValType>(pos);
+    std::tie(result.count, pos) = leb128u_decode<uint32_t>(pos, end);
+    std::tie(result.type, pos) = parse<ValType>(pos, end);
     return {result, pos};
 }
 
 template <>
-inline parser_result<Code> parse(const uint8_t* pos)
+inline parser_result<Code> parse(const uint8_t* pos, const uint8_t* end)
 {
-    const auto [size, pos1] = leb128u_decode<uint32_t>(pos);
+    const auto [size, pos1] = leb128u_decode<uint32_t>(pos, end);
 
-    const auto [locals_vec, pos2] = parse_vec<Locals>(pos1);
+    const auto [locals_vec, pos2] = parse_vec<Locals>(pos1, end);
 
     auto result = parse_expr(pos2);
 
@@ -233,18 +258,18 @@ inline parser_result<Code> parse(const uint8_t* pos)
 }
 
 template <>
-inline parser_result<Data> parse(const uint8_t* pos)
+inline parser_result<Data> parse(const uint8_t* pos, const uint8_t* end)
 {
     MemIdx memory_index;
-    std::tie(memory_index, pos) = leb128u_decode<uint32_t>(pos);
+    std::tie(memory_index, pos) = leb128u_decode<uint32_t>(pos, end);
     if (memory_index != 0)
         throw parser_error{"unexpected memidx value " + std::to_string(memory_index)};
 
     ConstantExpression offset;
-    std::tie(offset, pos) = parse_constant_expression(pos);
+    std::tie(offset, pos) = parse_constant_expression(pos, end);
 
     std::vector<uint8_t> init;
-    std::tie(init, pos) = parse_vec<uint8_t>(pos);
+    std::tie(init, pos) = parse_vec<uint8_t>(pos, end);
 
     return {{offset, bytes(init.data(), init.size())}, pos};
 }
@@ -261,42 +286,46 @@ Module parse(bytes_view input)
     {
         const auto id = static_cast<SectionId>(*it++);
         uint32_t size;
-        std::tie(size, it) = leb128u_decode<uint32_t>(it);
-        const auto expected_end_pos = it + size;
+        std::tie(size, it) = leb128u_decode<uint32_t>(it, input.end());
+
+        const auto expected_section_end = it + size;
+        if (expected_section_end > input.end())
+            throw parser_error("Unexpected EOF");
+
         switch (id)
         {
         case SectionId::type:
-            std::tie(module.typesec, it) = parse_vec<FuncType>(it);
+            std::tie(module.typesec, it) = parse_vec<FuncType>(it, input.end());
             break;
         case SectionId::import:
-            std::tie(module.importsec, it) = parse_vec<Import>(it);
+            std::tie(module.importsec, it) = parse_vec<Import>(it, input.end());
             break;
         case SectionId::function:
-            std::tie(module.funcsec, it) = parse_vec<TypeIdx>(it);
+            std::tie(module.funcsec, it) = parse_vec<TypeIdx>(it, input.end());
             break;
         case SectionId::table:
-            std::tie(module.tablesec, it) = parse_vec<Table>(it);
+            std::tie(module.tablesec, it) = parse_vec<Table>(it, input.end());
             break;
         case SectionId::memory:
-            std::tie(module.memorysec, it) = parse_vec<Memory>(it);
+            std::tie(module.memorysec, it) = parse_vec<Memory>(it, input.end());
             break;
         case SectionId::global:
-            std::tie(module.globalsec, it) = parse_vec<Global>(it);
+            std::tie(module.globalsec, it) = parse_vec<Global>(it, input.end());
             break;
         case SectionId::export_:
-            std::tie(module.exportsec, it) = parse_vec<Export>(it);
+            std::tie(module.exportsec, it) = parse_vec<Export>(it, input.end());
             break;
         case SectionId::start:
-            std::tie(module.startfunc, it) = leb128u_decode<uint32_t>(it);
+            std::tie(module.startfunc, it) = leb128u_decode<uint32_t>(it, input.end());
             break;
         case SectionId::element:
-            std::tie(module.elementsec, it) = parse_vec<Element>(it);
+            std::tie(module.elementsec, it) = parse_vec<Element>(it, input.end());
             break;
         case SectionId::code:
-            std::tie(module.codesec, it) = parse_vec<Code>(it);
+            std::tie(module.codesec, it) = parse_vec<Code>(it, input.end());
             break;
         case SectionId::data:
-            std::tie(module.datasec, it) = parse_vec<Data>(it);
+            std::tie(module.datasec, it) = parse_vec<Data>(it, input.end());
             break;
         case SectionId::custom:
             // These sections are ignored for now.
@@ -307,10 +336,10 @@ Module parse(bytes_view input)
                 "unknown section encountered " + std::to_string(static_cast<int>(id))};
         }
 
-        if (it != expected_end_pos)
+        if (it != expected_section_end)
         {
             throw parser_error{"incorrect section " + std::to_string(static_cast<int>(id)) +
-                               " size, difference: " + std::to_string(it - expected_end_pos)};
+                               " size, difference: " + std::to_string(it - expected_section_end)};
         }
     }
 

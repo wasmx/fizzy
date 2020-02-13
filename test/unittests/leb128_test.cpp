@@ -5,6 +5,23 @@
 
 using namespace fizzy;
 
+namespace
+{
+/// A leb128u_decode() wrapper for convenient testing.
+template <typename T>
+inline auto leb128u_decode(bytes_view input)
+{
+    return fizzy::leb128u_decode<T>(input.begin(), input.end());
+}
+
+/// A leb128s_decode() wrapper for convenient testing.
+template <typename T>
+inline auto leb128s_decode(bytes_view input)
+{
+    return fizzy::leb128s_decode<T>(input.begin(), input.end());
+}
+}  // namespace
+
 TEST(leb128, decode_u64)
 {
     // clang-format off
@@ -26,7 +43,7 @@ TEST(leb128, decode_u64)
 
     for (auto const& testcase : testcases)
     {
-        auto res = leb128u_decode<uint64_t>(testcase.first.data());
+        auto res = leb128u_decode<uint64_t>(testcase.first);
         EXPECT_EQ(res.first, testcase.second) << hex(testcase.first);
         EXPECT_EQ(res.second, &testcase.first[0] + testcase.first.size()) << hex(testcase.first);
     }
@@ -34,19 +51,18 @@ TEST(leb128, decode_u64)
 
 TEST(leb128, decode_u64_invalid)
 {
-    // buffer overrun is not caught
-    //    bytes encoded_624485_invalid{0xe5, 0x8e, 0xa6};
-    //    EXPECT_THROW_MESSAGE(leb128_decode_u64(encoded_624485_invalid.data()), parser_error,
-    //    "??");
+    bytes encoded_624485_invalid{0xe5, 0x8e, 0xa6};
+    EXPECT_THROW_MESSAGE(
+        leb128u_decode<uint64_t>(encoded_624485_invalid), parser_error, "Unexpected EOF");
 
     bytes encoded_1_too_many_leading_zeroes{
         0x81, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80};
-    EXPECT_THROW_MESSAGE(leb128u_decode<uint64_t>(encoded_1_too_many_leading_zeroes.data()),
-        parser_error, "Invalid LEB128 encoding: too many bytes.");
+    EXPECT_THROW_MESSAGE(leb128u_decode<uint64_t>(encoded_1_too_many_leading_zeroes), parser_error,
+        "Invalid LEB128 encoding: too many bytes.");
 
     bytes encoded_max_leading_zeroes{
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x81, 0x00};
-    EXPECT_THROW_MESSAGE(leb128u_decode<uint64_t>(encoded_max_leading_zeroes.data()), parser_error,
+    EXPECT_THROW_MESSAGE(leb128u_decode<uint64_t>(encoded_max_leading_zeroes), parser_error,
         "Invalid LEB128 encoding: too many bytes.");
 }
 
@@ -67,7 +83,7 @@ TEST(leb128, decode_u8)
 
     for (auto const& testcase : testcases)
     {
-        auto res = leb128u_decode<uint8_t>(testcase.first.data());
+        auto res = leb128u_decode<uint8_t>(testcase.first);
         EXPECT_EQ(res.first, testcase.second) << hex(testcase.first);
         EXPECT_EQ(res.second, &testcase.first[0] + testcase.first.size()) << hex(testcase.first);
     }
@@ -82,6 +98,41 @@ TEST(leb128, decode_u8_invalid)
     bytes encoded_too_big{0xe5, 0x8e, 0x26};
     EXPECT_THROW_MESSAGE(leb128u_decode<uint8_t>(encoded_too_big.data()), parser_error,
         "Invalid LEB128 encoding: too many bytes.");
+}
+
+TEST(leb128, decode_out_of_buffer)
+{
+    constexpr auto m = "Unexpected EOF";
+    EXPECT_THROW_MESSAGE(leb128u_decode<uint8_t>(bytes{}), parser_error, m);
+    EXPECT_THROW_MESSAGE(leb128u_decode<uint8_t>(bytes{0x80}), parser_error, m);
+
+    EXPECT_THROW_MESSAGE(leb128u_decode<uint16_t>(bytes{}), parser_error, m);
+    EXPECT_THROW_MESSAGE(leb128u_decode<uint16_t>(bytes{0x81}), parser_error, m);
+    EXPECT_THROW_MESSAGE(leb128u_decode<uint16_t>(bytes{0x82, 0x81}), parser_error, m);
+
+    EXPECT_THROW_MESSAGE(leb128u_decode<uint32_t>(bytes{}), parser_error, m);
+    EXPECT_THROW_MESSAGE(leb128u_decode<uint32_t>(bytes{0x91}), parser_error, m);
+    EXPECT_THROW_MESSAGE(leb128u_decode<uint32_t>(bytes{0x91, 0x92}), parser_error, m);
+    EXPECT_THROW_MESSAGE(leb128u_decode<uint32_t>(bytes{0x91, 0x92, 0x93}), parser_error, m);
+    EXPECT_THROW_MESSAGE(leb128u_decode<uint32_t>(bytes{0x91, 0x92, 0x93, 0x94}), parser_error, m);
+
+    EXPECT_THROW_MESSAGE(leb128u_decode<uint64_t>(bytes{}), parser_error, m);
+    EXPECT_THROW_MESSAGE(leb128u_decode<uint64_t>(bytes{0xa1}), parser_error, m);
+    EXPECT_THROW_MESSAGE(leb128u_decode<uint64_t>(bytes{0xa1, 0xa2}), parser_error, m);
+    EXPECT_THROW_MESSAGE(leb128u_decode<uint64_t>(bytes{0xa1, 0xa2, 0xa3}), parser_error, m);
+    EXPECT_THROW_MESSAGE(leb128u_decode<uint64_t>(bytes{0xa1, 0xa2, 0xa3, 0xa4}), parser_error, m);
+    EXPECT_THROW_MESSAGE(
+        leb128u_decode<uint64_t>(bytes{0xa1, 0xa2, 0xa3, 0xa4, 0xa5}), parser_error, m);
+    EXPECT_THROW_MESSAGE(
+        leb128u_decode<uint64_t>(bytes{0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6}), parser_error, m);
+    EXPECT_THROW_MESSAGE(
+        leb128u_decode<uint64_t>(bytes{0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7}), parser_error, m);
+    EXPECT_THROW_MESSAGE(
+        leb128u_decode<uint64_t>(bytes{0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8}),
+        parser_error, m);
+    EXPECT_THROW_MESSAGE(
+        leb128u_decode<uint64_t>(bytes{0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9}),
+        parser_error, m);
 }
 
 TEST(leb128, decode_s64)
@@ -109,7 +160,7 @@ TEST(leb128, decode_s64)
 
     for (auto const& testcase : testcases)
     {
-        auto res = leb128s_decode<int64_t>(testcase.first.data());
+        const auto res = leb128s_decode<int64_t>(testcase.first);
         EXPECT_EQ(res.first, testcase.second) << hex(testcase.first);
         EXPECT_EQ(res.second, &testcase.first[0] + testcase.first.size()) << hex(testcase.first);
     }
@@ -117,15 +168,15 @@ TEST(leb128, decode_s64)
 
 TEST(leb128, decode_s64_invalid)
 {
-    bytes encoded_1_too_many_leading_zeroes{
+    const bytes encoded_1_too_many_leading_zeroes{
         0x81, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80};
-    EXPECT_THROW_MESSAGE(leb128s_decode<int64_t>(encoded_1_too_many_leading_zeroes.data()),
-        parser_error, "Invalid LEB128 encoding: too many bytes.");
+    EXPECT_THROW_MESSAGE(leb128s_decode<int64_t>(encoded_1_too_many_leading_zeroes), parser_error,
+        "Invalid LEB128 encoding: too many bytes.");
 
-    bytes encoded_minus1_too_many_leading_1s{
+    const bytes encoded_minus1_too_many_leading_1s{
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01};
-    EXPECT_THROW_MESSAGE(leb128s_decode<int64_t>(encoded_minus1_too_many_leading_1s.data()),
-        parser_error, "Invalid LEB128 encoding: too many bytes.");
+    EXPECT_THROW_MESSAGE(leb128s_decode<int64_t>(encoded_minus1_too_many_leading_1s), parser_error,
+        "Invalid LEB128 encoding: too many bytes.");
 }
 
 TEST(leb128, decode_s32)
@@ -153,7 +204,7 @@ TEST(leb128, decode_s32)
 
     for (auto const& testcase : testcases)
     {
-        auto res = leb128s_decode<int32_t>(testcase.first.data());
+        const auto res = leb128s_decode<int32_t>(testcase.first);
         EXPECT_EQ(res.first, testcase.second) << hex(testcase.first);
         EXPECT_EQ(res.second, &testcase.first[0] + testcase.first.size()) << hex(testcase.first);
     }
@@ -177,7 +228,7 @@ TEST(leb128, decode_s8)
 
     for (auto const& testcase : testcases)
     {
-        auto res = leb128s_decode<int8_t>(testcase.first.data());
+        const auto res = leb128s_decode<int8_t>(testcase.first);
         EXPECT_EQ(res.first, testcase.second) << hex(testcase.first);
         EXPECT_EQ(res.second, &testcase.first[0] + testcase.first.size()) << hex(testcase.first);
     }
@@ -185,11 +236,22 @@ TEST(leb128, decode_s8)
 
 TEST(leb128, decode_s8_invalid)
 {
-    bytes encoded_1_too_many_leading_zeroes{0x81, 0x80, 0x80};
-    EXPECT_THROW_MESSAGE(leb128s_decode<int8_t>(encoded_1_too_many_leading_zeroes.data()),
-        parser_error, "Invalid LEB128 encoding: too many bytes.");
-
-    bytes encoded_too_big{0xe5, 0x8e, 0x26};
-    EXPECT_THROW_MESSAGE(leb128s_decode<int8_t>(encoded_too_big.data()), parser_error,
+    const bytes encoded_1_too_many_leading_zeroes{0x81, 0x80, 0x80};
+    EXPECT_THROW_MESSAGE(leb128s_decode<int8_t>(encoded_1_too_many_leading_zeroes), parser_error,
         "Invalid LEB128 encoding: too many bytes.");
+
+    const bytes encoded_too_big{0xe5, 0x8e, 0x26};
+    EXPECT_THROW_MESSAGE(leb128s_decode<int8_t>(encoded_too_big), parser_error,
+        "Invalid LEB128 encoding: too many bytes.");
+}
+
+TEST(leb128, decode_s_out_of_buffer)
+{
+    constexpr auto m = "Unexpected EOF";
+    const auto input = bytes{0x82, 0x81};
+
+    EXPECT_THROW_MESSAGE(leb128s_decode<int16_t>(nullptr, nullptr), parser_error, m);
+    EXPECT_THROW_MESSAGE(leb128s_decode<int16_t>(input.data(), input.data()), parser_error, m);
+    EXPECT_THROW_MESSAGE(leb128s_decode<int16_t>(input.data(), input.data() + 1), parser_error, m);
+    EXPECT_THROW_MESSAGE(leb128s_decode<int16_t>(input), parser_error, m);
 }
