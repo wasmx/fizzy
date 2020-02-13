@@ -678,7 +678,7 @@ TEST(execute_control, br_1_out_of_function_and_imported_function)
     EXPECT_EQ(ret[0], 1);
 }
 
-TEST(execute, br_table)
+TEST(execute_control, br_table)
 {
     /* wat2wasm
     (func (param i32) (result i32)
@@ -700,7 +700,7 @@ TEST(execute, br_table)
       )
       (i32.const 104)
     )
-   */
+    */
     const auto bin = from_hex(
         "0061736d0100000001060160017f017f030201000a330131000240024002400240024020000e04030201000441"
         "e3000f0b41e4000f0b41e5000f0b41e6000f0b41e7000f0b41e8000b");
@@ -721,7 +721,7 @@ TEST(execute, br_table)
     EXPECT_EQ(ret[0], 104);
 }
 
-TEST(execute, br_table_empty_vector)
+TEST(execute_control, br_table_empty_vector)
 {
     /* wat2wasm
     (func (param i32) (result i32)
@@ -731,7 +731,7 @@ TEST(execute, br_table_empty_vector)
       )
       (i32.const 100)
     )
-   */
+    */
     const auto bin = from_hex(
         "0061736d0100000001060160017f017f030201000a13011100024020000e000041e3000f0b41e4000b");
 
