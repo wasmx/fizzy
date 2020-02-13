@@ -335,8 +335,7 @@ TEST(instantiate, memory_default)
 
     auto instance = instantiate(module);
 
-    ASSERT_EQ(instance.memory->size(), 0);
-    EXPECT_EQ(instance.memory_max_pages * PageSize, 256 * 1024 * 1024);
+    EXPECT_FALSE(instance.memory);
 }
 
 TEST(instantiate, memory_single)

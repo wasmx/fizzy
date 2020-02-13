@@ -241,7 +241,7 @@ std::tuple<bytes_ptr, size_t> allocate_memory(const std::vector<Memory>& module_
     }
     else
     {
-        bytes_ptr memory{new bytes{}, bytes_delete};
+        bytes_ptr memory{nullptr, null_delete};
         return {std::move(memory), MemoryPagesLimit};
     }
 }
