@@ -50,21 +50,25 @@ TEST(execute, call_trap)
 
 TEST(execute, call_with_arguments)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
-    module.typesec.emplace_back(FuncType{{}, {ValType::i32}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.funcsec.emplace_back(TypeIdx{1});
-    module.codesec.emplace_back(Code{2, {Instr::local_get, Instr::end}, {0, 0, 0, 0}});
-    module.codesec.emplace_back(
-        Code{0, {Instr::i32_const, Instr::i32_const, Instr::call, Instr::end},
-            {1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0}});
+    /* wat2wasm
+    (module
+      (func $calc (param $a i32) (param $b i32) (result i32)
+        local.get 1
+        local.get 0
+        i32.sub ;; a - b
+      )
+      (func (result i32)
+        i32.const 13
+        i32.const 17
+        call $calc ;; 17 - 13 => 4
+      )
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010b0260027f7f017f6000017f03030200010a12020700200120006b0b0800410d41111000"
+        "0b");
 
-    const auto [trap, ret] = execute(module, 1, {});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0x2);
+    EXPECT_RESULT(execute(parse(wasm), 1, {}), 4);
 }
 
 TEST(execute, call_indirect)
