@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <unordered_map>
 
 namespace fs = std::filesystem;
 using json = nlohmann::json;
@@ -12,6 +13,7 @@ using json = nlohmann::json;
 namespace
 {
 constexpr auto JsonExtension = ".json";
+constexpr auto UnnamedModule = "_unnamed";
 
 template <typename T>
 uint64_t json_to_value(const json& v)
@@ -62,22 +64,26 @@ public:
                 const auto filename = cmd.at("filename").get<std::string>();
                 log_no_newline("Instantiating " + filename + " ");
 
+                const std::string name =
+                    (cmd.find("name") != cmd.end() ? cmd.at("name").get<std::string>() :
+                                                     UnnamedModule);
+
                 const auto wasm_binary = load_wasm_file(path, filename);
                 try
                 {
                     // TODO provide dummy imports if needed
-                    instance = fizzy::instantiate(fizzy::parse(wasm_binary));
+                    instances[name] = fizzy::instantiate(fizzy::parse(wasm_binary));
                 }
                 catch (const fizzy::parser_error& ex)
                 {
                     fail(std::string{"Parsing failed with error: "} + ex.what());
-                    instance = std::nullopt;
+                    instances.erase(name);
                     continue;
                 }
                 catch (const fizzy::instantiate_error& ex)
                 {
                     fail(std::string{"Instantiation failed with error: "} + ex.what());
-                    instance = std::nullopt;
+                    instances.erase(name);
                     continue;
                 }
                 pass();
@@ -219,14 +225,20 @@ public:
 private:
     std::optional<fizzy::execution_result> invoke(const json& action)
     {
-        if (!instance.has_value())
+        const auto module_name =
+            (action.find("module") != action.end() ? action["module"] : UnnamedModule);
+
+        const auto it_instance = instances.find(module_name);
+        if (it_instance == instances.end())
         {
             skip("No instantiated module.");
             return std::nullopt;
         }
 
+        auto& instance = it_instance->second;
+
         const auto func_name = action.at("field").get<std::string>();
-        const auto func_idx = fizzy::find_exported_function(instance->module, func_name);
+        const auto func_idx = fizzy::find_exported_function(instance.module, func_name);
         if (!func_idx.has_value())
         {
             skip("Function '" + func_name + "' not found.");
@@ -250,7 +262,7 @@ private:
             args.push_back(arg_value);
         }
 
-        return fizzy::execute(*instance, *func_idx, std::move(args));
+        return fizzy::execute(instance, *func_idx, std::move(args));
     }
 
     void pass()
@@ -276,7 +288,7 @@ private:
     void log_no_newline(std::string_view message) const { std::cout << message << std::flush; }
 
     test_settings settings;
-    std::optional<fizzy::Instance> instance;
+    std::unordered_map<std::string, fizzy::Instance> instances;
     test_results results;
 };
 
