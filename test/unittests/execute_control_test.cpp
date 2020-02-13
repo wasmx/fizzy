@@ -744,6 +744,29 @@ TEST(execute_control, br_table_empty_vector)
     }
 }
 
+TEST(execute_control, br_table_as_return)
+{
+    /* wat2wasm
+    (func (param i32) (result i32)
+      (block (result i32)
+        i32.const 1001
+        get_local 0
+        br_table 0 1
+      )
+      drop
+      i32.const 1000
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017f030201000a14011200027f41e90720000e0100010b1a41e8070b");
+
+    for (const auto param : {0u, 1u})
+    {
+        const auto result = execute(parse(wasm), 0, {param});
+        EXPECT_RESULT(result, 1000 + param);
+    }
+}
+
 TEST(execute_control, return_from_loop)
 {
     /* wat2wasm
