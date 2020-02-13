@@ -1088,6 +1088,53 @@ TEST(execute, imported_function_call_with_arguments)
     EXPECT_EQ(ret[0], 42);
 }
 
+TEST(execute, imported_functions_call_indirect)
+{
+    /* wat2wasm
+    (module
+      (type $ft (func (param i32) (result i64)))
+      (func $sqr    (import "env" "sqr") (param i32) (result i64))
+      (func $isqrt  (import "env" "isqrt") (param i32) (result i64))
+      (func $double (param i32) (result i64)
+        get_local 0
+        i64.extend_u/i32
+        get_local 0
+        i64.extend_u/i32
+        i64.add
+      )
+
+      (func $main (param i32) (param i32) (result i64)
+        get_local 1
+        get_local 0
+        call_indirect (type $ft)
+      )
+
+      (table anyfunc (elem $double $sqr $isqrt))
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010c0260017f017e60027f7f017e02170203656e7603737172000003656e76056973717274"
+        "00000303020001040501700103030909010041000b030200010a150209002000ad2000ad7c0b09002001200011"
+        "00000b");
+
+    const auto module = parse(wasm);
+    ASSERT_EQ(module.typesec.size(), 2);
+    ASSERT_EQ(module.importsec.size(), 2);
+    ASSERT_EQ(module.codesec.size(), 2);
+
+    constexpr auto sqr = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+        return {false, {args[0] * args[0]}};
+    };
+    constexpr auto isqrt = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+        return {false, {(11 + args[0] / 11) / 2}};
+    };
+
+    auto instance = instantiate(module, {sqr, isqrt});
+    EXPECT_RESULT(execute(instance, 3, {0, 10}), 20);  // double(10)
+    EXPECT_RESULT(execute(instance, 3, {1, 9}), 81);   // sqr(9)
+    EXPECT_RESULT(execute(instance, 3, {2, 50}), 7);   // isqrt(50)
+}
+
 TEST(execute, memory_copy_32bytes)
 {
     /* copy32(dst, src) - copies 4 x 8 bytes using offset immediate.
