@@ -116,10 +116,12 @@ inline parser_result<Global> parse(const uint8_t* pos, const uint8_t* end)
 template <>
 inline parser_result<Table> parse(const uint8_t* pos, const uint8_t* end)
 {
-    (void)end;  // FIXME: Bounds checking.
-    const uint8_t kind = *pos++;
-    if (kind != FuncRef)
-        throw parser_error{"unexpected table elemtype: " + std::to_string(kind)};
+    if (pos == end)
+        throw parser_error{"Unexpected EOF"};
+
+    const uint8_t elemtype = *pos++;
+    if (elemtype != FuncRef)
+        throw parser_error{"unexpected table elemtype: " + std::to_string(elemtype)};
 
     Limits limits;
     std::tie(limits, pos) = parse_limits(pos, end);

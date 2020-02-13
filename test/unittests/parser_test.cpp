@@ -465,6 +465,12 @@ TEST(parser, table_invalid_elemtype)
     EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected table elemtype: 113");
 }
 
+TEST(parser, table_elemtype_out_of_bounds)
+{
+    const auto wasm = bytes{wasm_prefix} + make_section(4, make_vec({""_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+}
+
 TEST(parser, memory_single_min_limit)
 {
     const auto section_contents = "01007f"_bytes;
