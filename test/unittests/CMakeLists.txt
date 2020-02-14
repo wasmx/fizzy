@@ -21,6 +21,7 @@ target_sources(
     parser_expr_test.cpp
     parser_test.cpp
     stack_test.cpp
+    wasm_engine_test.cpp
 )
 
 gtest_discover_tests(
