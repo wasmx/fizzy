@@ -1167,10 +1167,10 @@ TEST(execute, imported_function_from_another_module)
       (export "sub" (func $sub))
     )
     */
-    static const auto bin1 = from_hex(
+    const auto bin1 = from_hex(
         "0061736d0100000001070160027f7f017f030201000707010373756200000a09010700200020016b0b");
-    static const auto module1 = parse(bin1);
-    static auto instance1 = instantiate(module1);
+    const auto module1 = parse(bin1);
+    auto instance1 = instantiate(module1);
 
     /* wat2wasm
     (module
@@ -1188,8 +1188,11 @@ TEST(execute, imported_function_from_another_module)
         "b");
     const auto module2 = parse(bin2);
 
-    auto sub = [](Instance&, std::vector<uint64_t> args) -> execution_result {
-        return fizzy::execute(instance1, 0, std::move(args));
+    const auto func_idx = fizzy::find_exported_function(module1, "sub");
+    ASSERT_TRUE(func_idx.has_value());
+
+    auto sub = [&instance1, func_idx](Instance&, std::vector<uint64_t> args) -> execution_result {
+        return fizzy::execute(instance1, *func_idx, std::move(args));
     };
 
     auto instance2 = instantiate(module2, {sub});

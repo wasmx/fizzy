@@ -17,7 +17,7 @@ TEST(instantiate, imported_functions)
     auto instance = instantiate(module, {host_foo});
 
     ASSERT_EQ(instance.imported_functions.size(), 1);
-    EXPECT_EQ(instance.imported_functions[0], host_foo);
+    EXPECT_EQ(*instance.imported_functions[0].target<decltype(host_foo)>(), host_foo);
     ASSERT_EQ(instance.imported_function_types.size(), 1);
     EXPECT_EQ(instance.imported_function_types[0], TypeIdx{0});
 }
@@ -39,8 +39,8 @@ TEST(instantiate, imported_functions_multiple)
     auto instance = instantiate(module, {host_foo1, host_foo2});
 
     ASSERT_EQ(instance.imported_functions.size(), 2);
-    EXPECT_EQ(instance.imported_functions[0], host_foo1);
-    EXPECT_EQ(instance.imported_functions[1], host_foo2);
+    EXPECT_EQ(*instance.imported_functions[0].target<decltype(host_foo1)>(), host_foo1);
+    EXPECT_EQ(*instance.imported_functions[1].target<decltype(host_foo2)>(), host_foo2);
     ASSERT_EQ(instance.imported_function_types.size(), 2);
     EXPECT_EQ(instance.imported_function_types[0], TypeIdx{0});
     EXPECT_EQ(instance.imported_function_types[1], TypeIdx{1});
