@@ -14,7 +14,13 @@ if(NOT huntergate_POPULATED)
     include(${huntergate_SOURCE_DIR}/cmake/HunterGate.cmake)
 endif()
 
-set(HUNTER_CONFIGURATION_TYPES Release)
+if(NOT CMAKE_CONFIGURATION_TYPES)
+    if(CMAKE_BUILD_TYPE STREQUAL Debug)
+        set(HUNTER_CONFIGURATION_TYPES Debug)
+    else()
+        set(HUNTER_CONFIGURATION_TYPES Release)
+    endif()
+endif()
 
 HunterGate(
     URL https://github.com/cpp-pm/hunter/archive/v0.23.239.tar.gz
