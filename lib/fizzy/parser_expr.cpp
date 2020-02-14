@@ -1,5 +1,6 @@
 #include "parser.hpp"
 #include "stack.hpp"
+#include <cassert>
 
 namespace fizzy
 {
@@ -28,11 +29,14 @@ struct LabelPosition
 ///
 /// Spec: https://webassembly.github.io/spec/core/binary/types.html#binary-blocktype.
 /// @return The type arity (can be 0 or 1).
-parser_result<uint8_t> parse_blocktype(const uint8_t* pos)
+parser_result<uint8_t> parse_blocktype(const uint8_t* pos, const uint8_t* end)
 {
     // The byte meaning an empty wasm result type.
     // https://webassembly.github.io/spec/core/binary/types.html#result-types
     constexpr uint8_t BlockTypeEmpty = 0x40;
+
+    if (pos == end)
+        throw parser_error{"Unexpected EOF"};
 
     const uint8_t type{*pos};
 
@@ -40,12 +44,12 @@ parser_result<uint8_t> parse_blocktype(const uint8_t* pos)
         return {0, pos + 1};
 
     // Validate type.
-    std::tie(std::ignore, pos) = parse<ValType>(pos, pos + 1);  // FIXME: Bounds checking.
+    std::tie(std::ignore, pos) = parse<ValType>(pos, end);
     return {1, pos};
 }
 }  // namespace
 
-parser_result<Code> parse_expr(const uint8_t* pos)
+parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end)
 {
     Code code;
 
@@ -56,6 +60,9 @@ parser_result<Code> parse_expr(const uint8_t* pos)
     bool continue_parsing = true;
     while (continue_parsing)
     {
+        if (pos == end)
+            throw parser_error{"Unexpected EOF"};
+
         const auto instr = static_cast<Instr>(*pos++);
         switch (instr)
         {
@@ -227,7 +234,7 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         case Instr::block:
         {
             uint8_t arity;
-            std::tie(arity, pos) = parse_blocktype(pos);
+            std::tie(arity, pos) = parse_blocktype(pos, end);
             code.immediates.push_back(arity);
 
             // Push label with immediates offset after arity.
@@ -241,7 +248,7 @@ parser_result<Code> parse_expr(const uint8_t* pos)
 
         case Instr::loop:
         {
-            std::tie(std::ignore, pos) = parse_blocktype(pos);
+            std::tie(std::ignore, pos) = parse_blocktype(pos, end);
             label_positions.push_back({Instr::loop, 0});  // Mark as not interested.
             break;
         }
@@ -249,7 +256,7 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         case Instr::if_:
         {
             uint8_t arity;
-            std::tie(arity, pos) = parse_blocktype(pos);
+            std::tie(arity, pos) = parse_blocktype(pos, end);
             code.immediates.push_back(arity);
 
             label_positions.push_back({Instr::if_, code.immediates.size()});
@@ -294,7 +301,7 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         case Instr::call:
         {
             uint32_t imm;
-            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
+            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, end);
             push(code.immediates, imm);
             break;
         }
@@ -302,11 +309,9 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         case Instr::br_table:
         {
             std::vector<uint32_t> label_indices;
-            std::tie(label_indices, pos) =
-                parse_vec<uint32_t>(pos, pos + 1000);  // FIXME: Bounds checking.
+            std::tie(label_indices, pos) = parse_vec<uint32_t>(pos, end);
             uint32_t default_label_idx;
-            std::tie(default_label_idx, pos) =
-                leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
+            std::tie(default_label_idx, pos) = leb128u_decode<uint32_t>(pos, end);
 
             push(code.immediates, static_cast<uint32_t>(label_indices.size()));
             for (const auto idx : label_indices)
@@ -318,8 +323,11 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         case Instr::call_indirect:
         {
             uint32_t imm;
-            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
+            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, end);
             push(code.immediates, imm);
+
+            if (pos == end)
+                throw parser_error{"Unexpected EOF"};
 
             const uint8_t tableidx{*pos++};
             if (tableidx != 0)
@@ -330,7 +338,7 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         case Instr::i32_const:
         {
             int32_t imm;
-            std::tie(imm, pos) = leb128s_decode<int32_t>(pos, pos + 5);  // FIXME: Bounds checking.
+            std::tie(imm, pos) = leb128s_decode<int32_t>(pos, end);
             push(code.immediates, static_cast<uint32_t>(imm));
             break;
         }
@@ -338,7 +346,7 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         case Instr::i64_const:
         {
             int64_t imm;
-            std::tie(imm, pos) = leb128s_decode<int64_t>(pos, pos + 10);  // FIXME: Bounds checking.
+            std::tie(imm, pos) = leb128s_decode<int64_t>(pos, end);
             push(code.immediates, static_cast<uint64_t>(imm));
             break;
         }
@@ -364,18 +372,20 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         case Instr::i64_store32:
         {
             // alignment
-            std::tie(std::ignore, pos) =
-                leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
+            std::tie(std::ignore, pos) = leb128u_decode<uint32_t>(pos, end);
 
             // offset
             uint32_t imm;
-            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, pos + 4);  // FIXME: Bounds checking.
+            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, end);
             push(code.immediates, imm);
             break;
         }
         case Instr::memory_size:
         case Instr::memory_grow:
         {
+            if (pos == end)
+                throw parser_error{"Unexpected EOF"};
+
             const uint8_t memory_idx{*pos++};
             if (memory_idx != 0)
                 throw parser_error{"invalid memory index encountered"};
@@ -384,8 +394,7 @@ parser_result<Code> parse_expr(const uint8_t* pos)
         }
         code.instructions.emplace_back(instr);
     }
-    if (!label_positions.empty())
-        throw parser_error{"code is not balanced (missing end statements)"};
+    assert(label_positions.empty());
     return {code, pos};
 }
 }  // namespace fizzy
