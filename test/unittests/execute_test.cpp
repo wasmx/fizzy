@@ -69,7 +69,7 @@ TEST(execute, call_with_arguments)
 
 TEST(execute, call_indirect)
 {
-    /*
+    /* wat2wasm
       (type $out-i32 (func (result i32)))
 
       (table anyfunc (elem $f3 $f2 $f1 $f4 $f5))
@@ -85,11 +85,8 @@ TEST(execute, call_indirect)
       )
     */
     const auto bin = from_hex(
-        "0061736d01000000010e036000017f6000017e60017f017f0307060000000100"
-        "0204050170010505090b010041000b0502010003040a2106040041010b040041"
-        "020b040041030b040042040b0300000b070020001100000b002d046e616d6501"
-        "15050002663101026632020266330302663404026635020f0600000100020003"
-        "00040005010000");
+        "0061736d01000000010e036000017f6000017e60017f017f03070600000001000204050170010505090b010041"
+        "000b0502010003040a2106040041010b040041020b040041030b040042040b0300000b070020001100000b");
 
     const Module module = parse(bin);
 
@@ -154,7 +151,7 @@ TEST(execute, call_indirect_with_argument)
 
 TEST(execute, call_indirect_imported_table)
 {
-    /*
+    /* wat2wasm
     (module
       (type $out_i32 (func (result i32)))
       (import "m" "t" (table 5 20 anyfunc))
@@ -171,10 +168,8 @@ TEST(execute, call_indirect_imported_table)
     )
     */
     const auto bin = from_hex(
-        "0061736d01000000010e036000017f6000017e60017f017f020a01016d017401"
-        "700105140307060000000100020a2106040041010b040041020b040041030b04"
-        "0042040b0300000b070020001100000b002d046e616d65011505000266310102"
-        "6632020266330302663404026635020f060000010002000300040005010000");
+        "0061736d01000000010e036000017f6000017e60017f017f020a01016d01740170010514030706000000010002"
+        "0a2106040041010b040041020b040041030b040042040b0300000b070020001100000b");
 
     const Module module = parse(bin);
 
@@ -1137,8 +1132,10 @@ TEST(execute, imported_functions_call_indirect)
 
 TEST(execute, memory_copy_32bytes)
 {
-    /* copy32(dst, src) - copies 4 x 8 bytes using offset immediate.
+    /* wat2wasm
     (memory 1)
+
+    ;; copy32(dst, src) - copies 4 x 8 bytes using offset immediate.
     (func (param i32 i32)
       get_local 0
       get_local 1
@@ -1161,7 +1158,7 @@ TEST(execute, memory_copy_32bytes)
 
     const auto bin = from_hex(
         "0061736d0100000001060160027f7f000302010005030100010a2c012a00200020012903003703002000200129"
-        "030837030820002001290310370310200020012903183703180b000e046e616d65020701000200000100");
+        "030837030820002001290310370310200020012903183703180b");
 
     const auto module = parse(bin);
     auto instance = instantiate(module);
