@@ -18,10 +18,6 @@ enum class ValType : uint8_t
     i64 = 0x7e,
 };
 
-/// The byte meaning an empty wasm result type.
-/// https://webassembly.github.io/spec/core/binary/types.html#result-types
-constexpr uint8_t BlockTypeEmpty = 0x40;
-
 // https://webassembly.github.io/spec/core/binary/types.html#table-types
 constexpr uint8_t FuncRef = 0x70;
 
