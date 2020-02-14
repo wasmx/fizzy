@@ -23,6 +23,26 @@ struct LabelPosition
     Instr instruction = Instr::unreachable;  ///< The instruction that created the label.
     size_t immediates_offset{0};             ///< The immediates offset for block instructions.
 };
+
+/// Parses blocktype.
+///
+/// Spec: https://webassembly.github.io/spec/core/binary/types.html#binary-blocktype.
+/// @return The type arity (can be 0 or 1).
+parser_result<uint8_t> parse_blocktype(const uint8_t* pos)
+{
+    // The byte meaning an empty wasm result type.
+    // https://webassembly.github.io/spec/core/binary/types.html#result-types
+    constexpr uint8_t BlockTypeEmpty = 0x40;
+
+    const uint8_t type{*pos};
+
+    if (type == BlockTypeEmpty)
+        return {0, pos + 1};
+
+    // Validate type.
+    std::tie(std::ignore, pos) = parse<ValType>(pos, pos + 1);  // FIXME: Bounds checking.
+    return {1, pos};
+}
 }  // namespace
 
 parser_result<Code> parse_expr(const uint8_t* pos)
@@ -206,20 +226,8 @@ parser_result<Code> parse_expr(const uint8_t* pos)
 
         case Instr::block:
         {
-            const uint8_t type{*pos};
             uint8_t arity;
-            if (type == BlockTypeEmpty)
-            {
-                arity = 0;
-                ++pos;
-            }
-            else
-            {
-                std::tie(std::ignore, pos) = parse<ValType>(
-                    pos, pos + 1);  // FIXME: Bounds checking. // Report incorrect type.
-                arity = 1;
-            }
-
+            std::tie(arity, pos) = parse_blocktype(pos);
             code.immediates.push_back(arity);
 
             // Push label with immediates offset after arity.
@@ -233,33 +241,15 @@ parser_result<Code> parse_expr(const uint8_t* pos)
 
         case Instr::loop:
         {
-            const uint8_t type{*pos};
-            if (type == BlockTypeEmpty)
-                ++pos;
-            else
-                std::tie(std::ignore, pos) = parse<ValType>(
-                    pos, pos + 1);  // FIXME: Bounds checking. // Report incorrect type.
+            std::tie(std::ignore, pos) = parse_blocktype(pos);
             label_positions.push_back({Instr::loop, 0});  // Mark as not interested.
             break;
         }
 
         case Instr::if_:
         {
-            const uint8_t type{*pos};
             uint8_t arity;
-            if (type == BlockTypeEmpty)
-            {
-                arity = 0;
-                ++pos;
-            }
-            else
-            {
-                // Will throw in case of incorrect type.
-                std::tie(std::ignore, pos) =
-                    parse<ValType>(pos, pos + 1);  // FIXME: Bounds checking.
-                arity = 1;
-            }
-
+            std::tie(arity, pos) = parse_blocktype(pos);
             code.immediates.push_back(arity);
 
             label_positions.push_back({Instr::if_, code.immediates.size()});
