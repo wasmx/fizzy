@@ -1,6 +1,7 @@
 #include "execute.hpp"
 #include "parser.hpp"
 #include <nlohmann/json.hpp>
+#include <test/utils/hex.hpp>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -15,6 +16,35 @@ namespace
 {
 constexpr auto JsonExtension = ".json";
 constexpr auto UnnamedModule = "_unnamed";
+
+// spectest module details:
+// https://github.com/WebAssembly/spec/issues/1111
+// https://github.com/WebAssembly/spec/blob/e3a3c12f51221daaa901691e674d7ff990029122/interpreter/host/spectest.ml#L33
+// https://github.com/WebAssembly/spec/blob/f85f6e6b70fff9ee0f6ba21ebcdad2183bd67874/test/harness/sync_index.js#L79
+/* wat2wasm
+(module
+  (func (export "print"))
+  (func (export "print_i32") (param i32))
+  (func (export "print_i32_f32") (param i32) (param f32))
+  (func (export "print_f64_f64") (param f64) (param f64))
+  (func (export "print_f32") (param f32))
+  (func (export "print_f64") (param f64))
+  (global (export "global_i32") i32 (i32.const 666))
+  (global (export "global_f32") f32 (f32.const 666))
+  (global (export "global_f64") f64 (f64.const 666))
+  (table (export "table") 10 20 anyfunc)
+  (memory (export "memory") 1 2)
+)
+*/
+const auto spectest_bin = fizzy::from_hex(
+    "0061736d01000000011a0660000060017f0060027f7d0060027c7c0060017d0060017c000307060001020304050405"
+    "0170010a14050401010102061b037f00419a050b7d0043008026440b7c00440000000000d084400b0785010b057072"
+    "696e740000097072696e745f69333200010d7072696e745f6933325f66333200020d7072696e745f6636345f663634"
+    "0003097072696e745f6633320004097072696e745f66363400050a676c6f62616c5f69333203000a676c6f62616c5f"
+    "66333203010a676c6f62616c5f6636340302057461626c650100066d656d6f727902000a130602000b02000b02000b"
+    "02000b02000b02000b");
+const auto spectest_module = fizzy::parse(spectest_bin);
+const std::string spectest_name = "spectest";
 
 template <typename T>
 uint64_t json_to_value(const json& v)
@@ -53,7 +83,11 @@ struct imports
 class test_runner
 {
 public:
-    explicit test_runner(const test_settings& ts) : m_settings{ts} {}
+    explicit test_runner(const test_settings& ts)
+      : m_settings{ts}, m_registered_names{{spectest_name, spectest_name}}
+    {
+        m_instances[spectest_name] = fizzy::instantiate(spectest_module);
+    }
 
     test_results run_from_file(const fs::path& path)
     {
