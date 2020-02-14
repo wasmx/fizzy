@@ -71,7 +71,13 @@ std::optional<WasmEngine::FuncRef> WabtEngine::find_function(std::string_view na
 WasmEngine::Result WabtEngine::execute(
     WasmEngine::FuncRef func_ref, const std::vector<uint64_t>& args)
 {
-    wabt::interp::Executor executor{&m_env};
+    // WABT Executor/Thread will init both value and call stack vectors with zeros up front.
+    // To mitigate the performance overhead, we set sizes to much lower values
+    // than default ones.
+    wabt::interp::Thread::Options thread_options;
+    thread_options.value_stack_size = 1024;  // Default: 32k.
+    thread_options.call_stack_size = 1024;   // Default: 64k.
+    wabt::interp::Executor executor{&m_env, nullptr, thread_options};
 
     const auto* e = reinterpret_cast<const wabt::interp::Export*>(func_ref);
 
