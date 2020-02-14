@@ -294,13 +294,12 @@ void branch(uint32_t label_idx, Stack<LabelContext>& labels, Stack<uint64_t>& st
 bool invoke_function(
     uint32_t type_idx, uint32_t func_idx, Instance& instance, Stack<uint64_t>& stack)
 {
-    const auto num_inputs = instance.module.typesec[type_idx].inputs.size();
-    assert(stack.size() >= num_inputs);
-    std::vector<uint64_t> call_args(
-        stack.rbegin(), stack.rbegin() + static_cast<ptrdiff_t>(num_inputs));
-    stack.resize(stack.size() - num_inputs);
+    const auto num_args = instance.module.typesec[type_idx].inputs.size();
+    assert(stack.size() >= num_args);
+    std::vector<uint64_t> call_args(stack.end() - static_cast<ptrdiff_t>(num_args), stack.end());
+    stack.resize(stack.size() - num_args);
 
-    const auto ret = execute(instance, func_idx, call_args);
+    const auto ret = execute(instance, func_idx, std::move(call_args));
     // Bubble up traps
     if (ret.trapped)
         return false;

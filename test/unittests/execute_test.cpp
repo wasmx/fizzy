@@ -50,21 +50,25 @@ TEST(execute, call_trap)
 
 TEST(execute, call_with_arguments)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
-    module.typesec.emplace_back(FuncType{{}, {ValType::i32}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.funcsec.emplace_back(TypeIdx{1});
-    module.codesec.emplace_back(Code{2, {Instr::local_get, Instr::end}, {0, 0, 0, 0}});
-    module.codesec.emplace_back(
-        Code{0, {Instr::i32_const, Instr::i32_const, Instr::call, Instr::end},
-            {1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0}});
+    /* wat2wasm
+    (module
+      (func $calc (param $a i32) (param $b i32) (result i32)
+        local.get 1
+        local.get 0
+        i32.sub ;; a - b
+      )
+      (func (result i32)
+        i32.const 13
+        i32.const 17
+        call $calc ;; 17 - 13 => 4
+      )
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010b0260027f7f017f6000017f03030200010a12020700200120006b0b0800410d41111000"
+        "0b");
 
-    const auto [trap, ret] = execute(module, 1, {});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0x2);
+    EXPECT_RESULT(execute(parse(wasm), 1, {}), 4);
 }
 
 TEST(execute, call_indirect)
@@ -112,38 +116,30 @@ TEST(execute, call_indirect)
 
 TEST(execute, call_indirect_with_argument)
 {
-    /*
-        (type $bin_func (func (param i32 i32) (result i32)))
-        (table anyfunc (elem $f1 $f2 $f3))
+    /* wat2wasm
+    (module
+      (type $bin_func (func (param i32 i32) (result i32)))
+      (table anyfunc (elem $f1 $f2 $f3))
 
-        (func $f1 (param i32 i32) (result i32) (i32.add (get_local 0) (get_local 1)))
-        (func $f2 (param i32 i32) (result i32) (i32.sub (get_local 0) (get_local 1)))
-        (func $f3 (param i32) (result i32) (i32.mul (get_local 0) (get_local 0)))
+      (func $f1 (param i32 i32) (result i32) (i32.div_u (get_local 0) (get_local 1)))
+      (func $f2 (param i32 i32) (result i32) (i32.sub (get_local 0) (get_local 1)))
+      (func $f3 (param i32) (result i32) (i32.mul (get_local 0) (get_local 0)))
 
-        (func (param i32) (result i32)
-          (i32.const 1)
-          (i32.const 2)
-          (call_indirect (type $bin_func) (get_local 0))
-        )
+      (func (param i32) (result i32)
+        i32.const 31
+        i32.const 7
+        (call_indirect (type $bin_func) (get_local 0))
+      )
+    )
     */
     const auto bin = from_hex(
-        "0061736D01000000010C0260027F7F017F60017F017F03050400000101040501"
-        "700103030909010041000B030001020A25040700200020016A0B070020002001"
-        "6B0B0700200020006C0B0B004101410220001100000B002B046E616D65010D03"
-        "0002663101026632020266330215040002000001000102000001000201000003"
-        "010000");
+        "0061736d01000000010c0260027f7f017f60017f017f03050400000101040501700103030909010041000b0300"
+        "01020a25040700200020016e0b0700200020016b0b0700200020006c0b0b00411f410720001100000b");
 
     const Module module = parse(bin);
 
-    for (const auto param : {0u, 1u})
-    {
-        constexpr uint64_t expected_results[]{3, 1};
-
-        const auto [trap, ret] = execute(module, 3, {param});
-        ASSERT_FALSE(trap);
-        ASSERT_EQ(ret.size(), 1);
-        EXPECT_EQ(ret[0], expected_results[param]);
-    }
+    EXPECT_RESULT(execute(module, 3, {0}), 31 / 7);
+    EXPECT_RESULT(execute(module, 3, {1}), 31 - 7);
 
     // immediate is incorrect type
     EXPECT_TRUE(execute(module, 3, {2}).trapped);
