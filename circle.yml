@@ -76,7 +76,7 @@ jobs:
         name: "Check code format"
         command: |
           clang-format --version
-          find . -name '*.hpp' -o -name '*.cpp' -o -name '*.h' -o -name '*.c' | xargs clang-format -i
+          find . -name '*.hpp' -o -name '*.cpp' -o -name '*.h' -o -name '*.c' -not -wholename './test/benchmarks/*' | xargs clang-format -i
           git diff --color --exit-code
     - run:
         name: "Run codespell"

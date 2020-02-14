@@ -1,0 +1,12 @@
+rounds_1
+blake2b_bench
+85 1
+
+885469211
+
+rounds_16
+blake2b_bench
+85 16
+
+144115026
+
