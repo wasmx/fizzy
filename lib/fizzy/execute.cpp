@@ -815,7 +815,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         case Instr::global_get:
         {
             const auto idx = read<uint32_t>(immediates);
-            assert(idx <= instance.globals.size());
+            assert(idx < instance.imported_globals.size() + instance.globals.size());
             if (idx < instance.imported_globals.size())
             {
                 stack.push(*instance.imported_globals[idx].value);
