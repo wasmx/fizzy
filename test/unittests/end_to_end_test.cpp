@@ -7,7 +7,7 @@ using namespace fizzy;
 
 TEST(end_to_end, milestone1)
 {
-    /*
+    /* wat2wasm
     (module
       (func $add (param $lhs i32) (param $rhs i32) (result i32)
         (local $local1 i32)
@@ -22,10 +22,9 @@ TEST(end_to_end, milestone1)
       )
     )
     */
-
-    const auto bin = from_hex(
+    const auto wasm = from_hex(
         "0061736d0100000001070160027f7f017f030201000a13011101017f200020016a20026a220220006a0b");
-    const auto module = parse(bin);
+    const auto module = parse(wasm);
 
     const auto [trap, ret] = execute(module, 0, {20, 22});
 
@@ -140,7 +139,7 @@ TEST(end_to_end, nested_loops_in_c)
 
 TEST(end_to_end, memset)
 {
-    /*
+    /* wat2wasm
     (module
       (type (;0;) (func))
       (type (;1;) (func (param i32 i32)))
@@ -176,19 +175,13 @@ TEST(end_to_end, memset)
     (export "__heap_base" (global 1))
     (export "__data_end" (global 2)))
     */
-    const auto bin = from_hex(
-        "0061736d01000000"
-        "01090260000060027f7f00"
-        "0303020001"
-        "04050170010101"
-        "0503010002"
-        "0615037f01418088040b7f00418088040b7f004180080b"
-        "072c"
-        "0404746573740001066d656d6f727902000b5f5f686561705f6261736503010a5f5f646174615f656e640302"
-        "0a2c"
-        "0202000b2700024020014101480d000340200041d209360200200041046a21002001417f6a22010d000b0b0b");
+    const auto wasm = from_hex(
+        "0061736d0100000001090260000060027f7f0003030200010405017001010105030100020615037f0141808804"
+        "0b7f00418088040b7f004180080b072c0404746573740001066d656d6f727902000b5f5f686561705f62617365"
+        "03010a5f5f646174615f656e6403020a2c0202000b2700024020014101480d000340200041d209360200200041"
+        "046a21002001417f6a22010d000b0b0b");
 
-    const auto module = parse(bin);
+    const auto module = parse(wasm);
 
     const auto func_idx = find_exported_function(module, "test");
     ASSERT_TRUE(func_idx);

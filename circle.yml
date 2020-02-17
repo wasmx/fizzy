@@ -95,9 +95,11 @@ jobs:
         name: "Check wat2wasm4cpp"
         command: |
           export PATH=$PATH:~/bin
+          ./wat2wasm4cpp.py test/unittests/end_to_end_test.cpp
           ./wat2wasm4cpp.py test/unittests/execute_call_test.cpp
           ./wat2wasm4cpp.py test/unittests/execute_control_test.cpp
           ./wat2wasm4cpp.py test/unittests/execute_test.cpp
+          ./wat2wasm4cpp.py test/unittests/wasm_engine_test.cpp
           git diff --color --exit-code
 
 
