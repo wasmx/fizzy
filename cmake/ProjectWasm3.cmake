@@ -16,12 +16,12 @@ set(wasm3_library ${binary_dir}/source/${CMAKE_STATIC_LIBRARY_PREFIX}m3${CMAKE_S
 ExternalProject_Add(wasm3
     EXCLUDE_FROM_ALL 1
     PREFIX ${prefix}
-    DOWNLOAD_NAME wasm3-ext-api.tar.gz
+    DOWNLOAD_NAME wasm3-ext-api-v2.tar.gz
     DOWNLOAD_DIR ${prefix}/downloads
     SOURCE_DIR ${source_dir}
     BINARY_DIR ${binary_dir}
-    URL https://github.com/axic/wasm3/archive/ext-api.tar.gz
-    URL_HASH SHA256=bef4e5534737f6054614b80c986dc6c5330178a8d288f1d338aec3296dbd990c
+    URL https://github.com/axic/wasm3/archive/ext-api-v2.tar.gz
+    URL_HASH SHA256=6163efd2f9c5088a6c0a7e5c8f815871d8f70af5de3240c52be6c9473411fbdf
     CMAKE_ARGS
     -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
     -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
