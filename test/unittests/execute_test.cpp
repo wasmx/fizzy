@@ -332,6 +332,36 @@ TEST(execute, global_get_imported)
     EXPECT_EQ(ret2[0], 43);
 }
 
+TEST(execute, global_get_imported_and_internal)
+{
+    /* wat2wasm
+    (module
+      (global (import "mod" "g1") i32)
+      (global (import "mod" "g2") i32)
+      (global i32 (i32.const 42))
+      (global i32 (i32.const 43))
+      (func (param i32) (result i32) (get_global 0))
+      (func (param i32) (result i32) (get_global 1))
+      (func (param i32) (result i32) (get_global 2))
+      (func (param i32) (result i32) (get_global 3))
+    )
+     */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017f021502036d6f64026731037f00036d6f64026732037f00030504000000"
+        "00060b027f00412a0b7f00412b0b0a1504040023000b040023010b040023020b040023030b");
+    const auto module = parse(wasm);
+
+    uint64_t g1 = 40;
+    uint64_t g2 = 41;
+    auto instance =
+        instantiate(module, {}, {}, {}, {ImportedGlobal{&g1, false}, ImportedGlobal{&g2, false}});
+
+    EXPECT_RESULT(execute(instance, 0, {}), 40);
+    EXPECT_RESULT(execute(instance, 1, {}), 41);
+    EXPECT_RESULT(execute(instance, 2, {}), 42);
+    EXPECT_RESULT(execute(instance, 3, {}), 43);
+}
+
 TEST(execute, global_set)
 {
     Module module;
