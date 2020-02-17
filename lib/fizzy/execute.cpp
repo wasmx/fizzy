@@ -1448,4 +1448,26 @@ std::optional<GlobalIdx> find_exported_global(const Module& module, std::string_
 
     return {};
 }
+
+std::optional<std::string> find_exported_table_name(const Module& module)
+{
+    for (const auto& export_ : module.exportsec)
+    {
+        if (export_.kind == ExternalKind::Table)
+            return export_.name;
+    }
+
+    return {};
+}
+
+std::optional<std::string> find_exported_memory_name(const Module& module)
+{
+    for (const auto& export_ : module.exportsec)
+    {
+        if (export_.kind == ExternalKind::Memory)
+            return export_.name;
+    }
+
+    return {};
+}
 }  // namespace fizzy

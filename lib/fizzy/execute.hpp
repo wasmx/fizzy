@@ -78,4 +78,11 @@ std::optional<FuncIdx> find_exported_function(const Module& module, std::string_
 
 // Find exported global index by name.
 std::optional<FuncIdx> find_exported_global(const Module& module, std::string_view name);
+
+// Find exported table name.
+std::optional<std::string> find_exported_table_name(const Module& module);
+
+// Find exported memory name.
+std::optional<std::string> find_exported_memory_name(const Module& module);
+
 }  // namespace fizzy
