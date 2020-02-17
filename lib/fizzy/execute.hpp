@@ -75,4 +75,7 @@ execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uin
 
 // Find exported function index by name.
 std::optional<FuncIdx> find_exported_function(const Module& module, std::string_view name);
+
+// Find exported global index by name.
+std::optional<FuncIdx> find_exported_global(const Module& module, std::string_view name);
 }  // namespace fizzy

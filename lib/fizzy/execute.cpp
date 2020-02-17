@@ -1437,4 +1437,15 @@ std::optional<FuncIdx> find_exported_function(const Module& module, std::string_
 
     return {};
 }
+
+std::optional<GlobalIdx> find_exported_global(const Module& module, std::string_view name)
+{
+    for (const auto& export_ : module.exportsec)
+    {
+        if (export_.kind == ExternalKind::Global && name == export_.name)
+            return export_.index;
+    }
+
+    return {};
+}
 }  // namespace fizzy

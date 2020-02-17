@@ -35,10 +35,10 @@ struct Limits
     std::optional<uint32_t> max;
 };
 
-// https://webassembly.github.io/spec/core/binary/modules.html#binary-typeidx
+// https://webassembly.github.io/spec/core/syntax/modules.html#syntax-typeidx
 using TypeIdx = uint32_t;
 
-// https://webassembly.github.io/spec/core/binary/modules.html#binary-funcidx
+// https://webassembly.github.io/spec/core/syntax/modules.html#syntax-funcidx
 using FuncIdx = uint32_t;
 
 // https://webassembly.github.io/spec/core/syntax/modules.html#syntax-tableidx
@@ -46,6 +46,9 @@ using TableIdx = uint32_t;
 
 // https://webassembly.github.io/spec/core/syntax/modules.html#syntax-memidx
 using MemIdx = uint32_t;
+
+// https://webassembly.github.io/spec/core/syntax/modules.html#syntax-globalidx
+using GlobalIdx = uint32_t;
 
 /// Function locals.
 /// https://webassembly.github.io/spec/core/binary/modules.html#binary-local
