@@ -18,7 +18,7 @@ struct LabelContext
 };
 
 void match_imported_functions(const std::vector<TypeIdx>& module_imported_types,
-    const std::vector<ImportedFunction>& imported_functions)
+    const std::vector<ExternalFunction>& imported_functions)
 {
     if (module_imported_types.size() != imported_functions.size())
     {
@@ -43,7 +43,7 @@ void match_limits(const Limits& external_limits, const Limits& module_limits)
 }
 
 void match_imported_tables(const std::vector<Table>& module_imported_tables,
-    const std::vector<ImportedTable>& imported_tables)
+    const std::vector<ExternalTable>& imported_tables)
 {
     assert(module_imported_tables.size() <= 1);
 
@@ -77,7 +77,7 @@ void match_imported_tables(const std::vector<Table>& module_imported_tables,
 }
 
 void match_imported_memories(const std::vector<Memory>& module_imported_memories,
-    const std::vector<ImportedMemory>& imported_memories)
+    const std::vector<ExternalMemory>& imported_memories)
 {
     assert(module_imported_memories.size() <= 1);
 
@@ -111,7 +111,7 @@ void match_imported_memories(const std::vector<Memory>& module_imported_memories
 }
 
 void match_imported_globals(const std::vector<bool>& module_imports_mutability,
-    const std::vector<ImportedGlobal>& imported_globals)
+    const std::vector<ExternalGlobal>& imported_globals)
 {
     if (module_imports_mutability.size() != imported_globals.size())
     {
@@ -135,10 +135,10 @@ void match_imported_globals(const std::vector<bool>& module_imports_mutability,
 }
 
 std::vector<TypeIdx> match_imports(const Module& module,
-    const std::vector<ImportedFunction>& imported_functions,
-    const std::vector<ImportedTable>& imported_tables,
-    const std::vector<ImportedMemory>& imported_memories,
-    const std::vector<ImportedGlobal>& imported_globals)
+    const std::vector<ExternalFunction>& imported_functions,
+    const std::vector<ExternalTable>& imported_tables,
+    const std::vector<ExternalMemory>& imported_memories,
+    const std::vector<ExternalGlobal>& imported_globals)
 {
     std::vector<TypeIdx> imported_function_types;
     std::vector<Table> imported_table_types;
@@ -174,7 +174,7 @@ std::vector<TypeIdx> match_imports(const Module& module,
 }
 
 table_ptr allocate_table(
-    const std::vector<Table>& module_tables, const std::vector<ImportedTable>& imported_tables)
+    const std::vector<Table>& module_tables, const std::vector<ExternalTable>& imported_tables)
 {
     static const auto table_delete = [](std::vector<FuncIdx>* t) noexcept { delete t; };
     static const auto null_delete = [](std::vector<FuncIdx>*) noexcept {};
@@ -194,7 +194,7 @@ table_ptr allocate_table(
 }
 
 std::tuple<bytes_ptr, size_t> allocate_memory(const std::vector<Memory>& module_memories,
-    const std::vector<ImportedMemory>& imported_memories)
+    const std::vector<ExternalMemory>& imported_memories)
 {
     static const auto bytes_delete = [](bytes* b) noexcept { delete b; };
     static const auto null_delete = [](bytes*) noexcept {};
@@ -247,7 +247,7 @@ std::tuple<bytes_ptr, size_t> allocate_memory(const std::vector<Memory>& module_
 }
 
 uint64_t eval_constant_expression(ConstantExpression expr,
-    const std::vector<ImportedGlobal>& imported_globals, const std::vector<Global>& global_types,
+    const std::vector<ExternalGlobal>& imported_globals, const std::vector<Global>& global_types,
     const std::vector<uint64_t>& globals)
 {
     if (expr.kind == ConstantExpression::Kind::Constant)
@@ -478,9 +478,9 @@ inline uint64_t popcnt64(uint64_t value) noexcept
 }
 }  // namespace
 
-Instance instantiate(Module module, std::vector<ImportedFunction> imported_functions,
-    std::vector<ImportedTable> imported_tables, std::vector<ImportedMemory> imported_memories,
-    std::vector<ImportedGlobal> imported_globals)
+Instance instantiate(Module module, std::vector<ExternalFunction> imported_functions,
+    std::vector<ExternalTable> imported_tables, std::vector<ExternalMemory> imported_memories,
+    std::vector<ExternalGlobal> imported_globals)
 {
     std::vector<TypeIdx> imported_function_types = match_imports(
         module, imported_functions, imported_tables, imported_memories, imported_globals);
