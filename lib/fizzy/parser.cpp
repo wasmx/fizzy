@@ -332,9 +332,17 @@ Module parse(bytes_view input)
     input.remove_prefix(wasm_prefix.size());
 
     Module module;
+    SectionId last_id = SectionId::custom;
     for (auto it = input.begin(); it != input.end();)
     {
         const auto id = static_cast<SectionId>(*it++);
+        if (id != SectionId::custom)
+        {
+            if (id <= last_id)
+                throw parser_error{"Unexpected out-of-order section type"};
+            last_id = id;
+        }
+
         uint32_t size;
         std::tie(size, it) = leb128u_decode<uint32_t>(it, input.end());
 
