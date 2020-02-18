@@ -25,6 +25,7 @@ TEST(wasm_engine, multi_i32_args_ret_i32)
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
         ASSERT_TRUE(engine->instantiate());
+        ASSERT_FALSE(engine->find_function("notfound").has_value());
         const auto func = engine->find_function("test");
         ASSERT_TRUE(func.has_value());
         // (52 - 21) * 0x1fffffff => 0xdfffffe1
@@ -58,6 +59,7 @@ TEST(wasm_engine, multi_mixed_args_ret_i32)
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
         ASSERT_TRUE(engine->instantiate());
+        ASSERT_FALSE(engine->find_function("notfound").has_value());
         const auto func = engine->find_function("test");
         ASSERT_TRUE(func.has_value());
         // (52 - 21) * 0x1fffffff => 0xdfffffe1
