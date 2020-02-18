@@ -313,7 +313,7 @@ private:
 
     std::optional<imports> create_imports(const fizzy::Module& module)
     {
-        std::vector<fizzy::ExternalFunction> imported_functions;
+        imports result;
         for (auto const& import : module.importsec)
         {
             const auto it_registered = registered_names.find(import.module);
@@ -343,17 +343,44 @@ private:
                     return std::nullopt;
                 }
 
-                imported_functions.emplace_back(*func);
+                result.functions.emplace_back(*func);
             }
-            else
+            else if (import.kind == fizzy::ExternalKind::Table)
             {
-                skip("Unsupported import kind.");
-                return std::nullopt;
+                const auto table = fizzy::find_exported_table(instance, import.name);
+                if (!table.has_value())
+                {
+                    fail("Table \"" + import.name + "\" not found in \"" + import.module + "\".");
+                    return std::nullopt;
+                }
+
+                result.tables.emplace_back(*table);
             }
-            // TODO memory, table, globals
+            else if (import.kind == fizzy::ExternalKind::Memory)
+            {
+                const auto memory = fizzy::find_exported_memory(instance, import.name);
+                if (!memory.has_value())
+                {
+                    fail("Memory \"" + import.name + "\" not found in \"" + import.module + "\".");
+                    return std::nullopt;
+                }
+
+                result.memories.emplace_back(*memory);
+            }
+            else if (import.kind == fizzy::ExternalKind::Global)
+            {
+                const auto global = fizzy::find_exported_global(instance, import.name);
+                if (!global.has_value())
+                {
+                    fail("Global \"" + import.name + "\" not found in \"" + import.module + "\".");
+                    return std::nullopt;
+                }
+
+                result.globals.emplace_back(*global);
+            }
         }
 
-        return imports{imported_functions, {}, {}, {}};
+        return result;
     }
 
     void pass()
