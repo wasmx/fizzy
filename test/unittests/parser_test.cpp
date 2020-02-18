@@ -105,61 +105,6 @@ TEST(parser, limits_invalid)
         parse_limits(input.data(), input.data() + input.size()), parser_error, "invalid limits 2");
 }
 
-TEST(parser, code_locals)
-{
-    const auto wasm_locals = "81017f"_bytes;  // 0x81 x i32.
-    const auto wasm =
-        bytes{wasm_prefix} +
-        make_section(10, make_vec({add_size_prefix(make_vec({wasm_locals}) + "0b"_bytes)}));
-
-    const auto module = parse(wasm);
-    ASSERT_EQ(module.codesec.size(), 1);
-    EXPECT_EQ(module.codesec[0].local_count, 0x81);
-}
-
-TEST(parser, code_locals_2)
-{
-    const auto wasm_locals1 = "017e"_bytes;  // 1 x i64.
-    const auto wasm_locals2 = "027f"_bytes;  // 2 x i32.
-    const auto wasm_locals3 = "037e"_bytes;  // 3 x i64.
-    const auto wasm_locals4 = "047e"_bytes;  // 4 x i64.
-    const auto wasm =
-        bytes{wasm_prefix} +
-        make_section(10,
-            make_vec({add_size_prefix(
-                make_vec({wasm_locals1, wasm_locals2, wasm_locals3, wasm_locals4}) + "0b"_bytes)}));
-
-    const auto module = parse(wasm);
-    ASSERT_EQ(module.codesec.size(), 1);
-    EXPECT_EQ(module.codesec[0].local_count, 1 + 2 + 3 + 4);
-}
-
-TEST(parser, code_locals_invalid_type)
-{
-    const auto wasm_locals = "017b"_bytes;  // 1 x <invalid_type>.
-    const auto wasm =
-        bytes{wasm_prefix} +
-        make_section(10, make_vec({add_size_prefix(make_vec({wasm_locals}) + "0b"_bytes)}));
-
-    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "invalid valtype 123");
-}
-
-TEST(parser, code_locals_too_many)
-{
-    const auto large_num = "8080808008"_bytes;  // 0x80000000
-    for (const auto& locals : {
-             make_vec({large_num + "7e"_bytes, large_num + "7e"_bytes}),  // large i64 + large i64
-             make_vec({large_num + "7e"_bytes, large_num + "7f"_bytes}),  // large i64 + large i32
-             make_vec({large_num + "7f"_bytes, large_num + "7f"_bytes})   // large i32 + large i32
-         })
-    {
-        const auto wasm =
-            bytes{wasm_prefix} + make_section(10, make_vec({add_size_prefix(locals + "0b"_bytes)}));
-
-        EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "too many local variables");
-    }
-}
-
 TEST(parser, module_empty)
 {
     const auto module = parse(wasm_prefix);
@@ -806,6 +751,61 @@ TEST(parser, element_section_no_table_section)
         bytes{wasm_prefix} + make_section(9, make_vec({"000b"_bytes + make_vec({"00"_bytes})}));
     EXPECT_THROW_MESSAGE(
         parse(wasm), parser_error, "element section encountered without a table section");
+}
+
+TEST(parser, code_locals)
+{
+    const auto wasm_locals = "81017f"_bytes;  // 0x81 x i32.
+    const auto wasm =
+        bytes{wasm_prefix} +
+        make_section(10, make_vec({add_size_prefix(make_vec({wasm_locals}) + "0b"_bytes)}));
+
+    const auto module = parse(wasm);
+    ASSERT_EQ(module.codesec.size(), 1);
+    EXPECT_EQ(module.codesec[0].local_count, 0x81);
+}
+
+TEST(parser, code_locals_2)
+{
+    const auto wasm_locals1 = "017e"_bytes;  // 1 x i64.
+    const auto wasm_locals2 = "027f"_bytes;  // 2 x i32.
+    const auto wasm_locals3 = "037e"_bytes;  // 3 x i64.
+    const auto wasm_locals4 = "047e"_bytes;  // 4 x i64.
+    const auto wasm =
+        bytes{wasm_prefix} +
+        make_section(10,
+            make_vec({add_size_prefix(
+                make_vec({wasm_locals1, wasm_locals2, wasm_locals3, wasm_locals4}) + "0b"_bytes)}));
+
+    const auto module = parse(wasm);
+    ASSERT_EQ(module.codesec.size(), 1);
+    EXPECT_EQ(module.codesec[0].local_count, 1 + 2 + 3 + 4);
+}
+
+TEST(parser, code_locals_invalid_type)
+{
+    const auto wasm_locals = "017b"_bytes;  // 1 x <invalid_type>.
+    const auto wasm =
+        bytes{wasm_prefix} +
+        make_section(10, make_vec({add_size_prefix(make_vec({wasm_locals}) + "0b"_bytes)}));
+
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "invalid valtype 123");
+}
+
+TEST(parser, code_locals_too_many)
+{
+    const auto large_num = "8080808008"_bytes;  // 0x80000000
+    for (const auto& locals : {
+             make_vec({large_num + "7e"_bytes, large_num + "7e"_bytes}),  // large i64 + large i64
+             make_vec({large_num + "7e"_bytes, large_num + "7f"_bytes}),  // large i64 + large i32
+             make_vec({large_num + "7f"_bytes, large_num + "7f"_bytes})   // large i32 + large i32
+         })
+    {
+        const auto wasm =
+            bytes{wasm_prefix} + make_section(10, make_vec({add_size_prefix(locals + "0b"_bytes)}));
+
+        EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "too many local variables");
+    }
 }
 
 TEST(parser, code_with_empty_expr_2_locals)
