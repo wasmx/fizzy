@@ -249,7 +249,11 @@ inline parser_result<Code> parse(const uint8_t* pos, const uint8_t* end)
 
     const auto [locals_vec, pos2] = parse_vec<Locals>(pos1, end);
 
-    auto result = parse_expr(pos2, end);
+    auto [code, pos3] = parse_expr(pos2, end);
+
+    // Size is the total bytes of locals and expressions
+    if (size != (pos3 - pos1))
+        throw parser_error{"malformed size field for function"};
 
     uint64_t local_count = 0;
     for (const auto& l : locals_vec)
@@ -258,9 +262,9 @@ inline parser_result<Code> parse(const uint8_t* pos, const uint8_t* end)
         if (local_count > std::numeric_limits<uint32_t>::max())
             throw parser_error{"too many local variables"};
     }
-    std::get<0>(result).local_count = static_cast<uint32_t>(local_count);
+    code.local_count = static_cast<uint32_t>(local_count);
 
-    return result;
+    return {std::move(code), pos3};
 }
 
 template <>
