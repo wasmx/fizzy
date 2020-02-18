@@ -975,6 +975,32 @@ TEST(parser, code_section_invalid_instructions)
     }
 }
 
+TEST(parser, code_section_size_too_small)
+{
+    // Real size is 5 bytes
+    const auto func_bin =
+        "00"  // vec(locals)
+        "0101010b"_bytes;
+    const auto code_bin = "04"_bytes + func_bin;
+    const auto section_contents = make_vec({code_bin});
+    const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
+
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "malformed size field for function");
+}
+
+TEST(parser, code_section_size_too_large)
+{
+    // Real size is 5 bytes
+    const auto func_bin =
+        "00"  // vec(locals)
+        "0101010b"_bytes;
+    const auto code_bin = "06"_bytes + func_bin;
+    const auto section_contents = make_vec({code_bin});
+    const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
+
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "malformed size field for function");
+}
+
 TEST(parser, data_section)
 {
     const auto section_contents =
