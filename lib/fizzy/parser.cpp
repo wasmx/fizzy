@@ -251,8 +251,14 @@ inline parser_result<Code> parse(const uint8_t* pos, const uint8_t* end)
 
     auto result = parse_expr(pos2, end);
 
+    uint64_t local_count = 0;
     for (const auto& l : locals_vec)
-        std::get<0>(result).local_count += l.count;
+    {
+        local_count += l.count;
+        if (local_count > std::numeric_limits<uint32_t>::max())
+            throw parser_error{"too many local variables"};
+    }
+    std::get<0>(result).local_count = static_cast<uint32_t>(local_count);
 
     return result;
 }
