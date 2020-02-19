@@ -1451,6 +1451,17 @@ std::optional<FuncIdx> find_exported_function(const Module& module, std::string_
     return {};
 }
 
+std::optional<ExternalFunction> find_exported_function(Instance& instance, std::string_view name)
+{
+    const auto opt_index = find_export(instance, ExternalKind::Function, name);
+    if (!opt_index.has_value())
+        return std::nullopt;
+
+    return [idx = *opt_index, &instance](fizzy::Instance&, std::vector<uint64_t> args) {
+        return execute(instance, idx, std::move(args));
+    };
+}
+
 std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::string_view name)
 {
     const auto opt_index = find_export(instance, ExternalKind::Global, name);

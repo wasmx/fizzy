@@ -77,6 +77,9 @@ execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uin
 // Find exported function index by name.
 std::optional<FuncIdx> find_exported_function(const Module& module, std::string_view name);
 
+// Find exported function by name.
+std::optional<ExternalFunction> find_exported_function(Instance& instance, std::string_view name);
+
 // Find exported global by name.
 std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::string_view name);
 
