@@ -190,7 +190,8 @@ TEST(parser, section_vec_size_out_of_bounds)
 
 TEST(parser, custom_section_empty)
 {
-    const auto bin = bytes{wasm_prefix} + make_section(0, bytes{});
+    // Section consists of an empty name
+    const auto bin = bytes{wasm_prefix} + make_section(0, "00"_bytes);
     const auto module = parse(bin);
     EXPECT_EQ(module.typesec.size(), 0);
     EXPECT_EQ(module.funcsec.size(), 0);
@@ -199,7 +200,8 @@ TEST(parser, custom_section_empty)
 
 TEST(parser, custom_section_nonempty)
 {
-    const auto bin = bytes{wasm_prefix} + make_section(0, "ff"_bytes);
+    // Section consists of only the name "abc"
+    const auto bin = bytes{wasm_prefix} + make_section(0, "03616263"_bytes);
     const auto module = parse(bin);
     EXPECT_EQ(module.typesec.size(), 0);
     EXPECT_EQ(module.funcsec.size(), 0);
@@ -210,6 +212,12 @@ TEST(parser, custom_section_size_out_of_bounds)
 {
     const auto wasm = bytes{wasm_prefix} + "0080"_bytes;
     EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+}
+
+TEST(parser, custom_section_name_out_of_bounds)
+{
+    const auto bin = bytes{wasm_prefix} + make_section(0, "01"_bytes);
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "Unexpected EOF");
 }
 
 TEST(parser, custom_section_out_of_bounds)

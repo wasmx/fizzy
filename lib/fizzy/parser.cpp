@@ -338,6 +338,8 @@ Module parse(bytes_view input)
             std::tie(module.datasec, it) = parse_vec<Data>(it, input.end());
             break;
         case SectionId::custom:
+            // NOTE: this section can be ignored, but the name must be parseable (and valid UTF-8)
+            parse_string(it, input.end());
             // These sections are ignored for now.
             it += size;
             break;
