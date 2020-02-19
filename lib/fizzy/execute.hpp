@@ -20,7 +20,7 @@ struct execution_result
 
 struct Instance;
 
-using ImportedFunction = std::function<execution_result(Instance&, std::vector<uint64_t>)>;
+using ImportedFunction = std::function<execution_result(std::vector<uint64_t>)>;
 
 using table_ptr = std::unique_ptr<std::vector<FuncIdx>, void (*)(std::vector<FuncIdx>*)>;
 

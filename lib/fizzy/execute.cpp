@@ -558,7 +558,7 @@ Instance instantiate(Module module, std::vector<ImportedFunction> imported_funct
 execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint64_t> args)
 {
     if (func_idx < instance.imported_functions.size())
-        return instance.imported_functions[func_idx](instance, std::move(args));
+        return instance.imported_functions[func_idx](std::move(args));
 
     const auto code_idx = func_idx - instance.imported_functions.size();
     assert(code_idx < instance.module.codesec.size());

@@ -921,7 +921,7 @@ TEST(execute, imported_function)
     module.typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
     module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
 
-    auto host_foo = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    auto host_foo = [](std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] + args[1]}};
     };
 
@@ -941,10 +941,10 @@ TEST(execute, imported_two_functions)
     module.importsec.emplace_back(Import{"mod", "foo1", ExternalKind::Function, {0}});
     module.importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {0}});
 
-    auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    auto host_foo1 = [](std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] + args[1]}};
     };
-    auto host_foo2 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    auto host_foo2 = [](std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] * args[1]}};
     };
 
@@ -972,10 +972,10 @@ TEST(execute, imported_functions_and_regular_one)
     module.importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {0}});
     module.codesec.emplace_back(Code{0, {Instr::i32_const, Instr::end}, {42, 0, 42, 0}});
 
-    auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    auto host_foo1 = [](std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] + args[1]}};
     };
-    auto host_foo2 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    auto host_foo2 = [](std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] * args[0]}};
     };
 
@@ -994,7 +994,7 @@ TEST(execute, imported_functions_and_regular_one)
     EXPECT_EQ(ret2[0], 400);
 
     // check correct number of arguments is passed to host
-    auto count_args = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    auto count_args = [](std::vector<uint64_t> args) -> execution_result {
         return {false, {args.size()}};
     };
 
@@ -1022,10 +1022,10 @@ TEST(execute, imported_two_functions_different_type)
     module.importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {0}});
     module.codesec.emplace_back(Code{0, {Instr::i32_const, Instr::end}, {42, 0, 42, 0}});
 
-    auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    auto host_foo1 = [](std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] + args[1]}};
     };
-    auto host_foo2 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    auto host_foo2 = [](std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] * args[0]}};
     };
 
@@ -1056,7 +1056,7 @@ TEST(execute, imported_function_traps)
     module.typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
     module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
 
-    auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result { return {true, {}}; };
+    auto host_foo = [](std::vector<uint64_t>) -> execution_result { return {true, {}}; };
 
     auto instance = instantiate(module, {host_foo});
 
@@ -1073,9 +1073,7 @@ TEST(execute, imported_function_call)
     module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(Code{0, {Instr::call, Instr::end}, {0, 0, 0, 0}});
 
-    auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result {
-        return {false, {42}};
-    };
+    auto host_foo = [](std::vector<uint64_t>) -> execution_result { return {false, {42}}; };
 
     auto instance = instantiate(module, {host_foo});
 
@@ -1096,7 +1094,7 @@ TEST(execute, imported_function_call_with_arguments)
         Code{0, {Instr::local_get, Instr::call, Instr::i32_const, Instr::i32_add, Instr::end},
             {0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0}});
 
-    auto host_foo = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    auto host_foo = [](std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] * 2}};
     };
 
@@ -1143,10 +1141,10 @@ TEST(execute, imported_functions_call_indirect)
     ASSERT_EQ(module.importsec.size(), 2);
     ASSERT_EQ(module.codesec.size(), 2);
 
-    constexpr auto sqr = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto sqr = [](std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] * args[0]}};
     };
-    constexpr auto isqrt = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto isqrt = [](std::vector<uint64_t> args) -> execution_result {
         return {false, {(11 + args[0] / 11) / 2}};
     };
 
@@ -1191,7 +1189,7 @@ TEST(execute, imported_function_from_another_module)
     const auto func_idx = fizzy::find_exported_function(module1, "sub");
     ASSERT_TRUE(func_idx.has_value());
 
-    auto sub = [&instance1, func_idx](Instance&, std::vector<uint64_t> args) -> execution_result {
+    auto sub = [&instance1, func_idx](std::vector<uint64_t> args) -> execution_result {
         return fizzy::execute(instance1, *func_idx, std::move(args));
     };
 
