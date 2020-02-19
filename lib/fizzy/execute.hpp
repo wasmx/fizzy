@@ -3,6 +3,7 @@
 #include "exceptions.hpp"
 #include "types.hpp"
 #include <cstdint>
+#include <functional>
 #include <memory>
 
 namespace fizzy
@@ -19,7 +20,7 @@ struct execution_result
 
 struct Instance;
 
-using ImportedFunction = execution_result (*)(Instance&, std::vector<uint64_t>);
+using ImportedFunction = std::function<execution_result(Instance&, std::vector<uint64_t>)>;
 
 using table_ptr = std::unique_ptr<std::vector<FuncIdx>, void (*)(std::vector<FuncIdx>*)>;
 
