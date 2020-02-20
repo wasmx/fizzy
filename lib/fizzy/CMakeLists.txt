@@ -3,6 +3,7 @@ add_library(fizzy::fizzy ALIAS fizzy)
 
 target_sources(
     fizzy PRIVATE
+    bytes.hpp
     execute.cpp
     execute.hpp
     leb128.hpp

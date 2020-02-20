@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.hpp"
+#include "bytes.hpp"
 #include <cstdint>
 
 namespace fizzy

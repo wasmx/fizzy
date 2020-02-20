@@ -1,8 +1,10 @@
 #pragma once
 
-#include "types.hpp"
+#include "bytes.hpp"
 #include <memory>
 #include <optional>
+#include <string_view>
+#include <vector>
 
 namespace fizzy::test
 {
