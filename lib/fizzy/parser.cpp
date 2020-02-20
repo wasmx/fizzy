@@ -339,7 +339,7 @@ Module parse(bytes_view input)
             break;
         case SectionId::custom:
             // NOTE: this section can be ignored, but the name must be parseable (and valid UTF-8)
-            parse_string(it, input.end());
+            parse_string(it, expected_section_end);
             // These sections are ignored for now.
             it += size;
             break;

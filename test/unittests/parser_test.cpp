@@ -165,6 +165,13 @@ TEST(parser, custom_section_name_out_of_bounds)
     EXPECT_THROW_MESSAGE(parse(bin), parser_error, "Unexpected EOF");
 }
 
+TEST(parser, custom_section_name_exceeds_section_size)
+{
+    const auto bin = bytes{wasm_prefix} + make_invalid_size_section(0, 1, "01aa"_bytes) +
+                     make_section(0, "00"_bytes);
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "Unexpected EOF");
+}
+
 TEST(parser, custom_section_out_of_bounds)
 {
     const auto wasm = bytes{wasm_prefix} + make_invalid_size_section(0, 31, {});
@@ -1124,9 +1131,9 @@ TEST(parser, interleaved_custom_section)
     const auto type_section = make_vec({functype_void_to_void});
     const auto func_section = make_vec({"00"_bytes});
     const auto code_section = make_vec({add_size_prefix("000b"_bytes)});
-    const auto bin = bytes{wasm_prefix} + make_section(0, bytes{4}) +
-                     make_section(1, type_section) + make_section(0, bytes{5}) +
-                     make_section(3, func_section) + make_section(0, bytes{6}) +
+    const auto bin = bytes{wasm_prefix} + make_section(0, "01aa"_bytes) +
+                     make_section(1, type_section) + make_section(0, "01bb"_bytes) +
+                     make_section(3, func_section) + make_section(0, "01cc"_bytes) +
                      make_section(10, code_section);
 
     const auto module = parse(bin);
