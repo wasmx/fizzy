@@ -1,5 +1,6 @@
 #pragma once
 
+#include "bytes.hpp"
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -8,9 +9,6 @@
 
 namespace fizzy
 {
-using bytes = std::basic_string<uint8_t>;
-using bytes_view = std::basic_string_view<uint8_t>;
-
 // https://webassembly.github.io/spec/core/binary/types.html#binary-valtype
 enum class ValType : uint8_t
 {
