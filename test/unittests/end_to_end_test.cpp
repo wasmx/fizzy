@@ -141,29 +141,41 @@ TEST(end_to_end, nested_loops_in_c)
 TEST(end_to_end, memset)
 {
     /*
-    (func $test (export "test") (type $t1) (param $p0 i32) (param $p1 i32)
-    block $B0
-      get_local $p1
-      i32.const 1
-      i32.lt_s
-      br_if $B0
-      loop $L1
-        get_local $p0
-        i32.const 1234
-        i32.store
-        get_local $p0
-        i32.const 4
-        i32.add
-        set_local $p0
-        get_local $p1
-        i32.const -1
-        i32.add
-        tee_local $p1
-        br_if $L1
-      end
-    end)
+    (module
+      (type (;0;) (func))
+      (type (;1;) (func (param i32 i32)))
+      (func (;0;) (type 0))
+      (func (;1;) (type 1) (param i32 i32)
+        block  ;; label = @1
+          local.get 1
+          i32.const 1
+          i32.lt_s
+          br_if 0 (;@1;)
+          loop  ;; label = @2
+            local.get 0
+            i32.const 1234
+            i32.store
+            local.get 0
+            i32.const 4
+            i32.add
+            local.set 0
+            local.get 1
+            i32.const -1
+            i32.add
+            local.tee 1
+            br_if 0 (;@2;)
+        end
+      end)
+    (table (;0;) 1 1 funcref)
+    (memory (;0;) 2)
+    (global (;0;) (mut i32) (i32.const 66560))
+    (global (;1;) i32 (i32.const 66560))
+    (global (;2;) i32 (i32.const 1024))
+    (export "test" (func 1))
+    (export "memory" (memory 0))
+    (export "__heap_base" (global 1))
+    (export "__data_end" (global 2)))
     */
-
     const auto bin = from_hex(
         "0061736d01000000"
         "01090260000060027f7f00"
