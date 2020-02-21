@@ -99,6 +99,7 @@ jobs:
           ./wat2wasm4cpp.py test/unittests/execute_call_test.cpp
           ./wat2wasm4cpp.py test/unittests/execute_control_test.cpp
           ./wat2wasm4cpp.py test/unittests/execute_test.cpp
+          ./wat2wasm4cpp.py test/unittests/parser_test.cpp
           ./wat2wasm4cpp.py test/unittests/wasm_engine_test.cpp
           git diff --color --exit-code
 

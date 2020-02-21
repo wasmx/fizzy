@@ -1155,7 +1155,7 @@ TEST(parser, interleaved_custom_section)
 
 TEST(parser, milestone1)
 {
-    /*
+    /* wat2wasm
     (module
       (func $add (param $lhs i32) (param $rhs i32) (result i32)
         (local $local1 i32)
@@ -1170,10 +1170,9 @@ TEST(parser, milestone1)
       )
     )
     */
-
-    const auto bin =
-        "0061736d0100000001070160027f7f017f030201000a13011101017f200020016a20026a220220006a0b"_bytes;
-    const auto m = parse(bin);
+    const auto wasm = from_hex(
+        "0061736d0100000001070160027f7f017f030201000a13011101017f200020016a20026a220220006a0b");
+    const auto m = parse(wasm);
 
     ASSERT_EQ(m.typesec.size(), 1);
     EXPECT_EQ(m.typesec[0].inputs, (std::vector{ValType::i32, ValType::i32}));
