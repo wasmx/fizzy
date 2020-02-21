@@ -139,12 +139,18 @@ inline parser_result<Memory> parse(const uint8_t* pos, const uint8_t* end)
 
 parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end)
 {
-    std::vector<uint8_t> value;
-    std::tie(value, pos) = parse_vec<uint8_t>(pos, end);
+    // NOTE: this is an optimised version of parse_vec<uint8_t>
+    uint32_t size;
+    std::tie(size, pos) = leb128u_decode<uint32_t>(pos, end);
+
+    if ((pos + size) > end)
+        throw parser_error{"Unexpected EOF"};
 
     // FIXME: need to validate that string is a valid UTF-8
+    auto ret = std::string(pos, pos + size);
+    pos += size;
 
-    return {std::string(value.begin(), value.end()), pos};
+    return {std::move(ret), pos};
 }
 
 template <>
