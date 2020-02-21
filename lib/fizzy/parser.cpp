@@ -137,7 +137,7 @@ inline parser_result<Memory> parse(const uint8_t* pos, const uint8_t* end)
     return {{limits}, pos};
 }
 
-inline parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end)
+parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end)
 {
     std::vector<uint8_t> value;
     std::tie(value, pos) = parse_vec<uint8_t>(pos, end);
