@@ -5,6 +5,17 @@
 using namespace fizzy;
 using namespace fizzy::test;
 
+TEST(wasm_engine, parse_error)
+{
+    const auto wasm = "0102"_bytes;
+
+    for (auto engine_create_fn : {create_fizzy_engine, create_wabt_engine, create_wasm3_engine})
+    {
+        auto engine = engine_create_fn();
+        ASSERT_FALSE(engine->parse(wasm));
+    }
+}
+
 TEST(wasm_engine, trapped)
 {
     /* wat2wasm
