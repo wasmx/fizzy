@@ -284,10 +284,17 @@ inline parser_result<Data> parse(const uint8_t* pos, const uint8_t* end)
     ConstantExpression offset;
     std::tie(offset, pos) = parse_constant_expression(pos, end);
 
-    std::vector<uint8_t> init;
-    std::tie(init, pos) = parse_vec<uint8_t>(pos, end);
+    // NOTE: this is an optimised version of parse_vec<uint8_t>
+    uint32_t size;
+    std::tie(size, pos) = leb128u_decode<uint32_t>(pos, end);
 
-    return {{offset, bytes(init.data(), init.size())}, pos};
+    if ((pos + size) > end)
+        throw parser_error{"Unexpected EOF"};
+
+    auto init = bytes(pos, pos + size);
+    pos += size;
+
+    return {{offset, std::move(init)}, pos};
 }
 
 Module parse(bytes_view input)
