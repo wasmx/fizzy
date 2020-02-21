@@ -1,6 +1,10 @@
+#include "instructions.hpp"
 #include "parser.hpp"
 #include "stack.hpp"
 #include <cassert>
+
+#include <iostream>
+#include <sstream>
 
 namespace fizzy
 {
@@ -408,7 +412,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
         }
         }
         code.instructions.emplace_back(instr);
+        code.max_stack_depth += instr_stack_change(instr);
     }
+    std::cout << "Funcion stack depth: " << code.max_stack_depth << std::endl;
     assert(label_positions.empty());
     return {code, pos};
 }
