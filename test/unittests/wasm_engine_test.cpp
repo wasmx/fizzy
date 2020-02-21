@@ -16,6 +16,36 @@ TEST(wasm_engine, parse_error)
     }
 }
 
+TEST(wasm_engine, instantiate_error)
+{
+    /* wat2wasm
+    (func $extfunc (import "env" "extfunc") (param i32) (result i32))
+    (func $test (export "test")
+      unreachable
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001090260017f017f600000020f0103656e760765787466756e630000030201010708010474"
+        "65737400010a05010300000b");
+
+    // TODO: parse/instantiate is not properly separated in wabt and wasm3
+    // (and wasm3 doesn't care about imports, until execution)
+
+    for (auto engine_create_fn : {create_fizzy_engine})
+    {
+        auto engine = engine_create_fn();
+        ASSERT_TRUE(engine->parse(wasm));
+        ASSERT_FALSE(engine->instantiate());
+    }
+
+    // NOTE: wabt doesn't differentiate between parse/instantiate errors
+    for (auto engine_create_fn : {create_wabt_engine})
+    {
+        auto engine = engine_create_fn();
+        ASSERT_FALSE(engine->parse(wasm));
+    }
+}
+
 TEST(wasm_engine, trapped)
 {
     /* wat2wasm
