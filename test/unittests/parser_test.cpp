@@ -105,61 +105,6 @@ TEST(parser, limits_invalid)
         parse_limits(input.data(), input.data() + input.size()), parser_error, "invalid limits 2");
 }
 
-TEST(parser, code_locals)
-{
-    const auto wasm_locals = "81017f"_bytes;  // 0x81 x i32.
-    const auto wasm =
-        bytes{wasm_prefix} +
-        make_section(10, make_vec({add_size_prefix(make_vec({wasm_locals}) + "0b"_bytes)}));
-
-    const auto module = parse(wasm);
-    ASSERT_EQ(module.codesec.size(), 1);
-    EXPECT_EQ(module.codesec[0].local_count, 0x81);
-}
-
-TEST(parser, code_locals_2)
-{
-    const auto wasm_locals1 = "017e"_bytes;  // 1 x i64.
-    const auto wasm_locals2 = "027f"_bytes;  // 2 x i32.
-    const auto wasm_locals3 = "037e"_bytes;  // 3 x i64.
-    const auto wasm_locals4 = "047e"_bytes;  // 4 x i64.
-    const auto wasm =
-        bytes{wasm_prefix} +
-        make_section(10,
-            make_vec({add_size_prefix(
-                make_vec({wasm_locals1, wasm_locals2, wasm_locals3, wasm_locals4}) + "0b"_bytes)}));
-
-    const auto module = parse(wasm);
-    ASSERT_EQ(module.codesec.size(), 1);
-    EXPECT_EQ(module.codesec[0].local_count, 1 + 2 + 3 + 4);
-}
-
-TEST(parser, code_locals_invalid_type)
-{
-    const auto wasm_locals = "017b"_bytes;  // 1 x <invalid_type>.
-    const auto wasm =
-        bytes{wasm_prefix} +
-        make_section(10, make_vec({add_size_prefix(make_vec({wasm_locals}) + "0b"_bytes)}));
-
-    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "invalid valtype 123");
-}
-
-TEST(parser, code_locals_too_many)
-{
-    const auto large_num = "8080808008"_bytes;  // 0x80000000
-    for (const auto& locals : {
-             make_vec({large_num + "7e"_bytes, large_num + "7e"_bytes}),  // large i64 + large i64
-             make_vec({large_num + "7e"_bytes, large_num + "7f"_bytes}),  // large i64 + large i32
-             make_vec({large_num + "7f"_bytes, large_num + "7f"_bytes})   // large i32 + large i32
-         })
-    {
-        const auto wasm =
-            bytes{wasm_prefix} + make_section(10, make_vec({add_size_prefix(locals + "0b"_bytes)}));
-
-        EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "too many local variables");
-    }
-}
-
 TEST(parser, module_empty)
 {
     const auto module = parse(wasm_prefix);
@@ -226,7 +171,14 @@ TEST(parser, custom_section_out_of_bounds)
     EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
 }
 
-TEST(parser, functype_wrong_prefix)
+TEST(parser, type_section_empty)
+{
+    const auto bin = bytes{wasm_prefix} + make_section(1, make_vec({}));
+    const auto module = parse(bin);
+    EXPECT_EQ(module.typesec.size(), 0);
+}
+
+TEST(parser, type_section_wrong_prefix)
 {
     const auto section_contents =
         "01"
@@ -318,6 +270,13 @@ TEST(parser, type_section_functype_out_of_bounds)
 {
     const auto wasm = bytes{wasm_prefix} + make_section(1, make_vec({""_bytes}));
     EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+}
+
+TEST(parser, import_section_empty)
+{
+    const auto bin = bytes{wasm_prefix} + make_section(2, make_vec({}));
+    const auto module = parse(bin);
+    EXPECT_EQ(module.importsec.size(), 0);
 }
 
 TEST(parser, import_single_function)
@@ -422,6 +381,13 @@ TEST(parser, table_and_imported_table)
         "both module table and imported table are defined (at most one of them is allowed)");
 }
 
+TEST(parser, function_section_empty)
+{
+    const auto bin = bytes{wasm_prefix} + make_section(3, make_vec({}));
+    const auto module = parse(bin);
+    EXPECT_EQ(module.funcsec.size(), 0);
+}
+
 TEST(parser, function_section_with_single_function)
 {
     const auto section_contents = "0100"_bytes;
@@ -447,6 +413,13 @@ TEST(parser, function_section_end_out_of_bounds)
 {
     const auto wasm = bytes{wasm_prefix} + make_invalid_size_section(3, 2, {});
     EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+}
+
+TEST(parser, table_section_empty)
+{
+    const auto bin = bytes{wasm_prefix} + make_section(4, make_vec({}));
+    const auto module = parse(bin);
+    EXPECT_EQ(module.tablesec.size(), 0);
 }
 
 TEST(parser, table_single_min_limit)
@@ -501,6 +474,13 @@ TEST(parser, table_elemtype_out_of_bounds)
     EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
 }
 
+TEST(parser, memory_section_empty)
+{
+    const auto bin = bytes{wasm_prefix} + make_section(5, make_vec({}));
+    const auto module = parse(bin);
+    EXPECT_EQ(module.memorysec.size(), 0);
+}
+
 TEST(parser, memory_single_min_limit)
 {
     const auto section_contents = "01007f"_bytes;
@@ -545,6 +525,13 @@ TEST(parser, memory_limits_kind_out_of_bounds)
 {
     const auto wasm = bytes{wasm_prefix} + make_section(5, make_vec({""_bytes}));
     EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+}
+
+TEST(parser, global_section_empty)
+{
+    const auto bin = bytes{wasm_prefix} + make_section(6, make_vec({}));
+    const auto module = parse(bin);
+    EXPECT_EQ(module.globalsec.size(), 0);
 }
 
 TEST(parser, global_single_mutable_const_inited)
@@ -644,6 +631,13 @@ TEST(parser, global_constant_expression_out_of_bounds)
     // i32, immutable, i64_const, 0x808081, EOF.
     const auto wasm4 = bytes{wasm_prefix} + make_section(6, make_vec({"7f0042808081"_bytes}));
     EXPECT_THROW_MESSAGE(parse(wasm4), parser_error, "Unexpected EOF");
+}
+
+TEST(parser, export_section_empty)
+{
+    const auto bin = bytes{wasm_prefix} + make_section(7, make_vec({}));
+    const auto module = parse(bin);
+    EXPECT_EQ(module.exportsec.size(), 0);
 }
 
 TEST(parser, export_single_function)
@@ -764,6 +758,13 @@ TEST(parser, start_index_decode_out_of_bounds)
     EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
 }
 
+TEST(parser, element_section_empty)
+{
+    const auto bin = bytes{wasm_prefix} + make_section(9, make_vec({}));
+    const auto module = parse(bin);
+    EXPECT_EQ(module.elementsec.size(), 0);
+}
+
 TEST(parser, element_section)
 {
     const auto table_contents = bytes{0x01, 0x70, 0x00, 0x7f};
@@ -806,6 +807,68 @@ TEST(parser, element_section_no_table_section)
         bytes{wasm_prefix} + make_section(9, make_vec({"000b"_bytes + make_vec({"00"_bytes})}));
     EXPECT_THROW_MESSAGE(
         parse(wasm), parser_error, "element section encountered without a table section");
+}
+
+TEST(parser, code_section_empty)
+{
+    const auto bin = bytes{wasm_prefix} + make_section(10, make_vec({}));
+    const auto module = parse(bin);
+    EXPECT_EQ(module.codesec.size(), 0);
+}
+
+TEST(parser, code_locals)
+{
+    const auto wasm_locals = "81017f"_bytes;  // 0x81 x i32.
+    const auto wasm =
+        bytes{wasm_prefix} +
+        make_section(10, make_vec({add_size_prefix(make_vec({wasm_locals}) + "0b"_bytes)}));
+
+    const auto module = parse(wasm);
+    ASSERT_EQ(module.codesec.size(), 1);
+    EXPECT_EQ(module.codesec[0].local_count, 0x81);
+}
+
+TEST(parser, code_locals_2)
+{
+    const auto wasm_locals1 = "017e"_bytes;  // 1 x i64.
+    const auto wasm_locals2 = "027f"_bytes;  // 2 x i32.
+    const auto wasm_locals3 = "037e"_bytes;  // 3 x i64.
+    const auto wasm_locals4 = "047e"_bytes;  // 4 x i64.
+    const auto wasm =
+        bytes{wasm_prefix} +
+        make_section(10,
+            make_vec({add_size_prefix(
+                make_vec({wasm_locals1, wasm_locals2, wasm_locals3, wasm_locals4}) + "0b"_bytes)}));
+
+    const auto module = parse(wasm);
+    ASSERT_EQ(module.codesec.size(), 1);
+    EXPECT_EQ(module.codesec[0].local_count, 1 + 2 + 3 + 4);
+}
+
+TEST(parser, code_locals_invalid_type)
+{
+    const auto wasm_locals = "017b"_bytes;  // 1 x <invalid_type>.
+    const auto wasm =
+        bytes{wasm_prefix} +
+        make_section(10, make_vec({add_size_prefix(make_vec({wasm_locals}) + "0b"_bytes)}));
+
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "invalid valtype 123");
+}
+
+TEST(parser, code_locals_too_many)
+{
+    const auto large_num = "8080808008"_bytes;  // 0x80000000
+    for (const auto& locals : {
+             make_vec({large_num + "7e"_bytes, large_num + "7e"_bytes}),  // large i64 + large i64
+             make_vec({large_num + "7e"_bytes, large_num + "7f"_bytes}),  // large i64 + large i32
+             make_vec({large_num + "7f"_bytes, large_num + "7f"_bytes})   // large i32 + large i32
+         })
+    {
+        const auto wasm =
+            bytes{wasm_prefix} + make_section(10, make_vec({add_size_prefix(locals + "0b"_bytes)}));
+
+        EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "too many local variables");
+    }
 }
 
 TEST(parser, code_with_empty_expr_2_locals)
@@ -1007,6 +1070,13 @@ TEST(parser, code_section_size_too_large)
     const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
 
     EXPECT_THROW_MESSAGE(parse(bin), parser_error, "malformed size field for function");
+}
+
+TEST(parser, data_section_empty)
+{
+    const auto bin = bytes{wasm_prefix} + make_section(11, make_vec({}));
+    const auto module = parse(bin);
+    EXPECT_EQ(module.datasec.size(), 0);
 }
 
 TEST(parser, data_section)
