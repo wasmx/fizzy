@@ -5,6 +5,29 @@
 using namespace fizzy;
 using namespace fizzy::test;
 
+TEST(wasm_engine, trapped)
+{
+    /* wat2wasm
+    (func $test (export "test")
+      unreachable
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d0100000001040160000003020100070801047465737400000a05010300000b");
+
+    for (auto engine_create_fn : {create_fizzy_engine, create_wabt_engine, create_wasm3_engine})
+    {
+        auto engine = engine_create_fn();
+        ASSERT_TRUE(engine->parse(wasm));
+        ASSERT_TRUE(engine->instantiate());
+        const auto func = engine->find_function("test");
+        ASSERT_TRUE(func.has_value());
+        const auto result = engine->execute(*func, {});
+        ASSERT_TRUE(result.trapped);
+        ASSERT_FALSE(result.value.has_value());
+    }
+}
+
 TEST(wasm_engine, multi_i32_args_ret_i32)
 {
     /* wat2wasm
