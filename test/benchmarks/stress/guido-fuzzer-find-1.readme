@@ -1,0 +1,11 @@
+This is a fuzzer find for a parsing/instantiation blow up. The generated code is
+not supposed to run successfully (it traps). Additionally Wasm3 due to a bug fails to run it.
+
+It can however be run with the following inputs file:
+main
+main
+iii:i
+0 0 0
+
+
+
