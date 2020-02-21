@@ -143,10 +143,21 @@ TEST(parser, custom_section_empty)
     EXPECT_EQ(module.codesec.size(), 0);
 }
 
-TEST(parser, custom_section_nonempty)
+TEST(parser, custom_section_nonempty_name_only)
 {
     // Section consists of only the name "abc"
     const auto bin = bytes{wasm_prefix} + make_section(0, "03616263"_bytes);
+    const auto module = parse(bin);
+    EXPECT_EQ(module.typesec.size(), 0);
+    EXPECT_EQ(module.funcsec.size(), 0);
+    EXPECT_EQ(module.codesec.size(), 0);
+}
+
+TEST(parser, custom_section_nonempty)
+{
+    // Section consists of the name "abc" and 14 bytes of unparsed data
+    const auto bin =
+        bytes{wasm_prefix} + make_section(0, "036162630000112233445566778899000099"_bytes);
     const auto module = parse(bin);
     EXPECT_EQ(module.typesec.size(), 0);
     EXPECT_EQ(module.funcsec.size(), 0);
