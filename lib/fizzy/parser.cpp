@@ -401,6 +401,13 @@ inline parser_result<Data> parse(const uint8_t* pos, const uint8_t* end)
     return {{offset, std::move(init)}, pos};
 }
 
+inline const uint8_t* parse_custom_section(const uint8_t* pos, const uint8_t* end)
+{
+    // NOTE: this section can be ignored, but the name must be parseable (and valid UTF-8)
+    parse_string(pos, end);
+    return end;
+}
+
 Module parse(bytes_view input)
 {
     if (input.substr(0, wasm_prefix.size()) != wasm_prefix)
@@ -464,10 +471,7 @@ Module parse(bytes_view input)
             std::tie(module.datasec, it) = parse_vec<Data>(it, input.end());
             break;
         case SectionId::custom:
-            // NOTE: this section can be ignored, but the name must be parseable (and valid UTF-8)
-            parse_string(it, expected_section_end);
-            // These sections are ignored for now.
-            it += size;
+            it = parse_custom_section(it, expected_section_end);
             break;
         default:
             throw parser_error{
