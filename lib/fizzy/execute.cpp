@@ -2,6 +2,7 @@
 #include "limits.hpp"
 #include "stack.hpp"
 #include "types.hpp"
+#include <algorithm>
 #include <cassert>
 #include <cstring>
 
@@ -1439,4 +1440,31 @@ std::optional<FuncIdx> find_exported_function(const Module& module, std::string_
 
     return {};
 }
+
+std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::string_view name)
+{
+    const auto it = std::find_if(instance.module.exportsec.begin(), instance.module.exportsec.end(),
+        [&name](const auto& export_) {
+            return export_.kind == ExternalKind::Global && export_.name == name;
+        });
+
+    if (it == instance.module.exportsec.end())
+        return std::nullopt;
+
+    const auto global_idx = it->index;
+    if (global_idx < instance.imported_globals.size())
+    {
+        // imported global is reexported
+        return ExternalGlobal{instance.imported_globals[global_idx].value,
+            instance.imported_globals[global_idx].is_mutable};
+    }
+    else
+    {
+        // global owned by instance
+        const auto module_global_idx = global_idx - instance.imported_globals.size();
+        return ExternalGlobal{&instance.globals[module_global_idx],
+            instance.module.globalsec[module_global_idx].is_mutable};
+    }
+}
+
 }  // namespace fizzy
