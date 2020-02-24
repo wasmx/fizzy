@@ -92,17 +92,21 @@ public:
                     instances[name] = fizzy::instantiate(std::move(module),
                         std::move(imports->functions), std::move(imports->tables),
                         std::move(imports->memories), std::move(imports->globals));
+
+                    last_module_name = name;
                 }
                 catch (const fizzy::parser_error& ex)
                 {
                     fail(std::string{"Parsing failed with error: "} + ex.what());
                     instances.erase(name);
+                    last_module_name.clear();
                     continue;
                 }
                 catch (const fizzy::instantiate_error& ex)
                 {
                     fail(std::string{"Instantiation failed with error: "} + ex.what());
                     instances.erase(name);
+                    last_module_name.clear();
                     continue;
                 }
                 pass();
@@ -270,7 +274,8 @@ private:
     fizzy::Instance* find_instance_for_action(const json& action)
     {
         const auto module_name =
-            (action.find("module") != action.end() ? action["module"] : UnnamedModule);
+            (action.find("module") != action.end() ? action["module"].get<std::string>() :
+                                                     last_module_name);
 
         const auto it_instance = instances.find(module_name);
         if (it_instance == instances.end())
@@ -439,6 +444,7 @@ private:
     test_settings settings;
     std::unordered_map<std::string, fizzy::Instance> instances;
     std::unordered_map<std::string, std::string> registered_names;
+    std::string last_module_name;
     test_results results;
 };
 
