@@ -26,6 +26,8 @@ inline parser_result<uint32_t> parse(const uint8_t* pos, const uint8_t* end)
     return leb128u_decode<uint32_t>(pos, end);
 }
 
+parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end);
+
 template <>
 inline parser_result<ValType> parse(const uint8_t* pos, const uint8_t* end)
 {

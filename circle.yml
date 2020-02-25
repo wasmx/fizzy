@@ -63,9 +63,13 @@ commands:
     description: "Run benchmarks"
     steps:
       - run:
-          name: "Run benchmarks"
+          name: "Run wasm engine benchmarks"
           working_directory: ~/build
           command: bin/fizzy-bench ~/project/test/benchmarks
+      - run:
+          name: "Run fizzy internal benchmarks"
+          working_directory: ~/build
+          command: bin/fizzy-bench-internal
 
 jobs:
 
