@@ -394,7 +394,7 @@ inline void binary_op(Stack<uint64_t>& stack, Op op) noexcept
     using T = decltype(op(stack.pop(), stack.pop()));
     const auto val2 = static_cast<T>(stack.pop());
     const auto val1 = static_cast<T>(stack.pop());
-    stack.push(static_cast<uint64_t>(op(val1, val2)));
+    stack.push(static_cast<std::make_unsigned_t<T>>(op(val1, val2)));
 }
 
 template <typename T, template <typename> class Op>
