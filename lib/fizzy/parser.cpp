@@ -5,6 +5,7 @@
 
 namespace fizzy
 {
+/* FIXME: use this in functions parsing a single byte (and rename this to parse_byte) OR remove this
 template <>
 inline parser_result<uint8_t> parse(const uint8_t* pos, const uint8_t* end)
 {
@@ -13,6 +14,7 @@ inline parser_result<uint8_t> parse(const uint8_t* pos, const uint8_t* end)
 
     return {*pos, pos + 1};
 }
+*/
 
 template <>
 inline parser_result<FuncType> parse(const uint8_t* pos, const uint8_t* end)
