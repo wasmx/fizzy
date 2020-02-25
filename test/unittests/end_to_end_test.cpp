@@ -141,45 +141,34 @@ TEST(end_to_end, memset)
 {
     /* wat2wasm
     (module
-      (type (;0;) (func))
-      (type (;1;) (func (param i32 i32)))
-      (func (;0;) (type 0))
-      (func (;1;) (type 1) (param i32 i32)
-        block  ;; label = @1
-          local.get 1
+      (func (export "test") (param $p0 i32) (param $p1 i32)
+        block $B0
+          local.get $p1
           i32.const 1
           i32.lt_s
-          br_if 0 (;@1;)
-          loop  ;; label = @2
-            local.get 0
+          br_if $B0
+          loop $L1
+            local.get $p0
             i32.const 1234
             i32.store
-            local.get 0
+            local.get $p0
             i32.const 4
             i32.add
-            local.set 0
-            local.get 1
+            local.set $p0
+            local.get $p1
             i32.const -1
             i32.add
-            local.tee 1
-            br_if 0 (;@2;)
+            local.tee $p1
+            br_if $L1
         end
       end)
-    (table (;0;) 1 1 funcref)
-    (memory (;0;) 2)
-    (global (;0;) (mut i32) (i32.const 66560))
-    (global (;1;) i32 (i32.const 66560))
-    (global (;2;) i32 (i32.const 1024))
-    (export "test" (func 1))
-    (export "memory" (memory 0))
-    (export "__heap_base" (global 1))
-    (export "__data_end" (global 2)))
+      (memory 1)
+      (export "memory" (memory 0))
+    )
     */
     const auto wasm = from_hex(
-        "0061736d0100000001090260000060027f7f0003030200010405017001010105030100020615037f0141808804"
-        "0b7f00418088040b7f004180080b072c0404746573740001066d656d6f727902000b5f5f686561705f62617365"
-        "03010a5f5f646174615f656e6403020a2c0202000b2700024020014101480d000340200041d209360200200041"
-        "046a21002001417f6a22010d000b0b0b");
+        "0061736d0100000001060160027f7f0003020100050301000107110204746573740000066d656d6f727902000a"
+        "29012700024020014101480d000340200041d209360200200041046a21002001417f6a22010d000b0b0b");
 
     const auto module = parse(wasm);
 
