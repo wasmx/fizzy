@@ -1497,4 +1497,38 @@ std::optional<ExternalTable> find_exported_table(Instance& instance, std::string
     }
 }
 
+std::optional<ExternalMemory> find_exported_memory(Instance& instance, std::string_view name)
+{
+    const auto it = std::find_if(instance.module.exportsec.begin(), instance.module.exportsec.end(),
+        [&name](const auto& export_) {
+            return export_.kind == ExternalKind::Memory && export_.name == name;
+        });
+
+    if (it == instance.module.exportsec.end())
+        return std::nullopt;
+
+    if (instance.module.memorysec.size() == 1)
+    {
+        // memory owned by instance
+        return ExternalMemory{instance.memory.get(), instance.module.memorysec[0].limits};
+    }
+    else
+    {
+        // imported memory is reexported
+        const auto it_import =
+            std::find_if(instance.module.importsec.begin(), instance.module.importsec.end(),
+                [](const auto& import) { return import.kind == ExternalKind::Memory; });
+        assert(it_import != instance.module.importsec.end());
+
+        // FIXME: Limits min here is not correct: memory could have been imported with limits
+        // narrower than the ones defined in module's import definition, we save only max during
+        // instantiate, but not min.
+        Limits limits = it_import->desc.memory.limits;
+        if (instance.memory_max_pages < MemoryPagesLimit)
+            limits.max = instance.memory_max_pages;
+
+        return ExternalMemory{instance.memory.get(), limits};
+    }
+}
+
 }  // namespace fizzy

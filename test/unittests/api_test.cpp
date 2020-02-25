@@ -1,6 +1,7 @@
 #include "execute.hpp"
 #include "parser.hpp"
 #include <gtest/gtest.h>
+#include <lib/fizzy/limits.hpp>
 #include <test/utils/hex.hpp>
 
 using namespace fizzy;
@@ -234,4 +235,106 @@ TEST(api, DISABLED_find_exported_table_reimport)
 
     // importing the same table into the module with equal limits, instantiate should succeed
     instantiate(parse(wasm_reimported_table), {}, {*opt_table});
+}
+
+TEST(api, find_exported_memory)
+{
+    /* wat2wasm
+    (module
+      (func $f (export "f") nop)
+      (global (export "g1") i32 (i32.const 0))
+      (table (export "tab") 0 anyfunc)
+      (memory (export "mem") 1 2)
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010401600000030201000404017000000504010101020606017f0041000b07160401660000"
+        "0267310300037461620100036d656d02000a05010300010b");
+
+    auto instance = instantiate(parse(wasm));
+
+    auto opt_memory = find_exported_memory(instance, "mem");
+    ASSERT_TRUE(opt_memory);
+    EXPECT_EQ(opt_memory->data->size(), PageSize);
+    EXPECT_EQ(opt_memory->limits.min, 1);
+    ASSERT_TRUE(opt_memory->limits.max.has_value());
+    EXPECT_EQ(opt_memory->limits.max, 2);
+
+    EXPECT_FALSE(find_exported_memory(instance, "mem2").has_value());
+
+    /* wat2wasm
+    (module
+      (memory (import "test" "memory") 1 10)
+      (export "mem" (memory 0))
+      (func $f (export "f") nop)
+      (global (export "g1") i32 (i32.const 0))
+      (table (export "tab") 0 anyfunc)
+    )
+    */
+    const auto wasm_reexported_memory = from_hex(
+        "0061736d010000000104016000000211010474657374066d656d6f72790201010a030201000404017000000606"
+        "017f0041000b071604036d656d02000166000002673103000374616201000a05010300010b");
+
+    bytes memory(PageSize, 0);
+    auto instance_reexported_memory =
+        instantiate(parse(wasm_reexported_memory), {}, {}, {ExternalMemory{&memory, {1, 4}}});
+
+    opt_memory = find_exported_memory(instance_reexported_memory, "mem");
+    ASSERT_TRUE(opt_memory);
+    EXPECT_EQ(opt_memory->data, &memory);
+    EXPECT_EQ(opt_memory->limits.min, 1);
+    ASSERT_TRUE(opt_memory->limits.max.has_value());
+    EXPECT_EQ(opt_memory->limits.max, 4);
+
+    EXPECT_FALSE(find_exported_memory(instance, "memory").has_value());
+
+    /* wat2wasm
+    (module
+      (func $f (export "f") nop)
+      (global (export "g1") i32 (i32.const 0))
+      (table (export "tab") 0 anyfunc)
+    )
+    */
+    const auto wasm_no_memory = from_hex(
+        "0061736d01000000010401600000030201000404017000000606017f0041000b07100301660000026731030003"
+        "74616201000a05010300010b");
+
+    auto instance_no_memory = instantiate(parse(wasm_no_memory));
+
+    EXPECT_FALSE(find_exported_table(instance_no_memory, "mem").has_value());
+}
+
+TEST(api, DISABLED_find_exported_memory_reimport)
+{
+    /* wat2wasm
+    (module
+      (memory (import "test" "memory") 1 10)
+      (export "mem" (memory 0))
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d010000000211010474657374066d656d6f72790201010a070701036d656d0200");
+
+    // importing the memory with limits narrower than defined in the module
+    bytes memory(2 * PageSize, 0);
+    auto instance = instantiate(parse(wasm), {}, {}, {ExternalMemory{&memory, {2, 5}}});
+
+    auto opt_memory = find_exported_memory(instance, "mem");
+    ASSERT_TRUE(opt_memory);
+    EXPECT_EQ(opt_memory->data, &memory);
+    // table should have the limits it was imported with
+    EXPECT_EQ(opt_memory->limits.min, 2);
+    ASSERT_TRUE(opt_memory->limits.max.has_value());
+    EXPECT_EQ(*opt_memory->limits.max, 5);
+
+    /* wat2wasm
+    (module
+      (memory (import "test" "memory") 2 5)
+    )
+    */
+    const auto wasm_reimported_memory =
+        from_hex("0061736d010000000211010474657374066d656d6f727902010205");
+
+    // importing the same table into the module with equal limits, instantiate should succeed
+    instantiate(parse(wasm_reimported_memory), {}, {}, {*opt_memory});
 }

@@ -83,4 +83,7 @@ std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::stri
 // Find exported table by name.
 std::optional<ExternalTable> find_exported_table(Instance& instance, std::string_view name);
 
+// Find exported memory by name.
+std::optional<ExternalMemory> find_exported_memory(Instance& instance, std::string_view name);
+
 }  // namespace fizzy
