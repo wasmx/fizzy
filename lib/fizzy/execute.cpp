@@ -385,7 +385,7 @@ inline void unary_op(Stack<uint64_t>& stack, Op op) noexcept
 {
     using T = decltype(op(stack.pop()));
     const auto a = static_cast<T>(stack.pop());
-    stack.push(static_cast<uint64_t>(op(a)));
+    stack.push(op(a));
 }
 
 template <typename Op>
