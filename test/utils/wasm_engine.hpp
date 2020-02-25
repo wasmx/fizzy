@@ -27,15 +27,15 @@ public:
     /// Consecutive invocations replace the internal module and invalidate the internal instance.
     virtual bool parse(bytes_view input) = 0;
 
-    /// Finds an exported function in the internal instance.
-    /// Requires parse().
-    virtual std::optional<FuncRef> find_function(std::string_view name) const = 0;
-
     /// Instantiates the internal module creating an internal instance.
     /// Returns false on instantiation error.
     /// Consecutive invocations replace the internal instance with a new one.
     /// Requires parse().
     virtual bool instantiate() = 0;
+
+    /// Finds an exported function in the internal instance.
+    /// Requires instantiate().
+    virtual std::optional<FuncRef> find_function(std::string_view name) const = 0;
 
     /// Returns the entire memory of the internal instance.
     /// It must return memory index 0 and the size must be a multiple of the page size.
