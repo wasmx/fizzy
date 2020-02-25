@@ -39,17 +39,6 @@ inline parser_result<uint32_t> parse(const uint8_t* pos, const uint8_t* end)
     return leb128u_decode<uint32_t>(pos, end);
 }
 
-/* FIXME: use this in functions parsing a single byte (and rename this to parse_byte) OR remove this
-template <>
-inline parser_result<uint8_t> parse(const uint8_t* pos, const uint8_t* end)
-{
-    if (pos == end)
-        throw parser_error{"Unexpected EOF"};
-
-    return {*pos, pos + 1};
-}
-*/
-
 ValType validate_valtype(uint8_t byte)
 {
     switch (byte)
@@ -70,27 +59,17 @@ ValType validate_valtype(uint8_t byte)
 template <>
 parser_result<ValType> parse(const uint8_t* pos, const uint8_t* end)
 {
-    if (pos == end)
-        throw parser_error{"Unexpected EOF"};
-
-    const auto byte = *pos++;
+    uint8_t byte;
+    std::tie(byte, pos) = parse_byte(pos, end);
     const auto valtype = validate_valtype(byte);
     return {valtype, pos};
-}
-
-const uint8_t* validate_valtype(const uint8_t* pos, const uint8_t* end)
-{
-    const auto [_, next_pos] = parse<ValType>(pos, end);
-    return next_pos;
 }
 
 template <>
 inline parser_result<FuncType> parse(const uint8_t* pos, const uint8_t* end)
 {
-    if (pos == end)
-        throw parser_error{"Unexpected EOF"};
-
-    const uint8_t kind = *pos++;
+    uint8_t kind;
+    std::tie(kind, pos) = parse_byte(pos, end);
     if (kind != 0x60)
     {
         throw parser_error{
@@ -107,10 +86,8 @@ inline std::tuple<bool, const uint8_t*> parse_global_type(const uint8_t* pos, co
 {
     std::tie(std::ignore, pos) = parse<ValType>(pos, end);
 
-    if (pos == end)
-        throw parser_error{"Unexpected EOF"};
-
-    const uint8_t mutability = *pos++;
+    uint8_t mutability;
+    std::tie(mutability, pos) = parse_byte(pos, end);
     if (mutability != 0x00 && mutability != 0x01)
     {
         throw parser_error{"unexpected byte value " + std::to_string(mutability) +
@@ -129,10 +106,10 @@ inline parser_result<ConstantExpression> parse_constant_expression(
     Instr instr;
     do
     {
-        if (pos == end)
-            throw parser_error{"Unexpected EOF"};
+        uint8_t opcode;
+        std::tie(opcode, pos) = parse_byte(pos, end);
 
-        instr = static_cast<Instr>(*pos++);
+        instr = static_cast<Instr>(opcode);
         switch (instr)
         {
         default:
@@ -220,10 +197,8 @@ inline parser_result<Limits> parse_limits(const uint8_t* pos, const uint8_t* end
 template <>
 inline parser_result<Table> parse(const uint8_t* pos, const uint8_t* end)
 {
-    if (pos == end)
-        throw parser_error{"Unexpected EOF"};
-
-    const uint8_t elemtype = *pos++;
+    uint8_t elemtype;
+    std::tie(elemtype, pos) = parse_byte(pos, end);
     if (elemtype != FuncRef)
         throw parser_error{"unexpected table elemtype: " + std::to_string(elemtype)};
 
@@ -264,10 +239,8 @@ inline parser_result<Import> parse(const uint8_t* pos, const uint8_t* end)
     std::tie(result.module, pos) = parse_string(pos, end);
     std::tie(result.name, pos) = parse_string(pos, end);
 
-    if (pos == end)
-        throw parser_error{"Unexpected EOF"};
-
-    const uint8_t kind = *pos++;
+    uint8_t kind;
+    std::tie(kind, pos) = parse_byte(pos, end);
     switch (kind)
     {
     case 0x00:
@@ -299,10 +272,8 @@ inline parser_result<Export> parse(const uint8_t* pos, const uint8_t* end)
     Export result;
     std::tie(result.name, pos) = parse_string(pos, end);
 
-    if (pos == end)
-        throw parser_error{"Unexpected EOF"};
-
-    const uint8_t kind = *pos++;
+    uint8_t kind;
+    std::tie(kind, pos) = parse_byte(pos, end);
     switch (kind)
     {
     case 0x00:
