@@ -15,8 +15,9 @@ inline void store(uint8_t* dst, T value) noexcept
 template <typename T>
 inline void push(bytes& b, T value)
 {
-    b.resize(b.size() + sizeof(value));
-    store(&b[b.size() - sizeof(value)], value);
+    uint8_t storage[sizeof(T)];
+    store(storage, value);
+    b.append(storage, sizeof(storage));
 }
 
 struct LabelPosition
