@@ -79,4 +79,8 @@ std::optional<FuncIdx> find_exported_function(const Module& module, std::string_
 
 // Find exported global by name.
 std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::string_view name);
+
+// Find exported table by name.
+std::optional<ExternalTable> find_exported_table(Instance& instance, std::string_view name);
+
 }  // namespace fizzy

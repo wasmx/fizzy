@@ -1467,4 +1467,34 @@ std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::stri
     }
 }
 
+std::optional<ExternalTable> find_exported_table(Instance& instance, std::string_view name)
+{
+    const auto it = std::find_if(instance.module.exportsec.begin(), instance.module.exportsec.end(),
+        [&name](const auto& export_) {
+            return export_.kind == ExternalKind::Table && export_.name == name;
+        });
+
+    if (it == instance.module.exportsec.end())
+        return std::nullopt;
+
+    if (instance.module.tablesec.size() == 1)
+    {
+        // table owned by instance
+        return ExternalTable{instance.table.get(), instance.module.tablesec[0].limits};
+    }
+    else
+    {
+        // imported table is reexported
+        const auto it_import =
+            std::find_if(instance.module.importsec.begin(), instance.module.importsec.end(),
+                [](const auto& import) { return import.kind == ExternalKind::Table; });
+        assert(it_import != instance.module.importsec.end());
+
+        // FIXME: Limits here are not exactly correct: table could have been imported with limits
+        // narrower than the ones defined in module's import definition, we don't save those during
+        // instantiate.
+        return ExternalTable{instance.table.get(), it_import->desc.table.limits};
+    }
+}
+
 }  // namespace fizzy
