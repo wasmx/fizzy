@@ -479,6 +479,16 @@ inline uint64_t popcnt64(uint64_t value) noexcept
 {
     return static_cast<uint64_t>(__builtin_popcountll(value));
 }
+
+std::optional<uint32_t> find_export(
+    const Instance& instance, ExternalKind kind, std::string_view name)
+{
+    const auto it = std::find_if(instance.module.exportsec.begin(), instance.module.exportsec.end(),
+        [kind, name](const auto& export_) { return export_.kind == kind && export_.name == name; });
+
+    return (it != instance.module.exportsec.end() ? std::make_optional(it->index) : std::nullopt);
+}
+
 }  // namespace
 
 Instance instantiate(Module module, std::vector<ExternalFunction> imported_functions,
@@ -1443,15 +1453,11 @@ std::optional<FuncIdx> find_exported_function(const Module& module, std::string_
 
 std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::string_view name)
 {
-    const auto it = std::find_if(instance.module.exportsec.begin(), instance.module.exportsec.end(),
-        [&name](const auto& export_) {
-            return export_.kind == ExternalKind::Global && export_.name == name;
-        });
-
-    if (it == instance.module.exportsec.end())
+    const auto opt_index = find_export(instance, ExternalKind::Global, name);
+    if (!opt_index.has_value())
         return std::nullopt;
 
-    const auto global_idx = it->index;
+    const auto global_idx = *opt_index;
     if (global_idx < instance.imported_globals.size())
     {
         // imported global is reexported
@@ -1469,12 +1475,7 @@ std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::stri
 
 std::optional<ExternalTable> find_exported_table(Instance& instance, std::string_view name)
 {
-    const auto it = std::find_if(instance.module.exportsec.begin(), instance.module.exportsec.end(),
-        [&name](const auto& export_) {
-            return export_.kind == ExternalKind::Table && export_.name == name;
-        });
-
-    if (it == instance.module.exportsec.end())
+    if (!find_export(instance, ExternalKind::Table, name))
         return std::nullopt;
 
     if (instance.module.tablesec.size() == 1)
@@ -1499,12 +1500,7 @@ std::optional<ExternalTable> find_exported_table(Instance& instance, std::string
 
 std::optional<ExternalMemory> find_exported_memory(Instance& instance, std::string_view name)
 {
-    const auto it = std::find_if(instance.module.exportsec.begin(), instance.module.exportsec.end(),
-        [&name](const auto& export_) {
-            return export_.kind == ExternalKind::Memory && export_.name == name;
-        });
-
-    if (it == instance.module.exportsec.end())
+    if (!find_export(instance, ExternalKind::Memory, name))
         return std::nullopt;
 
     if (instance.module.memorysec.size() == 1)
