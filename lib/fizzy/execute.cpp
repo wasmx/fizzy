@@ -356,7 +356,8 @@ inline bool load_from_memory(bytes_view memory, Stack<uint64_t>& stack, const ui
     const auto address = static_cast<uint32_t>(stack.pop());
     // NOTE: alignment is dropped by the parser
     const auto offset = read<uint32_t>(immediates);
-    if ((address + offset + sizeof(SrcT)) > memory.size())
+    // Addressing is 32-bit, but we keep the value as 64-bit to detect overflows.
+    if ((uint64_t{address} + offset + sizeof(SrcT)) > memory.size())
         return false;
 
     const auto ret = load<SrcT>(memory, address + offset);
@@ -371,7 +372,8 @@ inline bool store_into_memory(bytes& memory, Stack<uint64_t>& stack, const uint8
     const auto address = static_cast<uint32_t>(stack.pop());
     // NOTE: alignment is dropped by the parser
     const auto offset = read<uint32_t>(immediates);
-    if ((address + offset + sizeof(DstT)) > memory.size())
+    // Addressing is 32-bit, but we keep the value as 64-bit to detect overflows.
+    if ((uint64_t{address} + offset + sizeof(DstT)) > memory.size())
         return false;
 
     store<DstT>(memory, address + offset, value);

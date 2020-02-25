@@ -278,6 +278,24 @@ TEST(execute, i32_load_imported_memory)
     ASSERT_TRUE(execute(instance, 0, {65537}).trapped);
 }
 
+TEST(execute, i32_load_overflow)
+{
+    Module module;
+    module.memorysec.emplace_back(Memory{{1, 1}});
+    // NOTE: this is i32.load offset=0x7fffffff
+    module.codesec.emplace_back(Code{
+        0, {Instr::local_get, Instr::i32_load, Instr::end}, {0, 0, 0, 0, 0xff, 0xff, 0xff, 0x7f}});
+
+    auto instance = instantiate(module);
+
+    // Offset is 0x7fffffff + 0 => 0x7fffffff
+    ASSERT_TRUE(execute(instance, 0, {0}).trapped);
+    // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
+    ASSERT_TRUE(execute(instance, 0, {0x80000000}).trapped);
+    // Offset is 0x7fffffff + 0x80000001 => 0x100000000
+    ASSERT_TRUE(execute(instance, 0, {0x80000001}).trapped);
+}
+
 TEST(execute, i64_load)
 {
     Module module;
@@ -295,6 +313,24 @@ TEST(execute, i64_load)
     ASSERT_EQ(ret[0], 0x2a0000002a);
 
     ASSERT_TRUE(execute(instance, 0, {65537}).trapped);
+}
+
+TEST(execute, i64_load_overflow)
+{
+    Module module;
+    module.memorysec.emplace_back(Memory{{1, 1}});
+    // NOTE: this is i64.load offset=0x7fffffff
+    module.codesec.emplace_back(Code{
+        0, {Instr::local_get, Instr::i64_load, Instr::end}, {0, 0, 0, 0, 0xff, 0xff, 0xff, 0x7f}});
+
+    auto instance = instantiate(module);
+
+    // Offset is 0x7fffffff + 0 => 0x7fffffff
+    ASSERT_TRUE(execute(instance, 0, {0}).trapped);
+    // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
+    ASSERT_TRUE(execute(instance, 0, {0x80000000}).trapped);
+    // Offset is 0x7fffffff + 0x80000001 => 0x100000000
+    ASSERT_TRUE(execute(instance, 0, {0x80000001}).trapped);
 }
 
 TEST(execute, i32_load8_s)
@@ -538,6 +574,25 @@ TEST(execute, i32_store_imported_memory)
     ASSERT_TRUE(execute(instance, 0, {42, 65537}).trapped);
 }
 
+TEST(execute, i32_store_overflow)
+{
+    Module module;
+    module.memorysec.emplace_back(Memory{{1, 1}});
+    // NOTE: this is i32.store offset=0x7fffffff
+    module.codesec.emplace_back(
+        Code{0, {Instr::local_get, Instr::i32_const, Instr::i32_store, Instr::end},
+            {0, 0, 0, 0, 0x55, 0xaa, 0x55, 0xaa, 0xff, 0xff, 0xff, 0x7f}});
+
+    auto instance = instantiate(module);
+
+    // Offset is 0x7fffffff + 0 => 0x7fffffff
+    ASSERT_TRUE(execute(instance, 0, {0}).trapped);
+    // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
+    ASSERT_TRUE(execute(instance, 0, {0x80000000}).trapped);
+    // Offset is 0x7fffffff + 0x80000001 => 0x100000000
+    ASSERT_TRUE(execute(instance, 0, {0x80000001}).trapped);
+}
+
 TEST(execute, i64_store)
 {
     Module module;
@@ -554,6 +609,25 @@ TEST(execute, i64_store)
     ASSERT_EQ(instance.memory->substr(0, 8), from_hex("2a0000002a000000"));
 
     ASSERT_TRUE(execute(instance, 0, {0x2a0000002a, 65537}).trapped);
+}
+
+TEST(execute, i64_store_overflow)
+{
+    Module module;
+    module.memorysec.emplace_back(Memory{{1, 1}});
+    // NOTE: this is i64.store offset=0x7fffffff
+    module.codesec.emplace_back(
+        Code{0, {Instr::local_get, Instr::i32_const, Instr::i64_store, Instr::end},
+            {0, 0, 0, 0, 0x55, 0xaa, 0x55, 0xaa, 0xff, 0xff, 0xff, 0x7f}});
+
+    auto instance = instantiate(module);
+
+    // Offset is 0x7fffffff + 0 => 0x7fffffff
+    ASSERT_TRUE(execute(instance, 0, {0}).trapped);
+    // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
+    ASSERT_TRUE(execute(instance, 0, {0x80000000}).trapped);
+    // Offset is 0x7fffffff + 0x80000001 => 0x100000000
+    ASSERT_TRUE(execute(instance, 0, {0x80000001}).trapped);
 }
 
 TEST(execute, i32_store8)
