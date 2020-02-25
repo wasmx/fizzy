@@ -19,7 +19,7 @@ public:
     using std::vector<T>::resize;
     using std::vector<T>::size;
 
-    void push(T val) { emplace_back(val); }
+    inline void push(T val) { emplace_back(val); }
 
     T pop()
     {
@@ -28,7 +28,7 @@ public:
         return res;
     }
 
-    T peek(size_t depth = 0) const noexcept { return (*this)[size() - depth - 1]; }
+    inline T peek(size_t depth = 0) const noexcept { return (*this)[size() - depth - 1]; }
 
     /// Drops @a num_elements elements from the top of the stack.
     void drop(size_t num_elements = 1) noexcept { resize(size() - num_elements); }
