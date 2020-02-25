@@ -7,7 +7,7 @@ using namespace fizzy;
 
 TEST(end_to_end, milestone1)
 {
-    /*
+    /* wat2wasm
     (module
       (func $add (param $lhs i32) (param $rhs i32) (result i32)
         (local $local1 i32)
@@ -22,10 +22,9 @@ TEST(end_to_end, milestone1)
       )
     )
     */
-
-    const auto bin = from_hex(
+    const auto wasm = from_hex(
         "0061736d0100000001070160027f7f017f030201000a13011101017f200020016a20026a220220006a0b");
-    const auto module = parse(bin);
+    const auto module = parse(wasm);
 
     const auto [trap, ret] = execute(module, 0, {20, 22});
 
@@ -140,43 +139,38 @@ TEST(end_to_end, nested_loops_in_c)
 
 TEST(end_to_end, memset)
 {
-    /*
-    (func $test (export "test") (type $t1) (param $p0 i32) (param $p1 i32)
-    block $B0
-      get_local $p1
-      i32.const 1
-      i32.lt_s
-      br_if $B0
-      loop $L1
-        get_local $p0
-        i32.const 1234
-        i32.store
-        get_local $p0
-        i32.const 4
-        i32.add
-        set_local $p0
-        get_local $p1
-        i32.const -1
-        i32.add
-        tee_local $p1
-        br_if $L1
-      end
-    end)
+    /* wat2wasm
+    (module
+      (func (export "test") (param $p0 i32) (param $p1 i32)
+        block $B0
+          local.get $p1
+          i32.const 1
+          i32.lt_s
+          br_if $B0
+          loop $L1
+            local.get $p0
+            i32.const 1234
+            i32.store
+            local.get $p0
+            i32.const 4
+            i32.add
+            local.set $p0
+            local.get $p1
+            i32.const -1
+            i32.add
+            local.tee $p1
+            br_if $L1
+        end
+      end)
+      (memory 1)
+      (export "memory" (memory 0))
+    )
     */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160027f7f0003020100050301000107110204746573740000066d656d6f727902000a"
+        "29012700024020014101480d000340200041d209360200200041046a21002001417f6a22010d000b0b0b");
 
-    const auto bin = from_hex(
-        "0061736d01000000"
-        "01090260000060027f7f00"
-        "0303020001"
-        "04050170010101"
-        "0503010002"
-        "0615037f01418088040b7f00418088040b7f004180080b"
-        "072c"
-        "0404746573740001066d656d6f727902000b5f5f686561705f6261736503010a5f5f646174615f656e640302"
-        "0a2c"
-        "0202000b2700024020014101480d000340200041d209360200200041046a21002001417f6a22010d000b0b0b");
-
-    const auto module = parse(bin);
+    const auto module = parse(wasm);
 
     const auto func_idx = find_exported_function(module, "test");
     ASSERT_TRUE(func_idx);
