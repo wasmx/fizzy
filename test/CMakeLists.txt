@@ -10,3 +10,7 @@ add_subdirectory(bench)
 add_subdirectory(bench_internal)
 add_subdirectory(spectests)
 add_subdirectory(unittests)
+
+if(FIZZY_FUZZING)
+    add_subdirectory(fuzzer)
+endif()
