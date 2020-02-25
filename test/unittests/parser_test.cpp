@@ -1142,9 +1142,9 @@ TEST(parser, interleaved_custom_section)
     const auto type_section = make_vec({functype_void_to_void});
     const auto func_section = make_vec({"00"_bytes});
     const auto code_section = make_vec({add_size_prefix("000b"_bytes)});
-    const auto bin = bytes{wasm_prefix} + make_section(0, "01aa"_bytes) +
-                     make_section(1, type_section) + make_section(0, "01bb"_bytes) +
-                     make_section(3, func_section) + make_section(0, "01cc"_bytes) +
+    const auto bin = bytes{wasm_prefix} + make_section(0, "0161"_bytes) +
+                     make_section(1, type_section) + make_section(0, "0162"_bytes) +
+                     make_section(3, func_section) + make_section(0, "0163"_bytes) +
                      make_section(10, code_section);
 
     const auto module = parse(bin);
