@@ -5,6 +5,7 @@
 
 namespace fizzy
 {
+/* FIXME: use this in functions parsing a single byte (and rename this to parse_byte) OR remove this
 template <>
 inline parser_result<uint8_t> parse(const uint8_t* pos, const uint8_t* end)
 {
@@ -13,6 +14,7 @@ inline parser_result<uint8_t> parse(const uint8_t* pos, const uint8_t* end)
 
     return {*pos, pos + 1};
 }
+*/
 
 template <>
 inline parser_result<FuncType> parse(const uint8_t* pos, const uint8_t* end)
@@ -139,12 +141,18 @@ inline parser_result<Memory> parse(const uint8_t* pos, const uint8_t* end)
 
 parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end)
 {
-    std::vector<uint8_t> value;
-    std::tie(value, pos) = parse_vec<uint8_t>(pos, end);
+    // NOTE: this is an optimised version of parse_vec<uint8_t>
+    uint32_t size;
+    std::tie(size, pos) = leb128u_decode<uint32_t>(pos, end);
+
+    if ((pos + size) > end)
+        throw parser_error{"Unexpected EOF"};
 
     // FIXME: need to validate that string is a valid UTF-8
+    auto ret = std::string(pos, pos + size);
+    pos += size;
 
-    return {std::string(value.begin(), value.end()), pos};
+    return {std::move(ret), pos};
 }
 
 template <>
@@ -278,10 +286,17 @@ inline parser_result<Data> parse(const uint8_t* pos, const uint8_t* end)
     ConstantExpression offset;
     std::tie(offset, pos) = parse_constant_expression(pos, end);
 
-    std::vector<uint8_t> init;
-    std::tie(init, pos) = parse_vec<uint8_t>(pos, end);
+    // NOTE: this is an optimised version of parse_vec<uint8_t>
+    uint32_t size;
+    std::tie(size, pos) = leb128u_decode<uint32_t>(pos, end);
 
-    return {{offset, bytes(init.data(), init.size())}, pos};
+    if ((pos + size) > end)
+        throw parser_error{"Unexpected EOF"};
+
+    auto init = bytes(pos, pos + size);
+    pos += size;
+
+    return {{offset, std::move(init)}, pos};
 }
 
 Module parse(bytes_view input)
