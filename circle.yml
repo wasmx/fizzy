@@ -82,7 +82,7 @@ jobs:
     - run:
         name: "Run codespell"
         command: |
-          codespell --quiet-level=4
+          codespell --quiet-level=4 -I .codespell-whitelist
     - run:
         name: "Install wabt"
         working_directory: ~/bin

@@ -263,7 +263,7 @@ TEST(instantiate, imported_globals)
     module.importsec.emplace_back(Import{"mod", "g", ExternalKind::Global, {true}});
 
     uint64_t global_value = 42;
-    ImportedGlobal g{&global_value, true};
+    ExternalGlobal g{&global_value, true};
     auto instance = instantiate(module, {}, {}, {}, {g});
 
     ASSERT_EQ(instance.imported_globals.size(), 1);
@@ -279,9 +279,9 @@ TEST(instantiate, imported_globals_multiple)
     module.importsec.emplace_back(Import{"mod", "g2", ExternalKind::Global, {false}});
 
     uint64_t global_value1 = 42;
-    ImportedGlobal g1{&global_value1, true};
+    ExternalGlobal g1{&global_value1, true};
     uint64_t global_value2 = 43;
-    ImportedGlobal g2{&global_value2, false};
+    ExternalGlobal g2{&global_value2, false};
     auto instance = instantiate(module, {}, {}, {}, {g1, g2});
 
     ASSERT_EQ(instance.imported_globals.size(), 2);
@@ -299,7 +299,7 @@ TEST(instantiate, imported_globals_mismatched_count)
     module.importsec.emplace_back(Import{"mod", "g2", ExternalKind::Global, {false}});
 
     uint64_t global_value = 42;
-    ImportedGlobal g{&global_value, true};
+    ExternalGlobal g{&global_value, true};
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {g}), instantiate_error,
         "Module requires 2 imported globals, 1 provided");
 }
@@ -311,9 +311,9 @@ TEST(instantiate, imported_globals_mismatched_mutability)
     module.importsec.emplace_back(Import{"mod", "g2", ExternalKind::Global, {false}});
 
     uint64_t global_value1 = 42;
-    ImportedGlobal g1{&global_value1, false};
+    ExternalGlobal g1{&global_value1, false};
     uint64_t global_value2 = 42;
-    ImportedGlobal g2{&global_value2, true};
+    ExternalGlobal g2{&global_value2, true};
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {g1, g2}), instantiate_error,
         "Global 0 mutability doesn't match module's global mutability");
 }
@@ -324,7 +324,7 @@ TEST(instantiate, imported_globals_nullptr)
     module.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {false}});
     module.importsec.emplace_back(Import{"mod", "g2", ExternalKind::Global, {false}});
 
-    ImportedGlobal g{nullptr, false};
+    ExternalGlobal g{nullptr, false};
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {g, g}), instantiate_error,
         "Global 0 has a null pointer to value");
 }
@@ -436,7 +436,7 @@ TEST(instantiate, element_section_offset_from_imported_global)
         Element{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
 
     uint64_t global_value = 1;
-    ImportedGlobal g{&global_value, false};
+    ExternalGlobal g{&global_value, false};
 
     auto instance = instantiate(module, {}, {}, {}, {g});
 
@@ -533,7 +533,7 @@ TEST(instantiate, data_section_offset_from_imported_global)
     module.datasec.emplace_back(Data{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
 
     uint64_t global_value = 42;
-    ImportedGlobal g{&global_value, false};
+    ExternalGlobal g{&global_value, false};
 
     auto instance = instantiate(module, {}, {}, {}, {g});
 
@@ -612,7 +612,7 @@ TEST(instantiate, globals_with_imported)
     module.globalsec.emplace_back(Global{false, {ConstantExpression::Kind::Constant, {43}}});
 
     uint64_t global_value = 41;
-    ImportedGlobal g{&global_value, true};
+    ExternalGlobal g{&global_value, true};
 
     auto instance = instantiate(module, {}, {}, {}, {g});
 
@@ -631,7 +631,7 @@ TEST(instantiate, globals_initialized_from_imported)
     module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::GlobalGet, {0}}});
 
     uint64_t global_value = 42;
-    ImportedGlobal g{&global_value, false};
+    ExternalGlobal g{&global_value, false};
 
     auto instance = instantiate(module, {}, {}, {}, {g});
 
@@ -644,7 +644,7 @@ TEST(instantiate, globals_initialized_from_imported)
     module_invalid1.globalsec.emplace_back(
         Global{true, {ConstantExpression::Kind::GlobalGet, {0}}});
 
-    ImportedGlobal g_mutable{&global_value, true};
+    ExternalGlobal g_mutable{&global_value, true};
 
     EXPECT_THROW_MESSAGE(instantiate(module_invalid1, {}, {}, {}, {g_mutable}), instantiate_error,
         "Constant expression can use global_get only for const globals.");

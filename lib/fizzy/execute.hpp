@@ -20,23 +20,23 @@ struct execution_result
 
 struct Instance;
 
-using ImportedFunction = std::function<execution_result(Instance&, std::vector<uint64_t>)>;
+using ExternalFunction = std::function<execution_result(Instance&, std::vector<uint64_t>)>;
 
 using table_ptr = std::unique_ptr<std::vector<FuncIdx>, void (*)(std::vector<FuncIdx>*)>;
 
-struct ImportedTable
+struct ExternalTable
 {
     std::vector<FuncIdx>* table = nullptr;
     Limits limits;
 };
 
-struct ImportedMemory
+struct ExternalMemory
 {
     bytes* data = nullptr;
     Limits limits;
 };
 
-struct ImportedGlobal
+struct ExternalGlobal
 {
     uint64_t* value = nullptr;
     bool is_mutable = false;
@@ -57,16 +57,16 @@ struct Instance
     // For these cases unique_ptr would either have a normal deleter or noop deleter respectively.
     table_ptr table = {nullptr, [](std::vector<FuncIdx>*) {}};
     std::vector<uint64_t> globals;
-    std::vector<ImportedFunction> imported_functions;
+    std::vector<ExternalFunction> imported_functions;
     std::vector<TypeIdx> imported_function_types;
-    std::vector<ImportedGlobal> imported_globals;
+    std::vector<ExternalGlobal> imported_globals;
 };
 
 // Instantiate a module.
-Instance instantiate(Module module, std::vector<ImportedFunction> imported_functions = {},
-    std::vector<ImportedTable> imported_tables = {},
-    std::vector<ImportedMemory> imported_memories = {},
-    std::vector<ImportedGlobal> imported_globals = {});
+Instance instantiate(Module module, std::vector<ExternalFunction> imported_functions = {},
+    std::vector<ExternalTable> imported_tables = {},
+    std::vector<ExternalMemory> imported_memories = {},
+    std::vector<ExternalGlobal> imported_globals = {});
 
 // Execute a function on an instance.
 execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint64_t> args);

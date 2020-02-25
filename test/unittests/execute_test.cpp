@@ -315,7 +315,7 @@ TEST(execute, global_get_imported)
     module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
 
     uint64_t global_value = 42;
-    auto instance = instantiate(module, {}, {}, {}, {ImportedGlobal{&global_value, false}});
+    auto instance = instantiate(module, {}, {}, {}, {ExternalGlobal{&global_value, false}});
 
     const auto [trap, ret] = execute(instance, 0, {});
 
@@ -354,7 +354,7 @@ TEST(execute, global_get_imported_and_internal)
     uint64_t g1 = 40;
     uint64_t g2 = 41;
     auto instance =
-        instantiate(module, {}, {}, {}, {ImportedGlobal{&g1, false}, ImportedGlobal{&g2, false}});
+        instantiate(module, {}, {}, {}, {ExternalGlobal{&g1, false}, ExternalGlobal{&g2, false}});
 
     EXPECT_RESULT(execute(instance, 0, {}), 40);
     EXPECT_RESULT(execute(instance, 1, {}), 41);
@@ -405,7 +405,7 @@ TEST(execute, global_set_imported)
         Code{0, {Instr::i32_const, Instr::global_set, Instr::end}, {42, 0, 0, 0, 0, 0, 0, 0}});
 
     uint64_t global_value = 41;
-    auto instance = instantiate(module, {}, {}, {}, {ImportedGlobal{&global_value, true}});
+    auto instance = instantiate(module, {}, {}, {}, {ExternalGlobal{&global_value, true}});
 
     const auto [trap, ret] = execute(instance, 0, {});
 
