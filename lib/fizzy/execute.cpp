@@ -609,13 +609,13 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
             const auto target_imm = read<uint32_t>(immediates);
             LabelContext label{code.instructions.data() + target_pc,
                 code.immediates.data() + target_imm, arity, stack.size()};
-            labels.emplace_back(label);
+            labels.push(label);
             break;
         }
         case Instr::loop:
         {
             LabelContext label{pc - 1, immediates, 0, stack.size()};  // Target this instruction.
-            labels.push_back(label);
+            labels.push(label);
             break;
         }
         case Instr::if_:
@@ -630,7 +630,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
 
                 LabelContext label{code.instructions.data() + target_pc,
                     code.immediates.data() + target_imm, arity, stack.size()};
-                labels.emplace_back(label);
+                labels.push(label);
             }
             else
             {
@@ -641,7 +641,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
                 {
                     LabelContext label{code.instructions.data() + target_pc,
                         code.immediates.data() + target_imm, arity, stack.size()};
-                    labels.emplace_back(label);
+                    labels.push(label);
                     pc = code.instructions.data() + target_else_pc;
                     immediates = code.immediates.data() + target_else_imm;
                 }
@@ -668,7 +668,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         case Instr::end:
         {
             if (!labels.empty())
-                labels.pop_back();
+                labels.pop();
             else
                 goto end;
             break;
@@ -1437,7 +1437,10 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
 end:
     assert(labels.empty() || trap);
     // move allows to return derived Stack<uint64_t> instance into base vector<uint64_t> value
-    return {trap, std::move(stack)};
+    if (stack.empty())
+        return {trap, {}};
+    else
+        return {trap, {stack.pop()}};
 }
 
 execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uint64_t> args)

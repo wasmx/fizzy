@@ -239,7 +239,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end)
             code.immediates.push_back(arity);
 
             // Push label with immediates offset after arity.
-            label_positions.push_back({Instr::block, code.immediates.size()});
+            label_positions.push({Instr::block, code.immediates.size()});
 
             // Placeholders for immediate values, filled at the matching end instruction.
             push(code.immediates, uint32_t{0});  // Diff to the end instruction.
@@ -250,7 +250,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end)
         case Instr::loop:
         {
             std::tie(std::ignore, pos) = parse_blocktype(pos, end);
-            label_positions.push_back({Instr::loop, 0});  // Mark as not interested.
+            label_positions.push({Instr::loop, 0});  // Mark as not interested.
             break;
         }
 
@@ -260,7 +260,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end)
             std::tie(arity, pos) = parse_blocktype(pos, end);
             code.immediates.push_back(arity);
 
-            label_positions.push_back({Instr::if_, code.immediates.size()});
+            label_positions.push({Instr::if_, code.immediates.size()});
 
             // Placeholders for immediate values, filled at the matching end and else instructions.
             push(code.immediates, uint32_t{0});  // Diff to the end instruction.
