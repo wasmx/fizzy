@@ -22,11 +22,12 @@ struct Instance;
 
 using ExternalFunction = std::function<execution_result(Instance&, std::vector<uint64_t>)>;
 
-using table_ptr = std::unique_ptr<std::vector<FuncIdx>, void (*)(std::vector<FuncIdx>*)>;
+using table_elements = std::vector<std::optional<FuncIdx>>;
+using table_ptr = std::unique_ptr<table_elements, void (*)(table_elements*)>;
 
 struct ExternalTable
 {
-    std::vector<FuncIdx>* table = nullptr;
+    table_elements* table = nullptr;
     Limits limits;
 };
 
@@ -55,7 +56,7 @@ struct Instance
     size_t memory_max_pages = 0;
     // Table is either allocated and owned by the instance or imported and owned externally.
     // For these cases unique_ptr would either have a normal deleter or noop deleter respectively.
-    table_ptr table = {nullptr, [](std::vector<FuncIdx>*) {}};
+    table_ptr table = {nullptr, [](table_elements*) {}};
     std::vector<uint64_t> globals;
     std::vector<ExternalFunction> imported_functions;
     std::vector<TypeIdx> imported_function_types;

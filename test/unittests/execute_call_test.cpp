@@ -158,7 +158,7 @@ TEST(execute_call, call_indirect_imported_table)
 
     const Module module = parse(bin);
 
-    std::vector<FuncIdx> table{2, 1, 0, 3, 4};
+    table_elements table{2, 1, 0, 3, 4};
     auto instance = instantiate(module, {}, {{&table, {5, 20}}});
 
     for (const auto param : {0u, 1u, 2u})
