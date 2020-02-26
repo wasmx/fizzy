@@ -592,8 +592,8 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
     std::vector<uint64_t> locals = std::move(args);
     locals.resize(locals.size() + code.local_count);
 
-    // TODO: preallocate fixed stack depth properly
     Stack<uint64_t> stack;
+    stack.reserve(code.max_stack_depth);
 
     Stack<LabelContext> labels;
 
