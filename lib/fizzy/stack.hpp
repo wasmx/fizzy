@@ -19,6 +19,8 @@ public:
     using std::vector<T>::resize;
     using std::vector<T>::size;
 
+    // Also used: size(), resize(), clear(), empty(), end()
+
     void push(T val) { emplace_back(val); }
 
     T pop()
