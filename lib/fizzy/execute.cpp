@@ -2,6 +2,7 @@
 #include "limits.hpp"
 #include "stack.hpp"
 #include "types.hpp"
+#include <algorithm>
 #include <cassert>
 #include <cstring>
 
@@ -478,6 +479,16 @@ inline uint64_t popcnt64(uint64_t value) noexcept
 {
     return static_cast<uint64_t>(__builtin_popcountll(value));
 }
+
+std::optional<uint32_t> find_export(
+    const Instance& instance, ExternalKind kind, std::string_view name)
+{
+    const auto it = std::find_if(instance.module.exportsec.begin(), instance.module.exportsec.end(),
+        [kind, name](const auto& export_) { return export_.kind == kind && export_.name == name; });
+
+    return (it != instance.module.exportsec.end() ? std::make_optional(it->index) : std::nullopt);
+}
+
 }  // namespace
 
 Instance instantiate(Module module, std::vector<ExternalFunction> imported_functions,
@@ -1439,4 +1450,92 @@ std::optional<FuncIdx> find_exported_function(const Module& module, std::string_
 
     return {};
 }
+
+std::optional<ExternalFunction> find_exported_function(Instance& instance, std::string_view name)
+{
+    const auto opt_index = find_export(instance, ExternalKind::Function, name);
+    if (!opt_index.has_value())
+        return std::nullopt;
+
+    return [idx = *opt_index, &instance](fizzy::Instance&, std::vector<uint64_t> args) {
+        return execute(instance, idx, std::move(args));
+    };
+}
+
+std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::string_view name)
+{
+    const auto opt_index = find_export(instance, ExternalKind::Global, name);
+    if (!opt_index.has_value())
+        return std::nullopt;
+
+    const auto global_idx = *opt_index;
+    if (global_idx < instance.imported_globals.size())
+    {
+        // imported global is reexported
+        return ExternalGlobal{instance.imported_globals[global_idx].value,
+            instance.imported_globals[global_idx].is_mutable};
+    }
+    else
+    {
+        // global owned by instance
+        const auto module_global_idx = global_idx - instance.imported_globals.size();
+        return ExternalGlobal{&instance.globals[module_global_idx],
+            instance.module.globalsec[module_global_idx].is_mutable};
+    }
+}
+
+std::optional<ExternalTable> find_exported_table(Instance& instance, std::string_view name)
+{
+    if (!find_export(instance, ExternalKind::Table, name))
+        return std::nullopt;
+
+    if (instance.module.tablesec.size() == 1)
+    {
+        // table owned by instance
+        return ExternalTable{instance.table.get(), instance.module.tablesec[0].limits};
+    }
+    else
+    {
+        // imported table is reexported
+        const auto it_import =
+            std::find_if(instance.module.importsec.begin(), instance.module.importsec.end(),
+                [](const auto& import) { return import.kind == ExternalKind::Table; });
+        assert(it_import != instance.module.importsec.end());
+
+        // FIXME: Limits here are not exactly correct: table could have been imported with limits
+        // narrower than the ones defined in module's import definition, we don't save those during
+        // instantiate.
+        return ExternalTable{instance.table.get(), it_import->desc.table.limits};
+    }
+}
+
+std::optional<ExternalMemory> find_exported_memory(Instance& instance, std::string_view name)
+{
+    if (!find_export(instance, ExternalKind::Memory, name))
+        return std::nullopt;
+
+    if (instance.module.memorysec.size() == 1)
+    {
+        // memory owned by instance
+        return ExternalMemory{instance.memory.get(), instance.module.memorysec[0].limits};
+    }
+    else
+    {
+        // imported memory is reexported
+        const auto it_import =
+            std::find_if(instance.module.importsec.begin(), instance.module.importsec.end(),
+                [](const auto& import) { return import.kind == ExternalKind::Memory; });
+        assert(it_import != instance.module.importsec.end());
+
+        // FIXME: Limits min here is not correct: memory could have been imported with limits
+        // narrower than the ones defined in module's import definition, we save only max during
+        // instantiate, but not min.
+        Limits limits = it_import->desc.memory.limits;
+        if (instance.memory_max_pages < MemoryPagesLimit)
+            limits.max = instance.memory_max_pages;
+
+        return ExternalMemory{instance.memory.get(), limits};
+    }
+}
+
 }  // namespace fizzy
