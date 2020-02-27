@@ -1,5 +1,6 @@
 #include "parser.hpp"
 #include <benchmark/benchmark.h>
+#include <test/utils/leb128_encode.hpp>
 #include <algorithm>
 #include <random>
 #include <vector>
@@ -8,8 +9,6 @@ std::pair<uint64_t, const uint8_t*> nop(const uint8_t* p, const uint8_t* end);
 std::pair<uint64_t, const uint8_t*> leb128u_decode_u64_noinline(
     const uint8_t* input, const uint8_t* end);
 std::pair<uint64_t, const uint8_t*> decodeULEB128(const uint8_t* p, const uint8_t* end);
-
-fizzy::bytes leb128u_encode(uint64_t value);
 
 namespace
 {
@@ -30,7 +29,7 @@ fizzy::bytes generate_ascii_vec(size_t size)
 {
     std::uniform_int_distribution<uint8_t> dist{0, 0x7f};
 
-    const auto size_encoded = leb128u_encode(size);
+    const auto size_encoded = fizzy::test::leb128u_encode(size);
     fizzy::bytes result;
     result.reserve(size + size_encoded.size());
     result += size_encoded;
@@ -48,7 +47,7 @@ static void leb128u_decode_u64(benchmark::State& state)
     fizzy::bytes input;
     input.reserve(size * ((sizeof(uint64_t) * 8) / 7 + 1));
     for (const auto sample : samples)
-        input += leb128u_encode(sample);
+        input += fizzy::test::leb128u_encode(sample);
 
     benchmark::ClobberMemory();
 

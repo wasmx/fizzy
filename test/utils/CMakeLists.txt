@@ -10,6 +10,8 @@ target_sources(
     fizzy_engine.cpp
     hex.cpp
     hex.hpp
+    leb128_encode.cpp
+    leb128_encode.hpp
     wabt_engine.cpp
     wasm3_engine.cpp
     wasm_engine.hpp
