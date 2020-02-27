@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 #include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
+#include <test/utils/leb128_encode.hpp>
 #include <array>
 
 using namespace fizzy;
@@ -14,14 +15,12 @@ namespace
 {
 bytes add_size_prefix(const bytes& content)
 {
-    assert(content.size() < 0x80);
-    return bytes{static_cast<uint8_t>(content.size())} + content;
+    return test::leb128u_encode(content.size()) + content;
 }
 
 bytes make_vec(std::initializer_list<bytes_view> contents)
 {
-    assert(contents.size() < 0x80);
-    bytes ret{static_cast<uint8_t>(contents.size())};
+    bytes ret = test::leb128u_encode(contents.size());
     for (const auto& content : contents)
         ret.append(content);
     return ret;
@@ -34,8 +33,7 @@ bytes make_section(uint8_t id, const bytes& content)
 
 bytes make_invalid_size_section(uint8_t id, size_t size, const bytes& content)
 {
-    assert(size < 0x80);
-    return bytes{id, static_cast<uint8_t>(size)} + content;
+    return bytes{id} + test::leb128u_encode(size) + content;
 }
 }  // namespace
 
