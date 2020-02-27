@@ -65,6 +65,14 @@ TEST(parser, valtype_vec)
     EXPECT_EQ(vec[2], ValType::i32);
 }
 
+TEST(parser, vec_malformend_huge_size)
+{
+    // Malformed vec as size only without any elements:
+    const auto vec_bin = test::leb128u_encode(std::numeric_limits<uint32_t>::max());
+    const auto wasm_bin = bytes{wasm_prefix} + make_section(1, vec_bin);
+    EXPECT_THROW_MESSAGE(parse(wasm_bin), parser_error, "Unexpected EOF");
+}
+
 TEST(parser, limits_min)
 {
     const auto input = "007f"_bytes;
@@ -445,6 +453,15 @@ TEST(parser, function_section_with_multiple_functions)
     EXPECT_EQ(module.funcsec[1], 1);
     EXPECT_EQ(module.funcsec[2], 0x42);
     EXPECT_EQ(module.funcsec[3], 0xff);
+}
+
+TEST(parser, function_section_size_128)
+{
+    constexpr auto size = 128;
+    const auto section_contents = test::leb128u_encode(size) + bytes(128, 0);
+    const auto wasm_bin = bytes{wasm_prefix} + make_section(3, section_contents);
+    const auto module = parse(wasm_bin);
+    ASSERT_EQ(module.funcsec.size(), size);
 }
 
 TEST(parser, function_section_end_out_of_bounds)
