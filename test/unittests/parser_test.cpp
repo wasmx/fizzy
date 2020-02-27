@@ -189,6 +189,12 @@ TEST(parser, custom_section_out_of_bounds)
     EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
 }
 
+TEST(parser, custom_section_invalid_utf8)
+{
+    const auto bin = bytes{wasm_prefix} + make_section(0, "027f80"_bytes);
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "Invalid UTF-8");
+}
+
 TEST(parser, type_section_empty)
 {
     const auto bin = bytes{wasm_prefix} + make_section(1, make_vec({}));
@@ -362,6 +368,22 @@ TEST(parser, import_kind_out_of_bounds)
 {
     const auto wasm = bytes{wasm_prefix} + make_section(2, make_vec({"0000"_bytes}));
     EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+}
+
+TEST(parser, import_invalid_utf8_in_module)
+{
+    const auto section_contents =
+        bytes{0x01, 0x03, 'm', 0x80, 'd', 0x03, 'f', 'o', 'o', 0x00, 0x42};
+    const auto wasm = bytes{wasm_prefix} + make_section(2, section_contents);
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Invalid UTF-8");
+}
+
+TEST(parser, import_invalid_utf8_in_name)
+{
+    const auto section_contents =
+        bytes{0x01, 0x03, 'm', 'o', 'd', 0x03, 'f', 0x80, 'o', 0x00, 0x42};
+    const auto wasm = bytes{wasm_prefix} + make_section(2, section_contents);
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Invalid UTF-8");
 }
 
 TEST(parser, memory_and_imported_memory)
@@ -703,6 +725,13 @@ TEST(parser, export_kind_out_of_bounds)
 {
     const auto wasm = bytes{wasm_prefix} + make_section(7, make_vec({"00"_bytes}));
     EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+}
+
+TEST(parser, export_invalid_utf8)
+{
+    const auto section_contents = make_vec({bytes{0x03, 'a', 0x80, 'c', 0x00, 0x42}});
+    const auto wasm = bytes{wasm_prefix} + make_section(7, section_contents);
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Invalid UTF-8");
 }
 
 TEST(parser, export_name_out_of_bounds)
@@ -1142,9 +1171,9 @@ TEST(parser, interleaved_custom_section)
     const auto type_section = make_vec({functype_void_to_void});
     const auto func_section = make_vec({"00"_bytes});
     const auto code_section = make_vec({add_size_prefix("000b"_bytes)});
-    const auto bin = bytes{wasm_prefix} + make_section(0, "01aa"_bytes) +
-                     make_section(1, type_section) + make_section(0, "01bb"_bytes) +
-                     make_section(3, func_section) + make_section(0, "01cc"_bytes) +
+    const auto bin = bytes{wasm_prefix} + make_section(0, "0161"_bytes) +
+                     make_section(1, type_section) + make_section(0, "0162"_bytes) +
+                     make_section(3, func_section) + make_section(0, "0163"_bytes) +
                      make_section(10, code_section);
 
     const auto module = parse(bin);
