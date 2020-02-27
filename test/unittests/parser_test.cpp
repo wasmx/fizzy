@@ -474,6 +474,14 @@ TEST(parser, function_section_end_out_of_bounds)
     EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
 }
 
+TEST(parser, function_section_without_code)
+{
+    const auto function_section = "0100"_bytes;
+    const auto bin = bytes{wasm_prefix} + make_section(3, function_section);
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error,
+        "malformed binary: number of function and code entries must match");
+}
+
 TEST(parser, table_section_empty)
 {
     const auto bin = bytes{wasm_prefix} + make_section(4, make_vec({}));
@@ -1165,6 +1173,16 @@ TEST(parser, code_section_size_too_large)
     const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
 
     EXPECT_THROW_MESSAGE(parse(bin), parser_error, "malformed size field for function");
+}
+
+TEST(parser, code_section_without_function_section)
+{
+    const auto code_bin = "02000b"_bytes;
+    const auto section_contents = make_vec({code_bin});
+    const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
+
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error,
+        "malformed binary: number of function and code entries must match");
 }
 
 TEST(parser, data_section_empty)
