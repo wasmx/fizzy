@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <type_traits>
 #include <unordered_map>
 
 namespace fs = std::filesystem;
@@ -18,7 +19,7 @@ constexpr auto UnnamedModule = "_unnamed";
 template <typename T>
 uint64_t json_to_value(const json& v)
 {
-    return static_cast<uint64_t>(static_cast<T>(std::stoull(v.get<std::string>())));
+    return static_cast<std::make_unsigned_t<T>>(std::stoull(v.get<std::string>()));
 }
 
 fizzy::bytes load_wasm_file(const fs::path& json_file_path, std::string_view filename)
@@ -122,24 +123,17 @@ public:
 
                     const auto expected_type = expected.at(0).at("type").get<std::string>();
                     uint64_t expected_value;
-                    uint64_t actual_value;
                     if (expected_type == "i32")
-                    {
                         expected_value = json_to_value<int32_t>(expected.at(0).at("value"));
-                        actual_value =
-                            static_cast<uint64_t>(static_cast<int32_t>(result->stack[0]));
-                    }
                     else if (expected_type == "i64")
-                    {
                         expected_value = json_to_value<int64_t>(expected.at(0).at("value"));
-                        actual_value = result->stack[0];
-                    }
                     else
                     {
                         skip("Unsupported expected type '" + expected_type + "'.");
                         continue;
                     }
 
+                    const uint64_t actual_value = result->stack[0];
                     if (expected_value != actual_value)
                     {
                         std::stringstream message;
