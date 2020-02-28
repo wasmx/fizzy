@@ -18,6 +18,27 @@ inline parser_result<uint8_t> parse(const uint8_t* pos, const uint8_t* end)
 */
 
 template <>
+parser_result<ValType> parse(const uint8_t* pos, const uint8_t* end)
+{
+    if (pos == end)
+        throw parser_error{"Unexpected EOF"};
+
+    const auto b = *pos++;
+    switch (b)
+    {
+    case 0x7F:
+        return {ValType::i32, pos};
+    case 0x7E:
+        return {ValType::i64, pos};
+    case 0x7D:  // f32
+    case 0x7C:  // f64
+        throw parser_error{"unsupported valtype (floating point)"};
+    default:
+        throw parser_error{"invalid valtype " + std::to_string(b)};
+    }
+}
+
+template <>
 inline parser_result<FuncType> parse(const uint8_t* pos, const uint8_t* end)
 {
     if (pos == end)

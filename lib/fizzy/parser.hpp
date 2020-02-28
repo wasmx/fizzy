@@ -28,27 +28,6 @@ inline parser_result<uint32_t> parse(const uint8_t* pos, const uint8_t* end)
 
 parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end);
 
-template <>
-inline parser_result<ValType> parse(const uint8_t* pos, const uint8_t* end)
-{
-    if (pos == end)
-        throw parser_error{"Unexpected EOF"};
-
-    const auto b = *pos++;
-    switch (b)
-    {
-    case 0x7F:
-        return {ValType::i32, pos};
-    case 0x7E:
-        return {ValType::i64, pos};
-    case 0x7D:  // f32
-    case 0x7C:  // f64
-        throw parser_error{"unsupported valtype (floating point)"};
-    default:
-        throw parser_error{"invalid valtype " + std::to_string(b)};
-    }
-}
-
 inline parser_result<Limits> parse_limits(const uint8_t* pos, const uint8_t* end)
 {
     if (pos == end)
