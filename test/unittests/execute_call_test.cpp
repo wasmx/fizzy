@@ -158,7 +158,7 @@ TEST(execute_call, call_indirect_imported_table)
 
     const Module module = parse(bin);
 
-    std::vector<FuncIdx> table{2, 1, 0, 3, 4};
+    table_elements table{2, 1, 0, 3, 4};
     auto instance = instantiate(module, {}, {{&table, {5, 20}}});
 
     for (const auto param : {0u, 1u, 2u})
@@ -179,6 +179,33 @@ TEST(execute_call, call_indirect_imported_table)
 
     // argument out of table bounds
     EXPECT_TRUE(execute(instance, 5, {5}).trapped);
+}
+
+TEST(execute_call, call_indirect_uninited_table)
+{
+    /* wat2wasm
+      (type $out-i32 (func (result i32)))
+
+      (table 5 anyfunc)
+      (elem (i32.const 0) $f3 $f2 $f1)
+
+      (func $f1 (result i32) i32.const 1)
+      (func $f2 (result i32) i32.const 2)
+      (func $f3 (result i32) i32.const 3)
+
+      (func (param i32) (result i32)
+        (call_indirect (type $out-i32) (get_local 0))
+      )
+    */
+    const auto bin = from_hex(
+        "0061736d01000000010a026000017f60017f017f030504000000010404017000050909010041000b030201000a"
+        "1804040041010b040041020b040041030b070020001100000b");
+
+    const Module module = parse(bin);
+
+    // elements 3 and 4 are not initialized
+    EXPECT_TRUE(execute(module, 3, {3}).trapped);
+    EXPECT_TRUE(execute(module, 3, {4}).trapped);
 }
 
 TEST(execute_call, imported_function_call)

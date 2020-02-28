@@ -177,8 +177,8 @@ std::vector<TypeIdx> match_imports(const Module& module,
 table_ptr allocate_table(
     const std::vector<Table>& module_tables, const std::vector<ExternalTable>& imported_tables)
 {
-    static const auto table_delete = [](std::vector<FuncIdx>* t) noexcept { delete t; };
-    static const auto null_delete = [](std::vector<FuncIdx>*) noexcept {};
+    static const auto table_delete = [](table_elements* t) noexcept { delete t; };
+    static const auto null_delete = [](table_elements*) noexcept {};
 
     if (module_tables.size() + imported_tables.size() > 1)
     {
@@ -187,7 +187,7 @@ table_ptr allocate_table(
         throw instantiate_error("Cannot support more than 1 table section.");
     }
     else if (module_tables.size() == 1)
-        return {new std::vector<FuncIdx>(module_tables[0].limits.min), table_delete};
+        return {new table_elements(module_tables[0].limits.min), table_delete};
     else if (imported_tables.size() == 1)
         return {imported_tables[0].table, null_delete};
     else
@@ -740,14 +740,20 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
             }
 
             const auto called_func_idx = (*instance.table)[elem_idx];
-            assert(called_func_idx <
+            if (!called_func_idx.has_value())
+            {
+                trap = true;
+                goto end;
+            }
+
+            assert(*called_func_idx <
                    instance.imported_functions.size() + instance.module.funcsec.size());
 
             // check actual type against expected type
             const auto actual_type_idx =
                 called_func_idx < instance.imported_functions.size() ?
-                    instance.imported_function_types[called_func_idx] :
-                    instance.module.funcsec[called_func_idx - instance.imported_functions.size()];
+                    instance.imported_function_types[*called_func_idx] :
+                    instance.module.funcsec[*called_func_idx - instance.imported_functions.size()];
             assert(actual_type_idx < instance.module.typesec.size());
             const auto& expected_type = instance.module.typesec[expected_type_idx];
             const auto& actual_type = instance.module.typesec[actual_type_idx];
@@ -758,7 +764,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
                 goto end;
             }
 
-            if (!invoke_function(actual_type_idx, called_func_idx, instance, stack))
+            if (!invoke_function(actual_type_idx, *called_func_idx, instance, stack))
             {
                 trap = true;
                 goto end;

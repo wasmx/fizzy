@@ -234,7 +234,7 @@ TEST(api, find_exported_table)
         "0061736d010000000104016000000211010474657374057461626c650170010214030302000005030100000606"
         "017f0041000b071604037461620100016600000267310300036d656d02000a09020300010b0300010b");
 
-    std::vector<FuncIdx> table = {1, 0};
+    table_elements table = {1, 0};
     auto instance_reexported_table =
         instantiate(parse(wasm_reexported_table), {}, {ExternalTable{&table, {2, 20}}});
 
@@ -275,7 +275,7 @@ TEST(api, DISABLED_find_exported_table_reimport)
         from_hex("0061736d010000000211010474657374057461626c650170010214070701037461620100");
 
     // importing the table with limits narrower than defined in the module
-    std::vector<FuncIdx> table(5);
+    table_elements table(5);
     auto instance = instantiate(parse(wasm), {}, {ExternalTable{&table, {5, 10}}});
 
     auto opt_table = find_exported_table(instance, "tab");
