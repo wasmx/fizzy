@@ -2,21 +2,6 @@
 #include <cstdint>
 #include <utility>
 
-// Adapted from LLVM.
-// https://github.com/llvm/llvm-project/blob/master/llvm/include/llvm/Support/LEB128.h#L80
-fizzy::bytes leb128u_encode(uint64_t value)
-{
-    fizzy::bytes result;
-    do
-    {
-        uint8_t byte = value & 0x7f;
-        value >>= 7;
-        if (value != 0)
-            byte |= 0x80;  // Mark this byte to show that more bytes will follow.
-        result.push_back(byte);
-    } while (value != 0);
-    return result;
-}
 
 std::pair<uint64_t, const uint8_t*> nop(const uint8_t* p, const uint8_t* end)
 {

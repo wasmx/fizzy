@@ -79,7 +79,13 @@ inline parser_result<std::vector<T>> parse_vec(const uint8_t* pos, const uint8_t
     std::tie(size, pos) = leb128u_decode<uint32_t>(pos, end);
 
     std::vector<T> result;
-    result.reserve(size);
+
+    // Reserve memory for vec elements if `size` value is reasonable.
+    // TODO: Adjust the limit constant by inspecting max vec size value
+    //       appearing in big set of example wasm binaries.
+    if (size < 128)
+        result.reserve(size);
+
     auto inserter = std::back_inserter(result);
     for (uint32_t i = 0; i < size; ++i)
         std::tie(inserter, pos) = parse<T>(pos, end);

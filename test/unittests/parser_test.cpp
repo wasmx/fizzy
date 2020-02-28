@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 #include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
+#include <test/utils/leb128_encode.hpp>
 #include <array>
 
 using namespace fizzy;
@@ -14,14 +15,12 @@ namespace
 {
 bytes add_size_prefix(const bytes& content)
 {
-    assert(content.size() < 0x80);
-    return bytes{static_cast<uint8_t>(content.size())} + content;
+    return test::leb128u_encode(content.size()) + content;
 }
 
 bytes make_vec(std::initializer_list<bytes_view> contents)
 {
-    assert(contents.size() < 0x80);
-    bytes ret{static_cast<uint8_t>(contents.size())};
+    bytes ret = test::leb128u_encode(contents.size());
     for (const auto& content : contents)
         ret.append(content);
     return ret;
@@ -34,8 +33,7 @@ bytes make_section(uint8_t id, const bytes& content)
 
 bytes make_invalid_size_section(uint8_t id, size_t size, const bytes& content)
 {
-    assert(size < 0x80);
-    return bytes{id, static_cast<uint8_t>(size)} + content;
+    return bytes{id} + test::leb128u_encode(size) + content;
 }
 }  // namespace
 
@@ -65,6 +63,14 @@ TEST(parser, valtype_vec)
     EXPECT_EQ(vec[0], ValType::i32);
     EXPECT_EQ(vec[1], ValType::i64);
     EXPECT_EQ(vec[2], ValType::i32);
+}
+
+TEST(parser, vec_malformend_huge_size)
+{
+    // Malformed vec as size only without any elements:
+    const auto vec_bin = test::leb128u_encode(std::numeric_limits<uint32_t>::max());
+    const auto wasm_bin = bytes{wasm_prefix} + make_section(1, vec_bin);
+    EXPECT_THROW_MESSAGE(parse(wasm_bin), parser_error, "Unexpected EOF");
 }
 
 TEST(parser, limits_min)
@@ -447,6 +453,15 @@ TEST(parser, function_section_with_multiple_functions)
     EXPECT_EQ(module.funcsec[1], 1);
     EXPECT_EQ(module.funcsec[2], 0x42);
     EXPECT_EQ(module.funcsec[3], 0xff);
+}
+
+TEST(parser, function_section_size_128)
+{
+    constexpr auto size = 128;
+    const auto section_contents = test::leb128u_encode(size) + bytes(128, 0);
+    const auto wasm_bin = bytes{wasm_prefix} + make_section(3, section_contents);
+    const auto module = parse(wasm_bin);
+    ASSERT_EQ(module.funcsec.size(), size);
 }
 
 TEST(parser, function_section_end_out_of_bounds)
