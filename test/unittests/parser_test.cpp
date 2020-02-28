@@ -45,19 +45,19 @@ bytes make_functype(bytes input_types, bytes output_types)
 
 TEST(parser, valtype)
 {
-    std::array<uint8_t, 1> b{};
-    b[0] = 0x7e;
-    EXPECT_EQ(std::get<0>(parse<ValType>(b.begin(), b.end())), ValType::i64);
-    b[0] = 0x7f;
-    EXPECT_EQ(std::get<0>(parse<ValType>(b.begin(), b.end())), ValType::i32);
-    b[0] = 0x7c;
-    EXPECT_THROW_MESSAGE(
-        parse<ValType>(b.begin(), b.end()), parser_error, "unsupported valtype (floating point)");
-    b[0] = 0x7d;
-    EXPECT_THROW_MESSAGE(
-        parse<ValType>(b.begin(), b.end()), parser_error, "unsupported valtype (floating point)");
-    b[0] = 0x7a;
-    EXPECT_THROW_MESSAGE(parse<ValType>(b.begin(), b.end()), parser_error, "invalid valtype 122");
+    auto wasm_bin = bytes{wasm_prefix} + make_section(1, make_vec({make_functype({}, {0xcc})}));
+    auto& valtype_bin = wasm_bin.back();
+
+    valtype_bin = 0x7e;
+    EXPECT_EQ(parse(wasm_bin).typesec.front().outputs.front(), ValType::i64);
+    valtype_bin = 0x7f;
+    EXPECT_EQ(parse(wasm_bin).typesec.front().outputs.front(), ValType::i32);
+    valtype_bin = 0x7c;
+    EXPECT_THROW_MESSAGE(parse(wasm_bin), parser_error, "unsupported valtype (floating point)");
+    valtype_bin = 0x7d;
+    EXPECT_THROW_MESSAGE(parse(wasm_bin), parser_error, "unsupported valtype (floating point)");
+    valtype_bin = 0x7a;
+    EXPECT_THROW_MESSAGE(parse(wasm_bin), parser_error, "invalid valtype 122");
 }
 
 TEST(parser, vec_malformend_huge_size)
