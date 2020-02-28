@@ -173,29 +173,27 @@ public:
                         continue;
                     }
 
-                    const auto expected_type = expected.at(0).at("type").get<std::string>();
-                    uint64_t expected_value;
-                    if (expected_type == "i32")
-                        expected_value = json_to_value<int32_t>(expected.at(0).at("value"));
-                    else if (expected_type == "i64")
-                        expected_value = json_to_value<int64_t>(expected.at(0).at("value"));
-                    else
+                    if (!check_result(result->stack[0], expected.at(0)))
+                        continue;
+
+                    pass();
+                }
+                else if (action_type == "get")
+                {
+                    auto instance = find_instance_for_action(action);
+                    if (!instance)
+                        continue;
+
+                    const auto global_name = action.at("field").get<std::string>();
+                    const auto global = fizzy::find_exported_global(*instance, global_name);
+                    if (!global)
                     {
-                        skip("Unsupported expected type '" + expected_type + "'.");
+                        fail("Global \"" + global_name + "\" not found.");
                         continue;
                     }
 
-                    const uint64_t actual_value = result->stack[0];
-                    if (expected_value != actual_value)
-                    {
-                        std::stringstream message;
-                        message << "Incorrect returned value. Expected: " << expected_value
-                                << " (0x" << std::hex << expected_value << ") Actual: " << std::dec
-                                << actual_value << " (0x" << std::hex << actual_value << std::dec
-                                << ")";
-                        fail(message.str());
+                    if (!check_result(*global->value, cmd.at("expected").at(0)))
                         continue;
-                    }
 
                     pass();
                 }
@@ -269,7 +267,7 @@ public:
     }
 
 private:
-    std::optional<fizzy::execution_result> invoke(const json& action)
+    fizzy::Instance* find_instance_for_action(const json& action)
     {
         const auto module_name =
             (action.find("module") != action.end() ? action["module"] : UnnamedModule);
@@ -278,13 +276,20 @@ private:
         if (it_instance == instances.end())
         {
             skip("No instantiated module.");
-            return std::nullopt;
+            return nullptr;
         }
 
-        auto& instance = it_instance->second;
+        return &it_instance->second;
+    }
+
+    std::optional<fizzy::execution_result> invoke(const json& action)
+    {
+        auto instance = find_instance_for_action(action);
+        if (!instance)
+            return std::nullopt;
 
         const auto func_name = action.at("field").get<std::string>();
-        const auto func_idx = fizzy::find_exported_function(instance.module, func_name);
+        const auto func_idx = fizzy::find_exported_function(instance->module, func_name);
         if (!func_idx.has_value())
         {
             skip("Function '" + func_name + "' not found.");
@@ -308,7 +313,33 @@ private:
             args.push_back(arg_value);
         }
 
-        return fizzy::execute(instance, *func_idx, std::move(args));
+        return fizzy::execute(*instance, *func_idx, std::move(args));
+    }
+
+    bool check_result(uint64_t actual_value, const json& expected)
+    {
+        const auto expected_type = expected.at("type").get<std::string>();
+        uint64_t expected_value;
+        if (expected_type == "i32")
+            expected_value = json_to_value<int32_t>(expected.at("value"));
+        else if (expected_type == "i64")
+            expected_value = json_to_value<int64_t>(expected.at("value"));
+        else
+        {
+            skip("Unsupported expected type '" + expected_type + "'.");
+            return false;
+        }
+
+        if (expected_value != actual_value)
+        {
+            std::stringstream message;
+            message << "Incorrect returned value. Expected: " << expected_value << " (0x"
+                    << std::hex << expected_value << ") Actual: " << std::dec << actual_value
+                    << " (0x" << std::hex << actual_value << std::dec << ")";
+            fail(message.str());
+            return false;
+        }
+        return true;
     }
 
     std::optional<imports> create_imports(const fizzy::Module& module)
