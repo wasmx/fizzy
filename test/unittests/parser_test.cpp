@@ -60,17 +60,6 @@ TEST(parser, valtype)
     EXPECT_THROW_MESSAGE(parse<ValType>(b.begin(), b.end()), parser_error, "invalid valtype 122");
 }
 
-TEST(parser, valtype_vec)
-{
-    const auto input = "037f7e7fcc"_bytes;
-    const auto [vec, pos] = parse_vec<ValType>(input.data(), input.data() + input.size());
-    EXPECT_EQ(pos, input.data() + 4);
-    ASSERT_EQ(vec.size(), 3);
-    EXPECT_EQ(vec[0], ValType::i32);
-    EXPECT_EQ(vec[1], ValType::i64);
-    EXPECT_EQ(vec[2], ValType::i32);
-}
-
 TEST(parser, vec_malformend_huge_size)
 {
     // Malformed vec as size only without any elements:
@@ -259,15 +248,16 @@ TEST(parser, type_section_with_single_functype)
 
 TEST(parser, type_section_with_single_functype_params)
 {
-    // single type [i32, i64] -> [i32]
-    const auto section_contents = make_vec({make_functype({i32, i64}, {i32})});
+    // single type [i32, i64, i32] -> [i32]
+    const auto section_contents = make_vec({make_functype({i32, i64, i32}, {i32})});
     const auto bin = bytes{wasm_prefix} + make_section(1, section_contents);
     const auto module = parse(bin);
     ASSERT_EQ(module.typesec.size(), 1);
     const auto functype = module.typesec[0];
-    ASSERT_EQ(functype.inputs.size(), 2);
+    ASSERT_EQ(functype.inputs.size(), 3);
     EXPECT_EQ(functype.inputs[0], ValType::i32);
     EXPECT_EQ(functype.inputs[1], ValType::i64);
+    EXPECT_EQ(functype.inputs[2], ValType::i32);
     ASSERT_EQ(functype.outputs.size(), 1);
     EXPECT_EQ(functype.outputs[0], ValType::i32);
     EXPECT_EQ(module.funcsec.size(), 0);
