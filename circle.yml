@@ -230,6 +230,34 @@ jobs:
           command: |
             ~/bin/fizzy-bench test/benchmarks --benchmark_color=true --benchmark_repetitions=3 --benchmark_min_time=1
 
+  fuzzing:
+    executor: linux-clang-9
+    environment:
+      BUILD_TYPE: RelWithDebInfo
+      CMAKE_OPTIONS: -DFIZZY_FUZZING=ON -DSANITIZE=undefined,implicit-conversion,nullability
+      UBSAN_OPTIONS: halt_on_error=1
+    steps:
+      - build
+      - restore_cache:
+          name: "Restore fuzzing corpus"
+          key: fuzzing-corpus
+      - run:
+          name: "Parser fuzzing"
+          working_directory: ~/build
+          command: |
+            mkdir -p corpus
+            bin/fizzy-fuzz-parser corpus -jobs=2 -runs=1000000 -len_control=1000 -print_final_stats=1
+            mv corpus corpus-full
+            mkdir corpus
+            echo '--- MERGE ---'
+            bin/fizzy-fuzz-parser -merge=1 corpus corpus-full
+      - save_cache:
+          name: "Save fuzzing corpus"
+          key: fuzzing-corpus-{{epoch}}
+          paths:
+            - ~/build/corpus
+
+
 workflows:
   version: 2
   fizzy:
@@ -240,6 +268,7 @@ workflows:
       - clang-latest-coverage
       - clang-latest-asan
       - clang-latest-ubsan-tidy
+      - fuzzing
       - benchmark:
           requires:
             - release-linux
