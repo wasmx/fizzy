@@ -48,7 +48,7 @@ void benchmark_parse(
 
     const auto input_size = wasm_binary.size();
     auto num_bytes_parsed = uint64_t{0};
-    for (auto _ : state)  // NOLINT(clang-analyzer-deadcode.DeadStores)
+    for ([[maybe_unused]] auto _ : state)
     {
         engine->parse(wasm_binary);
         num_bytes_parsed += input_size;
@@ -70,7 +70,7 @@ void benchmark_instantiate(
     if (!engine->instantiate())
         return state.SkipWithError("Instantiaton failed");
 
-    for (auto _ : state)  // NOLINT(clang-analyzer-deadcode.DeadStores)
+    for ([[maybe_unused]] auto _ : state)
     {
         engine->instantiate();
     }
@@ -138,7 +138,7 @@ void benchmark_execute(
             return state.SkipWithError("Incorrect result memory");
     }
 
-    for (auto _ : state)  // NOLINT(clang-analyzer-deadcode.DeadStores)
+    for ([[maybe_unused]] auto _ : state)
     {
         // Reset instance to its initial state.
         // At this point we only reset memory, so this works only while globals

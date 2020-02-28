@@ -79,9 +79,8 @@ static void parse_string(benchmark::State& state)
     const auto input_end = input_begin + input.size();
     benchmark::ClobberMemory();
 
-    for (auto _ : state)
+    for ([[maybe_unused]] auto _ : state)
     {
-        (void)_;
         fizzy::parse_string(input_begin, input_end);
     }
 
