@@ -7,12 +7,11 @@
 
 using namespace fizzy;
 
-static const auto functype_void_to_void = "600000"_bytes;
-static const auto functype_i32i64_to_i32 = "60027f7e017f"_bytes;
-static const auto functype_i32_to_void = "60017f00"_bytes;
-
 namespace
 {
+constexpr uint8_t i32 = 0x7f;
+constexpr uint8_t i64 = 0x7e;
+
 bytes add_size_prefix(const bytes& content)
 {
     return test::leb128u_encode(content.size()) + content;
@@ -35,34 +34,30 @@ bytes make_invalid_size_section(uint8_t id, size_t size, const bytes& content)
 {
     return bytes{id} + test::leb128u_encode(size) + content;
 }
+
+bytes make_functype(bytes input_types, bytes output_types)
+{
+    // make_vec() not used here, because it requires different argument type.
+    return bytes{0x60} + test::leb128u_encode(input_types.size()) + input_types +
+           test::leb128u_encode(output_types.size()) + output_types;
+}
 }  // namespace
 
 TEST(parser, valtype)
 {
-    std::array<uint8_t, 1> b{};
-    b[0] = 0x7e;
-    EXPECT_EQ(std::get<0>(parse<ValType>(b.begin(), b.end())), ValType::i64);
-    b[0] = 0x7f;
-    EXPECT_EQ(std::get<0>(parse<ValType>(b.begin(), b.end())), ValType::i32);
-    b[0] = 0x7c;
-    EXPECT_THROW_MESSAGE(
-        parse<ValType>(b.begin(), b.end()), parser_error, "unsupported valtype (floating point)");
-    b[0] = 0x7d;
-    EXPECT_THROW_MESSAGE(
-        parse<ValType>(b.begin(), b.end()), parser_error, "unsupported valtype (floating point)");
-    b[0] = 0x7a;
-    EXPECT_THROW_MESSAGE(parse<ValType>(b.begin(), b.end()), parser_error, "invalid valtype 122");
-}
+    auto wasm_bin = bytes{wasm_prefix} + make_section(1, make_vec({make_functype({}, {0xcc})}));
+    auto& valtype_bin = wasm_bin.back();
 
-TEST(parser, valtype_vec)
-{
-    const auto input = "037f7e7fcc"_bytes;
-    const auto [vec, pos] = parse_vec<ValType>(input.data(), input.data() + input.size());
-    EXPECT_EQ(pos, input.data() + 4);
-    ASSERT_EQ(vec.size(), 3);
-    EXPECT_EQ(vec[0], ValType::i32);
-    EXPECT_EQ(vec[1], ValType::i64);
-    EXPECT_EQ(vec[2], ValType::i32);
+    valtype_bin = 0x7e;
+    EXPECT_EQ(parse(wasm_bin).typesec.front().outputs.front(), ValType::i64);
+    valtype_bin = 0x7f;
+    EXPECT_EQ(parse(wasm_bin).typesec.front().outputs.front(), ValType::i32);
+    valtype_bin = 0x7c;
+    EXPECT_THROW_MESSAGE(parse(wasm_bin), parser_error, "unsupported valtype (floating point)");
+    valtype_bin = 0x7d;
+    EXPECT_THROW_MESSAGE(parse(wasm_bin), parser_error, "unsupported valtype (floating point)");
+    valtype_bin = 0x7a;
+    EXPECT_THROW_MESSAGE(parse(wasm_bin), parser_error, "invalid valtype 122");
 }
 
 TEST(parser, vec_malformend_huge_size)
@@ -220,7 +215,7 @@ TEST(parser, type_section_wrong_prefix)
 
 TEST(parser, type_section_larger_than_expected)
 {
-    const auto section_contents = "01"_bytes + functype_void_to_void;
+    const auto section_contents = "01"_bytes + make_functype({}, {});
     const auto bin =
         bytes{wasm_prefix} +
         make_invalid_size_section(1, size_t{section_contents.size() - 1}, section_contents);
@@ -229,7 +224,7 @@ TEST(parser, type_section_larger_than_expected)
 
 TEST(parser, type_section_smaller_than_expected)
 {
-    const auto section_contents = "01"_bytes + functype_void_to_void + "fe"_bytes;
+    const auto section_contents = make_vec({make_functype({}, {})}) + "fe"_bytes;
     const auto bin =
         bytes{wasm_prefix} +
         make_invalid_size_section(1, size_t{section_contents.size() + 1}, section_contents) +
@@ -240,7 +235,7 @@ TEST(parser, type_section_smaller_than_expected)
 TEST(parser, type_section_with_single_functype)
 {
     // single type [void] -> [void]
-    const auto section_contents = "01"_bytes + functype_void_to_void;
+    const auto section_contents = make_vec({make_functype({}, {})});
     const auto bin = bytes{wasm_prefix} + make_section(1, section_contents);
     const auto module = parse(bin);
     ASSERT_EQ(module.typesec.size(), 1);
@@ -253,15 +248,16 @@ TEST(parser, type_section_with_single_functype)
 
 TEST(parser, type_section_with_single_functype_params)
 {
-    // single type [i32, i64] -> [i32]
-    const auto section_contents = make_vec({functype_i32i64_to_i32});
+    // single type [i32, i64, i32] -> [i32]
+    const auto section_contents = make_vec({make_functype({i32, i64, i32}, {i32})});
     const auto bin = bytes{wasm_prefix} + make_section(1, section_contents);
     const auto module = parse(bin);
     ASSERT_EQ(module.typesec.size(), 1);
     const auto functype = module.typesec[0];
-    ASSERT_EQ(functype.inputs.size(), 2);
+    ASSERT_EQ(functype.inputs.size(), 3);
     EXPECT_EQ(functype.inputs[0], ValType::i32);
     EXPECT_EQ(functype.inputs[1], ValType::i64);
+    EXPECT_EQ(functype.inputs[2], ValType::i32);
     ASSERT_EQ(functype.outputs.size(), 1);
     EXPECT_EQ(functype.outputs[0], ValType::i32);
     EXPECT_EQ(module.funcsec.size(), 0);
@@ -273,8 +269,8 @@ TEST(parser, type_section_with_multiple_functypes)
     // type 0 [void] -> [void]
     // type 1 [i32, i64] -> [i32]
     // type 2 [i32] -> []
-    const auto section_contents =
-        "03"_bytes + functype_void_to_void + functype_i32i64_to_i32 + functype_i32_to_void;
+    const auto section_contents = make_vec(
+        {make_functype({}, {}), make_functype({i32, i64}, {i32}), make_functype({i32}, {})});
     const auto bin = bytes{wasm_prefix} + make_section(1, section_contents);
 
     const auto module = parse(bin);
@@ -1183,7 +1179,7 @@ TEST(parser, unknown_section_nonempty)
 
 TEST(parser, interleaved_custom_section)
 {
-    const auto type_section = make_vec({functype_void_to_void});
+    const auto type_section = make_vec({make_functype({}, {})});
     const auto func_section = make_vec({"00"_bytes});
     const auto code_section = make_vec({add_size_prefix("000b"_bytes)});
     const auto bin = bytes{wasm_prefix} + make_section(0, "0161"_bytes) +
