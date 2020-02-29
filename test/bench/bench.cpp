@@ -100,17 +100,16 @@ void benchmark_execute(
     }
 
     if (!engine->instantiate())
-        return state.SkipWithError("Instantiaton failed");
+        return state.SkipWithError("Instantiation failed");
 
-    auto initial_memory = fizzy::bytes{engine->get_memory()};
+    const bool has_memory = !benchmark_case.memory.empty();
+    if (has_memory)
+    {
+        if (!engine->init_memory(benchmark_case.memory))
+            state.SkipWithError("Memory initialization failed");
+    }
 
-    // TODO: Check if memory is exported or imported.
-    if (benchmark_case.memory.size() > initial_memory.size())
-        return state.SkipWithError("Cannot init memory");
-
-    std::copy(std::begin(benchmark_case.memory), std::end(benchmark_case.memory),
-        std::begin(initial_memory));
-    engine->set_memory(initial_memory);
+    const auto initial_memory = fizzy::bytes{engine->get_memory()};
 
     {  // Execute once and check results against expectations.
         const auto result = engine->execute(*func_ref, benchmark_case.func_args);
