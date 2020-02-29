@@ -56,3 +56,12 @@
   (module (func $main (unreachable)) (start $main))
   "unreachable"
 )
+
+;; floating point module
+(module
+  (func (export "foo.f32") (result f32) (f32.const 1.23))
+  (func (export "foo.f64") (result f64) (f64.const 4.56))
+)
+
+(assert_return (invoke "foo.f32") (f32.const 1.23))
+(assert_return (invoke "foo.f64") (f64.const 4.56))
