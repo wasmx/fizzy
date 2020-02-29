@@ -58,6 +58,10 @@ commands:
         name: "Test"
         working_directory: ~/build
         command: ctest -R ${TESTS_FILTER:-'.*'} -j4 --schedule-random --output-on-failure
+    - run:
+        name: "Run smoketest with fizzy-spectests"
+        working_directory: ~/build
+        command: bin/fizzy-spectests --skip-validation ~/project/test/spectests/smoketest
 
   benchmark:
     description: "Run benchmarks"
