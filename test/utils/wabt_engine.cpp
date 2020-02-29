@@ -15,6 +15,7 @@ public:
     bool parse(bytes_view input) final;
     std::optional<FuncRef> find_function(std::string_view name) const final;
     bool instantiate() final;
+    bool init_memory(fizzy::bytes_view memory) final;
     bytes_view get_memory() const final;
     void set_memory(bytes_view memory) final;
     Result execute(FuncRef func_ref, const std::vector<uint64_t>& args) final;
@@ -35,6 +36,19 @@ bool WabtEngine::parse(bytes_view input)
 
 bool WabtEngine::instantiate()
 {
+    return true;
+}
+
+bool WabtEngine::init_memory(bytes_view memory)
+{
+    if (m_env.GetMemoryCount() == 0)
+        return false;
+
+    auto& dst = *m_env.GetMemory(0);
+    if (dst.data.size() < memory.size())
+        return false;
+
+    std::memcpy(dst.data.data(), memory.data(), memory.size());
     return true;
 }
 

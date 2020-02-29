@@ -25,6 +25,7 @@ public:
     bool parse(bytes_view input) final;
     std::optional<FuncRef> find_function(std::string_view name) const final;
     bool instantiate() final;
+    bool init_memory(fizzy::bytes_view memory) final;
     fizzy::bytes_view get_memory() const final;
     void set_memory(fizzy::bytes_view memory) final;
     Result execute(FuncRef func_ref, const std::vector<uint64_t>& args) final;
@@ -63,6 +64,16 @@ bool Wasm3Engine::parse(bytes_view input)
 bool Wasm3Engine::instantiate()
 {
     // Already done in parse (with owernship transfer).
+    return true;
+}
+
+bool Wasm3Engine::init_memory(fizzy::bytes_view memory)
+{
+    uint32_t size;
+    const auto data = m3_GetMemory(m_runtime, &size, 0);
+    if (data == nullptr || size < memory.size())
+        return false;
+    std::memcpy(data, memory.data(), memory.size());
     return true;
 }
 

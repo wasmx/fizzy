@@ -178,16 +178,15 @@ TEST(wasm_engine, memory)
         ASSERT_TRUE(engine->instantiate());
         const auto func = engine->find_function("test");
         ASSERT_TRUE(func.has_value());
-        auto mem_input = bytes{engine->get_memory()};
-        // Memory shouldn't be empty...
-        // ASSERT_FALSE(mem_input.empty());
-        mem_input[0] = 0x12;
-        mem_input[3] = 0x34;
-        EXPECT_EQ(mem_input[4], 0);
-        EXPECT_EQ(mem_input[5], 0);
-        EXPECT_EQ(mem_input[6], 0);
-        EXPECT_EQ(mem_input[7], 0);
-        engine->set_memory(mem_input);
+        const auto mem_input = bytes{engine->get_memory()};
+        ASSERT_FALSE(mem_input.empty());
+        EXPECT_EQ(mem_input, bytes(64 * 1024, 0));
+
+        const auto mem_init = bytes{0x12, 0, 0, 0x34};
+        engine->init_memory(mem_init);
+        const auto mem_check = engine->get_memory();
+        EXPECT_EQ(mem_check.substr(0, 4), mem_init);
+
         // Copy 32-bits from memory offset 0 to offset 4
         const auto result = engine->execute(*func, {0, 4});
         EXPECT_FALSE(result.trapped);
