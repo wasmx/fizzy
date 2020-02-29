@@ -109,8 +109,6 @@ void benchmark_execute(
             state.SkipWithError("Memory initialization failed");
     }
 
-    const auto initial_memory = fizzy::bytes{engine->get_memory()};
-
     {  // Execute once and check results against expectations.
         const auto result = engine->execute(*func_ref, benchmark_case.func_args);
         if (result.trapped)
@@ -139,11 +137,11 @@ void benchmark_execute(
 
     for ([[maybe_unused]] auto _ : state)
     {
-        // Reset instance to its initial state.
-        // At this point we only reset memory, so this works only while globals
-        // and imports are not used. If this become a problem doing full
-        // instantiate() should be considered.
-        engine->set_memory(initial_memory);
+        state.PauseTiming();
+        engine->instantiate();
+        if (has_memory)
+            engine->init_memory(benchmark_case.memory);
+        state.ResumeTiming();
 
         const auto result = engine->execute(*func_ref, benchmark_case.func_args);
         benchmark::DoNotOptimize(result);
