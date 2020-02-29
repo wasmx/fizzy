@@ -148,11 +148,9 @@ TEST(wasm_engine, no_memory)
         ASSERT_TRUE(engine->parse(wasm));
         ASSERT_TRUE(engine->instantiate());
         const auto func = engine->find_function("test");
-        ASSERT_TRUE(func.has_value());
+        EXPECT_TRUE(func.has_value());
         const auto mem = engine->get_memory();
-        ASSERT_TRUE(mem.empty());
-        // This should not fail as long as the above was true.
-        engine->set_memory(mem);
+        EXPECT_TRUE(mem.empty());
     }
 }
 

@@ -17,7 +17,6 @@ public:
     bool instantiate() final;
     bool init_memory(fizzy::bytes_view memory) final;
     bytes_view get_memory() const final;
-    void set_memory(bytes_view memory) final;
     Result execute(FuncRef func_ref, const std::vector<uint64_t>& args) final;
 };
 
@@ -60,18 +59,6 @@ bytes_view WabtEngine::get_memory() const
     auto& env = const_cast<wabt::interp::Environment&>(m_env);
     const auto& memory = env.GetMemory(0);
     return {reinterpret_cast<uint8_t*>(memory->data.data()), memory->data.size()};
-}
-
-void WabtEngine::set_memory(bytes_view memory)
-{
-    if (memory.empty())
-        return;
-
-    assert(m_env.GetMemoryCount() != 0);
-
-    auto& dst = *m_env.GetMemory(0);
-    const auto begin = reinterpret_cast<const char*>(memory.data());
-    dst.data.assign(begin, begin + memory.size());
 }
 
 std::optional<WasmEngine::FuncRef> WabtEngine::find_function(std::string_view name) const
