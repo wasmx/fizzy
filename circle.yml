@@ -149,18 +149,23 @@ jobs:
             find -name '*.profraw'
             llvm-profdata merge *.profraw -o fizzy.profdata
 
-            llvm-cov report -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt \
-              -object bin/fizzy-unittests -use-color
+            llvm-cov report -use-color -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt \
+              -object bin/fizzy-unittests \
+              -object bin/fizzy-spectests
             llvm-cov report -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt > coverage/report.txt \
-              -object bin/fizzy-unittests
+              -object bin/fizzy-unittests \
+              -object bin/fizzy-spectests
 
             llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt -region-coverage-lt=100 > coverage/missing.html \
-              -object bin/fizzy-unittests
+              -object bin/fizzy-unittests \
+              -object bin/fizzy-spectests
             llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt > coverage/full.html \
-             -object bin/fizzy-unittests
+              -object bin/fizzy-unittests \
+              -object bin/fizzy-spectests
 
             llvm-cov export -instr-profile fizzy.profdata -format=lcov > fizzy.lcov \
-              -object bin/fizzy-unittests
+              -object bin/fizzy-unittests \
+              -object bin/fizzy-spectests
             genhtml fizzy.lcov -o coverage -t Fizzy
       - store_artifacts:
           path: ~/build/coverage
