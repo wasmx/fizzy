@@ -24,6 +24,22 @@ IV) First class support for determistic applications (*blockchain*)
 
 To read about testing see [fizzy-spectests](./test/spectests/README.md).
 
+## Benchmarking
+
+Build with `-DFIZZY_TESTING=ON`.
+
+### Tools
+
+1. `fizzy-bench`
+2. `fizzy-bench-internal`
+
+### References
+
+1. https://www.youtube.com/watch?v=zWxSZcpeS8Q
+2. https://www.youtube.com/watch?v=Czr5dBfs72U
+3. https://www.youtube.com/watch?v=2EWejmkKlxs
+4. https://www.youtube.com/watch?v=nXaxk27zwlk
+
 ## License
 
 Apache 2.0
