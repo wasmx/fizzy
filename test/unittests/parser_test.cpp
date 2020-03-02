@@ -1207,10 +1207,18 @@ TEST(parser, wrongly_ordered_sections)
 
     for (auto id = last_section_id; id > first_section_id; id--)
     {
-        auto bin = bytes{wasm_prefix} + create_empty_section(0) + create_empty_section(id) +
-                   create_empty_section(0) + create_empty_section(0) +
-                   create_empty_section(uint8_t(id - 1)) + create_empty_section(0);
-        EXPECT_THROW_MESSAGE(parse(bin), parser_error, "Unexpected out-of-order section type");
+        const auto wrong_order_bin =
+            bytes{wasm_prefix} + create_empty_section(0) + create_empty_section(id) +
+            create_empty_section(0) + create_empty_section(0) +
+            create_empty_section(uint8_t(id - 1)) + create_empty_section(0);
+        EXPECT_THROW_MESSAGE(
+            parse(wrong_order_bin), parser_error, "Unexpected out-of-order section type");
+
+        const auto duplicated_bin = bytes{wasm_prefix} + create_empty_section(0) +
+                                    create_empty_section(id) + create_empty_section(0) +
+                                    create_empty_section(id) + create_empty_section(0);
+        EXPECT_THROW_MESSAGE(
+            parse(duplicated_bin), parser_error, "Unexpected out-of-order section type");
     }
 }
 
