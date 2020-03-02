@@ -42,6 +42,14 @@ struct test_results
     int skipped = 0;
 };
 
+struct imports
+{
+    std::vector<fizzy::ExternalFunction> functions;
+    std::vector<fizzy::ExternalTable> tables;
+    std::vector<fizzy::ExternalMemory> memories;
+    std::vector<fizzy::ExternalGlobal> globals;
+};
+
 class test_runner
 {
 public:
@@ -72,8 +80,18 @@ public:
                 const auto wasm_binary = load_wasm_file(path, filename);
                 try
                 {
-                    // TODO provide dummy imports if needed
-                    instances[name] = fizzy::instantiate(fizzy::parse(wasm_binary));
+                    fizzy::Module module = fizzy::parse(wasm_binary);
+
+                    auto imports = create_imports(module);
+                    if (!imports.has_value())
+                    {
+                        instances.erase(name);
+                        continue;
+                    }
+
+                    instances[name] = fizzy::instantiate(std::move(module),
+                        std::move(imports->functions), std::move(imports->tables),
+                        std::move(imports->memories), std::move(imports->globals));
                 }
                 catch (const fizzy::parser_error& ex)
                 {
@@ -103,7 +121,24 @@ public:
 
                 const auto registered_name = cmd.at("as").get<std::string>();
 
-                registered_names[registered_name] = module_name;
+                if (module_name == UnnamedModule)
+                {
+                    // Assign a name to unnamed module to avoid it being overwritten by another
+                    // unnamed one. Let the name be equal to registered name.
+                    const auto [_, inserted] =
+                        instances.emplace(registered_name, std::move(it_instance->second));
+                    if (!inserted)
+                    {
+                        fail("Failed to register unnamed module - another module with name \"" +
+                             registered_name + "\" already exists");
+                        continue;
+                    }
+
+                    instances.erase(module_name);
+                    registered_names[registered_name] = registered_name;
+                }
+                else
+                    registered_names[registered_name] = module_name;
                 pass();
             }
             else if (type == "assert_return" || type == "action")
@@ -274,6 +309,51 @@ private:
         }
 
         return fizzy::execute(instance, *func_idx, std::move(args));
+    }
+
+    std::optional<imports> create_imports(const fizzy::Module& module)
+    {
+        std::vector<fizzy::ExternalFunction> imported_functions;
+        for (auto const& import : module.importsec)
+        {
+            const auto it_registered = registered_names.find(import.module);
+            if (it_registered == registered_names.end())
+            {
+                fail("Module \"" + import.module + "\" not registered.");
+                return std::nullopt;
+            }
+
+            const auto module_name = it_registered->second;
+            const auto it_instance = instances.find(module_name);
+            if (it_instance == instances.end())
+            {
+                fail("Module not instantiated.");
+                return std::nullopt;
+            }
+
+            auto& instance = it_instance->second;
+
+            if (import.kind == fizzy::ExternalKind::Function)
+            {
+                const auto func = fizzy::find_exported_function(instance, import.name);
+                if (!func.has_value())
+                {
+                    fail(
+                        "Function \"" + import.name + "\" not found in \"" + import.module + "\".");
+                    return std::nullopt;
+                }
+
+                imported_functions.emplace_back(*func);
+            }
+            else
+            {
+                skip("Unsupported import kind.");
+                return std::nullopt;
+            }
+            // TODO memory, table, globals
+        }
+
+        return imports{imported_functions, {}, {}, {}};
     }
 
     void pass()
