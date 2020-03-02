@@ -53,7 +53,7 @@ struct imports
 class test_runner
 {
 public:
-    explicit test_runner(const test_settings& ts) : settings{ts} {}
+    explicit test_runner(const test_settings& ts) : m_settings{ts} {}
 
     test_results run_from_file(const fs::path& path)
     {
@@ -85,28 +85,28 @@ public:
                     auto imports = create_imports(module);
                     if (!imports.has_value())
                     {
-                        instances.erase(name);
+                        m_instances.erase(name);
                         continue;
                     }
 
-                    instances[name] = fizzy::instantiate(std::move(module),
+                    m_instances[name] = fizzy::instantiate(std::move(module),
                         std::move(imports->functions), std::move(imports->tables),
                         std::move(imports->memories), std::move(imports->globals));
 
-                    last_module_name = name;
+                    m_last_module_name = name;
                 }
                 catch (const fizzy::parser_error& ex)
                 {
                     fail(std::string{"Parsing failed with error: "} + ex.what());
-                    instances.erase(name);
-                    last_module_name.clear();
+                    m_instances.erase(name);
+                    m_last_module_name.clear();
                     continue;
                 }
                 catch (const fizzy::instantiate_error& ex)
                 {
                     fail(std::string{"Instantiation failed with error: "} + ex.what());
-                    instances.erase(name);
-                    last_module_name.clear();
+                    m_instances.erase(name);
+                    m_last_module_name.clear();
                     continue;
                 }
                 pass();
@@ -116,8 +116,8 @@ public:
                 const auto module_name =
                     (cmd.find("name") != cmd.end() ? cmd["name"] : UnnamedModule);
 
-                const auto it_instance = instances.find(module_name);
-                if (it_instance == instances.end())
+                const auto it_instance = m_instances.find(module_name);
+                if (it_instance == m_instances.end())
                 {
                     skip("Module not found.");
                     continue;
@@ -130,7 +130,7 @@ public:
                     // Assign a name to unnamed module to avoid it being overwritten by another
                     // unnamed one. Let the name be equal to registered name.
                     const auto [_, inserted] =
-                        instances.emplace(registered_name, std::move(it_instance->second));
+                        m_instances.emplace(registered_name, std::move(it_instance->second));
                     if (!inserted)
                     {
                         fail("Failed to register unnamed module - another module with name \"" +
@@ -138,11 +138,11 @@ public:
                         continue;
                     }
 
-                    instances.erase(module_name);
-                    registered_names[registered_name] = registered_name;
+                    m_instances.erase(module_name);
+                    m_registered_names[registered_name] = registered_name;
                 }
                 else
-                    registered_names[registered_name] = module_name;
+                    m_registered_names[registered_name] = module_name;
                 pass();
             }
             else if (type == "assert_return" || type == "action")
@@ -230,7 +230,7 @@ public:
             {
                 // NOTE: assert_malformed should result in a parser error and
                 //       assert_invalid should result in a validation error
-                if (type == "assert_invalid" && settings.skip_validation)
+                if (type == "assert_invalid" && m_settings.skip_validation)
                 {
                     skip("Validation tests disabled.");
                     continue;
@@ -262,12 +262,12 @@ public:
                 skip("Unsupported command type");
         }
 
-        log(std::to_string(results.passed + results.failed + results.skipped) + " tests ran from " +
-            path.filename().string() + ".\n  PASSED " + std::to_string(results.passed) +
-            ", FAILED " + std::to_string(results.failed) + ", SKIPPED " +
-            std::to_string(results.skipped) + ".\n");
+        log(std::to_string(m_results.passed + m_results.failed + m_results.skipped) +
+            " tests ran from " + path.filename().string() + ".\n  PASSED " +
+            std::to_string(m_results.passed) + ", FAILED " + std::to_string(m_results.failed) +
+            ", SKIPPED " + std::to_string(m_results.skipped) + ".\n");
 
-        return results;
+        return m_results;
     }
 
 private:
@@ -275,10 +275,10 @@ private:
     {
         const auto module_name =
             (action.find("module") != action.end() ? action["module"].get<std::string>() :
-                                                     last_module_name);
+                                                     m_last_module_name);
 
-        const auto it_instance = instances.find(module_name);
-        if (it_instance == instances.end())
+        const auto it_instance = m_instances.find(module_name);
+        if (it_instance == m_instances.end())
         {
             skip("No instantiated module.");
             return nullptr;
@@ -352,16 +352,16 @@ private:
         imports result;
         for (auto const& import : module.importsec)
         {
-            const auto it_registered = registered_names.find(import.module);
-            if (it_registered == registered_names.end())
+            const auto it_registered = m_registered_names.find(import.module);
+            if (it_registered == m_registered_names.end())
             {
                 fail("Module \"" + import.module + "\" not registered.");
                 return std::nullopt;
             }
 
             const auto module_name = it_registered->second;
-            const auto it_instance = instances.find(module_name);
-            if (it_instance == instances.end())
+            const auto it_instance = m_instances.find(module_name);
+            if (it_instance == m_instances.end())
             {
                 fail("Module not instantiated.");
                 return std::nullopt;
@@ -421,19 +421,19 @@ private:
 
     void pass()
     {
-        ++results.passed;
+        ++m_results.passed;
         std::cout << "PASSED\n";
     }
 
     void fail(std::string_view message)
     {
-        ++results.failed;
+        ++m_results.failed;
         std::cout << "FAILED " << message << "\n";
     }
 
     void skip(std::string_view message)
     {
-        ++results.skipped;
+        ++m_results.skipped;
         std::cout << "SKIPPED " << message << "\n";
     }
 
@@ -441,11 +441,11 @@ private:
 
     void log_no_newline(std::string_view message) const { std::cout << message << std::flush; }
 
-    test_settings settings;
-    std::unordered_map<std::string, fizzy::Instance> instances;
-    std::unordered_map<std::string, std::string> registered_names;
-    std::string last_module_name;
-    test_results results;
+    test_settings m_settings;
+    std::unordered_map<std::string, fizzy::Instance> m_instances;
+    std::unordered_map<std::string, std::string> m_registered_names;
+    std::string m_last_module_name;
+    test_results m_results;
 };
 
 bool run_tests_from_dir(const fs::path& path, const test_settings& settings)
