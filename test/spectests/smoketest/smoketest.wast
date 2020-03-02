@@ -13,6 +13,9 @@
   (func (export "foo.i32") (result i32) (i32.const 2))
   (func (export "foo.i64") (result i64) (i64.const 4))
   (func (export "trap") (unreachable))
+  (global (export "glob") i32 (i32.const 55))
+  (table (export "tab") 10 funcref)
+  (memory (export "mem") 1)
 )
 
 (register "Mod1" $Mod1)
@@ -33,3 +36,10 @@
 
 (assert_malformed (module binary "") "unexpected end")
 
+(module $Mod3
+  (import "Mod0" "foo" (func (param i32)))
+  (import "Mod1" "foo.i32" (func (result i32)))
+  (import "Mod1" "glob" (global i32))
+  (import "Mod1" "tab" (table 10 funcref))
+  (import "Mod1" "mem" (memory 1))
+)
