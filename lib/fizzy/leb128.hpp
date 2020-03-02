@@ -11,7 +11,7 @@ static_assert((int8_t{-1} >> 1) == int8_t{-1},
 namespace fizzy
 {
 template <typename T>
-std::pair<T, const uint8_t*> leb128u_decode(const uint8_t* input, const uint8_t* end)
+inline std::pair<T, const uint8_t*> leb128u_decode(const uint8_t* input, const uint8_t* end)
 {
     static_assert(!std::numeric_limits<T>::is_signed);
 
@@ -37,7 +37,7 @@ std::pair<T, const uint8_t*> leb128u_decode(const uint8_t* input, const uint8_t*
 }
 
 template <typename T>
-std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* input, const uint8_t* end)
+inline std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* input, const uint8_t* end)
 {
     static_assert(std::numeric_limits<T>::is_signed);
 
