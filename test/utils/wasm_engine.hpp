@@ -37,17 +37,16 @@ public:
     /// Requires instantiate().
     virtual std::optional<FuncRef> find_function(std::string_view name) const = 0;
 
+    /// Initializes the beginning of the instance's memory.
+    /// The `memory` must not be empty.
+    /// Requires instantiate().
+    virtual bool init_memory(bytes_view memory) = 0;
+
     /// Returns the entire memory of the internal instance.
     /// It must return memory index 0 and the size must be a multiple of the page size.
     /// Can return an empty view if no memory is available (exported).
     /// Requires instantiate().
     virtual bytes_view get_memory() const = 0;
-
-    /// Replaces the memory of the internal instance with the provided one.
-    /// It must change memory index 0.
-    /// Should not fail if the input is empty (no update) and there is no memory available.
-    /// Requires instantiate().
-    virtual void set_memory(bytes_view memory) = 0;
 
     /// Executes the function of the given index.
     /// Requires instantiate().

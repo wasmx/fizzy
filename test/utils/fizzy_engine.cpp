@@ -3,6 +3,7 @@
 
 #include <test/utils/wasm_engine.hpp>
 #include <cassert>
+#include <cstring>
 
 namespace fizzy::test
 {
@@ -14,8 +15,8 @@ public:
     bool parse(bytes_view input) final;
     std::optional<FuncRef> find_function(std::string_view name) const final;
     bool instantiate() final;
+    bool init_memory(bytes_view memory) final;
     bytes_view get_memory() const final;
-    void set_memory(bytes_view memory) final;
     Result execute(FuncRef func_ref, const std::vector<uint64_t>& args) final;
 };
 
@@ -50,21 +51,21 @@ bool FizzyEngine::instantiate()
     return true;
 }
 
+bool FizzyEngine::init_memory(bytes_view memory)
+{
+    if (m_instance.memory == nullptr || m_instance.memory->size() < memory.size())
+        return false;
+
+    std::memcpy(m_instance.memory->data(), memory.data(), memory.size());
+    return true;
+}
+
 bytes_view FizzyEngine::get_memory() const
 {
     if (!m_instance.memory)
         return {};
 
     return {m_instance.memory->data(), m_instance.memory->size()};
-}
-
-void FizzyEngine::set_memory(bytes_view memory)
-{
-    if (memory.empty())
-        return;
-
-    assert(m_instance.memory != nullptr);
-    *m_instance.memory = memory;
 }
 
 std::optional<WasmEngine::FuncRef> FizzyEngine::find_function(std::string_view name) const
