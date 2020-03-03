@@ -12,6 +12,8 @@ option(FIZZY_TESTING "Enable Fizzy internal tests" OFF)
 cmake_dependent_option(HUNTER_ENABLED "Enable Hunter package manager" ON
     "FIZZY_TESTING" OFF)
 
+cmake_dependent_option(FIZZY_FUZZING "Enable Fizzy fuzzing" OFF "FIZZY_TESTING" OFF)
+
 if(HUNTER_ENABLED)
     include(cmake/Hunter/init.cmake)
 endif()
@@ -27,6 +29,12 @@ if(is_big_endian)
 endif()
 
 cable_configure_compiler()
+
+if(FIZZY_FUZZING)
+    set(fuzzing_flags -fsanitize=fuzzer-no-link,undefined,address)
+    add_compile_options(${fuzzing_flags})
+    add_link_options(${fuzzing_flags})
+endif()
 
 set(include_dir ${PROJECT_SOURCE_DIR}/include)  # Public include directory.
 
