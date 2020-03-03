@@ -181,24 +181,15 @@ jobs:
             sed -i 's|$(pwd)/||' ~/build/fizzy.lcov
             codecov --file ~/build/fizzy.lcov -X gcov
 
-  clang-latest-asan:
+  sanitizers:
     executor: linux-clang-9
     environment:
       BUILD_TYPE: RelWithDebInfo
-      CMAKE_OPTIONS: -DENABLE_ASSERTIONS=ON -DSANITIZE=address
+      CMAKE_OPTIONS: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,implicit-conversion,nullability
     steps:
       - build
       - test
       - benchmark
-
-  ubsan:
-    executor: linux-clang-9
-    environment:
-      BUILD_TYPE: Debug
-      CMAKE_OPTIONS: -DSANITIZE=undefined,implicit-conversion,nullability
-    steps:
-      - build
-      - test
 
   benchmark:
     machine:
@@ -267,8 +258,7 @@ workflows:
       - release-linux
       - release-macos
       - coverage-tidy
-      - clang-latest-asan
-      - ubsan
+      - sanitizers
       - fuzzing
       - benchmark:
           requires:
