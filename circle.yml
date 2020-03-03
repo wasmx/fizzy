@@ -226,7 +226,7 @@ jobs:
     executor: linux-clang-9
     environment:
       BUILD_TYPE: RelWithDebInfo
-      CMAKE_OPTIONS: -DFIZZY_FUZZING=ON -DENABLE_ASSERTIONS=ON -DSANITIZE=undefined,implicit-conversion,nullability
+      CMAKE_OPTIONS: -DFIZZY_FUZZING=ON -DENABLE_ASSERTIONS=ON
       UBSAN_OPTIONS: halt_on_error=1
     steps:
       - build

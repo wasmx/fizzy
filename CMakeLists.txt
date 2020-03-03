@@ -47,7 +47,7 @@ if(ENABLE_ASSERTIONS)
 endif()
 
 if(FIZZY_FUZZING)
-    set(fuzzing_flags -fsanitize=fuzzer-no-link,undefined,address)
+    set(fuzzing_flags -fsanitize=fuzzer-no-link,address,undefined,implicit-conversion,nullability)
     add_compile_options(${fuzzing_flags})
     add_link_options(${fuzzing_flags})
 endif()
