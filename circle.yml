@@ -133,12 +133,16 @@ jobs:
       - build
       - test
 
-  clang-latest-coverage:
+  coverage-tidy:
     executor: linux-clang-9
     environment:
       BUILD_TYPE: Coverage
       TESTS_FILTER: unittests
+      CMAKE_OPTIONS: -DCMAKE_CXX_CLANG_TIDY=clang-tidy-9
     steps:
+      - run:
+          name: "Install clang-tidy"
+          command: sudo apt-get -q update && sudo apt-get -qy install clang-tidy-9
       - build
       - test
       - run:
@@ -187,15 +191,12 @@ jobs:
       - test
       - benchmark
 
-  clang-latest-ubsan-tidy:
+  ubsan:
     executor: linux-clang-9
     environment:
       BUILD_TYPE: Debug
-      CMAKE_OPTIONS: -DSANITIZE=undefined,implicit-conversion,nullability -DCMAKE_CXX_CLANG_TIDY=clang-tidy-9
+      CMAKE_OPTIONS: -DSANITIZE=undefined,implicit-conversion,nullability
     steps:
-      - run:
-          name: "Install clang-tidy"
-          command: sudo apt-get -q update && sudo apt-get -qy install clang-tidy-9
       - build
       - test
 
@@ -265,9 +266,9 @@ workflows:
       - lint
       - release-linux
       - release-macos
-      - clang-latest-coverage
+      - coverage-tidy
       - clang-latest-asan
-      - clang-latest-ubsan-tidy
+      - ubsan
       - fuzzing
       - benchmark:
           requires:
