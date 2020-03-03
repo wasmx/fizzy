@@ -20,12 +20,6 @@ parser_result<Code> parse_expr(const uint8_t* input, const uint8_t* end);
 template <typename T>
 parser_result<T> parse(const uint8_t* pos, const uint8_t* end);
 
-template <>
-inline parser_result<uint32_t> parse(const uint8_t* pos, const uint8_t* end)
-{
-    return leb128u_decode<uint32_t>(pos, end);
-}
-
 parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end);
 
 inline parser_result<Limits> parse_limits(const uint8_t* pos, const uint8_t* end)
@@ -51,23 +45,7 @@ inline parser_result<Limits> parse_limits(const uint8_t* pos, const uint8_t* end
     }
 }
 
-template <typename T>
-inline parser_result<std::vector<T>> parse_vec(const uint8_t* pos, const uint8_t* end)
-{
-    uint32_t size;
-    std::tie(size, pos) = leb128u_decode<uint32_t>(pos, end);
-
-    std::vector<T> result;
-
-    // Reserve memory for vec elements if `size` value is reasonable.
-    // TODO: Adjust the limit constant by inspecting max vec size value
-    //       appearing in big set of example wasm binaries.
-    if (size < 128)
-        result.reserve(size);
-
-    auto inserter = std::back_inserter(result);
-    for (uint32_t i = 0; i < size; ++i)
-        std::tie(inserter, pos) = parse<T>(pos, end);
-    return {result, pos};
-}
+/// Parses the vec of i32 values.
+/// This is used in parse_expr() (parser_expr.cpp).
+parser_result<std::vector<uint32_t>> parse_vec_i32(const uint8_t* pos, const uint8_t* end);
 }  // namespace fizzy

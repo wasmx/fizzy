@@ -310,7 +310,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end)
         case Instr::br_table:
         {
             std::vector<uint32_t> label_indices;
-            std::tie(label_indices, pos) = parse_vec<uint32_t>(pos, end);
+            std::tie(label_indices, pos) = parse_vec_i32(pos, end);
             uint32_t default_label_idx;
             std::tie(default_label_idx, pos) = leb128u_decode<uint32_t>(pos, end);
 
