@@ -324,7 +324,8 @@ struct Element
     std::vector<FuncIdx> init;
 };
 
-// https://webassembly.github.io/spec/core/binary/modules.html#code-section
+/// The element of the code section.
+/// https://webassembly.github.io/spec/core/binary/modules.html#code-section
 struct Code
 {
     uint32_t local_count = 0;
@@ -336,6 +337,14 @@ struct Code
     // The decoded instructions' immediate values.
     // These are instruction-type dependent fixed size value in the order of instructions.
     bytes immediates;
+};
+
+/// The reference to the `code` in the wasm binary.
+///
+/// The distinct type is needed for parse_vec<> specialization.
+struct code_view : public bytes_view
+{
+    using bytes_view::bytes_view;
 };
 
 // https://webassembly.github.io/spec/core/binary/modules.html#data-section

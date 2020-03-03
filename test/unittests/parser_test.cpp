@@ -1143,7 +1143,8 @@ TEST(parser, code_section_invalid_instructions)
                               + bytes{instr};
         const auto code_bin = add_size_prefix(func_bin);
         const auto section_contents = make_vec({code_bin});
-        const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
+        const auto bin = bytes{wasm_prefix} + make_section(3, make_vec({"00"_bytes})) +
+                         make_section(10, section_contents);
 
         const auto expected_msg = std::string{"invalid instruction "} + std::to_string(instr);
         EXPECT_THROW_MESSAGE(parse(bin), parser_error, expected_msg.c_str());
@@ -1160,7 +1161,7 @@ TEST(parser, code_section_size_too_small)
     const auto section_contents = make_vec({code_bin});
     const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
 
-    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "malformed size field for function");
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "incorrect section 10 size, difference: -1");
 }
 
 TEST(parser, code_section_size_too_large)
@@ -1172,6 +1173,20 @@ TEST(parser, code_section_size_too_large)
     const auto code_bin = "06"_bytes + func_bin;
     const auto section_contents = make_vec({code_bin});
     const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
+
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "Unexpected EOF");
+}
+
+TEST(parser, code_section_with_unused_bytes)
+{
+    // Code size is correctly 6, but expr only consumes 5 bytes (additional zero byte of extension).
+    const auto func_bin =
+        "00"  // vec(locals)
+        "0101010b"_bytes;
+    const auto code_bin = "06"_bytes + func_bin + "00"_bytes;
+    const auto section_contents = make_vec({code_bin});
+    const auto bin = bytes{wasm_prefix} + make_section(3, make_vec({"00"_bytes})) +
+                     make_section(10, section_contents);
 
     EXPECT_THROW_MESSAGE(parse(bin), parser_error, "malformed size field for function");
 }
