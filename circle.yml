@@ -181,7 +181,7 @@ jobs:
     executor: linux-clang-9
     environment:
       BUILD_TYPE: RelWithDebInfo
-      CMAKE_OPTIONS: -DSANITIZE=address
+      CMAKE_OPTIONS: -DENABLE_ASSERTIONS=ON -DSANITIZE=address
     steps:
       - build
       - test
@@ -234,7 +234,7 @@ jobs:
     executor: linux-clang-9
     environment:
       BUILD_TYPE: RelWithDebInfo
-      CMAKE_OPTIONS: -DFIZZY_FUZZING=ON -DSANITIZE=undefined,implicit-conversion,nullability
+      CMAKE_OPTIONS: -DFIZZY_FUZZING=ON -DENABLE_ASSERTIONS=ON -DSANITIZE=undefined,implicit-conversion,nullability
       UBSAN_OPTIONS: halt_on_error=1
     steps:
       - build
