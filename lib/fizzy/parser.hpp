@@ -48,4 +48,6 @@ inline parser_result<Limits> parse_limits(const uint8_t* pos, const uint8_t* end
 /// Parses the vec of i32 values.
 /// This is used in parse_expr() (parser_expr.cpp).
 parser_result<std::vector<uint32_t>> parse_vec_i32(const uint8_t* pos, const uint8_t* end);
+
+const uint8_t* validate_valtype(const uint8_t* pos, const uint8_t* end);
 }  // namespace fizzy

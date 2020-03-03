@@ -64,6 +64,12 @@ parser_result<ValType> parse(const uint8_t* pos, const uint8_t* end)
     }
 }
 
+const uint8_t* validate_valtype(const uint8_t* pos, const uint8_t* end)
+{
+    const auto [_, next_pos] = parse<ValType>(pos, end);
+    return next_pos;
+}
+
 template <>
 inline parser_result<FuncType> parse(const uint8_t* pos, const uint8_t* end)
 {
@@ -85,8 +91,7 @@ inline parser_result<FuncType> parse(const uint8_t* pos, const uint8_t* end)
 
 inline std::tuple<bool, const uint8_t*> parse_global_type(const uint8_t* pos, const uint8_t* end)
 {
-    // will throw if invalid type
-    std::tie(std::ignore, pos) = parse<ValType>(pos, end);
+    pos = validate_valtype(pos, end);
 
     if (pos == end)
         throw parser_error{"Unexpected EOF"};

@@ -44,8 +44,7 @@ parser_result<uint8_t> parse_blocktype(const uint8_t* pos, const uint8_t* end)
     if (type == BlockTypeEmpty)
         return {0, pos + 1};
 
-    // Validate type.
-    std::tie(std::ignore, pos) = parse<ValType>(pos, end);
+    pos = validate_valtype(pos, end);
     return {1, pos};
 }
 }  // namespace
