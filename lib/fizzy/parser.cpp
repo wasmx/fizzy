@@ -7,6 +7,9 @@
 namespace fizzy
 {
 template <typename T>
+parser_result<T> parse(const uint8_t* pos, const uint8_t* end);
+
+template <typename T>
 inline parser_result<std::vector<T>> parse_vec(const uint8_t* pos, const uint8_t* end)
 {
     uint32_t size;

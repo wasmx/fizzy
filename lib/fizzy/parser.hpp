@@ -17,9 +17,6 @@ Module parse(bytes_view input);
 
 parser_result<Code> parse_expr(const uint8_t* input, const uint8_t* end);
 
-template <typename T>
-parser_result<T> parse(const uint8_t* pos, const uint8_t* end);
-
 parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end);
 
 inline parser_result<Limits> parse_limits(const uint8_t* pos, const uint8_t* end)
