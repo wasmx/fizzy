@@ -1193,6 +1193,35 @@ TEST(parser, interleaved_custom_section)
     EXPECT_EQ(module.codesec.size(), 1);
 }
 
+TEST(parser, wrongly_ordered_sections)
+{
+    auto create_empty_section = [](uint8_t id) -> bytes {
+        if (id == 8)  // start
+            return make_section(8, "00"_bytes);
+        else
+            return make_section(id, make_vec({}));
+    };
+
+    constexpr uint8_t first_section_id = 1;
+    constexpr uint8_t last_section_id = 11;
+
+    for (auto id = last_section_id; id > first_section_id; id--)
+    {
+        const auto wrong_order_bin =
+            bytes{wasm_prefix} + create_empty_section(0) + create_empty_section(id) +
+            create_empty_section(0) + create_empty_section(0) +
+            create_empty_section(uint8_t(id - 1)) + create_empty_section(0);
+        EXPECT_THROW_MESSAGE(
+            parse(wrong_order_bin), parser_error, "Unexpected out-of-order section type");
+
+        const auto duplicated_bin = bytes{wasm_prefix} + create_empty_section(0) +
+                                    create_empty_section(id) + create_empty_section(0) +
+                                    create_empty_section(id) + create_empty_section(0);
+        EXPECT_THROW_MESSAGE(
+            parse(duplicated_bin), parser_error, "Unexpected out-of-order section type");
+    }
+}
+
 TEST(parser, milestone1)
 {
     /* wat2wasm
