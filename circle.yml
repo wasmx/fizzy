@@ -133,12 +133,16 @@ jobs:
       - build
       - test
 
-  clang-latest-coverage:
+  coverage-tidy:
     executor: linux-clang-9
     environment:
       BUILD_TYPE: Coverage
       TESTS_FILTER: unittests
+      CMAKE_OPTIONS: -DCMAKE_CXX_CLANG_TIDY=clang-tidy-9
     steps:
+      - run:
+          name: "Install clang-tidy"
+          command: sudo apt-get -q update && sudo apt-get -qy install clang-tidy-9
       - build
       - test
       - run:
@@ -177,27 +181,15 @@ jobs:
             sed -i 's|$(pwd)/||' ~/build/fizzy.lcov
             codecov --file ~/build/fizzy.lcov -X gcov
 
-  clang-latest-asan:
+  sanitizers:
     executor: linux-clang-9
     environment:
       BUILD_TYPE: RelWithDebInfo
-      CMAKE_OPTIONS: -DSANITIZE=address
+      CMAKE_OPTIONS: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,implicit-conversion,nullability
     steps:
       - build
       - test
       - benchmark
-
-  clang-latest-ubsan-tidy:
-    executor: linux-clang-9
-    environment:
-      BUILD_TYPE: Debug
-      CMAKE_OPTIONS: -DSANITIZE=undefined,implicit-conversion,nullability -DCMAKE_CXX_CLANG_TIDY=clang-tidy-9
-    steps:
-      - run:
-          name: "Install clang-tidy"
-          command: sudo apt-get -q update && sudo apt-get -qy install clang-tidy-9
-      - build
-      - test
 
   benchmark:
     machine:
@@ -234,7 +226,7 @@ jobs:
     executor: linux-clang-9
     environment:
       BUILD_TYPE: RelWithDebInfo
-      CMAKE_OPTIONS: -DFIZZY_FUZZING=ON -DSANITIZE=undefined,implicit-conversion,nullability
+      CMAKE_OPTIONS: -DFIZZY_FUZZING=ON -DENABLE_ASSERTIONS=ON
       UBSAN_OPTIONS: halt_on_error=1
     steps:
       - build
@@ -265,9 +257,8 @@ workflows:
       - lint
       - release-linux
       - release-macos
-      - clang-latest-coverage
-      - clang-latest-asan
-      - clang-latest-ubsan-tidy
+      - coverage-tidy
+      - sanitizers
       - fuzzing
       - benchmark:
           requires:

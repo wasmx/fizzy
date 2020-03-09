@@ -30,8 +30,24 @@ endif()
 
 cable_configure_compiler()
 
+# An option to enable assertions in non-Debug build types.
+# Disabling assertions in Debug build type has no effect (assertions are still enabled).
+option(ENABLE_ASSERTIONS "Enable NDEBUG based assertions" OFF)
+if(ENABLE_ASSERTIONS)
+    foreach(flags_var_to_scrub
+        CMAKE_CXX_FLAGS_RELEASE
+        CMAKE_CXX_FLAGS_RELWITHDEBINFO
+        CMAKE_CXX_FLAGS_MINSIZEREL
+        CMAKE_C_FLAGS_RELEASE
+        CMAKE_C_FLAGS_RELWITHDEBINFO
+        CMAKE_C_FLAGS_MINSIZEREL)
+        string(REGEX REPLACE "(^| )[/-]D *NDEBUG($| )" " "
+            "${flags_var_to_scrub}" "${${flags_var_to_scrub}}")
+    endforeach()
+endif()
+
 if(FIZZY_FUZZING)
-    set(fuzzing_flags -fsanitize=fuzzer-no-link,undefined,address)
+    set(fuzzing_flags -fsanitize=fuzzer-no-link,address,undefined,implicit-conversion,nullability)
     add_compile_options(${fuzzing_flags})
     add_link_options(${fuzzing_flags})
 endif()
