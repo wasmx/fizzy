@@ -427,6 +427,10 @@ inline T rotl(T lhs, T rhs) noexcept
 {
     constexpr T num_bits{sizeof(T) * 8};
     const auto k = rhs % num_bits;
+
+    if (k == 0)
+        return lhs;
+
     return (lhs << k) | (lhs >> (num_bits - k));
 }
 
@@ -435,6 +439,10 @@ inline T rotr(T lhs, T rhs) noexcept
 {
     constexpr T num_bits{sizeof(T) * 8};
     const auto k = rhs % num_bits;
+
+    if (k == 0)
+        return lhs;
+
     return (lhs >> k) | (lhs << (num_bits - k));
 }
 
