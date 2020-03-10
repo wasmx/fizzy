@@ -55,58 +55,49 @@ TEST(execute_control, block_br)
 
 TEST(execute_control, loop_void_empty)
 {
-    // This wasm code is invalid - loop is not allowed to leave anything on the stack.
-    Module module;
-    module.codesec.emplace_back(
-        Code{0, {Instr::loop, Instr::local_get, Instr::end, Instr::end}, {0, 0, 0, 0, 0}});
-
-    const auto [trap, ret] = execute(module, 0, {1});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 1);
+    /* wat2wasm --no-check
+    (func
+      (loop
+        get_local 0  ;; Leaves an item on the stack what makes the loop invalid.
+      )
+    )
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a09010700034020000b0b");
+    const auto result = execute(parse(wasm), 0, {1});
+    EXPECT_RESULT(result, 1);
 }
 
 TEST(execute_control, block_void_empty)
 {
-    // This wasm code is invalid - block with type [] is not allowed to leave anything on the stack.
-    Module module;
-    module.codesec.emplace_back(Code{0, {Instr::block, Instr::local_get, Instr::end, Instr::end},
-        from_hex("00"
-                 "00000000"
-                 "00000000"
-                 "00000000")});
-
-    const auto [trap, ret] = execute(module, 0, {100});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 100);
+    /* wat2wasm --no-check
+    (func
+      (block
+        get_local 0  ;; Leaves an item on the stack what makes the block invalid.
+      )
+    )
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a09010700024020000b0b");
+    const auto result = execute(parse(wasm), 0, {100});
+    EXPECT_RESULT(result, 100);
 }
 
 TEST(execute_control, loop_void_br_if_16)
 {
-    // This will try to loop 16 times.
-    //
-    // loop
-    //   local.get 0 # This is the input argument.
-    //   i32.const 1
-    //   i32.sub
-    //   local.tee 0
-    //   br_if 0
-    //   local.get 0
-    // end
-    Module module;
-    module.codesec.emplace_back(Code{0,
-        {Instr::loop, Instr::local_get, Instr::i32_const, Instr::i32_sub, Instr::local_tee,
-            Instr::br_if, Instr::local_get, Instr::end, Instr::end},
-        {0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
-
-    const auto [trap, ret] = execute(module, 0, {16});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0);
+    /* wat2wasm --no-check
+    (func (param i32)
+      (loop
+        local.get 0  ;; This is the input argument.
+        i32.const 1
+        i32.sub
+        local.tee 0
+        br_if 0
+        local.get 0  ;; Leaves an item on the stack what makes the loop invalid.
+      )
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d0100000001050160017f00030201000a120110000340200041016b22000d0020000b0b");
+    EXPECT_RESULT(execute(parse(wasm), 0, {16}), 0);
 }
 
 TEST(execute_control, loop_with_result)
