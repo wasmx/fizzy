@@ -6,6 +6,35 @@
 
 namespace fizzy
 {
+template <typename T>
+parser_result<T> parse(const uint8_t* pos, const uint8_t* end);
+
+template <typename T>
+inline parser_result<std::vector<T>> parse_vec(const uint8_t* pos, const uint8_t* end)
+{
+    uint32_t size;
+    std::tie(size, pos) = leb128u_decode<uint32_t>(pos, end);
+
+    std::vector<T> result;
+
+    // Reserve memory for vec elements if `size` value is reasonable.
+    // TODO: Adjust the limit constant by inspecting max vec size value
+    //       appearing in big set of example wasm binaries.
+    if (size < 128)
+        result.reserve(size);
+
+    auto inserter = std::back_inserter(result);
+    for (uint32_t i = 0; i < size; ++i)
+        std::tie(inserter, pos) = parse<T>(pos, end);
+    return {result, pos};
+}
+
+template <>
+inline parser_result<uint32_t> parse(const uint8_t* pos, const uint8_t* end)
+{
+    return leb128u_decode<uint32_t>(pos, end);
+}
+
 /* FIXME: use this in functions parsing a single byte (and rename this to parse_byte) OR remove this
 template <>
 inline parser_result<uint8_t> parse(const uint8_t* pos, const uint8_t* end)
@@ -38,6 +67,12 @@ parser_result<ValType> parse(const uint8_t* pos, const uint8_t* end)
     }
 }
 
+const uint8_t* validate_valtype(const uint8_t* pos, const uint8_t* end)
+{
+    const auto [_, next_pos] = parse<ValType>(pos, end);
+    return next_pos;
+}
+
 template <>
 inline parser_result<FuncType> parse(const uint8_t* pos, const uint8_t* end)
 {
@@ -59,8 +94,7 @@ inline parser_result<FuncType> parse(const uint8_t* pos, const uint8_t* end)
 
 inline std::tuple<bool, const uint8_t*> parse_global_type(const uint8_t* pos, const uint8_t* end)
 {
-    // will throw if invalid type
-    std::tie(std::ignore, pos) = parse<ValType>(pos, end);
+    pos = validate_valtype(pos, end);
 
     if (pos == end)
         throw parser_error{"Unexpected EOF"};
@@ -445,5 +479,10 @@ Module parse(bytes_view input)
         throw parser_error{"invalid start function index"};
 
     return module;
+}
+
+parser_result<std::vector<uint32_t>> parse_vec_i32(const uint8_t* pos, const uint8_t* end)
+{
+    return parse_vec<uint32_t>(pos, end);
 }
 }  // namespace fizzy
