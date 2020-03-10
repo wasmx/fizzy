@@ -70,16 +70,18 @@ TEST(parser, vec_malformend_huge_size)
 
 TEST(parser, limits_min)
 {
-    const auto input = "007f"_bytes;
-    const auto [limits, pos] = parse_limits(input.data(), input.data() + input.size());
+    const auto wasm = bytes{wasm_prefix} + make_section(5, make_vec({"007f"_bytes}));
+    const auto module = parse(wasm);
+    const auto& limits = module.memorysec[0].limits;
     EXPECT_EQ(limits.min, 0x7f);
     EXPECT_FALSE(limits.max.has_value());
 }
 
 TEST(parser, limits_minmax)
 {
-    const auto input = "01207f"_bytes;
-    const auto [limits, pos] = parse_limits(input.data(), input.data() + input.size());
+    const auto wasm = bytes{wasm_prefix} + make_section(5, make_vec({"01207f"_bytes}));
+    const auto module = parse(wasm);
+    const auto& limits = module.memorysec[0].limits;
     EXPECT_EQ(limits.min, 0x20);
     EXPECT_TRUE(limits.max.has_value());
     EXPECT_EQ(*limits.max, 0x7f);
@@ -87,23 +89,20 @@ TEST(parser, limits_minmax)
 
 TEST(parser, limits_min_invalid_too_short)
 {
-    const auto input = "00"_bytes;
-    EXPECT_THROW_MESSAGE(
-        parse_limits(input.data(), input.data() + input.size()), parser_error, "Unexpected EOF");
+    const auto wasm = bytes{wasm_prefix} + make_section(5, make_vec({"00"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
 }
 
 TEST(parser, limits_minmax_invalid_too_short)
 {
-    const auto input = "0120"_bytes;
-    EXPECT_THROW_MESSAGE(
-        parse_limits(input.data(), input.data() + input.size()), parser_error, "Unexpected EOF");
+    const auto wasm = bytes{wasm_prefix} + make_section(5, make_vec({"0120"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
 }
 
 TEST(parser, limits_invalid)
 {
-    const auto input = "02"_bytes;
-    EXPECT_THROW_MESSAGE(
-        parse_limits(input.data(), input.data() + input.size()), parser_error, "invalid limits 2");
+    const auto wasm = bytes{wasm_prefix} + make_section(5, make_vec({"02"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "invalid limits 2");
 }
 
 TEST(parser, module_empty)
