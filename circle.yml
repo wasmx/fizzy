@@ -90,7 +90,7 @@ commands:
             set +e
             # TODO: Make UBSan warnings fatal.
             # export UBSAN_OPTIONS=halt_on_error=1
-            expected="  PASSED 2857, FAILED 142, SKIPPED 8814."
+            expected="  PASSED 2869, FAILED 142, SKIPPED 8802."
             result=$(bin/fizzy-spectests --skip-validation wasm-spec/test/core/json | tail -1)
             echo "Expected: $expected"
             echo "Result: $result"
