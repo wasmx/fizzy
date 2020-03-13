@@ -27,8 +27,11 @@
 ;; expected i64 value
 (assert_return (invoke $Mod1 "foo.i64") (i64.const 4))
 
-;; FIXME: invoke without module name (last module)
-;; (assert_return (invoke "foo.i64") (i64.const 4))
+;; invoke without module name (last module)
+(assert_return (invoke "foo.i64") (i64.const 4))
+
+;; get global
+(assert_return (get $Mod1 "glob") (i32.const 55))
 
 (assert_trap (invoke $Mod1 "trap") "unreachable instruction")
 

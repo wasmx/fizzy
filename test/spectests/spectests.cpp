@@ -53,7 +53,7 @@ struct imports
 class test_runner
 {
 public:
-    explicit test_runner(const test_settings& ts) : settings{ts} {}
+    explicit test_runner(const test_settings& ts) : m_settings{ts} {}
 
     test_results run_from_file(const fs::path& path)
     {
@@ -85,24 +85,28 @@ public:
                     auto imports = create_imports(module);
                     if (!imports.has_value())
                     {
-                        instances.erase(name);
+                        m_instances.erase(name);
                         continue;
                     }
 
-                    instances[name] = fizzy::instantiate(std::move(module),
+                    m_instances[name] = fizzy::instantiate(std::move(module),
                         std::move(imports->functions), std::move(imports->tables),
                         std::move(imports->memories), std::move(imports->globals));
+
+                    m_last_module_name = name;
                 }
                 catch (const fizzy::parser_error& ex)
                 {
                     fail(std::string{"Parsing failed with error: "} + ex.what());
-                    instances.erase(name);
+                    m_instances.erase(name);
+                    m_last_module_name.clear();
                     continue;
                 }
                 catch (const fizzy::instantiate_error& ex)
                 {
                     fail(std::string{"Instantiation failed with error: "} + ex.what());
-                    instances.erase(name);
+                    m_instances.erase(name);
+                    m_last_module_name.clear();
                     continue;
                 }
                 pass();
@@ -112,8 +116,8 @@ public:
                 const auto module_name =
                     (cmd.find("name") != cmd.end() ? cmd["name"] : UnnamedModule);
 
-                const auto it_instance = instances.find(module_name);
-                if (it_instance == instances.end())
+                const auto it_instance = m_instances.find(module_name);
+                if (it_instance == m_instances.end())
                 {
                     skip("Module not found.");
                     continue;
@@ -126,7 +130,7 @@ public:
                     // Assign a name to unnamed module to avoid it being overwritten by another
                     // unnamed one. Let the name be equal to registered name.
                     const auto [_, inserted] =
-                        instances.emplace(registered_name, std::move(it_instance->second));
+                        m_instances.emplace(registered_name, std::move(it_instance->second));
                     if (!inserted)
                     {
                         fail("Failed to register unnamed module - another module with name \"" +
@@ -134,11 +138,11 @@ public:
                         continue;
                     }
 
-                    instances.erase(module_name);
-                    registered_names[registered_name] = registered_name;
+                    m_instances.erase(module_name);
+                    m_registered_names[registered_name] = registered_name;
                 }
                 else
-                    registered_names[registered_name] = module_name;
+                    m_registered_names[registered_name] = module_name;
                 pass();
             }
             else if (type == "assert_return" || type == "action")
@@ -173,29 +177,27 @@ public:
                         continue;
                     }
 
-                    const auto expected_type = expected.at(0).at("type").get<std::string>();
-                    uint64_t expected_value;
-                    if (expected_type == "i32")
-                        expected_value = json_to_value<int32_t>(expected.at(0).at("value"));
-                    else if (expected_type == "i64")
-                        expected_value = json_to_value<int64_t>(expected.at(0).at("value"));
-                    else
+                    if (!check_result(result->stack[0], expected.at(0)))
+                        continue;
+
+                    pass();
+                }
+                else if (action_type == "get")
+                {
+                    auto instance = find_instance_for_action(action);
+                    if (!instance)
+                        continue;
+
+                    const auto global_name = action.at("field").get<std::string>();
+                    const auto global = fizzy::find_exported_global(*instance, global_name);
+                    if (!global)
                     {
-                        skip("Unsupported expected type '" + expected_type + "'.");
+                        fail("Global \"" + global_name + "\" not found.");
                         continue;
                     }
 
-                    const uint64_t actual_value = result->stack[0];
-                    if (expected_value != actual_value)
-                    {
-                        std::stringstream message;
-                        message << "Incorrect returned value. Expected: " << expected_value
-                                << " (0x" << std::hex << expected_value << ") Actual: " << std::dec
-                                << actual_value << " (0x" << std::hex << actual_value << std::dec
-                                << ")";
-                        fail(message.str());
+                    if (!check_result(*global->value, cmd.at("expected").at(0)))
                         continue;
-                    }
 
                     pass();
                 }
@@ -228,7 +230,7 @@ public:
             {
                 // NOTE: assert_malformed should result in a parser error and
                 //       assert_invalid should result in a validation error
-                if (type == "assert_invalid" && settings.skip_validation)
+                if (type == "assert_invalid" && m_settings.skip_validation)
                 {
                     skip("Validation tests disabled.");
                     continue;
@@ -260,31 +262,39 @@ public:
                 skip("Unsupported command type");
         }
 
-        log(std::to_string(results.passed + results.failed + results.skipped) + " tests ran from " +
-            path.filename().string() + ".\n  PASSED " + std::to_string(results.passed) +
-            ", FAILED " + std::to_string(results.failed) + ", SKIPPED " +
-            std::to_string(results.skipped) + ".\n");
+        log(std::to_string(m_results.passed + m_results.failed + m_results.skipped) +
+            " tests ran from " + path.filename().string() + ".\n  PASSED " +
+            std::to_string(m_results.passed) + ", FAILED " + std::to_string(m_results.failed) +
+            ", SKIPPED " + std::to_string(m_results.skipped) + ".\n");
 
-        return results;
+        return m_results;
     }
 
 private:
-    std::optional<fizzy::execution_result> invoke(const json& action)
+    fizzy::Instance* find_instance_for_action(const json& action)
     {
         const auto module_name =
-            (action.find("module") != action.end() ? action["module"] : UnnamedModule);
+            (action.find("module") != action.end() ? action["module"].get<std::string>() :
+                                                     m_last_module_name);
 
-        const auto it_instance = instances.find(module_name);
-        if (it_instance == instances.end())
+        const auto it_instance = m_instances.find(module_name);
+        if (it_instance == m_instances.end())
         {
             skip("No instantiated module.");
-            return std::nullopt;
+            return nullptr;
         }
 
-        auto& instance = it_instance->second;
+        return &it_instance->second;
+    }
+
+    std::optional<fizzy::execution_result> invoke(const json& action)
+    {
+        auto instance = find_instance_for_action(action);
+        if (!instance)
+            return std::nullopt;
 
         const auto func_name = action.at("field").get<std::string>();
-        const auto func_idx = fizzy::find_exported_function(instance.module, func_name);
+        const auto func_idx = fizzy::find_exported_function(instance->module, func_name);
         if (!func_idx.has_value())
         {
             skip("Function '" + func_name + "' not found.");
@@ -308,7 +318,33 @@ private:
             args.push_back(arg_value);
         }
 
-        return fizzy::execute(instance, *func_idx, std::move(args));
+        return fizzy::execute(*instance, *func_idx, std::move(args));
+    }
+
+    bool check_result(uint64_t actual_value, const json& expected)
+    {
+        const auto expected_type = expected.at("type").get<std::string>();
+        uint64_t expected_value;
+        if (expected_type == "i32")
+            expected_value = json_to_value<int32_t>(expected.at("value"));
+        else if (expected_type == "i64")
+            expected_value = json_to_value<int64_t>(expected.at("value"));
+        else
+        {
+            skip("Unsupported expected type '" + expected_type + "'.");
+            return false;
+        }
+
+        if (expected_value != actual_value)
+        {
+            std::stringstream message;
+            message << "Incorrect returned value. Expected: " << expected_value << " (0x"
+                    << std::hex << expected_value << ") Actual: " << std::dec << actual_value
+                    << " (0x" << std::hex << actual_value << std::dec << ")";
+            fail(message.str());
+            return false;
+        }
+        return true;
     }
 
     std::optional<imports> create_imports(const fizzy::Module& module)
@@ -316,16 +352,16 @@ private:
         imports result;
         for (auto const& import : module.importsec)
         {
-            const auto it_registered = registered_names.find(import.module);
-            if (it_registered == registered_names.end())
+            const auto it_registered = m_registered_names.find(import.module);
+            if (it_registered == m_registered_names.end())
             {
                 fail("Module \"" + import.module + "\" not registered.");
                 return std::nullopt;
             }
 
             const auto module_name = it_registered->second;
-            const auto it_instance = instances.find(module_name);
-            if (it_instance == instances.end())
+            const auto it_instance = m_instances.find(module_name);
+            if (it_instance == m_instances.end())
             {
                 fail("Module not instantiated.");
                 return std::nullopt;
@@ -385,19 +421,19 @@ private:
 
     void pass()
     {
-        ++results.passed;
+        ++m_results.passed;
         std::cout << "PASSED\n";
     }
 
     void fail(std::string_view message)
     {
-        ++results.failed;
+        ++m_results.failed;
         std::cout << "FAILED " << message << "\n";
     }
 
     void skip(std::string_view message)
     {
-        ++results.skipped;
+        ++m_results.skipped;
         std::cout << "SKIPPED " << message << "\n";
     }
 
@@ -405,10 +441,11 @@ private:
 
     void log_no_newline(std::string_view message) const { std::cout << message << std::flush; }
 
-    test_settings settings;
-    std::unordered_map<std::string, fizzy::Instance> instances;
-    std::unordered_map<std::string, std::string> registered_names;
-    test_results results;
+    test_settings m_settings;
+    std::unordered_map<std::string, fizzy::Instance> m_instances;
+    std::unordered_map<std::string, std::string> m_registered_names;
+    std::string m_last_module_name;
+    test_results m_results;
 };
 
 bool run_tests_from_dir(const fs::path& path, const test_settings& settings)
