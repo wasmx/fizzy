@@ -19,29 +19,6 @@ parser_result<Code> parse_expr(const uint8_t* input, const uint8_t* end);
 
 parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end);
 
-inline parser_result<Limits> parse_limits(const uint8_t* pos, const uint8_t* end)
-{
-    if (pos == end)
-        throw parser_error{"Unexpected EOF"};
-
-    Limits result;
-    const auto b = *pos++;
-    switch (b)
-    {
-    case 0x00:
-        std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos, end);
-        return {result, pos};
-    case 0x01:
-        std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos, end);
-        std::tie(result.max, pos) = leb128u_decode<uint32_t>(pos, end);
-        if (result.min > *result.max)
-            throw parser_error("malformed limits (minimum is larger than maximum)");
-        return {result, pos};
-    default:
-        throw parser_error{"invalid limits " + std::to_string(b)};
-    }
-}
-
 /// Parses the vec of i32 values.
 /// This is used in parse_expr() (parser_expr.cpp).
 parser_result<std::vector<uint32_t>> parse_vec_i32(const uint8_t* pos, const uint8_t* end);
