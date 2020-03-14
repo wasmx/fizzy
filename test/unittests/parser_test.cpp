@@ -1069,8 +1069,24 @@ TEST(parser, code_section_unsupported_fp_instructions)
 
     for (const auto instr : fp_instructions)
     {
-        const auto func_bin = "00"_bytes  // vec(locals)
-                              + bytes{instr};
+        auto func_bin = "00"_bytes  // vec(locals)
+                        + bytes{instr};
+        switch (instr)
+        {
+        case 0x2a:  // f32.load
+        case 0x2b:  // f64.load
+        case 0x38:  // f32.store
+        case 0x39:  // f64.store
+            func_bin += test::leb128u_encode(0) + test::leb128u_encode(0);
+            break;
+        case 0x43:  // f32.const
+            func_bin += bytes(4, 0);
+            break;
+        case 0x44:  // f64.const
+            func_bin += bytes(8, 0);
+            break;
+        }
+        func_bin += bytes{0xb};  // end
         const auto code_bin = add_size_prefix(func_bin);
         const auto section_contents = make_vec({code_bin});
         const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
