@@ -11,6 +11,7 @@ namespace
 execution_result execute_unary_operation(Instr instr, uint64_t arg)
 {
     Module module;
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(Code{0, {Instr::local_get, instr, Instr::end}, {0, 0, 0, 0}});
 
     return execute(module, 0, {arg});
@@ -19,6 +20,7 @@ execution_result execute_unary_operation(Instr instr, uint64_t arg)
 execution_result execute_binary_operation(Instr instr, uint64_t lhs, uint64_t rhs)
 {
     Module module;
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::local_get, instr, Instr::end}, {0, 0, 0, 0, 1, 0, 0, 0}});
 
@@ -29,6 +31,7 @@ execution_result execute_binary_operation(Instr instr, uint64_t lhs, uint64_t rh
 TEST(execute_numeric, i32_const)
 {
     Module module;
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(Code{0, {Instr::i32_const, Instr::end}, {0x42, 0, 0x42, 0}});
 
     const auto [trap, ret] = execute(module, 0, {});
@@ -41,6 +44,7 @@ TEST(execute_numeric, i32_const)
 TEST(execute_numeric, i64_const)
 {
     Module module;
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::i64_const, Instr::end}, {0x42, 0, 0x42, 0, 0, 0, 0, 1}});
 

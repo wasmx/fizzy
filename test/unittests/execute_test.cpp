@@ -10,6 +10,7 @@ using namespace fizzy;
 TEST(execute, end)
 {
     Module module;
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(Code{0, {Instr::end}, {}});
 
     const auto [trap, ret] = execute(module, 0, {});
@@ -21,6 +22,7 @@ TEST(execute, end)
 TEST(execute, drop)
 {
     Module module;
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(Code{1, {Instr::local_get, Instr::drop, Instr::end}, {0, 0, 0, 0}});
 
     const auto [trap, ret] = execute(module, 0, {});
@@ -32,6 +34,7 @@ TEST(execute, drop)
 TEST(execute, select)
 {
     Module module;
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::local_get, Instr::local_get, Instr::select, Instr::end},
             {0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0}});
@@ -58,6 +61,7 @@ TEST(execute, select)
 TEST(execute, local_get)
 {
     Module module;
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(Code{0, {Instr::local_get, Instr::end}, {0, 0, 0, 0}});
 
     const auto [trap, ret] = execute(module, 0, {42});
@@ -70,6 +74,7 @@ TEST(execute, local_get)
 TEST(execute, local_set)
 {
     Module module;
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{1, {Instr::local_get, Instr::local_set, Instr::local_get, Instr::end},
             {0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0}});
@@ -84,6 +89,7 @@ TEST(execute, local_set)
 TEST(execute, local_tee)
 {
     Module module;
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{1, {Instr::local_get, Instr::local_tee, Instr::end}, {0, 0, 0, 0, 1, 0, 0, 0}});
 
@@ -97,8 +103,8 @@ TEST(execute, local_tee)
 TEST(execute, global_get)
 {
     Module module;
+    module.funcsec.emplace_back(TypeIdx{0});
     module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
-
     module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
 
     auto instance = instantiate(module);
@@ -113,9 +119,10 @@ TEST(execute, global_get)
 TEST(execute, global_get_two_globals)
 {
     Module module;
+    module.funcsec.emplace_back(TypeIdx{0});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
     module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {43}}});
-
     module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
     module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {1, 0, 0, 0}});
 
@@ -137,6 +144,7 @@ TEST(execute, global_get_two_globals)
 TEST(execute, global_get_imported)
 {
     Module module;
+    module.funcsec.emplace_back(TypeIdx{0});
     module.importsec.emplace_back(Import{"mod", "glob", ExternalKind::Global, {false}});
     module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
 
@@ -191,8 +199,8 @@ TEST(execute, global_get_imported_and_internal)
 TEST(execute, global_set)
 {
     Module module;
+    module.funcsec.emplace_back(TypeIdx{0});
     module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {41}}});
-
     module.codesec.emplace_back(
         Code{0, {Instr::i32_const, Instr::global_set, Instr::end}, {42, 0, 0, 0, 0, 0, 0, 0}});
 
@@ -207,9 +215,9 @@ TEST(execute, global_set)
 TEST(execute, global_set_two_globals)
 {
     Module module;
+    module.funcsec.emplace_back(TypeIdx{0});
     module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
     module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {43}}});
-
     module.codesec.emplace_back(Code{0,
         {Instr::i32_const, Instr::global_set, Instr::i32_const, Instr::global_set, Instr::end},
         {44, 0, 0, 0, 0, 0, 0, 0, 45, 0, 0, 0, 1, 0, 0, 0}});
@@ -226,6 +234,7 @@ TEST(execute, global_set_two_globals)
 TEST(execute, global_set_imported)
 {
     Module module;
+    module.funcsec.emplace_back(TypeIdx{0});
     module.importsec.emplace_back(Import{"mod", "glob", ExternalKind::Global, {true}});
     module.codesec.emplace_back(
         Code{0, {Instr::i32_const, Instr::global_set, Instr::end}, {42, 0, 0, 0, 0, 0, 0, 0}});
@@ -243,6 +252,7 @@ TEST(execute, i32_load)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i32_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
@@ -262,6 +272,7 @@ TEST(execute, i32_load_imported_memory)
     Module module;
     Import imp{"mod", "m", ExternalKind::Memory, {}};
     imp.desc.memory = Memory{{1, 1}};
+    module.funcsec.emplace_back(TypeIdx{0});
     module.importsec.emplace_back(imp);
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i32_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
@@ -282,6 +293,7 @@ TEST(execute, i32_load_overflow)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     // NOTE: this is i32.load offset=0x7fffffff
     module.codesec.emplace_back(Code{
         0, {Instr::local_get, Instr::i32_load, Instr::end}, {0, 0, 0, 0, 0xff, 0xff, 0xff, 0x7f}});
@@ -300,6 +312,7 @@ TEST(execute, i64_load)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
@@ -319,6 +332,7 @@ TEST(execute, i64_load_overflow)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     // NOTE: this is i64.load offset=0x7fffffff
     module.codesec.emplace_back(Code{
         0, {Instr::local_get, Instr::i64_load, Instr::end}, {0, 0, 0, 0, 0xff, 0xff, 0xff, 0x7f}});
@@ -337,6 +351,7 @@ TEST(execute, i32_load8_s)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i32_load8_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
@@ -356,6 +371,7 @@ TEST(execute, i32_load8_u)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i32_load8_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
@@ -375,6 +391,7 @@ TEST(execute, i32_load16_s)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i32_load16_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
@@ -395,6 +412,7 @@ TEST(execute, i32_load16_u)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i32_load16_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
@@ -415,6 +433,7 @@ TEST(execute, i64_load8_s)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load8_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
@@ -434,6 +453,7 @@ TEST(execute, i64_load8_u)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load8_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
@@ -453,6 +473,7 @@ TEST(execute, i64_load16_s)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load16_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
@@ -473,6 +494,7 @@ TEST(execute, i64_load16_u)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load16_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
@@ -493,6 +515,7 @@ TEST(execute, i64_load32_s)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load32_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
@@ -516,6 +539,7 @@ TEST(execute, i64_load32_u)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i64_load32_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
 
@@ -539,6 +563,7 @@ TEST(execute, i32_store)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::local_get, Instr::i32_store, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
@@ -559,6 +584,7 @@ TEST(execute, i32_store_imported_memory)
     Import imp{"mod", "m", ExternalKind::Memory, {}};
     imp.desc.memory = Memory{{1, 1}};
     module.importsec.emplace_back(imp);
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::local_get, Instr::i32_store, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
@@ -578,6 +604,7 @@ TEST(execute, i32_store_overflow)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     // NOTE: this is i32.store offset=0x7fffffff
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i32_const, Instr::i32_store, Instr::end},
@@ -597,6 +624,7 @@ TEST(execute, i64_store)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::local_get, Instr::i64_store, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
@@ -615,6 +643,7 @@ TEST(execute, i64_store_overflow)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     // NOTE: this is i64.store offset=0x7fffffff
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::i32_const, Instr::i64_store, Instr::end},
@@ -634,6 +663,7 @@ TEST(execute, i32_store8)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::local_get, Instr::i32_store8, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
@@ -652,6 +682,7 @@ TEST(execute, i32_store8_trap)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::local_get, Instr::i32_store8, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
@@ -666,6 +697,7 @@ TEST(execute, i32_store16)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::local_get, Instr::i32_store16, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
@@ -684,6 +716,7 @@ TEST(execute, i64_store8)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::local_get, Instr::i64_store8, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
@@ -702,6 +735,7 @@ TEST(execute, i64_store16)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::local_get, Instr::i64_store16, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
@@ -720,6 +754,7 @@ TEST(execute, i64_store32)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::local_get, Instr::i64_store32, Instr::end},
             {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
@@ -738,6 +773,7 @@ TEST(execute, memory_size)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(Code{0, {Instr::memory_size, Instr::end}, {}});
 
     const auto [trap, ret] = execute(module, 0, {});
@@ -750,6 +786,7 @@ TEST(execute, memory_grow)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 4096}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(
         Code{0, {Instr::local_get, Instr::memory_grow, Instr::end}, {0, 0, 0, 0}});
 
@@ -870,6 +907,7 @@ TEST(execute, imported_functions_and_regular_one)
     module.typesec.emplace_back(FuncType{{ValType::i64}, {ValType::i64}});
     module.importsec.emplace_back(Import{"mod", "foo1", ExternalKind::Function, {0}});
     module.importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {0}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(Code{0, {Instr::i32_const, Instr::end}, {42, 0, 42, 0}});
 
     auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
@@ -920,6 +958,7 @@ TEST(execute, imported_two_functions_different_type)
     module.typesec.emplace_back(FuncType{{ValType::i64}, {ValType::i64}});
     module.importsec.emplace_back(Import{"mod", "foo1", ExternalKind::Function, {0}});
     module.importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {0}});
+    module.funcsec.emplace_back(TypeIdx{0});
     module.codesec.emplace_back(Code{0, {Instr::i32_const, Instr::end}, {42, 0, 42, 0}});
 
     auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {

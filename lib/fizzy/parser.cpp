@@ -494,6 +494,9 @@ Module parse(bytes_view input)
     if (!module.elementsec.empty() && module.tablesec.empty() && imported_tbl_count == 0)
         throw parser_error("element section encountered without a table section");
 
+    if (module.funcsec.size() != module.codesec.size())
+        throw parser_error("malformed binary: number of function and code entries must match");
+
     const auto imported_func_count = std::count_if(module.importsec.begin(), module.importsec.end(),
         [](const auto& import) noexcept { return import.kind == ExternalKind::Function; });
     const auto total_func_count = static_cast<size_t>(imported_func_count) + module.funcsec.size();
