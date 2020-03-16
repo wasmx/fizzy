@@ -46,3 +46,13 @@
   (import "Mod1" "tab" (table 10 funcref))
   (import "Mod1" "mem" (memory 1))
 )
+
+(assert_unlinkable
+  (module (import "Mod0" "unknown" (func)))
+  "unknown import"
+)
+
+(assert_trap
+  (module (func $main (unreachable)) (start $main))
+  "unreachable"
+)

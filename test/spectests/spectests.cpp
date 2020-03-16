@@ -82,16 +82,17 @@ public:
                 {
                     fizzy::Module module = fizzy::parse(wasm_binary);
 
-                    auto imports = create_imports(module);
-                    if (!imports.has_value())
+                    auto [imports, error] = create_imports(module);
+                    if (!error.empty())
                     {
+                        fail(error);
                         m_instances.erase(name);
                         continue;
                     }
 
                     m_instances[name] = fizzy::instantiate(std::move(module),
-                        std::move(imports->functions), std::move(imports->tables),
-                        std::move(imports->memories), std::move(imports->globals));
+                        std::move(imports.functions), std::move(imports.tables),
+                        std::move(imports.memories), std::move(imports.globals));
 
                     m_last_module_name = name;
                 }
@@ -258,6 +259,65 @@ public:
                 fail("Invalid module parsed successfully. Expected error: " +
                      cmd.at("text").get<std::string>());
             }
+            else if (type == "assert_unlinkable" || type == "assert_uninstantiable")
+            {
+                // NOTE: assert_uninstantiable should result in a start function trap
+                //       assert_unlinkable checks all other instantiation failures
+
+                const auto module_type = cmd.at("module_type").get<std::string>();
+                if (module_type != "binary")
+                {
+                    skip("Only binary modules are supported.");
+                    continue;
+                }
+
+                const auto filename = cmd.at("filename").get<std::string>();
+                const auto wasm_binary = load_wasm_file(path, filename);
+                try
+                {
+                    fizzy::Module module = fizzy::parse(wasm_binary);
+
+                    auto [imports, error] = create_imports(module);
+                    if (!error.empty())
+                    {
+                        if (type == "assert_unlinkable")
+                            pass();
+                        else
+                            fail(error);
+                        continue;
+                    }
+
+                    fizzy::instantiate(std::move(module), std::move(imports.functions),
+                        std::move(imports.tables), std::move(imports.memories),
+                        std::move(imports.globals));
+                }
+                catch (const fizzy::parser_error& ex)
+                {
+                    fail(std::string{"Parsing failed with error: "} + ex.what());
+                    continue;
+                }
+                catch (const fizzy::instantiate_error& ex)
+                {
+                    if (ex.what() == std::string{"Start function failed to execute"})
+                    {
+                        if (type == "assert_uninstantiable")
+                            pass();
+                        else
+                            fail(std::string{"Instantiation failed with error: "} + ex.what());
+                    }
+                    else
+                    {
+                        if (type == "assert_uninstantiable")
+                            fail(std::string{"Instantiation failed with error: "} + ex.what());
+                        else
+                            pass();
+                    }
+                    continue;
+                }
+
+                fail("Module instantiated successfully. Expected error: " +
+                     cmd.at("text").get<std::string>());
+            }
             else
                 skip("Unsupported command type");
         }
@@ -347,25 +407,19 @@ private:
         return true;
     }
 
-    std::optional<imports> create_imports(const fizzy::Module& module)
+    std::pair<imports, std::string> create_imports(const fizzy::Module& module)
     {
         imports result;
-        for (auto const& import : module.importsec)
+        for (const auto& import : module.importsec)
         {
             const auto it_registered = m_registered_names.find(import.module);
             if (it_registered == m_registered_names.end())
-            {
-                fail("Module \"" + import.module + "\" not registered.");
-                return std::nullopt;
-            }
+                return {{}, "Module \"" + import.module + "\" not registered."};
 
             const auto module_name = it_registered->second;
             const auto it_instance = m_instances.find(module_name);
             if (it_instance == m_instances.end())
-            {
-                fail("Module not instantiated.");
-                return std::nullopt;
-            }
+                return {{}, "Module not instantiated."};
 
             auto& instance = it_instance->second;
 
@@ -374,9 +428,8 @@ private:
                 const auto func = fizzy::find_exported_function(instance, import.name);
                 if (!func.has_value())
                 {
-                    fail(
-                        "Function \"" + import.name + "\" not found in \"" + import.module + "\".");
-                    return std::nullopt;
+                    return {{},
+                        "Function \"" + import.name + "\" not found in \"" + import.module + "\"."};
                 }
 
                 result.functions.emplace_back(*func);
@@ -386,8 +439,8 @@ private:
                 const auto table = fizzy::find_exported_table(instance, import.name);
                 if (!table.has_value())
                 {
-                    fail("Table \"" + import.name + "\" not found in \"" + import.module + "\".");
-                    return std::nullopt;
+                    return {{},
+                        "Table \"" + import.name + "\" not found in \"" + import.module + "\"."};
                 }
 
                 result.tables.emplace_back(*table);
@@ -397,8 +450,8 @@ private:
                 const auto memory = fizzy::find_exported_memory(instance, import.name);
                 if (!memory.has_value())
                 {
-                    fail("Memory \"" + import.name + "\" not found in \"" + import.module + "\".");
-                    return std::nullopt;
+                    return {{},
+                        "Memory \"" + import.name + "\" not found in \"" + import.module + "\"."};
                 }
 
                 result.memories.emplace_back(*memory);
@@ -408,15 +461,15 @@ private:
                 const auto global = fizzy::find_exported_global(instance, import.name);
                 if (!global.has_value())
                 {
-                    fail("Global \"" + import.name + "\" not found in \"" + import.module + "\".");
-                    return std::nullopt;
+                    return {{},
+                        "Global \"" + import.name + "\" not found in \"" + import.module + "\"."};
                 }
 
                 result.globals.emplace_back(*global);
             }
         }
 
-        return result;
+        return {result, ""};
     }
 
     void pass()
