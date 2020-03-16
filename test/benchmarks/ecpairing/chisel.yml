@@ -1,0 +1,4 @@
+sentinel:
+  file: "target/wasm32-unknown-unknown/release/ecpairing.wasm"
+  snip:
+    preset: "ewasm"

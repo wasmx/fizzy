@@ -1,0 +1,21 @@
+[package]
+name = "ecpairing"
+version = "0.2.0"
+authors = ["Alex Beregszaszi <alex@rtfs.hu>"]
+license = "Apache-2.0"
+repository = "https://github.com/ewasm/ewasm-precompiles"
+description = "Ethereum ECPAIRING benchmark"
+publish = false
+edition = "2018"
+
+[dependencies]
+ethereum-bn128 = { git = "https://github.com/ewasm/ethereum-bn128.rs", tag = "0.1.0" }
+rustc-hex = "1.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+lto = true
+opt-level = 3
+debug = false
