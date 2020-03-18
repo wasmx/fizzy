@@ -18,7 +18,8 @@ struct LabelContext
     size_t stack_height = 0;             ///< The stack height at the label instruction.
 };
 
-void match_imported_functions(const std::vector<TypeIdx>& module_imported_types,
+void match_imported_functions(const Module& module,
+    const std::vector<TypeIdx>& module_imported_types,
     const std::vector<ExternalFunction>& imported_functions)
 {
     if (module_imported_types.size() != imported_functions.size())
@@ -26,6 +27,18 @@ void match_imported_functions(const std::vector<TypeIdx>& module_imported_types,
         throw instantiate_error("Module requires " + std::to_string(module_imported_types.size()) +
                                 " imported functions, " +
                                 std::to_string(imported_functions.size()) + " provided");
+    }
+
+    for (size_t i = 0; i < imported_functions.size(); ++i)
+    {
+        const auto& module_imported_type = module.typesec[module_imported_types[i]];
+        const auto& imported_type = imported_functions[i].type;
+        if (module_imported_type.inputs != imported_type.inputs ||
+            module_imported_type.outputs != imported_type.outputs)
+        {
+            throw instantiate_error("Function " + std::to_string(i) +
+                                    " type doesn't match module's imported function type");
+        }
     }
 }
 
@@ -166,7 +179,7 @@ std::vector<TypeIdx> match_imports(const Module& module,
         }
     }
 
-    match_imported_functions(imported_function_types, imported_functions);
+    match_imported_functions(module, imported_function_types, imported_functions);
     match_imported_tables(imported_table_types, imported_tables);
     match_imported_memories(imported_memory_types, imported_memories);
     match_imported_globals(imported_globals_mutability, imported_globals);
