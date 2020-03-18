@@ -32,7 +32,7 @@ WAT2WASM_TOOL = 'wat2wasm'
 FORMAT_TOOL = 'clang-format'
 
 WAT_RE = re.compile(r'/\* wat2wasm(.*)\n([^*]*)\*/', re.MULTILINE)
-WASM_RE = re.compile(r'\s*(?:const )?auto \w+ =\s*from_hex\(\s*"([^;]*)"\);',
+WASM_RE = re.compile(r'\s*(?:const )?auto \w+ =\s*(?:fizzy\:\:)?from_hex\(\s*"([^;]*)"\);',
                      re.MULTILINE)
 
 TMP_WAT_FILE = sys.argv[0] + '.wat'
