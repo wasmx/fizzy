@@ -22,8 +22,6 @@ TEST(instantiate, imported_functions)
     EXPECT_EQ(instance.imported_functions[0].type.inputs[0], ValType::i32);
     ASSERT_EQ(instance.imported_functions[0].type.outputs.size(), 1);
     EXPECT_EQ(instance.imported_functions[0].type.outputs[0], ValType::i32);
-    ASSERT_EQ(instance.imported_function_types.size(), 1);
-    EXPECT_EQ(instance.imported_function_types[0], TypeIdx{0});
 }
 
 TEST(instantiate, imported_functions_multiple)
@@ -52,9 +50,6 @@ TEST(instantiate, imported_functions_multiple)
     EXPECT_EQ(*instance.imported_functions[1].function.target<decltype(host_foo2)>(), host_foo2);
     EXPECT_TRUE(instance.imported_functions[1].type.inputs.empty());
     EXPECT_TRUE(instance.imported_functions[1].type.outputs.empty());
-    ASSERT_EQ(instance.imported_function_types.size(), 2);
-    EXPECT_EQ(instance.imported_function_types[0], TypeIdx{0});
-    EXPECT_EQ(instance.imported_function_types[1], TypeIdx{1});
 }
 
 TEST(instantiate, imported_functions_not_enough)

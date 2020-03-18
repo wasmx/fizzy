@@ -18,8 +18,7 @@ struct LabelContext
     size_t stack_height = 0;             ///< The stack height at the label instruction.
 };
 
-void match_imported_functions(const Module& module,
-    const std::vector<TypeIdx>& module_imported_types,
+void match_imported_functions(const std::vector<FuncType>& module_imported_types,
     const std::vector<ExternalFunction>& imported_functions)
 {
     if (module_imported_types.size() != imported_functions.size())
@@ -31,7 +30,7 @@ void match_imported_functions(const Module& module,
 
     for (size_t i = 0; i < imported_functions.size(); ++i)
     {
-        const auto& module_imported_type = module.typesec[module_imported_types[i]];
+        const auto& module_imported_type = module_imported_types[i];
         const auto& imported_type = imported_functions[i].type;
         if (module_imported_type.inputs != imported_type.inputs ||
             module_imported_type.outputs != imported_type.outputs)
@@ -148,13 +147,12 @@ void match_imported_globals(const std::vector<bool>& module_imports_mutability,
     }
 }
 
-std::vector<TypeIdx> match_imports(const Module& module,
-    const std::vector<ExternalFunction>& imported_functions,
+void match_imports(const Module& module, const std::vector<ExternalFunction>& imported_functions,
     const std::vector<ExternalTable>& imported_tables,
     const std::vector<ExternalMemory>& imported_memories,
     const std::vector<ExternalGlobal>& imported_globals)
 {
-    std::vector<TypeIdx> imported_function_types;
+    std::vector<FuncType> imported_function_types;
     std::vector<Table> imported_table_types;
     std::vector<Memory> imported_memory_types;
     std::vector<bool> imported_globals_mutability;
@@ -163,7 +161,8 @@ std::vector<TypeIdx> match_imports(const Module& module,
         switch (import.kind)
         {
         case ExternalKind::Function:
-            imported_function_types.emplace_back(import.desc.function_type_index);
+            assert(import.desc.function_type_index < module.typesec.size());
+            imported_function_types.emplace_back(module.typesec[import.desc.function_type_index]);
             break;
         case ExternalKind::Table:
             imported_table_types.emplace_back(import.desc.table);
@@ -179,12 +178,10 @@ std::vector<TypeIdx> match_imports(const Module& module,
         }
     }
 
-    match_imported_functions(module, imported_function_types, imported_functions);
+    match_imported_functions(imported_function_types, imported_functions);
     match_imported_tables(imported_table_types, imported_tables);
     match_imported_memories(imported_memory_types, imported_memories);
     match_imported_globals(imported_globals_mutability, imported_globals);
-
-    return imported_function_types;
 }
 
 table_ptr allocate_table(
@@ -305,10 +302,23 @@ void branch(uint32_t label_idx, Stack<LabelContext>& labels, Stack<uint64_t>& st
         stack.resize(label.stack_height);
 }
 
-bool invoke_function(
-    uint32_t type_idx, uint32_t func_idx, Instance& instance, Stack<uint64_t>& stack)
+const FuncType& function_type(const Instance& instance, FuncIdx idx)
 {
-    const auto num_args = instance.module.typesec[type_idx].inputs.size();
+    assert(idx < instance.imported_functions.size() + instance.module.funcsec.size());
+
+    if (idx < instance.imported_functions.size())
+        return instance.imported_functions[idx].type;
+
+    const auto type_idx = instance.module.funcsec[idx - instance.imported_functions.size()];
+    assert(type_idx < instance.module.typesec.size());
+
+    return instance.module.typesec[type_idx];
+}
+
+bool invoke_function(
+    const FuncType& func_type, uint32_t func_idx, Instance& instance, Stack<uint64_t>& stack)
+{
+    const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
     std::vector<uint64_t> call_args(stack.end() - static_cast<ptrdiff_t>(num_args), stack.end());
     stack.resize(stack.size() - num_args);
@@ -318,7 +328,7 @@ bool invoke_function(
     if (ret.trapped)
         return false;
 
-    const auto num_outputs = instance.module.typesec[type_idx].outputs.size();
+    const auto num_outputs = func_type.outputs.size();
     // NOTE: we can assume these two from validation
     assert(ret.stack.size() == num_outputs);
     assert(num_outputs <= 1);
@@ -518,8 +528,7 @@ Instance instantiate(Module module, std::vector<ExternalFunction> imported_funct
 {
     assert(module.funcsec.size() == module.codesec.size());
 
-    std::vector<TypeIdx> imported_function_types = match_imports(
-        module, imported_functions, imported_tables, imported_memories, imported_globals);
+    match_imports(module, imported_functions, imported_tables, imported_memories, imported_globals);
 
     // Init globals
     std::vector<uint64_t> globals;
@@ -576,8 +585,7 @@ Instance instantiate(Module module, std::vector<ExternalFunction> imported_funct
     // safe), but also erroneously points this warning to std::move(table)
     // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
     Instance instance = {std::move(module), std::move(memory), memory_max, std::move(table),
-        std::move(globals), std::move(imported_functions), std::move(imported_function_types),
-        std::move(imported_globals)};
+        std::move(globals), std::move(imported_functions), std::move(imported_globals)};
 
     // Run start function if present
     if (instance.module.startfunc)
@@ -733,15 +741,9 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         case Instr::call:
         {
             const auto called_func_idx = read<uint32_t>(immediates);
-            assert(called_func_idx <
-                   instance.imported_functions.size() + instance.module.funcsec.size());
-            const auto type_idx =
-                called_func_idx < instance.imported_functions.size() ?
-                    instance.imported_function_types[called_func_idx] :
-                    instance.module.funcsec[called_func_idx - instance.imported_functions.size()];
-            assert(type_idx < instance.module.typesec.size());
+            const auto& func_type = function_type(instance, called_func_idx);
 
-            if (!invoke_function(type_idx, called_func_idx, instance, stack))
+            if (!invoke_function(func_type, called_func_idx, instance, stack))
             {
                 trap = true;
                 goto end;
@@ -769,17 +771,9 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
                 goto end;
             }
 
-            assert(*called_func_idx <
-                   instance.imported_functions.size() + instance.module.funcsec.size());
-
             // check actual type against expected type
-            const auto actual_type_idx =
-                called_func_idx < instance.imported_functions.size() ?
-                    instance.imported_function_types[*called_func_idx] :
-                    instance.module.funcsec[*called_func_idx - instance.imported_functions.size()];
-            assert(actual_type_idx < instance.module.typesec.size());
+            const auto& actual_type = function_type(instance, *called_func_idx);
             const auto& expected_type = instance.module.typesec[expected_type_idx];
-            const auto& actual_type = instance.module.typesec[actual_type_idx];
             if (expected_type.inputs != actual_type.inputs ||
                 expected_type.outputs != actual_type.outputs)
             {
@@ -787,7 +781,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
                 goto end;
             }
 
-            if (!invoke_function(actual_type_idx, *called_func_idx, instance, stack))
+            if (!invoke_function(actual_type, *called_func_idx, instance, stack))
             {
                 trap = true;
                 goto end;
@@ -1560,11 +1554,7 @@ std::optional<ExternalFunction> find_exported_function(Instance& instance, std::
         return execute(instance, idx, std::move(args));
     };
 
-    const auto type_idx = (idx < instance.imported_functions.size() ?
-                               instance.imported_function_types[idx] :
-                               instance.module.funcsec[idx - instance.imported_functions.size()]);
-
-    return ExternalFunction{std::move(func), instance.module.typesec[type_idx]};
+    return ExternalFunction{std::move(func), function_type(instance, idx)};
 }
 
 std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::string_view name)
