@@ -56,6 +56,17 @@ TEST(instantiate, imported_functions_not_enough)
         "Module requires 1 imported functions, 0 provided");
 }
 
+TEST(instantiate, imported_function_wrong_type)
+{
+    Module module;
+    module.typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
+    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
+
+    auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result { return {true, {}}; };
+
+    ASSERT_THROW(instantiate(module, {host_foo}), instantiate_error);
+}
+
 TEST(instantiate, imported_table)
 {
     Module module;
