@@ -20,7 +20,11 @@ struct execution_result
 
 struct Instance;
 
-using ExternalFunction = std::function<execution_result(Instance&, std::vector<uint64_t>)>;
+struct ExternalFunction
+{
+    std::function<execution_result(Instance&, std::vector<uint64_t>)> function;
+    FuncType type;
+};
 
 using table_elements = std::vector<std::optional<FuncIdx>>;
 using table_ptr = std::unique_ptr<table_elements, void (*)(table_elements*)>;

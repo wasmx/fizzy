@@ -14,10 +14,14 @@ TEST(instantiate, imported_functions)
     module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
 
     auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result { return {true, {}}; };
-    auto instance = instantiate(module, {host_foo});
+    auto instance = instantiate(module, {{host_foo, module.typesec[0]}});
 
     ASSERT_EQ(instance.imported_functions.size(), 1);
-    EXPECT_EQ(*instance.imported_functions[0].target<decltype(host_foo)>(), host_foo);
+    EXPECT_EQ(*instance.imported_functions[0].function.target<decltype(host_foo)>(), host_foo);
+    ASSERT_EQ(instance.imported_functions[0].type.inputs.size(), 1);
+    EXPECT_EQ(instance.imported_functions[0].type.inputs[0], ValType::i32);
+    ASSERT_EQ(instance.imported_functions[0].type.outputs.size(), 1);
+    EXPECT_EQ(instance.imported_functions[0].type.outputs[0], ValType::i32);
     ASSERT_EQ(instance.imported_function_types.size(), 1);
     EXPECT_EQ(instance.imported_function_types[0], TypeIdx{0});
 }
@@ -36,11 +40,18 @@ TEST(instantiate, imported_functions_multiple)
     auto host_foo2 = [](Instance&, std::vector<uint64_t>) -> execution_result {
         return {true, {}};
     };
-    auto instance = instantiate(module, {host_foo1, host_foo2});
+    auto instance =
+        instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[1]}});
 
     ASSERT_EQ(instance.imported_functions.size(), 2);
-    EXPECT_EQ(*instance.imported_functions[0].target<decltype(host_foo1)>(), host_foo1);
-    EXPECT_EQ(*instance.imported_functions[1].target<decltype(host_foo2)>(), host_foo2);
+    EXPECT_EQ(*instance.imported_functions[0].function.target<decltype(host_foo1)>(), host_foo1);
+    ASSERT_EQ(instance.imported_functions[0].type.inputs.size(), 1);
+    EXPECT_EQ(instance.imported_functions[0].type.inputs[0], ValType::i32);
+    ASSERT_EQ(instance.imported_functions[0].type.outputs.size(), 1);
+    EXPECT_EQ(instance.imported_functions[0].type.outputs[0], ValType::i32);
+    EXPECT_EQ(*instance.imported_functions[1].function.target<decltype(host_foo2)>(), host_foo2);
+    EXPECT_TRUE(instance.imported_functions[1].type.inputs.empty());
+    EXPECT_TRUE(instance.imported_functions[1].type.outputs.empty());
     ASSERT_EQ(instance.imported_function_types.size(), 2);
     EXPECT_EQ(instance.imported_function_types[0], TypeIdx{0});
     EXPECT_EQ(instance.imported_function_types[1], TypeIdx{1});
@@ -63,8 +74,9 @@ TEST(instantiate, imported_function_wrong_type)
     module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
 
     auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result { return {true, {}}; };
+    const auto host_foo_type = FuncType{{}, {}};
 
-    ASSERT_THROW(instantiate(module, {host_foo}), instantiate_error);
+    ASSERT_THROW(instantiate(module, {{host_foo, host_foo_type}}), instantiate_error);
 }
 
 TEST(instantiate, imported_table)

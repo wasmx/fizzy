@@ -662,7 +662,7 @@ TEST(execute_control, br_1_out_of_function_and_imported_function)
         [](Instance&, std::vector<uint64_t>) noexcept -> execution_result { return {}; };
 
     const auto module = parse(bin);
-    auto instance = instantiate(module, {fake_imported_function});
+    auto instance = instantiate(module, {{fake_imported_function, module.typesec[0]}});
     const auto [trap, ret] = execute(instance, 1, {});
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);

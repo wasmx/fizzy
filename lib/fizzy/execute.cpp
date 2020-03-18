@@ -581,7 +581,7 @@ Instance instantiate(Module module, std::vector<ExternalFunction> imported_funct
 execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint64_t> args)
 {
     if (func_idx < instance.imported_functions.size())
-        return instance.imported_functions[func_idx](instance, std::move(args));
+        return instance.imported_functions[func_idx].function(instance, std::move(args));
 
     const auto code_idx = func_idx - instance.imported_functions.size();
     assert(code_idx < instance.module.codesec.size());
@@ -1542,9 +1542,16 @@ std::optional<ExternalFunction> find_exported_function(Instance& instance, std::
     if (!opt_index.has_value())
         return std::nullopt;
 
-    return [idx = *opt_index, &instance](fizzy::Instance&, std::vector<uint64_t> args) {
+    const auto idx = *opt_index;
+    auto func = [idx, &instance](fizzy::Instance&, std::vector<uint64_t> args) {
         return execute(instance, idx, std::move(args));
     };
+
+    const auto type_idx = (idx < instance.imported_functions.size() ?
+                               instance.imported_function_types[idx] :
+                               instance.module.funcsec[idx - instance.imported_functions.size()]);
+
+    return ExternalFunction{std::move(func), instance.module.typesec[type_idx]};
 }
 
 std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::string_view name)
