@@ -60,8 +60,9 @@ parser_result<ValType> parse(const uint8_t* pos, const uint8_t* end)
     case 0x7E:
         return {ValType::i64, pos};
     case 0x7D:  // f32
+        return {ValType::f32, pos};
     case 0x7C:  // f64
-        throw parser_error{"unsupported valtype (floating point)"};
+        return {ValType::f64, pos};
     default:
         throw parser_error{"invalid valtype " + std::to_string(b)};
     }
@@ -155,6 +156,18 @@ inline parser_result<ConstantExpression> parse_constant_expression(
             result.value.constant = static_cast<uint64_t>(value);
             break;
         }
+        case Instr::f32_const:
+            // FIXME: support this once floating points are implemented
+            result.kind = ConstantExpression::Kind::Constant;
+            result.value.constant = 0;
+            pos = skip(4, pos, end);
+            break;
+        case Instr::f64_const:
+            // FIXME: support this once floating points are implemented
+            result.kind = ConstantExpression::Kind::Constant;
+            result.value.constant = 0;
+            pos = skip(8, pos, end);
+            break;
         }
     } while (instr != Instr::end);
 

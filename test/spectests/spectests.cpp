@@ -378,7 +378,15 @@ private:
             args.push_back(arg_value);
         }
 
-        return fizzy::execute(*instance, *func_idx, std::move(args));
+        try
+        {
+            return fizzy::execute(*instance, *func_idx, std::move(args));
+        }
+        catch (fizzy::unsupported_feature const& ex)
+        {
+            skip(std::string{"Unsupported feature: "} + ex.what());
+            return std::nullopt;
+        }
     }
 
     bool check_result(uint64_t actual_value, const json& expected)

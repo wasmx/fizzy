@@ -74,8 +74,17 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end)
         case Instr::f64_load:
         case Instr::f32_store:
         case Instr::f64_store:
+            // alignment
+            std::tie(std::ignore, pos) = leb128u_decode<uint32_t>(pos, end);
+            // offset
+            std::tie(std::ignore, pos) = leb128u_decode<uint32_t>(pos, end);
+            break;
         case Instr::f32_const:
+            pos = skip(4, pos, end);
+            break;
         case Instr::f64_const:
+            pos = skip(8, pos, end);
+            break;
         case Instr::f32_eq:
         case Instr::f32_ne:
         case Instr::f32_lt:
@@ -138,8 +147,6 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end)
         case Instr::i64_reinterpret_f64:
         case Instr::f32_reinterpret_i32:
         case Instr::f64_reinterpret_i64:
-            throw parser_error{
-                "unsupported floating point instruction " + std::to_string(*(pos - 1))};
 
         case Instr::unreachable:
         case Instr::nop:

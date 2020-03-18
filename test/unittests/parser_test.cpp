@@ -53,9 +53,9 @@ TEST(parser, valtype)
     valtype_bin = 0x7f;
     EXPECT_EQ(parse(wasm_bin).typesec.front().outputs.front(), ValType::i32);
     valtype_bin = 0x7c;
-    EXPECT_THROW_MESSAGE(parse(wasm_bin), parser_error, "unsupported valtype (floating point)");
+    EXPECT_EQ(parse(wasm_bin).typesec.front().outputs.front(), ValType::f64);
     valtype_bin = 0x7d;
-    EXPECT_THROW_MESSAGE(parse(wasm_bin), parser_error, "unsupported valtype (floating point)");
+    EXPECT_EQ(parse(wasm_bin).typesec.front().outputs.front(), ValType::f32);
     valtype_bin = 0x7a;
     EXPECT_THROW_MESSAGE(parse(wasm_bin), parser_error, "invalid valtype 122");
 }
@@ -1089,7 +1089,7 @@ TEST(parser, code_section_with_memory_grow)
     EXPECT_THROW_MESSAGE(parse(bin_invalid), parser_error, "invalid memory index encountered");
 }
 
-TEST(parser, code_section_unsupported_fp_instructions)
+TEST(parser, code_section_fp_instructions)
 {
     const uint8_t fp_instructions[] = {0x2a, 0x2b, 0x38, 0x39, 0x43, 0x44, 0x5b, 0x5c, 0x5d, 0x5e,
         0x5f, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f, 0x90, 0x91,
@@ -1118,12 +1118,13 @@ TEST(parser, code_section_unsupported_fp_instructions)
         }
         func_bin += bytes{0xb};  // end
         const auto code_bin = add_size_prefix(func_bin);
-        const auto section_contents = make_vec({code_bin});
-        const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
+        const auto code_section = make_vec({code_bin});
+        const auto function_section = make_vec({"00"_bytes});
+        const auto bin =
+            bytes{wasm_prefix} + make_section(3, function_section) + make_section(10, code_section);
 
-        const auto expected_msg =
-            std::string{"unsupported floating point instruction "} + std::to_string(instr);
-        EXPECT_THROW_MESSAGE(parse(bin), parser_error, expected_msg.c_str());
+        const auto module = parse(bin);
+        EXPECT_EQ(module.codesec.size(), 1);
     }
 }
 

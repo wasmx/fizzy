@@ -14,4 +14,7 @@
   {"type": "assert_malformed", "line": 40, "filename": "smoketest.3.wasm", "text": "unexpected end", "module_type": "binary"}, 
   {"type": "module", "line": 42, "name": "$Mod3", "filename": "smoketest.4.wasm"}, 
   {"type": "assert_unlinkable", "line": 51, "filename": "smoketest.5.wasm", "text": "unknown import", "module_type": "binary"}, 
-  {"type": "assert_uninstantiable", "line": 56, "filename": "smoketest.6.wasm", "text": "unreachable", "module_type": "binary"}]}
+  {"type": "assert_uninstantiable", "line": 56, "filename": "smoketest.6.wasm", "text": "unreachable", "module_type": "binary"}, 
+  {"type": "module", "line": 61, "filename": "smoketest.7.wasm"}, 
+  {"type": "assert_return", "line": 66, "action": {"type": "invoke", "field": "foo.f32", "args": []}, "expected": [{"type": "f32", "value": "1067282596"}]}, 
+  {"type": "assert_return", "line": 67, "action": {"type": "invoke", "field": "foo.f64", "args": []}, "expected": [{"type": "f64", "value": "4616820122002590269"}]}]}

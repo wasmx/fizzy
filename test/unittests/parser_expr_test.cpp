@@ -26,8 +26,14 @@ TEST(parser, instr_loop)
     EXPECT_EQ(code2.immediates.size(), 0);
 
     const auto loop_f32_empty = "037d0b0b"_bytes;
-    EXPECT_THROW_MESSAGE(
-        parse_expr(loop_f32_empty), parser_error, "unsupported valtype (floating point)");
+    const auto [code3, pos3] = parse_expr(loop_f32_empty);
+    EXPECT_EQ(code3.instructions, (std::vector{Instr::loop, Instr::end, Instr::end}));
+    EXPECT_EQ(code3.immediates.size(), 0);
+
+    const auto loop_f64_empty = "037d0b0b"_bytes;
+    const auto [code4, pos4] = parse_expr(loop_f64_empty);
+    EXPECT_EQ(code4.instructions, (std::vector{Instr::loop, Instr::end, Instr::end}));
+    EXPECT_EQ(code4.immediates.size(), 0);
 }
 
 TEST(parser, instr_loop_input_buffer_overflow)
@@ -59,9 +65,13 @@ TEST(parser, instr_block)
         "02000000"
         "09000000"_bytes);
 
-    const auto block_f64_empty = "027c0b0b"_bytes;
-    EXPECT_THROW_MESSAGE(
-        parse_expr(block_f64_empty), parser_error, "unsupported valtype (floating point)");
+    const auto block_f64 = "027c0b0b"_bytes;
+    const auto [code3, pos3] = parse_expr(block_f64);
+    EXPECT_EQ(code3.instructions, (std::vector{Instr::block, Instr::end, Instr::end}));
+    EXPECT_EQ(code3.immediates,
+        "01"
+        "02000000"
+        "09000000"_bytes);
 }
 
 TEST(parser, instr_block_input_buffer_overflow)

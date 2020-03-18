@@ -1438,6 +1438,75 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
             // effectively no-op
             break;
         }
+        case Instr::f32_load:
+        case Instr::f64_load:
+        case Instr::f32_store:
+        case Instr::f64_store:
+        case Instr::f32_const:
+        case Instr::f64_const:
+        case Instr::f32_eq:
+        case Instr::f32_ne:
+        case Instr::f32_lt:
+        case Instr::f32_gt:
+        case Instr::f32_le:
+        case Instr::f32_ge:
+        case Instr::f64_eq:
+        case Instr::f64_ne:
+        case Instr::f64_lt:
+        case Instr::f64_gt:
+        case Instr::f64_le:
+        case Instr::f64_ge:
+        case Instr::f32_abs:
+        case Instr::f32_neg:
+        case Instr::f32_ceil:
+        case Instr::f32_floor:
+        case Instr::f32_trunc:
+        case Instr::f32_nearest:
+        case Instr::f32_sqrt:
+        case Instr::f32_add:
+        case Instr::f32_sub:
+        case Instr::f32_mul:
+        case Instr::f32_div:
+        case Instr::f32_min:
+        case Instr::f32_max:
+        case Instr::f32_copysign:
+        case Instr::f64_abs:
+        case Instr::f64_neg:
+        case Instr::f64_ceil:
+        case Instr::f64_floor:
+        case Instr::f64_trunc:
+        case Instr::f64_nearest:
+        case Instr::f64_sqrt:
+        case Instr::f64_add:
+        case Instr::f64_sub:
+        case Instr::f64_mul:
+        case Instr::f64_div:
+        case Instr::f64_min:
+        case Instr::f64_max:
+        case Instr::f64_copysign:
+        case Instr::i32_trunc_f32_s:
+        case Instr::i32_trunc_f32_u:
+        case Instr::i32_trunc_f64_s:
+        case Instr::i32_trunc_f64_u:
+        case Instr::i64_trunc_f32_s:
+        case Instr::i64_trunc_f32_u:
+        case Instr::i64_trunc_f64_s:
+        case Instr::i64_trunc_f64_u:
+        case Instr::f32_convert_i32_s:
+        case Instr::f32_convert_i32_u:
+        case Instr::f32_convert_i64_s:
+        case Instr::f32_convert_i64_u:
+        case Instr::f32_demote_f64:
+        case Instr::f64_convert_i32_s:
+        case Instr::f64_convert_i32_u:
+        case Instr::f64_convert_i64_s:
+        case Instr::f64_convert_i64_u:
+        case Instr::f64_promote_f32:
+        case Instr::i32_reinterpret_f32:
+        case Instr::i64_reinterpret_f64:
+        case Instr::f32_reinterpret_i32:
+        case Instr::f64_reinterpret_i64:
+            throw unsupported_feature("Floating point instruction.");
         default:
             assert(false);
             break;

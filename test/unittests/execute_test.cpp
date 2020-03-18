@@ -1048,3 +1048,220 @@ TEST(execute, memory_copy_32bytes)
     std::copy_n(&(*instance.memory)[33], input.size(), std::back_inserter(output));
     EXPECT_EQ(output, input);
 }
+
+TEST(execute, fp_instructions)
+{
+    /* wat2wasm
+    (memory 1)
+
+    ;; FIXME: also check for passing float arguments and use get_local
+    (func
+      ;; f32 ops
+      i32.const 0 ;; mem offset
+      f32.const 1
+      f32.store
+      i32.const 0 ;; mem offset
+      f32.load
+      f32.const 3.14
+      f32.add
+      f32.const 1
+      f32.sub
+      f32.const 3
+      f32.mul
+      f32.const 2
+      f32.div
+      f32.const 3
+      f32.min
+      f32.const 4
+      f32.max
+      f32.const -1
+      f32.copysign
+      f32.abs
+      f32.neg
+      f32.ceil
+      f32.floor
+      f32.trunc
+      f32.nearest
+      f32.sqrt
+      drop
+
+      f32.const 1
+      f32.const 1
+      f32.eq
+      drop
+      f32.const 1
+      f32.const 1
+      f32.ne
+      drop
+      f32.const 1
+      f32.const 1
+      f32.lt
+      drop
+      f32.const 1
+      f32.const 1
+      f32.gt
+      drop
+      f32.const 1
+      f32.const 1
+      f32.le
+      drop
+      f32.const 1
+      f32.const 1
+      f32.ge
+      drop
+
+      ;; f64 ops
+      i32.const 0 ;; mem offset
+      f64.const 1
+      f64.store
+      i32.const 0 ;; mem offset
+      f64.load
+      f64.const 3.14
+      f64.add
+      f64.const 1
+      f64.sub
+      f64.const 3
+      f64.mul
+      f64.const 2
+      f64.div
+      f64.const 3
+      f64.min
+      f64.const 4
+      f64.max
+      f64.const -1
+      f64.copysign
+      f64.abs
+      f64.neg
+      f64.ceil
+      f64.floor
+      f64.trunc
+      f64.nearest
+      f64.sqrt
+      drop
+
+      f64.const 1
+      f64.const 1
+      f64.eq
+      drop
+      f64.const 1
+      f64.const 1
+      f64.ne
+      drop
+      f64.const 1
+      f64.const 1
+      f64.lt
+      drop
+      f64.const 1
+      f64.const 1
+      f64.gt
+      drop
+      f64.const 1
+      f64.const 1
+      f64.le
+      drop
+      f64.const 1
+      f64.const 1
+      f64.ge
+      drop
+
+      ;; conversion ops
+      f64.const 1
+      f32.demote_f64
+      f64.promote_f32
+      drop
+
+      f32.const 1
+      i32.trunc_f32_s
+      drop
+      f32.const 1
+      i32.trunc_f32_u
+      drop
+      f64.const 1
+      i32.trunc_f64_s
+      drop
+      f64.const 1
+      i32.trunc_f64_u
+      drop
+
+      f32.const 1
+      i64.trunc_f32_s
+      drop
+      f32.const 1
+      i64.trunc_f32_u
+      drop
+      f64.const 1
+      i64.trunc_f64_s
+      drop
+      f64.const 1
+      i64.trunc_f64_u
+      drop
+
+      i32.const 1
+      f32.convert_i32_s
+      drop
+      i32.const 1
+      f32.convert_i32_u
+      drop
+      i64.const 1
+      f32.convert_i64_s
+      drop
+      i64.const 1
+      f32.convert_i64_u
+      drop
+
+      i32.const 1
+      f64.convert_i32_s
+      drop
+      i32.const 1
+      f64.convert_i32_u
+      drop
+      i64.const 1
+      f64.convert_i64_s
+      drop
+      i64.const 1
+      f64.convert_i64_u
+      drop
+
+      f32.const 1
+      i32.reinterpret_f32
+      drop
+      f64.const 1
+      i64.reinterpret_f64
+      drop
+      i32.const 1
+      f32.reinterpret_i32
+      drop
+      i64.const 1
+      f64.reinterpret_i64
+      drop
+    )
+
+    (func (param f32 f64)
+      unreachable
+    )
+    */
+
+    const auto bin = from_hex(
+        "0061736d0100000001090260000060027d7c00030302000105030100010af90302f203004100430000803f3802"
+        "0041002a020043c3f5484092430000803f93430000404094430000004095430000404096430000804097430000"
+        "80bf988b8c8d8e8f90911a430000803f430000803f5b1a430000803f430000803f5c1a430000803f430000803f"
+        "5d1a430000803f430000803f5e1a430000803f430000803f5f1a430000803f430000803f601a41004400000000"
+        "0000f03f39030041002b0300441f85eb51b81e0940a044000000000000f03fa1440000000000000840a2440000"
+        "000000000040a3440000000000000840a4440000000000001040a544000000000000f0bfa6999a9b9c9d9e9f1a"
+        "44000000000000f03f44000000000000f03f611a44000000000000f03f44000000000000f03f621a4400000000"
+        "0000f03f44000000000000f03f631a44000000000000f03f44000000000000f03f641a44000000000000f03f44"
+        "000000000000f03f651a44000000000000f03f44000000000000f03f661a44000000000000f03fb6bb1a430000"
+        "803fa81a430000803fa91a44000000000000f03faa1a44000000000000f03fab1a430000803fae1a430000803f"
+        "af1a44000000000000f03fb01a44000000000000f03fb11a4101b21a4101b31a4201b41a4201b51a4101b71a41"
+        "01b81a4201b91a4201ba1a430000803fbc1a44000000000000f03fbd1a4101be1a4201bf1a0b0300000b");
+
+    const auto module = parse(bin);
+    auto instance = instantiate(module);
+
+    // First function with floating point instructions.
+    EXPECT_THROW_MESSAGE(
+        execute(instance, 0, {}), unsupported_feature, "Floating point instruction.");
+
+    // Second function with floating point parameters.
+    ASSERT_TRUE(execute(instance, 1, {}).trapped);
+}
