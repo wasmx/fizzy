@@ -409,9 +409,8 @@ inline void comparison_op(Stack<uint64_t>& stack, Op<T> op) noexcept
 template <typename T>
 inline T shift_left(T lhs, T rhs) noexcept
 {
-    static_assert(!std::numeric_limits<T>::is_signed);
     constexpr T num_bits{sizeof(T) * 8};
-    const auto k = rhs % num_bits;
+    const auto k = rhs & (num_bits - 1);
     return lhs << k;
 }
 
@@ -426,9 +425,8 @@ inline T shift_right(T lhs, T rhs) noexcept
 template <typename T>
 inline T rotl(T lhs, T rhs) noexcept
 {
-    static_assert(!std::numeric_limits<T>::is_signed);
     constexpr T num_bits{sizeof(T) * 8};
-    const auto k = rhs % num_bits;
+    const auto k = rhs & (num_bits - 1);
 
     if (k == 0)
         return lhs;
@@ -439,9 +437,8 @@ inline T rotl(T lhs, T rhs) noexcept
 template <typename T>
 inline T rotr(T lhs, T rhs) noexcept
 {
-    static_assert(!std::numeric_limits<T>::is_signed);
     constexpr T num_bits{sizeof(T) * 8};
-    const auto k = rhs % num_bits;
+    const auto k = rhs & (num_bits - 1);
 
     if (k == 0)
         return lhs;
