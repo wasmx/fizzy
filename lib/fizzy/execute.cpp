@@ -410,7 +410,7 @@ template <typename T>
 inline T shift_left(T lhs, T rhs) noexcept
 {
     constexpr T num_bits{sizeof(T) * 8};
-    const auto k = rhs % num_bits;
+    const auto k = rhs & (num_bits - 1);
     return lhs << k;
 }
 
@@ -418,7 +418,7 @@ template <typename T>
 inline T shift_right(T lhs, T rhs) noexcept
 {
     constexpr T num_bits{sizeof(T) * 8};
-    const auto k = rhs % num_bits;
+    const auto k = rhs & (num_bits - 1);
     return lhs >> k;
 }
 
@@ -426,7 +426,7 @@ template <typename T>
 inline T rotl(T lhs, T rhs) noexcept
 {
     constexpr T num_bits{sizeof(T) * 8};
-    const auto k = rhs % num_bits;
+    const auto k = rhs & (num_bits - 1);
 
     if (k == 0)
         return lhs;
@@ -438,7 +438,7 @@ template <typename T>
 inline T rotr(T lhs, T rhs) noexcept
 {
     constexpr T num_bits{sizeof(T) * 8};
-    const auto k = rhs % num_bits;
+    const auto k = rhs & (num_bits - 1);
 
     if (k == 0)
         return lhs;

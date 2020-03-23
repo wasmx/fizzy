@@ -802,6 +802,7 @@ TEST(execute_numeric, i32_shr_s)
     EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 33), 0x3fffffff);
     EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 62), 1);
     EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 63), 0);
+    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 1, uint32_t(-1)), 0);
 }
 
 TEST(execute_numeric, i32_shr_s_stack_value)
@@ -1103,6 +1104,7 @@ TEST(execute_numeric, i64_shr_s)
     EXPECT_RESULT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 65), 0x3fffffffffffffff);
     EXPECT_RESULT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 126), 1);
     EXPECT_RESULT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 127), 0);
+    EXPECT_RESULT(ebo(Instr::i64_shr_s, 1, uint64_t(-1)), 0);
 }
 
 TEST(execute_numeric, i64_shr_u)
