@@ -11,7 +11,7 @@ TEST(instantiate, imported_functions)
 {
     Module module;
     module.typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
-    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
+    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {FuncIdx{0}}});
 
     auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result { return {true, {}}; };
     auto instance = instantiate(module, {{host_foo, module.typesec[0]}});
@@ -29,8 +29,8 @@ TEST(instantiate, imported_functions_multiple)
     Module module;
     module.typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
     module.typesec.emplace_back(FuncType{{}, {}});
-    module.importsec.emplace_back(Import{"mod", "foo1", ExternalKind::Function, {0}});
-    module.importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {1}});
+    module.importsec.emplace_back(Import{"mod", "foo1", ExternalKind::Function, {FuncIdx{0}}});
+    module.importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {FuncIdx{1}}});
 
     auto host_foo1 = [](Instance&, std::vector<uint64_t>) -> execution_result {
         return {true, {0}};
@@ -56,7 +56,7 @@ TEST(instantiate, imported_functions_not_enough)
 {
     Module module;
     module.typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
-    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
+    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {FuncIdx{0}}});
 
     EXPECT_THROW_MESSAGE(instantiate(module, {}), instantiate_error,
         "Module requires 1 imported functions, 0 provided");
@@ -66,7 +66,7 @@ TEST(instantiate, imported_function_wrong_type)
 {
     Module module;
     module.typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
-    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
+    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {FuncIdx{0}}});
 
     auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result { return {true, {}}; };
     const auto host_foo_type = FuncType{{}, {}};
