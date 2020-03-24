@@ -3,7 +3,6 @@
 #include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
 #include <test/utils/leb128_encode.hpp>
-#include <array>
 
 using namespace fizzy;
 
@@ -1037,8 +1036,8 @@ TEST(parser, code_section_with_memory_size)
         "3f000b"_bytes;
     const auto code_bin = add_size_prefix(func_bin);
     const auto section_contents = make_vec({code_bin});
-    const auto bin =
-        bytes{wasm_prefix} + make_section(3, "0100"_bytes) + make_section(10, section_contents);
+    const auto bin = bytes{wasm_prefix} + make_section(3, "0100"_bytes) +
+                     make_section(5, make_vec({"0000"_bytes})) + make_section(10, section_contents);
     const auto module = parse(bin);
     ASSERT_EQ(module.codesec.size(), 1);
     EXPECT_EQ(module.codesec[0].local_count, 0);
@@ -1065,8 +1064,8 @@ TEST(parser, code_section_with_memory_grow)
         "410040001a0b"_bytes;
     const auto code_bin = add_size_prefix(func_bin);
     const auto code_section = make_vec({code_bin});
-    const auto bin =
-        bytes{wasm_prefix} + make_section(3, "0100"_bytes) + make_section(10, code_section);
+    const auto bin = bytes{wasm_prefix} + make_section(3, "0100"_bytes) +
+                     make_section(5, make_vec({"0000"_bytes})) + make_section(10, code_section);
 
     const auto module = parse(bin);
     ASSERT_EQ(module.codesec.size(), 1);
@@ -1120,8 +1119,8 @@ TEST(parser, code_section_fp_instructions)
         const auto code_bin = add_size_prefix(func_bin);
         const auto code_section = make_vec({code_bin});
         const auto function_section = make_vec({"00"_bytes});
-        const auto bin =
-            bytes{wasm_prefix} + make_section(3, function_section) + make_section(10, code_section);
+        const auto bin = bytes{wasm_prefix} + make_section(3, function_section) +
+                         make_section(5, make_vec({"0000"_bytes})) + make_section(10, code_section);
 
         const auto module = parse(bin);
         EXPECT_EQ(module.codesec.size(), 1);

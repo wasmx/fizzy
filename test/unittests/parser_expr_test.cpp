@@ -9,7 +9,7 @@ namespace
 {
 inline auto parse_expr(const bytes& input)
 {
-    return fizzy::parse_expr(input.data(), input.data() + input.size());
+    return fizzy::parse_expr(input.data(), input.data() + input.size(), false);
 }
 }  // namespace
 

@@ -9,6 +9,11 @@ struct parser_error : public std::runtime_error
     using runtime_error::runtime_error;
 };
 
+struct validation_error : public std::runtime_error
+{
+    using runtime_error::runtime_error;
+};
+
 struct instantiate_error : public std::runtime_error
 {
     using runtime_error::runtime_error;
