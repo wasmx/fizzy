@@ -18,6 +18,16 @@ struct LabelContext
     size_t stack_height = 0;             ///< The stack height at the label instruction.
 };
 
+inline bool operator==(const FuncType& lhs, const FuncType& rhs)
+{
+    return lhs.inputs == rhs.inputs && lhs.outputs == rhs.outputs;
+}
+
+inline bool operator!=(const FuncType& lhs, const FuncType& rhs)
+{
+    return !(lhs == rhs);
+}
+
 void match_imported_functions(const std::vector<FuncType>& module_imported_types,
     const std::vector<ExternalFunction>& imported_functions)
 {
@@ -30,10 +40,7 @@ void match_imported_functions(const std::vector<FuncType>& module_imported_types
 
     for (size_t i = 0; i < imported_functions.size(); ++i)
     {
-        const auto& module_imported_type = module_imported_types[i];
-        const auto& imported_type = imported_functions[i].type;
-        if (module_imported_type.inputs != imported_type.inputs ||
-            module_imported_type.outputs != imported_type.outputs)
+        if (module_imported_types[i] != imported_functions[i].type)
         {
             throw instantiate_error("Function " + std::to_string(i) +
                                     " type doesn't match module's imported function type");
@@ -774,8 +781,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
             // check actual type against expected type
             const auto& actual_type = function_type(instance, *called_func_idx);
             const auto& expected_type = instance.module.typesec[expected_type_idx];
-            if (expected_type.inputs != actual_type.inputs ||
-                expected_type.outputs != actual_type.outputs)
+            if (expected_type != actual_type)
             {
                 trap = true;
                 goto end;
