@@ -346,16 +346,27 @@ inline parser_result<Locals> parse(const uint8_t* pos, const uint8_t* end)
 }
 
 template <>
-inline parser_result<Code> parse(const uint8_t* pos, const uint8_t* end)
+inline parser_result<code_view> parse(const uint8_t* pos, const uint8_t* end)
 {
-    const auto [size, pos1] = leb128u_decode<uint32_t>(pos, end);
+    const auto [code_size, code_begin] = leb128u_decode<uint32_t>(pos, end);
+    const auto code_end = code_begin + code_size;
+    if (code_end > end)
+        throw parser_error{"Unexpected EOF"};
 
-    const auto [locals_vec, pos2] = parse_vec<Locals>(pos1, end);
+    // Only record the code reference in wasm binary.
+    return {{code_begin, code_size}, code_end};
+}
 
-    auto [code, pos3] = parse_expr(pos2, end);
+inline Code parse_code(code_view code_binary)
+{
+    const auto begin = code_binary.begin();
+    const auto end = code_binary.end();
+    const auto [locals_vec, pos1] = parse_vec<Locals>(begin, end);
 
-    // Size is the total bytes of locals and expressions
-    if (size != (pos3 - pos1))
+    auto [code, pos2] = parse_expr(pos1, end);
+
+    // Size is the total bytes of locals and expressions.
+    if (pos2 != end)
         throw parser_error{"malformed size field for function"};
 
     uint64_t local_count = 0;
@@ -366,8 +377,7 @@ inline parser_result<Code> parse(const uint8_t* pos, const uint8_t* end)
             throw parser_error{"too many local variables"};
     }
     code.local_count = static_cast<uint32_t>(local_count);
-
-    return {std::move(code), pos3};
+    return code;
 }
 
 template <>
@@ -402,6 +412,7 @@ Module parse(bytes_view input)
     input.remove_prefix(wasm_prefix.size());
 
     Module module;
+    std::vector<code_view> code_binaries;
     SectionId last_id = SectionId::custom;
     for (auto it = input.begin(); it != input.end();)
     {
@@ -450,7 +461,7 @@ Module parse(bytes_view input)
             std::tie(module.elementsec, it) = parse_vec<Element>(it, input.end());
             break;
         case SectionId::code:
-            std::tie(module.codesec, it) = parse_vec<Code>(it, input.end());
+            std::tie(code_binaries, it) = parse_vec<code_view>(it, input.end());
             break;
         case SectionId::data:
             std::tie(module.datasec, it) = parse_vec<Data>(it, input.end());
@@ -507,7 +518,7 @@ Module parse(bytes_view input)
     if (!module.elementsec.empty() && module.tablesec.empty() && imported_tbl_count == 0)
         throw parser_error("element section encountered without a table section");
 
-    if (module.funcsec.size() != module.codesec.size())
+    if (module.funcsec.size() != code_binaries.size())
         throw parser_error("malformed binary: number of function and code entries must match");
 
     const auto imported_func_count = std::count_if(module.importsec.begin(), module.importsec.end(),
@@ -516,6 +527,11 @@ Module parse(bytes_view input)
 
     if (module.startfunc && *module.startfunc >= total_func_count)
         throw parser_error{"invalid start function index"};
+
+    // Process code. TODO: This can be done lazily.
+    module.codesec.reserve(code_binaries.size());
+    for (auto& code_binary : code_binaries)
+        module.codesec.emplace_back(parse_code(code_binary));
 
     return module;
 }
