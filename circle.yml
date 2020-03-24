@@ -205,7 +205,7 @@ jobs:
     executor: linux-clang-9
     environment:
       BUILD_TYPE: RelWithDebInfo
-      CMAKE_OPTIONS: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,implicit-conversion,nullability
+      CMAKE_OPTIONS: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
       UBSAN_OPTIONS: halt_on_error=1
     steps:
       - build
