@@ -378,7 +378,7 @@ private:
             return nullptr;
         }
 
-        return &it_instance->second;
+        return it_instance->second.get();
     }
 
     std::optional<fizzy::execution_result> invoke(const json& action)
@@ -467,7 +467,7 @@ private:
 
             if (import.kind == fizzy::ExternalKind::Function)
             {
-                const auto func = fizzy::find_exported_function(instance, import.name);
+                const auto func = fizzy::find_exported_function(*instance, import.name);
                 if (!func.has_value())
                 {
                     return {{},
@@ -478,7 +478,7 @@ private:
             }
             else if (import.kind == fizzy::ExternalKind::Table)
             {
-                const auto table = fizzy::find_exported_table(instance, import.name);
+                const auto table = fizzy::find_exported_table(*instance, import.name);
                 if (!table.has_value())
                 {
                     return {{},
@@ -489,7 +489,7 @@ private:
             }
             else if (import.kind == fizzy::ExternalKind::Memory)
             {
-                const auto memory = fizzy::find_exported_memory(instance, import.name);
+                const auto memory = fizzy::find_exported_memory(*instance, import.name);
                 if (!memory.has_value())
                 {
                     return {{},
@@ -500,7 +500,7 @@ private:
             }
             else if (import.kind == fizzy::ExternalKind::Global)
             {
-                const auto global = fizzy::find_exported_global(instance, import.name);
+                const auto global = fizzy::find_exported_global(*instance, import.name);
                 if (!global.has_value())
                 {
                     return {{},
@@ -537,7 +537,7 @@ private:
     void log_no_newline(std::string_view message) const { std::cout << message << std::flush; }
 
     test_settings m_settings;
-    std::unordered_map<std::string, fizzy::Instance> m_instances;
+    std::unordered_map<std::string, std::unique_ptr<fizzy::Instance>> m_instances;
     std::unordered_map<std::string, std::string> m_registered_names;
     std::string m_last_module_name;
     test_results m_results;

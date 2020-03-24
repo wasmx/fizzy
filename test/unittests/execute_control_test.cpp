@@ -663,7 +663,7 @@ TEST(execute_control, br_1_out_of_function_and_imported_function)
 
     const auto module = parse(bin);
     auto instance = instantiate(module, {{fake_imported_function, module.typesec[0]}});
-    const auto [trap, ret] = execute(instance, 1, {});
+    const auto [trap, ret] = execute(*instance, 1, {});
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 1);
     EXPECT_EQ(ret[0], 1);
