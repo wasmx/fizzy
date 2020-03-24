@@ -58,6 +58,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
     // For a block/if/else instruction the value is the block/if/else's immediate offset.
     Stack<LabelPosition> label_positions;
 
+    ssize_t max_stack_depth = 0;
+
     bool continue_parsing = true;
     while (continue_parsing)
     {
@@ -409,9 +411,12 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
         }
         }
         code.instructions.emplace_back(instr);
-        code.max_stack_depth += instr_stack_change(instr);
+        max_stack_depth += instr_stack_change(instr);
     }
     assert(label_positions.empty());
+    if (max_stack_depth < 0)
+        throw validation_error{"stack depth miscalculation (negative stack)"};
+    code.max_stack_depth = static_cast<size_t>(max_stack_depth);
     return {code, pos};
 }
 }  // namespace fizzy
