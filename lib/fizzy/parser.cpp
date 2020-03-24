@@ -243,11 +243,8 @@ parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end)
     if (!utf8_validate(pos, pos + size))
         throw parser_error{"Invalid UTF-8"};
 
-    const auto char_begin = reinterpret_cast<const char*>(pos);
-    auto ret = std::string(char_begin, char_begin + size);
-    pos += size;
-
-    return {std::move(ret), pos};
+    const auto str_end = pos + size;
+    return {std::string{pos, str_end}, str_end};
 }
 
 template <>

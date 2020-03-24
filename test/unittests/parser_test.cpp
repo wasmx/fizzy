@@ -152,6 +152,16 @@ TEST(parser, custom_section_nonempty_name_only)
     EXPECT_EQ(module.codesec.size(), 0);
 }
 
+TEST(parser, custom_section_name_not_ascii)
+{
+    // Section consists of only the name with some non-ascii characters.
+    const auto bin = bytes{wasm_prefix} + make_section(0, "0670617765c582"_bytes);
+    const auto module = parse(bin);
+    EXPECT_EQ(module.typesec.size(), 0);
+    EXPECT_EQ(module.funcsec.size(), 0);
+    EXPECT_EQ(module.codesec.size(), 0);
+}
+
 TEST(parser, custom_section_nonempty)
 {
     // Section consists of the name "abc" and 14 bytes of unparsed data
