@@ -88,8 +88,6 @@ commands:
           working_directory: ~/build
           command: |
             set +e
-            # TODO: Make UBSan warnings fatal.
-            # export UBSAN_OPTIONS=halt_on_error=1
             expected="  PASSED 4433, FAILED 42, SKIPPED 7338."
             result=$(bin/fizzy-spectests --skip-validation wasm-spec/test/core/json | tail -1)
             echo "Expected: $expected"
@@ -207,7 +205,8 @@ jobs:
     executor: linux-clang-9
     environment:
       BUILD_TYPE: RelWithDebInfo
-      CMAKE_OPTIONS: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,implicit-conversion,nullability
+      CMAKE_OPTIONS: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
+      UBSAN_OPTIONS: halt_on_error=1
     steps:
       - build
       - test
