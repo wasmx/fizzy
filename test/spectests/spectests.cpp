@@ -137,6 +137,13 @@ public:
                     m_last_module_name.clear();
                     continue;
                 }
+                catch (const fizzy::validation_error& ex)
+                {
+                    fail(std::string{"Validation failed with error: "} + ex.what());
+                    m_instances.erase(name);
+                    m_last_module_name.clear();
+                    continue;
+                }
                 catch (const fizzy::instantiate_error& ex)
                 {
                     fail(std::string{"Instantiation failed with error: "} + ex.what());
@@ -284,9 +291,20 @@ public:
                 {
                     fizzy::parse(wasm_binary);
                 }
-                catch (fizzy::parser_error const&)
+                catch (fizzy::parser_error const& ex)
                 {
-                    pass();
+                    if (type == "assert_malformed")
+                        pass();
+                    else
+                        fail(std::string{"Unexpected parser error: "} + ex.what());
+                    continue;
+                }
+                catch (fizzy::validation_error const& ex)
+                {
+                    if (type == "assert_invalid")
+                        pass();
+                    else
+                        fail(std::string{"Unexpected validation error: "} + ex.what());
                     continue;
                 }
 
@@ -328,6 +346,11 @@ public:
                 catch (const fizzy::parser_error& ex)
                 {
                     fail(std::string{"Parsing failed with error: "} + ex.what());
+                    continue;
+                }
+                catch (const fizzy::validation_error& ex)
+                {
+                    fail(std::string{"Validation failed with error: "} + ex.what());
                     continue;
                 }
                 catch (const fizzy::instantiate_error& ex)
