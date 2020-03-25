@@ -278,6 +278,7 @@ jobs:
 
 workflows:
   version: 2
+
   fizzy:
     jobs:
       - lint
@@ -286,9 +287,13 @@ workflows:
       - coverage-tidy
       - sanitizers
       - fuzzing
-      - benchmark:
+      - spectest:
           requires:
             - release-linux
-      - spectest:
+
+  benchmarking:
+    jobs:
+      - release-linux
+      - benchmark:
           requires:
             - release-linux
