@@ -260,7 +260,7 @@ TEST(instantiate, imported_memory_invalid)
     // Provided max exceeds the hard limit
     Module module_without_max;
     Import imp_without_max{"mod", "m", ExternalKind::Memory, {}};
-    imp.desc.memory = Memory{{1, std::nullopt}};
+    imp_without_max.desc.memory = Memory{{1, std::nullopt}};
     module_without_max.importsec.emplace_back(imp_without_max);
     EXPECT_THROW_MESSAGE(
         instantiate(module_without_max, {}, {}, {{&memory, {1, MemoryPagesLimit + 1}}}),
