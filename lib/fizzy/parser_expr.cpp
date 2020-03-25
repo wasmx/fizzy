@@ -333,6 +333,15 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
             uint32_t default_label_idx;
             std::tie(default_label_idx, pos) = leb128u_decode<uint32_t>(pos, end);
 
+            for (auto label_idx : label_indices)
+            {
+                if (label_idx > label_positions.size())
+                    throw validation_error{"invalid label index"};
+            }
+
+            if (default_label_idx > label_positions.size())
+                throw validation_error{"invalid label index"};
+
             push(code.immediates, static_cast<uint32_t>(label_indices.size()));
             for (const auto idx : label_indices)
                 push(code.immediates, idx);

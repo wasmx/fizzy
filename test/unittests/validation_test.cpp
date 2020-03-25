@@ -75,3 +75,42 @@ TEST(validation, br_if_invalid_label_index)
         from_hex("0061736d01000000010401600000030201000a0e010c000240034041000d030b0b0b");
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "invalid label index");
 }
+
+TEST(validation, br_table_invalid_label_index)
+{
+    /* wat2wasm --no-check
+    (func
+      (block
+        (block
+          (block
+            (block
+              (block
+                (br_table 0 1 2 3 4 5 6 0 (i32.const 0))
+              )
+            )
+          )
+        )
+      )
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010401600000030201000a1f011d000240024002400240024041000e070001020304050600"
+        "0b0b0b0b0b0b");
+
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "invalid label index");
+}
+
+TEST(validation, br_table_default_invalid_label_index)
+{
+    /* wat2wasm --no-check
+    (func
+      (block
+        (br_table 0 1 0 1 0 1 0 1 2 (i32.const 0))
+      )
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010401600000030201000a14011200024041000e080001000100010001020b0b");
+
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "invalid label index");
+}
