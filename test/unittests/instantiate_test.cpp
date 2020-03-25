@@ -11,15 +11,17 @@ TEST(instantiate, imported_functions)
 {
     Module module;
     module.typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
-    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
+    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {FuncIdx{0}}});
 
     auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result { return {true, {}}; };
-    auto instance = instantiate(module, {host_foo});
+    auto instance = instantiate(module, {{host_foo, module.typesec[0]}});
 
     ASSERT_EQ(instance.imported_functions.size(), 1);
-    EXPECT_EQ(*instance.imported_functions[0].target<decltype(host_foo)>(), host_foo);
-    ASSERT_EQ(instance.imported_function_types.size(), 1);
-    EXPECT_EQ(instance.imported_function_types[0], TypeIdx{0});
+    EXPECT_EQ(*instance.imported_functions[0].function.target<decltype(host_foo)>(), host_foo);
+    ASSERT_EQ(instance.imported_functions[0].type.inputs.size(), 1);
+    EXPECT_EQ(instance.imported_functions[0].type.inputs[0], ValType::i32);
+    ASSERT_EQ(instance.imported_functions[0].type.outputs.size(), 1);
+    EXPECT_EQ(instance.imported_functions[0].type.outputs[0], ValType::i32);
 }
 
 TEST(instantiate, imported_functions_multiple)
@@ -27,8 +29,8 @@ TEST(instantiate, imported_functions_multiple)
     Module module;
     module.typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
     module.typesec.emplace_back(FuncType{{}, {}});
-    module.importsec.emplace_back(Import{"mod", "foo1", ExternalKind::Function, {0}});
-    module.importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {1}});
+    module.importsec.emplace_back(Import{"mod", "foo1", ExternalKind::Function, {FuncIdx{0}}});
+    module.importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {FuncIdx{1}}});
 
     auto host_foo1 = [](Instance&, std::vector<uint64_t>) -> execution_result {
         return {true, {0}};
@@ -36,24 +38,40 @@ TEST(instantiate, imported_functions_multiple)
     auto host_foo2 = [](Instance&, std::vector<uint64_t>) -> execution_result {
         return {true, {}};
     };
-    auto instance = instantiate(module, {host_foo1, host_foo2});
+    auto instance =
+        instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[1]}});
 
     ASSERT_EQ(instance.imported_functions.size(), 2);
-    EXPECT_EQ(*instance.imported_functions[0].target<decltype(host_foo1)>(), host_foo1);
-    EXPECT_EQ(*instance.imported_functions[1].target<decltype(host_foo2)>(), host_foo2);
-    ASSERT_EQ(instance.imported_function_types.size(), 2);
-    EXPECT_EQ(instance.imported_function_types[0], TypeIdx{0});
-    EXPECT_EQ(instance.imported_function_types[1], TypeIdx{1});
+    EXPECT_EQ(*instance.imported_functions[0].function.target<decltype(host_foo1)>(), host_foo1);
+    ASSERT_EQ(instance.imported_functions[0].type.inputs.size(), 1);
+    EXPECT_EQ(instance.imported_functions[0].type.inputs[0], ValType::i32);
+    ASSERT_EQ(instance.imported_functions[0].type.outputs.size(), 1);
+    EXPECT_EQ(instance.imported_functions[0].type.outputs[0], ValType::i32);
+    EXPECT_EQ(*instance.imported_functions[1].function.target<decltype(host_foo2)>(), host_foo2);
+    EXPECT_TRUE(instance.imported_functions[1].type.inputs.empty());
+    EXPECT_TRUE(instance.imported_functions[1].type.outputs.empty());
 }
 
 TEST(instantiate, imported_functions_not_enough)
 {
     Module module;
     module.typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
-    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
+    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {FuncIdx{0}}});
 
     EXPECT_THROW_MESSAGE(instantiate(module, {}), instantiate_error,
         "Module requires 1 imported functions, 0 provided");
+}
+
+TEST(instantiate, imported_function_wrong_type)
+{
+    Module module;
+    module.typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
+    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {FuncIdx{0}}});
+
+    auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result { return {true, {}}; };
+    const auto host_foo_type = FuncType{{}, {}};
+
+    ASSERT_THROW(instantiate(module, {{host_foo, host_foo_type}}), instantiate_error);
 }
 
 TEST(instantiate, imported_table)
@@ -242,7 +260,7 @@ TEST(instantiate, imported_memory_invalid)
     // Provided max exceeds the hard limit
     Module module_without_max;
     Import imp_without_max{"mod", "m", ExternalKind::Memory, {}};
-    imp.desc.memory = Memory{{1, std::nullopt}};
+    imp_without_max.desc.memory = Memory{{1, std::nullopt}};
     module_without_max.importsec.emplace_back(imp_without_max);
     EXPECT_THROW_MESSAGE(
         instantiate(module_without_max, {}, {}, {{&memory, {1, MemoryPagesLimit + 1}}}),

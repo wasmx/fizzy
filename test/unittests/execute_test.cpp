@@ -903,7 +903,7 @@ TEST(execute, imported_function)
         return {false, {args[0] + args[1]}};
     };
 
-    auto instance = instantiate(module, {host_foo});
+    auto instance = instantiate(module, {{host_foo, module.typesec[0]}});
 
     const auto [trap, ret] = execute(instance, 0, {20, 22});
 
@@ -926,7 +926,8 @@ TEST(execute, imported_two_functions)
         return {false, {args[0] * args[1]}};
     };
 
-    auto instance = instantiate(module, {host_foo1, host_foo2});
+    auto instance =
+        instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[0]}});
 
     const auto [trap1, ret1] = execute(instance, 0, {20, 22});
 
@@ -958,7 +959,8 @@ TEST(execute, imported_functions_and_regular_one)
         return {false, {args[0] * args[0]}};
     };
 
-    auto instance = instantiate(module, {host_foo1, host_foo2});
+    auto instance =
+        instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[0]}});
 
     const auto [trap1, ret1] = execute(instance, 0, {20, 22});
 
@@ -977,7 +979,8 @@ TEST(execute, imported_functions_and_regular_one)
         return {false, {args.size()}};
     };
 
-    auto instance_couner = instantiate(module, {count_args, count_args});
+    auto instance_couner =
+        instantiate(module, {{count_args, module.typesec[0]}, {count_args, module.typesec[0]}});
 
     const auto [trap3, ret3] = execute(instance_couner, 0, {20, 22});
 
@@ -1009,7 +1012,8 @@ TEST(execute, imported_two_functions_different_type)
         return {false, {args[0] * args[0]}};
     };
 
-    auto instance = instantiate(module, {host_foo1, host_foo2});
+    auto instance =
+        instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[0]}});
 
     const auto [trap1, ret1] = execute(instance, 0, {20, 22});
 
@@ -1038,7 +1042,7 @@ TEST(execute, imported_function_traps)
 
     auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result { return {true, {}}; };
 
-    auto instance = instantiate(module, {host_foo});
+    auto instance = instantiate(module, {{host_foo, module.typesec[0]}});
 
     const auto [trap, ret] = execute(instance, 0, {20, 22});
 

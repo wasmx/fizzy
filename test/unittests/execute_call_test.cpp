@@ -219,8 +219,9 @@ TEST(execute_call, imported_function_call)
     auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result {
         return {false, {42}};
     };
+    const auto host_foo_type = module.typesec[0];
 
-    auto instance = instantiate(module, {host_foo});
+    auto instance = instantiate(module, {{host_foo, host_foo_type}});
 
     const auto [trap, ret] = execute(instance, 1, {});
 
@@ -242,8 +243,9 @@ TEST(execute_call, imported_function_call_with_arguments)
     auto host_foo = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] * 2}};
     };
+    const auto host_foo_type = module.typesec[0];
 
-    auto instance = instantiate(module, {host_foo});
+    auto instance = instantiate(module, {{host_foo, host_foo_type}});
 
     const auto [trap, ret] = execute(instance, 1, {20});
 
@@ -293,7 +295,7 @@ TEST(execute_call, imported_functions_call_indirect)
         return {false, {(11 + args[0] / 11) / 2}};
     };
 
-    auto instance = instantiate(module, {sqr, isqrt});
+    auto instance = instantiate(module, {{sqr, module.typesec[0]}, {isqrt, module.typesec[0]}});
     EXPECT_RESULT(execute(instance, 3, {0, 10}), 20);  // double(10)
     EXPECT_RESULT(execute(instance, 3, {1, 9}), 81);   // sqr(9)
     EXPECT_RESULT(execute(instance, 3, {2, 50}), 7);   // isqrt(50)
@@ -338,7 +340,7 @@ TEST(execute_call, imported_function_from_another_module)
         return fizzy::execute(instance1, *func_idx, std::move(args));
     };
 
-    auto instance2 = instantiate(module2, {sub});
+    auto instance2 = instantiate(module2, {{sub, module1.typesec[0]}});
 
     EXPECT_RESULT(execute(instance2, 1, {44, 2}), 42);
 }
