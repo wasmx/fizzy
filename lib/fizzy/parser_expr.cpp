@@ -1,3 +1,4 @@
+#include "instructions.hpp"
 #include "parser.hpp"
 #include <cassert>
 #include <stack>
@@ -25,10 +26,17 @@ inline void push(bytes& b, T value)
 struct ControlFrame
 {
     /// The instruction that created the label.
-    Instr instruction{Instr::unreachable};
+    const Instr instruction{Instr::unreachable};
 
     /// The immediates offset for block instructions.
-    size_t immediates_offset{0};
+    const size_t immediates_offset{0};
+
+    /// The frame stack height.
+    int stack_height{0};
+
+    /// Whether the remainder of the block is unreachable (used to handle stack-polymorphic typing
+    /// after branches).
+    bool unreachable{false};
 };
 
 /// Parses blocktype.
@@ -63,7 +71,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
     // For a block/if/else instruction the value is the block/if/else's immediate offset.
     std::stack<ControlFrame> control_stack;
 
-    control_stack.push({Instr::block, 0});  // The function's implicit block.
+    control_stack.push({Instr::block});  // The function's implicit block.
+
+    const auto metrics_table = get_instruction_metrics_table();
 
     bool continue_parsing = true;
     while (continue_parsing)
@@ -71,9 +81,17 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
         if (pos == end)
             throw parser_error{"Unexpected EOF"};
 
-        const auto& frame = control_stack.top();
+        auto& frame = control_stack.top();
 
-        const auto instr = static_cast<Instr>(*pos++);
+        const auto opcode = *pos++;
+        const auto& metrics = metrics_table[opcode];
+
+        if (frame.stack_height < metrics.stack_height_required && !frame.unreachable)
+            throw validation_error{"stack underflow"};
+
+        frame.stack_height += metrics.stack_height_change;
+
+        const auto instr = static_cast<Instr>(opcode);
         switch (instr)
         {
         default:
@@ -161,8 +179,11 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
         case Instr::f64_reinterpret_i64:
 
         case Instr::unreachable:
-        case Instr::nop:
         case Instr::return_:
+            frame.unreachable = true;
+            break;
+
+        case Instr::nop:
         case Instr::drop:
         case Instr::select:
         case Instr::i32_eq:
@@ -243,7 +264,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
                     block_imm += sizeof(target_pc);
                     store(block_imm, target_imm);
                 }
-                control_stack.pop();
+                control_stack.pop();  // Pop the current frame.
             }
             else
                 continue_parsing = false;
@@ -256,6 +277,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
             std::tie(arity, pos) = parse_blocktype(pos, end);
             code.immediates.push_back(arity);
 
+            // Parent frame gets additional items on stack after this block exit.
+            frame.stack_height += arity;
+
             // Push label with immediates offset after arity.
             control_stack.push({Instr::block, code.immediates.size()});
 
@@ -267,8 +291,13 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
 
         case Instr::loop:
         {
-            std::tie(std::ignore, pos) = parse_blocktype(pos, end);
-            control_stack.push({Instr::loop, 0});  // Mark as not interested.
+            uint8_t arity;
+            std::tie(arity, pos) = parse_blocktype(pos, end);
+
+            // Parent frame gets additional items on stack after this block exit.
+            frame.stack_height += arity;
+
+            control_stack.push({Instr::loop});
             break;
         }
 
@@ -277,6 +306,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
             uint8_t arity;
             std::tie(arity, pos) = parse_blocktype(pos, end);
             code.immediates.push_back(arity);
+
+            // Parent frame gets additional items on stack after this block exit.
+            frame.stack_height += arity;
 
             control_stack.push({Instr::if_, code.immediates.size()});
 
@@ -294,6 +326,11 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
         {
             if (frame.instruction != Instr::if_)
                 throw parser_error{"unexpected else instruction (if instruction missing)"};
+
+            // Reset frame after if. The if result type validation not implemented yet.
+            frame.stack_height = 0;
+            frame.unreachable = false;
+
             const auto target_pc = static_cast<uint32_t>(code.instructions.size() + 1);
             const auto target_imm = static_cast<uint32_t>(code.immediates.size());
 
@@ -317,6 +354,10 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
                 throw validation_error{"invalid label index"};
 
             push(code.immediates, label_idx);
+
+            if (instr == Instr::br)
+                frame.unreachable = true;
+
             break;
         }
 
@@ -353,6 +394,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
             for (const auto idx : label_indices)
                 push(code.immediates, idx);
             push(code.immediates, default_label_idx);
+
+            frame.unreachable = true;
+
             break;
         }
 
