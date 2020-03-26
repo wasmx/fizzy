@@ -22,8 +22,10 @@ inline void push(bytes& b, T value)
 
 struct LabelPosition
 {
-    Instr instruction = Instr::unreachable;  ///< The instruction that created the label.
-    size_t immediates_offset{0};             ///< The immediates offset for block instructions.
+    Instr instruction{Instr::unreachable};  ///< The instruction that created the label.
+    uint32_t code_offset{0};                ///< The target instruction code offset.
+    uint32_t immediates_offset{0};          ///< The target instruction immediates offset.
+    bool has_result{false};                 ///< Whenever the control instruction returns a result.
 };
 
 /// Parses blocktype.
@@ -247,7 +249,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
             code.immediates.push_back(arity);
 
             // Push label with immediates offset after arity.
-            label_positions.push_back({Instr::block, code.immediates.size()});
+            label_positions.push_back(
+                {Instr::block, static_cast<uint32_t>(code.instructions.size()),
+                    static_cast<uint32_t>(code.immediates.size()), arity != 0});
 
             // Placeholders for immediate values, filled at the matching end instruction.
             push(code.immediates, uint32_t{0});  // Diff to the end instruction.
@@ -258,7 +262,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
         case Instr::loop:
         {
             std::tie(std::ignore, pos) = parse_blocktype(pos, end);
-            label_positions.push_back({Instr::loop, 0});  // Mark as not interested.
+            label_positions.push_back({Instr::loop, static_cast<uint32_t>(code.instructions.size()),
+                static_cast<uint32_t>(code.immediates.size()), false});
             break;
         }
 
@@ -268,7 +273,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
             std::tie(arity, pos) = parse_blocktype(pos, end);
             code.immediates.push_back(arity);
 
-            label_positions.push_back({Instr::if_, code.immediates.size()});
+            label_positions.push_back({Instr::if_, static_cast<uint32_t>(code.instructions.size()),
+                static_cast<uint32_t>(code.immediates.size()), arity != 0});
 
             // Placeholders for immediate values, filled at the matching end and else instructions.
             push(code.immediates, uint32_t{0});  // Diff to the end instruction.
