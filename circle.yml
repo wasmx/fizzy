@@ -103,7 +103,7 @@ commands:
           working_directory: ~/build
           command: |
             set +e
-            expected="  PASSED 4451, FAILED 24, SKIPPED 7338."
+            expected="  PASSED 4450, FAILED 25, SKIPPED 7338."
             result=$(bin/fizzy-spectests --skip-validation wasm-spec/test/core/json | tail -1)
             echo "Expected: $expected"
             echo "Result: $result"
