@@ -262,6 +262,14 @@ jobs:
       - benchmark:
           repetitions: 2
           out_dir: new
+      - run:
+          name: "Checkout base"
+          command: git checkout $(git merge-base HEAD origin/master)
+      - build:
+          target: fizzy-bench fizzy-bench-internal
+      - benchmark:
+          repetitions: 2
+          out_dir: old
 
   fuzzing:
     executor: linux-clang-9
