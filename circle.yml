@@ -22,6 +22,10 @@ executors:
 commands:
   build:
     description: "Build"
+    parameters:
+      target:
+        type: string
+        default: all
     steps:
       - run:
           name: "Environment"
@@ -53,7 +57,7 @@ commands:
             - ~/.hunter/_Base/Cache
       - run:
           name: "Build"
-          command: cmake --build ~/build
+          command: cmake --build ~/build --target <<parameters.target>>
 
   test:
     description: "Test"
@@ -253,7 +257,8 @@ jobs:
             sudo apt-get -qy install --no-install-recommends g++-9 cmake ninja-build
 
       - checkout
-      - build
+      - build:
+          target: fizzy-bench fizzy-bench-internal
       - benchmark:
           repetitions: 2
           out_dir: new
