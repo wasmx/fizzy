@@ -1,5 +1,10 @@
 version: 2.1
 
+parameters:
+  benchmark:
+    type: boolean
+    default: false
+
 executors:
   lint:
     docker:
@@ -278,7 +283,9 @@ jobs:
 
 workflows:
   version: 2
-  fizzy:
+
+  testing:
+    unless: <<pipeline.parameters.benchmark>>
     jobs:
       - lint
       - release-linux
@@ -286,9 +293,14 @@ workflows:
       - coverage-tidy
       - sanitizers
       - fuzzing
-      - benchmark:
+      - spectest:
           requires:
             - release-linux
-      - spectest:
+
+  benchmarking:
+    when: <<pipeline.parameters.benchmark>>
+    jobs:
+      - release-linux
+      - benchmark:
           requires:
             - release-linux
