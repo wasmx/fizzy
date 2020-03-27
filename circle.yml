@@ -268,7 +268,7 @@ jobs:
       - build:
           target: fizzy-bench fizzy-bench-internal
       - benchmark:
-          repetitions: 2
+          repetitions: 9
           out_dir: new
       - run:
           name: "Checkout base"
@@ -276,8 +276,14 @@ jobs:
       - build:
           target: fizzy-bench fizzy-bench-internal
       - benchmark:
-          repetitions: 2
+          repetitions: 9
           out_dir: old
+      - run:
+          name: "Compare"
+          working_directory: "~"
+          command: |
+            benchmark/tools/compare.py --display_aggregates_only benchmarks ~/build/engines-old ~/build/engines-new
+            benchmark/tools/compare.py --display_aggregates_only benchmarks ~/build/internal-old ~/build/internal-new
 
   fuzzing:
     executor: linux-clang-9
