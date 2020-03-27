@@ -224,31 +224,30 @@ jobs:
   benchmark:
     machine:
       image: ubuntu-1604:201903-01
+    environment:
+      CC: gcc-9
+      CXX: g++-9
+      BUILD_TYPE: Release
     steps:
       - run:
-          name: "Install standard libraries"
+          name: "Install toolchain"
           working_directory: "~"
           command: |
             export DEBIAN_FRONTEND=noninteractive
 
-            # Remove all default sources
+            # Remove additional sources
             sudo rm /etc/apt/sources.list.d/*
-            sudo rm /etc/apt/sources.list
+
+            wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add -
 
             sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+            sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ xenial main'
             sudo apt-get -q update
-            sudo apt-get -qy install libstdc++6
+            sudo apt-get -qy install --no-install-recommends g++-9 cmake ninja-build
 
-            wget -q http://archive.ubuntu.com/ubuntu/pool/main/g/glibc/libc6_2.29-0ubuntu2_amd64.deb
-            sudo dpkg -i --force-all libc6_2.29-0ubuntu2_amd64.deb
-
-      - attach_workspace:
-          at: "~"
       - checkout
-      - run:
-          name: "Benchmark"
-          command: |
-            ~/bin/fizzy-bench test/benchmarks --benchmark_color=true --benchmark_repetitions=3 --benchmark_min_time=1
+      - build
+      - benchmark
 
   fuzzing:
     executor: linux-clang-9
@@ -304,7 +303,4 @@ workflows:
   benchmarking:
     when: <<pipeline.parameters.benchmark>>
     jobs:
-      - release-linux
-      - benchmark:
-          requires:
-            - release-linux
+      - benchmark
