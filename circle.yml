@@ -241,6 +241,14 @@ jobs:
       BUILD_TYPE: Release
     steps:
       - run:
+          name: "Install benchmark compare.py"
+          working_directory: "~"
+          command: |
+            git clone https://github.com/google/benchmark.git --quiet --depth=1 --single-branch
+            pyenv global 3.7.0
+            pip install scipy --progress-bar off
+            python ~/benchmark/tools/compare.py --help
+      - run:
           name: "Install toolchain"
           working_directory: "~"
           command: |
