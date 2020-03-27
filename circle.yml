@@ -23,7 +23,6 @@ commands:
   build:
     description: "Build"
     steps:
-      - checkout
       - run:
           name: "Environment"
           command: |
@@ -139,6 +138,7 @@ jobs:
     environment:
       BUILD_TYPE: Release
     steps:
+      - checkout
       - build
       - test
       - persist_to_workspace:
@@ -155,6 +155,7 @@ jobs:
       - run:
           name: "Install System Dependencies"
           command: HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake ninja
+      - checkout
       - build
       - test
 
@@ -168,6 +169,7 @@ jobs:
       - run:
           name: "Install clang-tidy"
           command: sudo apt-get -q update && sudo apt-get -qy install clang-tidy-9
+      - checkout
       - build
       - test
       - run:
@@ -213,6 +215,7 @@ jobs:
       CMAKE_OPTIONS: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
       UBSAN_OPTIONS: halt_on_error=1
     steps:
+      - checkout
       - build
       - test
       - benchmark
@@ -254,6 +257,7 @@ jobs:
       CMAKE_OPTIONS: -DFIZZY_FUZZING=ON -DENABLE_ASSERTIONS=ON
       UBSAN_OPTIONS: halt_on_error=1
     steps:
+      - checkout
       - build
       - restore_cache:
           name: "Restore fuzzing corpus"
