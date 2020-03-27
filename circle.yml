@@ -69,15 +69,22 @@ commands:
 
   benchmark:
     description: "Run benchmarks"
+    parameters:
+      repetitions:
+        type: integer
+        default: 1
+      out_dir:
+        type: string
+        default: out
     steps:
       - run:
           name: "Run wasm engine benchmarks"
           working_directory: ~/build
-          command: bin/fizzy-bench ~/project/test/benchmarks
+          command: bin/fizzy-bench ~/project/test/benchmarks --benchmark_repetitions=<<parameters.repetitions>> --benchmark_out=engines-<<parameters.out_dir>>
       - run:
           name: "Run fizzy internal benchmarks"
           working_directory: ~/build
-          command: bin/fizzy-bench-internal
+          command: bin/fizzy-bench-internal --benchmark_repetitions=<<parameters.repetitions>> --benchmark_out=internal-<<parameters.out_dir>>
 
   spectest:
     description: "Run spectest"
@@ -247,7 +254,9 @@ jobs:
 
       - checkout
       - build
-      - benchmark
+      - benchmark:
+          repetitions: 2
+          out_dir: new
 
   fuzzing:
     executor: linux-clang-9
