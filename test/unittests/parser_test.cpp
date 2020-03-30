@@ -1049,7 +1049,13 @@ TEST(parser, code_section_with_basic_instructions)
 {
     const auto func_bin =
         "00"  // vec(locals)
-        "2001210222036a01000b"_bytes;
+        "2001"
+        "4102"
+        "6a"
+        "2103"
+        "01"
+        "00"
+        "0b"_bytes;
     const auto code_bin = add_size_prefix(func_bin);
     const auto section_contents = make_vec({code_bin});
     const auto bin = bytes{wasm_prefix} + make_section(1, make_vec({make_functype({}, {})})) +
@@ -1063,9 +1069,9 @@ TEST(parser, code_section_with_basic_instructions)
     EXPECT_EQ(module.codesec[0].local_count, 0);
     ASSERT_EQ(module.codesec[0].instructions.size(), 7);
     EXPECT_EQ(module.codesec[0].instructions[0], Instr::local_get);
-    EXPECT_EQ(module.codesec[0].instructions[1], Instr::local_set);
-    EXPECT_EQ(module.codesec[0].instructions[2], Instr::local_tee);
-    EXPECT_EQ(module.codesec[0].instructions[3], Instr::i32_add);
+    EXPECT_EQ(module.codesec[0].instructions[1], Instr::i32_const);
+    EXPECT_EQ(module.codesec[0].instructions[2], Instr::i32_add);
+    EXPECT_EQ(module.codesec[0].instructions[3], Instr::local_set);
     EXPECT_EQ(module.codesec[0].instructions[4], Instr::nop);
     EXPECT_EQ(module.codesec[0].instructions[5], Instr::unreachable);
     EXPECT_EQ(module.codesec[0].instructions[6], Instr::end);
@@ -1145,7 +1151,7 @@ TEST(parser, code_section_fp_instructions)
     for (const auto instr : fp_instructions)
     {
         auto func_bin = "00"_bytes  // vec(locals)
-                        + bytes{instr};
+                        + i32_const(0) + i32_const(0) + bytes{instr};
         switch (instr)
         {
         case 0x2a:  // f32.load
