@@ -14,6 +14,7 @@ target_sources(
     leb128_encode.hpp
     wabt_engine.cpp
     wasm3_engine.cpp
+    wasm_binary.hpp
     wasm_engine.hpp
 )
 

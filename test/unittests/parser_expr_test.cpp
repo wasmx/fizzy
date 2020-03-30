@@ -2,8 +2,10 @@
 #include <gtest/gtest.h>
 #include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
+#include <test/utils/wasm_binary.hpp>
 
 using namespace fizzy;
+using namespace fizzy::test;
 
 namespace
 {

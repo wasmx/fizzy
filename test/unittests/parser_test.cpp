@@ -3,8 +3,10 @@
 #include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
 #include <test/utils/leb128_encode.hpp>
+#include <test/utils/wasm_binary.hpp>
 
 using namespace fizzy;
+using namespace fizzy::test;
 
 namespace
 {
@@ -1103,9 +1105,8 @@ TEST(parser, code_section_with_memory_size)
 
 TEST(parser, code_section_with_memory_grow)
 {
-    const auto func_bin =
-        "00"  // vec(locals)
-        "410040001a0b"_bytes;
+    const auto func_bin = "00"_bytes +  // vec(locals)
+                          i32_const(0) + "40001a0b"_bytes;
     const auto code_bin = add_size_prefix(func_bin);
     const auto code_section = make_vec({code_bin});
     const auto bin = bytes{wasm_prefix} + make_section(1, make_vec({make_functype({}, {})})) +
@@ -1122,9 +1123,8 @@ TEST(parser, code_section_with_memory_grow)
     EXPECT_EQ(module.codesec[0].instructions[3], Instr::end);
     EXPECT_EQ(module.codesec[0].immediates, "00000000"_bytes);
 
-    const auto func_bin_invalid =
-        "00"  // vec(locals)
-        "410040011a0b"_bytes;
+    const auto func_bin_invalid = "00"_bytes +  // vec(locals)
+                                  i32_const(0) + "40011a0b"_bytes;
     const auto code_bin_invalid = add_size_prefix(func_bin_invalid);
     const auto code_section_invalid = make_vec({code_bin_invalid});
     const auto bin_invalid = bytes{wasm_prefix} +
