@@ -601,7 +601,35 @@ std::unique_ptr<Instance> instantiate(Module module,
         const auto funcidx = *instance->module.startfunc;
         assert(funcidx < instance->imported_functions.size() + instance->module.funcsec.size());
         if (execute(*instance, funcidx, {}).trapped)
+        {
+            // When element section modified imported table, and then start function trapped,
+            // modifications to the table are not rolled back.
+            // Instance in this case is not being returned to the user, so it needs to be kept alive
+            // as long as functions using it are alive in the table.
+            if (!imported_tables.empty() && !instance->module.elementsec.empty())
+            {
+                // Instance may be used by several functions added to the table,
+                // so we need a shared ownership here.
+                std::shared_ptr<Instance> shared_instance = std::move(instance);
+
+                for (size_t i = 0; i < shared_instance->module.elementsec.size(); ++i)
+                {
+                    auto it_table = shared_instance->table->begin() + elementsec_offsets[i];
+                    for ([[maybe_unused]] auto _ : shared_instance->module.elementsec[i].init)
+                    {
+                        // Wrap the function with the lambda capturing shared instance
+                        auto& table_function = (*it_table)->function;
+                        table_function = [shared_instance, func = std::move(table_function)](
+                                             fizzy::Instance& _instance, std::vector<uint64_t> args,
+                                             int depth) {
+                            return func(_instance, std::move(args), depth);
+                        };
+                        ++it_table;
+                    }
+                }
+            }
             throw instantiate_error("Start function failed to execute");
+        }
     }
 
     return instance;
