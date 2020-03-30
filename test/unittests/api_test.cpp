@@ -219,7 +219,7 @@ TEST(api, find_exported_table)
     auto opt_table = find_exported_table(*instance, "tab");
     ASSERT_TRUE(opt_table);
     EXPECT_EQ(opt_table->table, instance->table.get());
-    EXPECT_EQ(opt_table->table->size(), 2);
+    EXPECT_EQ(opt_table->table->functions.size(), 2);
     // EXPECT_EQ((*opt_table->table)[0], 1);
     // EXPECT_EQ((*opt_table->table)[1], 0);
     EXPECT_EQ(opt_table->limits.min, 2);
@@ -242,7 +242,8 @@ TEST(api, find_exported_table)
         "0061736d010000000104016000000211010474657374057461626c650170010214030302000005030100000606"
         "017f0041000b071604037461620100016600000267310300036d656d02000a09020300010b0300010b");
 
-    table_elements table(2);  // = {/*1, 0*/std::nullopt, std::nullopt};
+    TableElements table;  // = {/*1, 0*/std::nullopt, std::nullopt};
+    table.functions.resize(2);
     auto instance_reexported_table =
         instantiate(parse(wasm_reexported_table), {}, {ExternalTable{&table, {2, 20}}});
 
@@ -283,7 +284,8 @@ TEST(api, DISABLED_find_exported_table_reimport)
         from_hex("0061736d010000000211010474657374057461626c650170010214070701037461620100");
 
     // importing the table with limits narrower than defined in the module
-    table_elements table(5);
+    TableElements table;
+    table.functions.resize(5);
     auto instance = instantiate(parse(wasm), {}, {ExternalTable{&table, {5, 10}}});
 
     auto opt_table = find_exported_table(*instance, "tab");

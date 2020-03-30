@@ -161,8 +161,8 @@ TEST(execute_call, call_indirect_imported_table)
     auto out_i32 = FuncType{{}, {ValType::i32}};
     auto out_i64 = FuncType{{}, {ValType::i64}};
 
-    table_elements table{
-        {{f3, out_i32}}, {{f2, out_i32}}, {{f1, out_i32}}, {{f4, out_i64}}, {{f5, out_i32}}};
+    TableElements table{
+        {{{f3, out_i32}}, {{f2, out_i32}}, {{f1, out_i32}}, {{f4, out_i64}}, {{f5, out_i32}}}, {}};
 
     auto instance = instantiate(module, {}, {{&table, {5, 20}}});
 

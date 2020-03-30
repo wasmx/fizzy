@@ -82,12 +82,13 @@ TEST(instantiate, imported_table)
     imp.desc.table = Table{{10, 30}};
     module.importsec.emplace_back(imp);
 
-    table_elements table(10);
+    TableElements table;
+    table.functions.resize(10);
     auto instance = instantiate(module, {}, {{&table, {10, 30}}});
 
     ASSERT_TRUE(instance->table);
-    EXPECT_EQ(instance->table->size(), 10);
-    EXPECT_EQ(instance->table->data(), table.data());
+    EXPECT_EQ(instance->table->functions.size(), 10);
+    EXPECT_EQ(instance->table->functions.data(), table.functions.data());
 }
 
 TEST(instantiate, imported_table_stricter_limits)
@@ -97,12 +98,13 @@ TEST(instantiate, imported_table_stricter_limits)
     imp.desc.table = Table{{10, 30}};
     module.importsec.emplace_back(imp);
 
-    table_elements table(20);
+    TableElements table;
+    table.functions.resize(20);
     auto instance = instantiate(module, {}, {{&table, {20, 20}}});
 
     ASSERT_TRUE(instance->table);
-    EXPECT_EQ(instance->table->size(), 20);
-    EXPECT_EQ(instance->table->data(), table.data());
+    EXPECT_EQ(instance->table->functions.size(), 20);
+    EXPECT_EQ(instance->table->functions.data(), table.functions.data());
 }
 
 TEST(instantiate, imported_table_invalid)
@@ -112,7 +114,8 @@ TEST(instantiate, imported_table_invalid)
     imp.desc.table = Table{{10, 30}};
     module.importsec.emplace_back(imp);
 
-    table_elements table(10);
+    TableElements table;
+    table.functions.resize(10);
 
     // Providing more than 1 table
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table, {10, 30}}, {&table, {10, 10}}}),
@@ -128,7 +131,7 @@ TEST(instantiate, imported_table_invalid)
         "Module defines an imported table but none was provided.");
 
     // Provided min too low
-    table_elements table_empty;
+    TableElements table_empty;
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table_empty, {0, 3}}}), instantiate_error,
         "Provided import's min is below import's min defined in module.");
 
@@ -149,7 +152,8 @@ TEST(instantiate, imported_table_invalid)
         "Provided imported table doesn't fit provided limits");
 
     // Allocated more than max
-    table_elements table_big(40, /*0*/ std::nullopt);
+    TableElements table_big;
+    table_big.functions.resize(40, /*0*/ std::nullopt);
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table_big, {10, 30}}}), instantiate_error,
         "Provided imported table doesn't fit provided limits");
 
@@ -425,11 +429,11 @@ TEST(instantiate, element_section)
 
     auto instance = instantiate(parse(bin));
 
-    ASSERT_EQ(instance->table->size(), 4);
-    EXPECT_FALSE((*instance->table)[0].has_value());
+    ASSERT_EQ(instance->table->functions.size(), 4);
+    EXPECT_FALSE(instance->table->functions[0].has_value());
 
     auto call_table_fn = [&instance](size_t idx) {
-        auto& elem = (*instance->table)[idx];
+        auto& elem = instance->table->functions[idx];
         auto res = elem->function(*instance, {});
         return res.stack.front();
     };
@@ -456,18 +460,18 @@ TEST(instantiate, element_section_offset_from_global)
         "000908010023000b0200010a0b02040041010b040041020b");
     auto instance = instantiate(parse(bin));
 
-    ASSERT_EQ(instance->table->size(), 4);
-    EXPECT_FALSE((*instance->table)[0].has_value());
+    ASSERT_EQ(instance->table->functions.size(), 4);
+    EXPECT_FALSE(instance->table->functions[0].has_value());
 
     auto call_table_fn = [&instance](size_t idx) {
-        auto& elem = (*instance->table)[idx];
+        auto& elem = instance->table->functions[idx];
         auto res = elem->function(*instance, {});
         return res.stack.front();
     };
 
     EXPECT_EQ(call_table_fn(1), 1);
     EXPECT_EQ(call_table_fn(2), 2);
-    EXPECT_FALSE((*instance->table)[3].has_value());
+    EXPECT_FALSE(instance->table->functions[3].has_value());
 }
 
 TEST(instantiate, element_section_offset_from_imported_global)
@@ -490,18 +494,18 @@ TEST(instantiate, element_section_offset_from_imported_global)
 
     auto instance = instantiate(parse(bin), {}, {}, {}, {g});
 
-    ASSERT_EQ(instance->table->size(), 4);
-    EXPECT_FALSE((*instance->table)[0].has_value());
+    ASSERT_EQ(instance->table->functions.size(), 4);
+    EXPECT_FALSE(instance->table->functions[0].has_value());
 
     auto call_table_fn = [&instance](size_t idx) {
-        auto& elem = (*instance->table)[idx];
+        auto& elem = instance->table->functions[idx];
         auto res = elem->function(*instance, {});
         return res.stack.front();
     };
 
     EXPECT_EQ(call_table_fn(1), 1);
     EXPECT_EQ(call_table_fn(2), 2);
-    EXPECT_FALSE((*instance->table)[3].has_value());
+    EXPECT_FALSE(instance->table->functions[3].has_value());
 }
 
 TEST(instantiate, element_section_offset_from_mutable_global)
@@ -550,14 +554,15 @@ TEST(instantiate, element_section_fills_imported_table)
 
     auto f0 = [](Instance&, std::vector<uint64_t>) { return execution_result{false, {0}}; };
 
-    table_elements table(4);
-    table[0] = ExternalFunction{f0, FuncType{{}, {ValType::i32}}};
+    TableElements table;
+    table.functions.resize(4);
+    table.functions[0] = ExternalFunction{f0, FuncType{{}, {ValType::i32}}};
     auto instance = instantiate(parse(bin), {}, {{&table, {4, std::nullopt}}});
 
-    ASSERT_EQ(instance->table->size(), 4);
+    ASSERT_EQ(instance->table->functions.size(), 4);
 
     auto call_table_fn = [&instance](size_t idx) {
-        auto& elem = (*instance->table)[idx];
+        auto& elem = instance->table->functions[idx];
         auto res = elem->function(*instance, {});
         return res.stack.front();
     };

@@ -32,7 +32,7 @@ bool FizzyEngine::parse(bytes_view input)
         auto module = fizzy::parse(input);
         m_instance =
             std::make_unique<Instance>(std::move(module), bytes_ptr{nullptr, [](bytes*) {}}, 0,
-                table_ptr{nullptr, [](table_elements*) {}}, std::vector<uint64_t>{},
+                table_ptr{nullptr, [](TableElements*) {}}, std::vector<uint64_t>{},
                 std::vector<ExternalFunction>{}, std::vector<ExternalGlobal>{});
     }
     catch (const fizzy::parser_error&)

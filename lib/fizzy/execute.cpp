@@ -88,7 +88,7 @@ void match_imported_tables(const std::vector<Table>& module_imported_tables,
         if (imported_tables[0].table == nullptr)
             throw instantiate_error("Provided imported table has a null pointer to data.");
 
-        const auto size = imported_tables[0].table->size();
+        const auto size = imported_tables[0].table->functions.size();
         const auto min = imported_tables[0].limits.min;
         const auto& max = imported_tables[0].limits.max;
         if (size < min || (max.has_value() && size > *max))
@@ -194,8 +194,8 @@ void match_imports(const Module& module, const std::vector<ExternalFunction>& im
 table_ptr allocate_table(
     const std::vector<Table>& module_tables, const std::vector<ExternalTable>& imported_tables)
 {
-    static const auto table_delete = [](table_elements* t) noexcept { delete t; };
-    static const auto null_delete = [](table_elements*) noexcept {};
+    static const auto table_delete = [](TableElements* t) noexcept { delete t; };
+    static const auto null_delete = [](TableElements*) noexcept {};
 
     if (module_tables.size() + imported_tables.size() > 1)
     {
@@ -204,7 +204,10 @@ table_ptr allocate_table(
         throw instantiate_error("Cannot support more than 1 table section.");
     }
     else if (module_tables.size() == 1)
-        return {new table_elements(module_tables[0].limits.min), table_delete};
+    {
+        std::vector<std::optional<ExternalFunction>> functions(module_tables[0].limits.min);
+        return {new TableElements{std::move(functions), {}}, table_delete};
+    }
     else if (imported_tables.size() == 1)
         return {imported_tables[0].table, null_delete};
     else
@@ -591,7 +594,7 @@ std::unique_ptr<Instance> instantiate(Module module,
         const uint64_t offset =
             eval_constant_expression(element.offset, imported_globals, module.globalsec, globals);
 
-        if (offset + element.init.size() > table->size())
+        if (offset + element.init.size() > table->functions.size())
             throw instantiate_error("Element segment is out of table bounds");
 
         elementsec_offsets.emplace_back(offset);
@@ -618,7 +621,8 @@ std::unique_ptr<Instance> instantiate(Module module,
     for (size_t i = 0; i < instance->module.elementsec.size(); ++i)
     {
         // Overwrite table[offset..] with element.init
-        auto it_table = instance->table->begin() + static_cast<ptrdiff_t>(elementsec_offsets[i]);
+        auto it_table =
+            instance->table->functions.begin() + static_cast<ptrdiff_t>(elementsec_offsets[i]);
         for (const auto idx : instance->module.elementsec[i].init)
         {
             auto func = [idx, &instance_ref = *instance](
@@ -636,7 +640,13 @@ std::unique_ptr<Instance> instantiate(Module module,
         const auto funcidx = *instance->module.startfunc;
         assert(funcidx < instance->imported_functions.size() + instance->module.funcsec.size());
         if (execute(*instance, funcidx, {}).trapped)
+        {
+            // In case some functions were added to the imported table,
+            // instance needs to be kept alive
+            if (!imported_tables.empty() && instance->module.elementsec.size() > 0)
+                instance->table->dependency_instances.emplace_back(std::move(instance));
             throw instantiate_error("Start function failed to execute");
+        }
     }
 
     return instance;
@@ -801,13 +811,13 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
             assert(expected_type_idx < instance.module.typesec.size());
 
             const auto elem_idx = stack.pop();
-            if (elem_idx >= instance.table->size())
+            if (elem_idx >= instance.table->functions.size())
             {
                 trap = true;
                 goto end;
             }
 
-            const auto called_func = (*instance.table)[elem_idx];
+            const auto called_func = instance.table->functions[elem_idx];
             if (!called_func.has_value())
             {
                 trap = true;
