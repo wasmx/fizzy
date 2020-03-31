@@ -342,6 +342,49 @@ TEST(execute_call, imported_function_from_another_module)
     EXPECT_RESULT(execute(*instance2, 1, {44, 2}), 42);
 }
 
+TEST(execute_call, imported_table_from_another_module)
+{
+    /* wat2wasm
+    (module
+      (func $sub (param $lhs i32) (param $rhs i32) (result i32)
+        get_local $lhs
+        get_local $rhs
+        i32.sub)
+      (table (export "tab") 1 funcref)
+      (elem (i32.const 0) $sub)
+    )
+    */
+    const auto bin1 = from_hex(
+        "0061736d0100000001070160027f7f017f030201000404017000010707010374616201000907010041000b0100"
+        "0a09010700200020016b0b");
+    const auto module1 = parse(bin1);
+    auto instance1 = instantiate(module1);
+
+    /* wat2wasm
+    (module
+      (type $t1 (func (param $lhs i32) (param $rhs i32) (result i32)))
+      (import "m1" "tab" (table 1 funcref))
+
+      (func $main (param i32) (param i32) (result i32)
+        get_local 0
+        get_local 1
+        (call_indirect (type $t1) (i32.const 0))
+      )
+    )
+    */
+    const auto bin2 = from_hex(
+        "0061736d0100000001070160027f7f017f020c01026d310374616201700001030201000a0d010b002000200141"
+        "001100000b");
+    const auto module2 = parse(bin2);
+
+    const auto table = fizzy::find_exported_table(instance1, "tab");
+    ASSERT_TRUE(table.has_value());
+
+    auto instance2 = instantiate(module2, {}, {*table});
+
+    EXPECT_RESULT(execute(instance2, 0, {44, 2}), 42);
+}
+
 TEST(execute_call, call_infinite_recursion)
 {
     /* wat2wasm
