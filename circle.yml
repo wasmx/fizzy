@@ -22,8 +22,11 @@ executors:
 commands:
   build:
     description: "Build"
+    parameters:
+      target:
+        type: string
+        default: all
     steps:
-      - checkout
       - run:
           name: "Environment"
           command: |
@@ -54,7 +57,7 @@ commands:
             - ~/.hunter/_Base/Cache
       - run:
           name: "Build"
-          command: cmake --build ~/build
+          command: cmake --build ~/build --target <<parameters.target>>
 
   test:
     description: "Test"
@@ -70,15 +73,22 @@ commands:
 
   benchmark:
     description: "Run benchmarks"
+    parameters:
+      repetitions:
+        type: integer
+        default: 1
+      out_dir:
+        type: string
+        default: out
     steps:
       - run:
           name: "Run wasm engine benchmarks"
           working_directory: ~/build
-          command: bin/fizzy-bench ~/project/test/benchmarks
+          command: bin/fizzy-bench ~/project/test/benchmarks --benchmark_repetitions=<<parameters.repetitions>> --benchmark_out=engines-<<parameters.out_dir>>
       - run:
           name: "Run fizzy internal benchmarks"
           working_directory: ~/build
-          command: bin/fizzy-bench-internal
+          command: bin/fizzy-bench-internal --benchmark_repetitions=<<parameters.repetitions>> --benchmark_out=internal-<<parameters.out_dir>>
 
   spectest:
     description: "Run spectest"
@@ -139,6 +149,7 @@ jobs:
     environment:
       BUILD_TYPE: Release
     steps:
+      - checkout
       - build
       - test
       - persist_to_workspace:
@@ -155,6 +166,7 @@ jobs:
       - run:
           name: "Install System Dependencies"
           command: HOMEBREW_NO_AUTO_UPDATE=1 brew install cmake ninja
+      - checkout
       - build
       - test
 
@@ -168,6 +180,7 @@ jobs:
       - run:
           name: "Install clang-tidy"
           command: sudo apt-get -q update && sudo apt-get -qy install clang-tidy-9
+      - checkout
       - build
       - test
       - run:
@@ -213,6 +226,7 @@ jobs:
       CMAKE_OPTIONS: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
       UBSAN_OPTIONS: halt_on_error=1
     steps:
+      - checkout
       - build
       - test
       - benchmark
@@ -221,31 +235,55 @@ jobs:
   benchmark:
     machine:
       image: ubuntu-1604:201903-01
+    environment:
+      CC: gcc-9
+      CXX: g++-9
+      BUILD_TYPE: Release
     steps:
       - run:
-          name: "Install standard libraries"
+          name: "Install benchmark compare.py"
+          working_directory: "~"
+          command: |
+            git clone https://github.com/google/benchmark.git --quiet --depth=1 --single-branch
+            pyenv global 3.7.0
+            pip install scipy --progress-bar off
+            python ~/benchmark/tools/compare.py --help
+      - run:
+          name: "Install toolchain"
           working_directory: "~"
           command: |
             export DEBIAN_FRONTEND=noninteractive
 
-            # Remove all default sources
+            # Remove additional sources
             sudo rm /etc/apt/sources.list.d/*
-            sudo rm /etc/apt/sources.list
+
+            wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add -
 
             sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+            sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ xenial main'
             sudo apt-get -q update
-            sudo apt-get -qy install libstdc++6
+            sudo apt-get -qy install --no-install-recommends g++-9 cmake ninja-build
 
-            wget -q http://archive.ubuntu.com/ubuntu/pool/main/g/glibc/libc6_2.29-0ubuntu2_amd64.deb
-            sudo dpkg -i --force-all libc6_2.29-0ubuntu2_amd64.deb
-
-      - attach_workspace:
-          at: "~"
       - checkout
+      - build:
+          target: fizzy-bench fizzy-bench-internal
+      - benchmark:
+          repetitions: 9
+          out_dir: new
       - run:
-          name: "Benchmark"
+          name: "Checkout base"
+          command: git checkout $(git merge-base HEAD origin/master)
+      - build:
+          target: fizzy-bench fizzy-bench-internal
+      - benchmark:
+          repetitions: 9
+          out_dir: old
+      - run:
+          name: "Compare"
+          working_directory: "~"
           command: |
-            ~/bin/fizzy-bench test/benchmarks --benchmark_color=true --benchmark_repetitions=3 --benchmark_min_time=1
+            benchmark/tools/compare.py --display_aggregates_only benchmarks ~/build/engines-old ~/build/engines-new
+            benchmark/tools/compare.py --display_aggregates_only benchmarks ~/build/internal-old ~/build/internal-new
 
   fuzzing:
     executor: linux-clang-9
@@ -254,6 +292,7 @@ jobs:
       CMAKE_OPTIONS: -DFIZZY_FUZZING=ON -DENABLE_ASSERTIONS=ON
       UBSAN_OPTIONS: halt_on_error=1
     steps:
+      - checkout
       - build
       - restore_cache:
           name: "Restore fuzzing corpus"
@@ -300,7 +339,4 @@ workflows:
   benchmarking:
     when: <<pipeline.parameters.benchmark>>
     jobs:
-      - release-linux
-      - benchmark:
-          requires:
-            - release-linux
+      - benchmark
