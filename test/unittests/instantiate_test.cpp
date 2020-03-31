@@ -516,6 +516,33 @@ TEST(instantiate, element_section_fills_imported_table)
     EXPECT_EQ((*instance->table)[3], 0x66);
 }
 
+TEST(instantiate, element_section_out_of_bounds_doesnt_change_imported_table)
+{
+    /* wat2wasm
+    (module
+      (table (import "m" "tab") 3 funcref)
+      (elem (i32.const 0) $f1 $f1)
+      (elem (i32.const 2) $f1 $f1)
+      (func $f1 (result i32) (i32.const 1))
+    )
+    */
+    const auto bin = from_hex(
+        "0061736d010000000105016000017f020b01016d037461620170000303020100090f020041000b020000004102"
+        "0b0200000a0601040041010b");
+    Module module = parse(bin);
+
+    table_elements table(3);
+    table[0] = 0xbb;
+
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table, {3, std::nullopt}}}), instantiate_error,
+        "Element segment is out of table bounds");
+
+    ASSERT_EQ(table.size(), 3);
+    EXPECT_EQ(table[0], 0xbb);
+    EXPECT_FALSE(table[1].has_value());
+    EXPECT_FALSE(table[2].has_value());
+}
+
 TEST(instantiate, data_section)
 {
     Module module;
@@ -597,6 +624,78 @@ TEST(instantiate, data_section_fills_imported_memory)
     auto instance = instantiate(module, {}, {}, {{&memory, {1, 1}}});
 
     EXPECT_EQ(memory.substr(0, 6), from_hex("00aa55550000"));
+}
+
+TEST(instantiate, data_section_out_of_bounds_doesnt_change_imported_memory)
+{
+    /* wat2wasm
+    (module
+      (memory (import "m" "mem") 1)
+      (data (i32.const 0) "a")
+      (data (i32.const 65536) "a")
+    )
+    */
+    const auto bin =
+        from_hex("0061736d01000000020a01016d036d656d0200010b0f020041000b016100418080040b0161");
+    Module module = parse(bin);
+
+    bytes memory(PageSize, 0);
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {1, 1}}}), instantiate_error,
+        "Data segment is out of memory bounds");
+
+    EXPECT_EQ(memory[0], 0);
+}
+
+TEST(instantiate, data_elem_section_errors_dont_change_imports)
+{
+    /* wat2wasm
+    (module
+      (table (import "m" "tab") 3 funcref)
+      (memory (import "m" "mem") 1)
+      (elem (i32.const 0) $f1 $f1)
+      (data (i32.const 0) "a")
+      (data (i32.const 65536) "a")
+      (func $f1 (result i32) (i32.const 1))
+    )
+    */
+    const auto bin_data_error = from_hex(
+        "0061736d010000000105016000017f021402016d0374616201700003016d036d656d0200010302010009080100"
+        "41000b0200000a0601040041010b0b0f020041000b016100418080040b0161");
+    Module module_data_error = parse(bin_data_error);
+
+    table_elements table(3);
+    bytes memory(PageSize, 0);
+    EXPECT_THROW_MESSAGE(
+        instantiate(module_data_error, {}, {{&table, {3, std::nullopt}}}, {{&memory, {1, 1}}}),
+        instantiate_error, "Data segment is out of memory bounds");
+
+    EXPECT_FALSE(table[0].has_value());
+    EXPECT_FALSE(table[1].has_value());
+    EXPECT_EQ(memory[0], 0);
+
+    /* wat2wasm
+    (module
+      (table (import "m" "tab") 3 funcref)
+      (memory (import "m" "mem") 1)
+      (elem (i32.const 0) $f1 $f1)
+      (elem (i32.const 2) $f1 $f1)
+      (data (i32.const 0) "a")
+      (func $f1 (result i32) (i32.const 1))
+    )
+    */
+    const auto bin_elem_error = from_hex(
+        "0061736d010000000105016000017f021402016d0374616201700003016d036d656d02000103020100090f0200"
+        "41000b0200000041020b0200000a0601040041010b0b07010041000b0161");
+    Module module_elem_error = parse(bin_elem_error);
+
+    EXPECT_THROW_MESSAGE(
+        instantiate(module_elem_error, {}, {{&table, {3, std::nullopt}}}, {{&memory, {1, 1}}}),
+        instantiate_error, "Element segment is out of table bounds");
+
+    EXPECT_FALSE(table[0].has_value());
+    EXPECT_FALSE(table[1].has_value());
+    EXPECT_FALSE(table[2].has_value());
+    EXPECT_EQ(memory[0], 0);
 }
 
 TEST(instantiate, globals_single)
