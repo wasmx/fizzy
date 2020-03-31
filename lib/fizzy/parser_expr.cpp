@@ -300,13 +300,24 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
             break;
         }
 
+        case Instr::br:
+        case Instr::br_if:
+        {
+            uint32_t label_idx;
+            std::tie(label_idx, pos) = leb128u_decode<uint32_t>(pos, end);
+
+            if (label_idx > label_positions.size())
+                throw validation_error{"invalid label index"};
+
+            push(code.immediates, label_idx);
+            break;
+        }
+
         case Instr::local_get:
         case Instr::local_set:
         case Instr::local_tee:
         case Instr::global_get:
         case Instr::global_set:
-        case Instr::br:
-        case Instr::br_if:
         case Instr::call:
         {
             uint32_t imm;
@@ -321,6 +332,15 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
             std::tie(label_indices, pos) = parse_vec_i32(pos, end);
             uint32_t default_label_idx;
             std::tie(default_label_idx, pos) = leb128u_decode<uint32_t>(pos, end);
+
+            for (auto label_idx : label_indices)
+            {
+                if (label_idx > label_positions.size())
+                    throw validation_error{"invalid label index"};
+            }
+
+            if (default_label_idx > label_positions.size())
+                throw validation_error{"invalid label index"};
 
             push(code.immediates, static_cast<uint32_t>(label_indices.size()));
             for (const auto idx : label_indices)

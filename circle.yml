@@ -103,7 +103,7 @@ commands:
           working_directory: ~/build
           command: |
             set +e
-            expected="  PASSED 4451, FAILED 24, SKIPPED 7338."
+            expected="  PASSED 4450, FAILED 25, SKIPPED 7338."
             result=$(bin/fizzy-spectests --skip-validation wasm-spec/test/core/json | tail -1)
             echo "Expected: $expected"
             echo "Result: $result"
@@ -140,6 +140,7 @@ jobs:
           ./wat2wasm4cpp.py test/unittests/execute_numeric_test.cpp
           ./wat2wasm4cpp.py test/unittests/execute_test.cpp
           ./wat2wasm4cpp.py test/unittests/parser_test.cpp
+          ./wat2wasm4cpp.py test/unittests/validation_test.cpp
           ./wat2wasm4cpp.py test/unittests/wasm_engine_test.cpp
           ./wat2wasm4cpp.py test/spectests/spectests.cpp
           git diff --color --exit-code
