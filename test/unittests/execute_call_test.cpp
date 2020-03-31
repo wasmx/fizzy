@@ -9,32 +9,25 @@ using namespace fizzy;
 
 TEST(execute_call, call)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{}, {ValType::i32}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(Code{0, {Instr::i32_const, Instr::end}, {42, 0, 42, 0}});
-    module.codesec.emplace_back(Code{0, {Instr::call, Instr::end}, {0, 0, 0, 0}});
-
-    const auto [trap, ret] = execute(module, 1, {});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0x2a002a);
+    /* wat2wasm
+    (func (result i32) (i32.const 0x2a002a))
+    (func (result i32) (call 0))
+    */
+    const auto wasm =
+        from_hex("0061736d010000000105016000017f03030200000a0e02070041aa80a8010b040010000b");
+    EXPECT_RESULT(execute(parse(wasm), 1, {}), 0x2a002a);
 }
 
 TEST(execute_call, call_trap)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{}, {ValType::i32}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(Code{0, {Instr::unreachable, Instr::end}, {}});
-    module.codesec.emplace_back(Code{0, {Instr::call, Instr::end}, {0, 0, 0, 0}});
+    /* wat2wasm
+    (func (result i32) (unreachable))
+    (func (result i32) (call 0))
+    */
+    const auto wasm = from_hex("0061736d010000000105016000017f03030200000a0a020300000b040010000b");
 
-    const auto [trap, ret] = execute(module, 1, {});
-
-    ASSERT_TRUE(trap);
+    const auto [trap, _] = execute(parse(wasm), 1, {});
+    EXPECT_TRUE(trap);
 }
 
 TEST(execute_call, call_with_arguments)
@@ -210,35 +203,43 @@ TEST(execute_call, call_indirect_uninited_table)
 
 TEST(execute_call, imported_function_call)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{}, {ValType::i32}});
-    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(Code{0, {Instr::call, Instr::end}, {0, 0, 0, 0}});
+    /* wat2wasm
+    (import "mod" "foo" (func (result i32)))
+    (func (result i32)
+      call 0
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000105016000017f020b01036d6f6403666f6f0000030201000a0601040010000b");
 
-    auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result {
+    const auto module = parse(wasm);
+
+    constexpr auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result {
         return {false, {42}};
     };
     const auto host_foo_type = module.typesec[0];
 
     auto instance = instantiate(module, {{host_foo, host_foo_type}});
 
-    const auto [trap, ret] = execute(instance, 1, {});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    EXPECT_RESULT(execute(instance, 1, {}), 42);
 }
 
 TEST(execute_call, imported_function_call_with_arguments)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
-    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::call, Instr::i32_const, Instr::i32_add, Instr::end},
-            {0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0}});
+    /* wat2wasm
+    (import "mod" "foo" (func (param i32) (result i32)))
+    (func (param i32) (result i32)
+      get_local 0
+      call 0
+      i32.const 2
+      i32.add
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017f020b01036d6f6403666f6f0000030201000a0b0109002000100041026a"
+        "0b");
+
+    const auto module = parse(wasm);
 
     auto host_foo = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] * 2}};
@@ -247,11 +248,7 @@ TEST(execute_call, imported_function_call_with_arguments)
 
     auto instance = instantiate(module, {{host_foo, host_foo_type}});
 
-    const auto [trap, ret] = execute(instance, 1, {20});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    EXPECT_RESULT(execute(instance, 1, {20}), 42);
 }
 
 TEST(execute_call, imported_functions_call_indirect)
