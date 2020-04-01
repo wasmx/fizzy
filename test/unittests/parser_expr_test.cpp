@@ -15,7 +15,7 @@ namespace
 {
 inline auto parse_expr(const bytes& input)
 {
-    return fizzy::parse_expr(input.data(), input.data() + input.size(), false);
+    return fizzy::parse_expr(input.data(), input.data() + input.size(), false, false);
 }
 }  // namespace
 

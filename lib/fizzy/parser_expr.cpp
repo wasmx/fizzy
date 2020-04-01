@@ -64,7 +64,8 @@ parser_result<uint8_t> parse_blocktype(const uint8_t* pos, const uint8_t* end)
 }
 }  // namespace
 
-parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have_memory)
+parser_result<Code> parse_expr(
+    const uint8_t* pos, const uint8_t* end, bool have_memory, [[maybe_unused]] bool have_result)
 {
     Code code;
 
