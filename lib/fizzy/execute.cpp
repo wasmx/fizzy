@@ -532,9 +532,9 @@ std::optional<uint32_t> find_export(
 
 }  // namespace
 
-Instance instantiate(Module module, std::vector<ExternalFunction> imported_functions,
-    std::vector<ExternalTable> imported_tables, std::vector<ExternalMemory> imported_memories,
-    std::vector<ExternalGlobal> imported_globals)
+std::unique_ptr<Instance> instantiate(Module module,
+    std::vector<ExternalFunction> imported_functions, std::vector<ExternalTable> imported_tables,
+    std::vector<ExternalMemory> imported_memories, std::vector<ExternalGlobal> imported_globals)
 {
     assert(module.funcsec.size() == module.codesec.size());
 
@@ -593,16 +593,17 @@ Instance instantiate(Module module, std::vector<ExternalFunction> imported_funct
 
     // FIXME: clang-tidy warns about potential memory leak for moving memory (which is in fact
     // safe), but also erroneously points this warning to std::move(table)
-    // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-    Instance instance = {std::move(module), std::move(memory), memory_max, std::move(table),
-        std::move(globals), std::move(imported_functions), std::move(imported_globals)};
+    auto instance = std::make_unique<Instance>(std::move(module), std::move(memory), memory_max,
+        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
+        std::move(table), std::move(globals), std::move(imported_functions),
+        std::move(imported_globals));
 
     // Run start function if present
-    if (instance.module.startfunc)
+    if (instance->module.startfunc)
     {
-        const auto funcidx = *instance.module.startfunc;
-        assert(funcidx < instance.imported_functions.size() + instance.module.funcsec.size());
-        if (execute(instance, funcidx, {}).trapped)
+        const auto funcidx = *instance->module.startfunc;
+        assert(funcidx < instance->imported_functions.size() + instance->module.funcsec.size());
+        if (execute(*instance, funcidx, {}).trapped)
             throw instantiate_error("Start function failed to execute");
     }
 
@@ -1541,7 +1542,7 @@ end:
 execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uint64_t> args)
 {
     auto instance = instantiate(module);
-    return execute(instance, func_idx, std::move(args));
+    return execute(*instance, func_idx, std::move(args));
 }
 
 std::optional<FuncIdx> find_exported_function(const Module& module, std::string_view name)

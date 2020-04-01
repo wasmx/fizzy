@@ -17,12 +17,12 @@ TEST(instantiate, imported_functions)
     auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result { return {true, {}}; };
     auto instance = instantiate(module, {{host_foo, module.typesec[0]}});
 
-    ASSERT_EQ(instance.imported_functions.size(), 1);
-    EXPECT_EQ(*instance.imported_functions[0].function.target<decltype(host_foo)>(), host_foo);
-    ASSERT_EQ(instance.imported_functions[0].type.inputs.size(), 1);
-    EXPECT_EQ(instance.imported_functions[0].type.inputs[0], ValType::i32);
-    ASSERT_EQ(instance.imported_functions[0].type.outputs.size(), 1);
-    EXPECT_EQ(instance.imported_functions[0].type.outputs[0], ValType::i32);
+    ASSERT_EQ(instance->imported_functions.size(), 1);
+    EXPECT_EQ(*instance->imported_functions[0].function.target<decltype(host_foo)>(), host_foo);
+    ASSERT_EQ(instance->imported_functions[0].type.inputs.size(), 1);
+    EXPECT_EQ(instance->imported_functions[0].type.inputs[0], ValType::i32);
+    ASSERT_EQ(instance->imported_functions[0].type.outputs.size(), 1);
+    EXPECT_EQ(instance->imported_functions[0].type.outputs[0], ValType::i32);
 }
 
 TEST(instantiate, imported_functions_multiple)
@@ -42,15 +42,15 @@ TEST(instantiate, imported_functions_multiple)
     auto instance =
         instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[1]}});
 
-    ASSERT_EQ(instance.imported_functions.size(), 2);
-    EXPECT_EQ(*instance.imported_functions[0].function.target<decltype(host_foo1)>(), host_foo1);
-    ASSERT_EQ(instance.imported_functions[0].type.inputs.size(), 1);
-    EXPECT_EQ(instance.imported_functions[0].type.inputs[0], ValType::i32);
-    ASSERT_EQ(instance.imported_functions[0].type.outputs.size(), 1);
-    EXPECT_EQ(instance.imported_functions[0].type.outputs[0], ValType::i32);
-    EXPECT_EQ(*instance.imported_functions[1].function.target<decltype(host_foo2)>(), host_foo2);
-    EXPECT_TRUE(instance.imported_functions[1].type.inputs.empty());
-    EXPECT_TRUE(instance.imported_functions[1].type.outputs.empty());
+    ASSERT_EQ(instance->imported_functions.size(), 2);
+    EXPECT_EQ(*instance->imported_functions[0].function.target<decltype(host_foo1)>(), host_foo1);
+    ASSERT_EQ(instance->imported_functions[0].type.inputs.size(), 1);
+    EXPECT_EQ(instance->imported_functions[0].type.inputs[0], ValType::i32);
+    ASSERT_EQ(instance->imported_functions[0].type.outputs.size(), 1);
+    EXPECT_EQ(instance->imported_functions[0].type.outputs[0], ValType::i32);
+    EXPECT_EQ(*instance->imported_functions[1].function.target<decltype(host_foo2)>(), host_foo2);
+    EXPECT_TRUE(instance->imported_functions[1].type.inputs.empty());
+    EXPECT_TRUE(instance->imported_functions[1].type.outputs.empty());
 }
 
 TEST(instantiate, imported_functions_not_enough)
@@ -85,9 +85,9 @@ TEST(instantiate, imported_table)
     table_elements table(10);
     auto instance = instantiate(module, {}, {{&table, {10, 30}}});
 
-    ASSERT_TRUE(instance.table);
-    EXPECT_EQ(instance.table->size(), 10);
-    EXPECT_EQ(instance.table->data(), table.data());
+    ASSERT_TRUE(instance->table);
+    EXPECT_EQ(instance->table->size(), 10);
+    EXPECT_EQ(instance->table->data(), table.data());
 }
 
 TEST(instantiate, imported_table_stricter_limits)
@@ -100,9 +100,9 @@ TEST(instantiate, imported_table_stricter_limits)
     table_elements table(20);
     auto instance = instantiate(module, {}, {{&table, {20, 20}}});
 
-    ASSERT_TRUE(instance.table);
-    EXPECT_EQ(instance.table->size(), 20);
-    EXPECT_EQ(instance.table->data(), table.data());
+    ASSERT_TRUE(instance->table);
+    EXPECT_EQ(instance->table->size(), 20);
+    EXPECT_EQ(instance->table->data(), table.data());
 }
 
 TEST(instantiate, imported_table_invalid)
@@ -171,10 +171,10 @@ TEST(instantiate, imported_memory)
     bytes memory(PageSize, 0);
     auto instance = instantiate(module, {}, {}, {{&memory, {1, 3}}});
 
-    ASSERT_TRUE(instance.memory);
-    EXPECT_EQ(instance.memory->size(), PageSize);
-    EXPECT_EQ(instance.memory->data(), memory.data());
-    EXPECT_EQ(instance.memory_max_pages, 3);
+    ASSERT_TRUE(instance->memory);
+    EXPECT_EQ(instance->memory->size(), PageSize);
+    EXPECT_EQ(instance->memory->data(), memory.data());
+    EXPECT_EQ(instance->memory_max_pages, 3);
 }
 
 TEST(instantiate, imported_memory_unlimited)
@@ -187,10 +187,10 @@ TEST(instantiate, imported_memory_unlimited)
     bytes memory(PageSize, 0);
     auto instance = instantiate(module, {}, {}, {{&memory, {1, std::nullopt}}});
 
-    ASSERT_TRUE(instance.memory);
-    EXPECT_EQ(instance.memory->size(), PageSize);
-    EXPECT_EQ(instance.memory->data(), memory.data());
-    EXPECT_EQ(instance.memory_max_pages, MemoryPagesLimit);
+    ASSERT_TRUE(instance->memory);
+    EXPECT_EQ(instance->memory->size(), PageSize);
+    EXPECT_EQ(instance->memory->data(), memory.data());
+    EXPECT_EQ(instance->memory_max_pages, MemoryPagesLimit);
 }
 
 TEST(instantiate, imported_memory_stricter_limits)
@@ -203,10 +203,10 @@ TEST(instantiate, imported_memory_stricter_limits)
     bytes memory(PageSize * 2, 0);
     auto instance = instantiate(module, {}, {}, {{&memory, {2, 2}}});
 
-    ASSERT_TRUE(instance.memory);
-    EXPECT_EQ(instance.memory->size(), PageSize * 2);
-    EXPECT_EQ(instance.memory->data(), memory.data());
-    EXPECT_EQ(instance.memory_max_pages, 2);
+    ASSERT_TRUE(instance->memory);
+    EXPECT_EQ(instance->memory->size(), PageSize * 2);
+    EXPECT_EQ(instance->memory->data(), memory.data());
+    EXPECT_EQ(instance->memory_max_pages, 2);
 }
 
 TEST(instantiate, imported_memory_invalid)
@@ -285,10 +285,10 @@ TEST(instantiate, imported_globals)
     ExternalGlobal g{&global_value, true};
     auto instance = instantiate(module, {}, {}, {}, {g});
 
-    ASSERT_EQ(instance.imported_globals.size(), 1);
-    EXPECT_EQ(instance.imported_globals[0].is_mutable, true);
-    EXPECT_EQ(*instance.imported_globals[0].value, 42);
-    ASSERT_EQ(instance.globals.size(), 0);
+    ASSERT_EQ(instance->imported_globals.size(), 1);
+    EXPECT_EQ(instance->imported_globals[0].is_mutable, true);
+    EXPECT_EQ(*instance->imported_globals[0].value, 42);
+    ASSERT_EQ(instance->globals.size(), 0);
 }
 
 TEST(instantiate, imported_globals_multiple)
@@ -303,12 +303,12 @@ TEST(instantiate, imported_globals_multiple)
     ExternalGlobal g2{&global_value2, false};
     auto instance = instantiate(module, {}, {}, {}, {g1, g2});
 
-    ASSERT_EQ(instance.imported_globals.size(), 2);
-    EXPECT_EQ(instance.imported_globals[0].is_mutable, true);
-    EXPECT_EQ(instance.imported_globals[1].is_mutable, false);
-    EXPECT_EQ(*instance.imported_globals[0].value, 42);
-    EXPECT_EQ(*instance.imported_globals[1].value, 43);
-    ASSERT_EQ(instance.globals.size(), 0);
+    ASSERT_EQ(instance->imported_globals.size(), 2);
+    EXPECT_EQ(instance->imported_globals[0].is_mutable, true);
+    EXPECT_EQ(instance->imported_globals[1].is_mutable, false);
+    EXPECT_EQ(*instance->imported_globals[0].value, 42);
+    EXPECT_EQ(*instance->imported_globals[1].value, 43);
+    ASSERT_EQ(instance->globals.size(), 0);
 }
 
 TEST(instantiate, imported_globals_mismatched_count)
@@ -354,7 +354,7 @@ TEST(instantiate, memory_default)
 
     auto instance = instantiate(module);
 
-    EXPECT_FALSE(instance.memory);
+    EXPECT_FALSE(instance->memory);
 }
 
 TEST(instantiate, memory_single)
@@ -364,8 +364,8 @@ TEST(instantiate, memory_single)
 
     auto instance = instantiate(module);
 
-    ASSERT_EQ(instance.memory->size(), PageSize);
-    EXPECT_EQ(instance.memory_max_pages, 1);
+    ASSERT_EQ(instance->memory->size(), PageSize);
+    EXPECT_EQ(instance->memory_max_pages, 1);
 }
 
 TEST(instantiate, memory_single_unspecified_maximum)
@@ -375,8 +375,8 @@ TEST(instantiate, memory_single_unspecified_maximum)
 
     auto instance = instantiate(module);
 
-    ASSERT_EQ(instance.memory->size(), PageSize);
-    EXPECT_EQ(instance.memory_max_pages * PageSize, 256 * 1024 * 1024);
+    ASSERT_EQ(instance->memory->size(), PageSize);
+    EXPECT_EQ(instance->memory_max_pages * PageSize, 256 * 1024 * 1024);
 }
 
 TEST(instantiate, memory_single_large_minimum)
@@ -420,11 +420,11 @@ TEST(instantiate, element_section)
 
     auto instance = instantiate(module);
 
-    ASSERT_EQ(instance.table->size(), 4);
-    EXPECT_FALSE((*instance.table)[0].has_value());
-    EXPECT_EQ((*instance.table)[1], 0xaa);
-    EXPECT_EQ((*instance.table)[2], 0x55);
-    EXPECT_EQ((*instance.table)[3], 0x55);
+    ASSERT_EQ(instance->table->size(), 4);
+    EXPECT_FALSE((*instance->table)[0].has_value());
+    EXPECT_EQ((*instance->table)[1], 0xaa);
+    EXPECT_EQ((*instance->table)[2], 0x55);
+    EXPECT_EQ((*instance->table)[3], 0x55);
 }
 
 TEST(instantiate, element_section_offset_from_global)
@@ -438,11 +438,11 @@ TEST(instantiate, element_section_offset_from_global)
 
     auto instance = instantiate(module);
 
-    ASSERT_EQ(instance.table->size(), 4);
-    EXPECT_FALSE((*instance.table)[0].has_value());
-    EXPECT_EQ((*instance.table)[1], 0xaa);
-    EXPECT_EQ((*instance.table)[2], 0xff);
-    EXPECT_FALSE((*instance.table)[3].has_value());
+    ASSERT_EQ(instance->table->size(), 4);
+    EXPECT_FALSE((*instance->table)[0].has_value());
+    EXPECT_EQ((*instance->table)[1], 0xaa);
+    EXPECT_EQ((*instance->table)[2], 0xff);
+    EXPECT_FALSE((*instance->table)[3].has_value());
 }
 
 TEST(instantiate, element_section_offset_from_imported_global)
@@ -459,11 +459,11 @@ TEST(instantiate, element_section_offset_from_imported_global)
 
     auto instance = instantiate(module, {}, {}, {}, {g});
 
-    ASSERT_EQ(instance.table->size(), 4);
-    EXPECT_FALSE((*instance.table)[0].has_value());
-    EXPECT_EQ((*instance.table)[1], 0xaa);
-    EXPECT_EQ((*instance.table)[2], 0xff);
-    EXPECT_FALSE((*instance.table)[3].has_value());
+    ASSERT_EQ(instance->table->size(), 4);
+    EXPECT_FALSE((*instance->table)[0].has_value());
+    EXPECT_EQ((*instance->table)[1], 0xaa);
+    EXPECT_EQ((*instance->table)[2], 0xff);
+    EXPECT_FALSE((*instance->table)[3].has_value());
 }
 
 TEST(instantiate, element_section_offset_from_mutable_global)
@@ -509,11 +509,11 @@ TEST(instantiate, element_section_fills_imported_table)
     table[0] = 0xbb;
     auto instance = instantiate(module, {}, {{&table, {4, std::nullopt}}});
 
-    ASSERT_EQ(instance.table->size(), 4);
-    EXPECT_EQ((*instance.table)[0], 0xbb);
-    EXPECT_EQ((*instance.table)[1], 0xaa);
-    EXPECT_EQ((*instance.table)[2], 0x55);
-    EXPECT_EQ((*instance.table)[3], 0x66);
+    ASSERT_EQ(instance->table->size(), 4);
+    EXPECT_EQ((*instance->table)[0], 0xbb);
+    EXPECT_EQ((*instance->table)[1], 0xaa);
+    EXPECT_EQ((*instance->table)[2], 0x55);
+    EXPECT_EQ((*instance->table)[3], 0x66);
 }
 
 TEST(instantiate, data_section)
@@ -527,7 +527,7 @@ TEST(instantiate, data_section)
 
     auto instance = instantiate(module);
 
-    EXPECT_EQ(instance.memory->substr(0, 6), from_hex("00aa55550000"));
+    EXPECT_EQ(instance->memory->substr(0, 6), from_hex("00aa55550000"));
 }
 
 TEST(instantiate, data_section_offset_from_global)
@@ -540,7 +540,7 @@ TEST(instantiate, data_section_offset_from_global)
 
     auto instance = instantiate(module);
 
-    EXPECT_EQ(instance.memory->substr(42, 2), "aaff"_bytes);
+    EXPECT_EQ(instance->memory->substr(42, 2), "aaff"_bytes);
 }
 
 TEST(instantiate, data_section_offset_from_imported_global)
@@ -556,7 +556,7 @@ TEST(instantiate, data_section_offset_from_imported_global)
 
     auto instance = instantiate(module, {}, {}, {}, {g});
 
-    EXPECT_EQ(instance.memory->substr(42, 2), "aaff"_bytes);
+    EXPECT_EQ(instance->memory->substr(42, 2), "aaff"_bytes);
 }
 
 TEST(instantiate, data_section_offset_from_mutable_global)
@@ -606,8 +606,8 @@ TEST(instantiate, globals_single)
 
     auto instance = instantiate(module);
 
-    ASSERT_EQ(instance.globals.size(), 1);
-    EXPECT_EQ(instance.globals[0], 42);
+    ASSERT_EQ(instance->globals.size(), 1);
+    EXPECT_EQ(instance->globals[0], 42);
 }
 
 TEST(instantiate, globals_multiple)
@@ -618,9 +618,9 @@ TEST(instantiate, globals_multiple)
 
     auto instance = instantiate(module);
 
-    ASSERT_EQ(instance.globals.size(), 2);
-    EXPECT_EQ(instance.globals[0], 42);
-    EXPECT_EQ(instance.globals[1], 43);
+    ASSERT_EQ(instance->globals.size(), 2);
+    EXPECT_EQ(instance->globals[0], 42);
+    EXPECT_EQ(instance->globals[1], 43);
 }
 
 TEST(instantiate, globals_with_imported)
@@ -635,12 +635,12 @@ TEST(instantiate, globals_with_imported)
 
     auto instance = instantiate(module, {}, {}, {}, {g});
 
-    ASSERT_EQ(instance.imported_globals.size(), 1);
-    EXPECT_EQ(*instance.imported_globals[0].value, 41);
-    EXPECT_EQ(instance.imported_globals[0].is_mutable, true);
-    ASSERT_EQ(instance.globals.size(), 2);
-    EXPECT_EQ(instance.globals[0], 42);
-    EXPECT_EQ(instance.globals[1], 43);
+    ASSERT_EQ(instance->imported_globals.size(), 1);
+    EXPECT_EQ(*instance->imported_globals[0].value, 41);
+    EXPECT_EQ(instance->imported_globals[0].is_mutable, true);
+    ASSERT_EQ(instance->globals.size(), 2);
+    EXPECT_EQ(instance->globals[0], 42);
+    EXPECT_EQ(instance->globals[1], 43);
 }
 
 TEST(instantiate, globals_initialized_from_imported)
@@ -654,8 +654,8 @@ TEST(instantiate, globals_initialized_from_imported)
 
     auto instance = instantiate(module, {}, {}, {}, {g});
 
-    ASSERT_EQ(instance.globals.size(), 1);
-    EXPECT_EQ(instance.globals[0], 42);
+    ASSERT_EQ(instance->globals.size(), 1);
+    EXPECT_EQ(instance->globals[0], 42);
 
     // initializing from mutable global is not allowed
     Module module_invalid1;

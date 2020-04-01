@@ -64,10 +64,23 @@ struct Instance
     std::vector<uint64_t> globals;
     std::vector<ExternalFunction> imported_functions;
     std::vector<ExternalGlobal> imported_globals;
+
+    Instance(Module _module, bytes_ptr _memory, size_t _memory_max_pages, table_ptr _table,
+        std::vector<uint64_t> _globals, std::vector<ExternalFunction> _imported_functions,
+        std::vector<ExternalGlobal> _imported_globals)
+      : module(std::move(_module)),
+        memory(std::move(_memory)),
+        memory_max_pages(_memory_max_pages),
+        table(std::move(_table)),
+        globals(std::move(_globals)),
+        imported_functions(std::move(_imported_functions)),
+        imported_globals(std::move(_imported_globals))
+    {}
 };
 
 // Instantiate a module.
-Instance instantiate(Module module, std::vector<ExternalFunction> imported_functions = {},
+std::unique_ptr<Instance> instantiate(Module module,
+    std::vector<ExternalFunction> imported_functions = {},
     std::vector<ExternalTable> imported_tables = {},
     std::vector<ExternalMemory> imported_memories = {},
     std::vector<ExternalGlobal> imported_globals = {});
