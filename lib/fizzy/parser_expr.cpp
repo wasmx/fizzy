@@ -63,6 +63,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
     // For a block/if/else instruction the value is the block/if/else's immediate offset.
     std::stack<ControlFrame> control_stack;
 
+    control_stack.push({Instr::block, 0});  // The function's implicit block.
+
     bool continue_parsing = true;
     while (continue_parsing)
     {
@@ -226,7 +228,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
 
         case Instr::end:
         {
-            if (!control_stack.empty())
+            if (control_stack.size() > 1)
             {
                 const auto& frame = control_stack.top();
                 if (frame.instruction != Instr::loop)  // If end of block/if/else instruction.
@@ -289,8 +291,6 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
 
         case Instr::else_:
         {
-            if (control_stack.empty())
-                throw parser_error{"unexpected else instruction"};
             const auto& frame = control_stack.top();
             if (frame.instruction != Instr::if_)
                 throw parser_error{"unexpected else instruction (if instruction missing)"};
@@ -298,8 +298,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
             const auto target_imm = static_cast<uint32_t>(code.immediates.size());
 
             // Set the imm values for else instruction.
-            auto* block_imm = code.immediates.data() + frame.immediates_offset +
-                              sizeof(target_pc) + sizeof(target_imm);
+            auto* block_imm = code.immediates.data() + frame.immediates_offset + sizeof(target_pc) +
+                              sizeof(target_imm);
             store(block_imm, target_pc);
             block_imm += sizeof(target_pc);
             store(block_imm, target_imm);
@@ -313,7 +313,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
             uint32_t label_idx;
             std::tie(label_idx, pos) = leb128u_decode<uint32_t>(pos, end);
 
-            if (label_idx > control_stack.size())
+            if (label_idx >= control_stack.size())
                 throw validation_error{"invalid label index"};
 
             push(code.immediates, label_idx);
@@ -342,11 +342,11 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
 
             for (auto label_idx : label_indices)
             {
-                if (label_idx > control_stack.size())
+                if (label_idx >= control_stack.size())
                     throw validation_error{"invalid label index"};
             }
 
-            if (default_label_idx > control_stack.size())
+            if (default_label_idx >= control_stack.size())
                 throw validation_error{"invalid label index"};
 
             push(code.immediates, static_cast<uint32_t>(label_indices.size()));
@@ -436,7 +436,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
         }
         code.instructions.emplace_back(instr);
     }
-    assert(control_stack.empty());
+    assert(control_stack.size() == 1);
     return {code, pos};
 }
 }  // namespace fizzy
