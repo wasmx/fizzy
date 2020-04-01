@@ -528,8 +528,13 @@ Module parse(bytes_view input)
     const auto have_memory = !module.memorysec.empty() || imported_mem_count != 0;
     // Process code. TODO: This can be done lazily.
     module.codesec.reserve(code_binaries.size());
-    for (auto& code_binary : code_binaries)
-        module.codesec.emplace_back(parse_code(code_binary, have_memory));
+    for (size_t i = 0; i < code_binaries.size(); ++i)
+    {
+        const auto type_idx = module.funcsec[i];
+        if (type_idx >= module.typesec.size())
+            throw validation_error{"invalid function type index"};
+        module.codesec.emplace_back(parse_code(code_binaries[i], have_memory));
+    }
 
     return module;
 }
