@@ -315,7 +315,21 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
             if (label_idx > label_positions.size())
                 throw validation_error{"invalid label index"};
 
-            push(code.immediates, label_idx);
+            // FIXME: Add support for "return"
+
+            // TODO: Do not return by value.
+            const auto label = label_positions.peek(label_idx);
+
+            if (label.instruction == Instr::loop)
+            {
+                push(code.immediates, label.code_offset);
+                push(code.immediates, label.immediates_offset);
+
+                // TODO: Should be named differently, for loop this is always 0.
+                push(code.immediates, uint8_t{label.has_result});
+            }
+            // FIXME: Add support for block.
+
             break;
         }
 

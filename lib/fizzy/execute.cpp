@@ -652,8 +652,6 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         }
         case Instr::loop:
         {
-            LabelContext label{pc - 1, immediates, 0, stack.size()};  // Target this instruction.
-            labels.push_back(label);
             break;
         }
         case Instr::if_:
@@ -714,7 +712,9 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
         case Instr::br:
         case Instr::br_if:
         {
-            const auto label_idx = read<uint32_t>(immediates);
+            const auto code_offset = read<uint32_t>(immediates);
+            const auto imm_offset = read<uint32_t>(immediates);
+            const auto carries_result = read<uint8_t>(immediates) != 0;
 
             // Check condition for br_if.
             if (instruction == Instr::br_if && static_cast<uint32_t>(stack.pop()) == 0)
