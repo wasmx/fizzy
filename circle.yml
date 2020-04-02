@@ -77,6 +77,9 @@ commands:
       repetitions:
         type: integer
         default: 1
+      min_time:
+        type: string
+        default: "0.5"
       out_dir:
         type: string
         default: out
@@ -84,11 +87,11 @@ commands:
       - run:
           name: "Run wasm engine benchmarks"
           working_directory: ~/build
-          command: bin/fizzy-bench ~/project/test/benchmarks --benchmark_repetitions=<<parameters.repetitions>> --benchmark_out=engines-<<parameters.out_dir>>
+          command: bin/fizzy-bench ~/project/test/benchmarks --benchmark_repetitions=<<parameters.repetitions>> --benchmark_min_time=<<parameters.min_time>> --benchmark_out=engines-<<parameters.out_dir>>
       - run:
           name: "Run fizzy internal benchmarks"
           working_directory: ~/build
-          command: bin/fizzy-bench-internal --benchmark_repetitions=<<parameters.repetitions>> --benchmark_out=internal-<<parameters.out_dir>>
+          command: bin/fizzy-bench-internal --benchmark_repetitions=<<parameters.repetitions>> --benchmark_min_time=<<parameters.min_time>> --benchmark_out=internal-<<parameters.out_dir>>
 
   spectest:
     description: "Run spectest"
@@ -230,7 +233,8 @@ jobs:
       - checkout
       - build
       - test
-      - benchmark
+      - benchmark:
+          min_time: "0.01"
       - spectest
 
   benchmark:
