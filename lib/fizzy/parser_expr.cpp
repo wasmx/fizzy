@@ -71,6 +71,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
         if (pos == end)
             throw parser_error{"Unexpected EOF"};
 
+        const auto& frame = control_stack.top();
+
         const auto instr = static_cast<Instr>(*pos++);
         switch (instr)
         {
@@ -230,7 +232,6 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
         {
             if (control_stack.size() > 1)
             {
-                const auto& frame = control_stack.top();
                 if (frame.instruction != Instr::loop)  // If end of block/if/else instruction.
                 {
                     const auto target_pc = static_cast<uint32_t>(code.instructions.size() + 1);
@@ -291,7 +292,6 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
 
         case Instr::else_:
         {
-            const auto& frame = control_stack.top();
             if (frame.instruction != Instr::if_)
                 throw parser_error{"unexpected else instruction (if instruction missing)"};
             const auto target_pc = static_cast<uint32_t>(code.instructions.size() + 1);
