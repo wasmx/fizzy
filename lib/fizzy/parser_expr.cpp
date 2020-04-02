@@ -1,6 +1,6 @@
 #include "parser.hpp"
-#include "stack.hpp"
 #include <cassert>
+#include <stack>
 
 namespace fizzy
 {
@@ -55,7 +55,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
 
     // The stack of labels allowing to distinguish between block/if/else and label instructions.
     // For a block/if/else instruction the value is the block/if/else's immediate offset.
-    Stack<LabelPosition> label_positions;
+    std::stack<LabelPosition> label_positions;
 
     bool continue_parsing = true;
     while (continue_parsing)
@@ -222,7 +222,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
         {
             if (!label_positions.empty())
             {
-                const auto label_pos = label_positions.pop();
+                const auto& label_pos = label_positions.top();
                 if (label_pos.instruction != Instr::loop)  // If end of block/if/else instruction.
                 {
                     const auto target_pc = static_cast<uint32_t>(code.instructions.size() + 1);
@@ -234,6 +234,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
                     block_imm += sizeof(target_pc);
                     store(block_imm, target_imm);
                 }
+                label_positions.pop();
             }
             else
                 continue_parsing = false;
@@ -247,7 +248,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
             code.immediates.push_back(arity);
 
             // Push label with immediates offset after arity.
-            label_positions.push_back({Instr::block, code.immediates.size()});
+            label_positions.push({Instr::block, code.immediates.size()});
 
             // Placeholders for immediate values, filled at the matching end instruction.
             push(code.immediates, uint32_t{0});  // Diff to the end instruction.
@@ -258,7 +259,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
         case Instr::loop:
         {
             std::tie(std::ignore, pos) = parse_blocktype(pos, end);
-            label_positions.push_back({Instr::loop, 0});  // Mark as not interested.
+            label_positions.push({Instr::loop, 0});  // Mark as not interested.
             break;
         }
 
@@ -268,7 +269,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
             std::tie(arity, pos) = parse_blocktype(pos, end);
             code.immediates.push_back(arity);
 
-            label_positions.push_back({Instr::if_, code.immediates.size()});
+            label_positions.push({Instr::if_, code.immediates.size()});
 
             // Placeholders for immediate values, filled at the matching end and else instructions.
             push(code.immediates, uint32_t{0});  // Diff to the end instruction.
@@ -284,7 +285,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
         {
             if (label_positions.empty())
                 throw parser_error{"unexpected else instruction"};
-            const auto label_pos = label_positions.peek();
+            const auto& label_pos = label_positions.top();
             if (label_pos.instruction != Instr::if_)
                 throw parser_error{"unexpected else instruction (if instruction missing)"};
             const auto target_pc = static_cast<uint32_t>(code.instructions.size() + 1);
