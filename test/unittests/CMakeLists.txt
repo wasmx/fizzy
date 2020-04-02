@@ -23,6 +23,7 @@ target_sources(
     parser_test.cpp
     stack_test.cpp
     utf8_test.cpp
+    validation_stack_test.cpp
     validation_test.cpp
     wasm_engine_test.cpp
 )
