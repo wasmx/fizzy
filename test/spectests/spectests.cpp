@@ -246,7 +246,7 @@ public:
                 else
                     skip("Unsupported action type '" + action_type + "'");
             }
-            else if (type == "assert_trap")
+            else if (type == "assert_trap" || type == "assert_exhaustion")
             {
                 const auto& action = cmd.at("action");
                 const auto action_type = action.at("type").get<std::string>();
