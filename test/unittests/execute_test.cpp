@@ -9,95 +9,86 @@ using namespace fizzy;
 
 TEST(execute, end)
 {
-    Module module;
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(Code{0, {Instr::end}, {}});
-
-    const auto [trap, ret] = execute(module, 0, {});
-
+    /* wat2wasm
+    (func)
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a040102000b");
+    const auto [trap, ret] = execute(parse(wasm), 0, {});
     ASSERT_FALSE(trap);
     EXPECT_EQ(ret.size(), 0);
 }
 
 TEST(execute, drop)
 {
-    Module module;
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(Code{1, {Instr::local_get, Instr::drop, Instr::end}, {0, 0, 0, 0}});
-
-    const auto [trap, ret] = execute(module, 0, {});
-
+    /* wat2wasm
+    (func
+      (local i32)
+      get_local 0
+      drop
+    )
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a09010701017f20001a0b");
+    const auto [trap, ret] = execute(parse(wasm), 0, {});
     ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 0);
+    EXPECT_EQ(ret.size(), 0);
 }
 
 TEST(execute, select)
 {
-    Module module;
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::local_get, Instr::local_get, Instr::select, Instr::end},
-            {0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0}});
+    /* wat2wasm
+    (func (param i64 i64 i32) (result i64)
+      get_local 0
+      get_local 1
+      get_local 2
+      select
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d0100000001080160037e7e7f017e030201000a0b0109002000200120021b0b");
 
-    auto result = execute(module, 0, {3, 6, 0});
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 6);
-
-    result = execute(module, 0, {3, 6, 1});
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 3);
-
-    result = execute(module, 0, {3, 6, 42});
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 3);
+    const auto module = parse(wasm);
+    EXPECT_RESULT(execute(module, 0, {3, 6, 0}), 6);
+    EXPECT_RESULT(execute(module, 0, {3, 6, 1}), 3);
+    EXPECT_RESULT(execute(module, 0, {3, 6, 42}), 3);
 }
 
 TEST(execute, local_get)
 {
-    Module module;
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(Code{0, {Instr::local_get, Instr::end}, {0, 0, 0, 0}});
-
-    const auto [trap, ret] = execute(module, 0, {42});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    /* wat2wasm
+    (func (param i64) (result i64)
+      get_local 0
+    )
+    */
+    const auto wasm = from_hex("0061736d0100000001060160017e017e030201000a0601040020000b");
+    EXPECT_RESULT(execute(parse(wasm), 0, {42}), 42);
 }
 
 TEST(execute, local_set)
 {
-    Module module;
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{1, {Instr::local_get, Instr::local_set, Instr::local_get, Instr::end},
-            {0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0}});
-
-    const auto [trap, ret] = execute(module, 0, {42});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    /* wat2wasm
+    (func (param i64) (result i64)
+      (local i64)
+      get_local 0
+      set_local 1
+      get_local 1
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d0100000001060160017e017e030201000a0c010a01017e2000210120010b");
+    EXPECT_RESULT(execute(parse(wasm), 0, {42}), 42);
 }
 
 TEST(execute, local_tee)
 {
-    Module module;
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{1, {Instr::local_get, Instr::local_tee, Instr::end}, {0, 0, 0, 0, 1, 0, 0, 0}});
-
-    const auto [trap, ret] = execute(module, 0, {42});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    /* wat2wasm
+    (func (param i64) (result i64)
+      (local i64)
+      get_local 0
+      tee_local 1
+    )
+    */
+    const auto wasm = from_hex("0061736d0100000001060160017e017e030201000a0a010801017e200022010b");
+    EXPECT_RESULT(execute(parse(wasm), 0, {42}), 42);
 }
 
 TEST(execute, global_get)
@@ -995,17 +986,19 @@ TEST(execute, imported_two_functions_different_type)
 
 TEST(execute, imported_function_traps)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
-    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
+    /* wat2wasm
+    (import "mod" "foo" (func (param i32 i32) (result i32)))
+    */
+    const auto wasm = from_hex("0061736d0100000001070160027f7f017f020b01036d6f6403666f6f0000");
 
-    auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result { return {true, {}}; };
+    constexpr auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result {
+        return {true, {}};
+    };
 
+    const auto module = parse(wasm);
     auto instance = instantiate(module, {{host_foo, module.typesec[0]}});
-
-    const auto [trap, ret] = execute(instance, 0, {20, 22});
-
-    ASSERT_TRUE(trap);
+    const auto [trap, _] = execute(instance, 0, {20, 22});
+    EXPECT_TRUE(trap);
 }
 
 TEST(execute, memory_copy_32bytes)
