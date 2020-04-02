@@ -1,6 +1,6 @@
 #include "parser.hpp"
-#include "stack.hpp"
 #include <cassert>
+#include <stack>
 
 namespace fizzy
 {
@@ -20,10 +20,15 @@ inline void push(bytes& b, T value)
     b.append(storage, sizeof(storage));
 }
 
-struct LabelPosition
+/// The control frame to keep information about labels and blocks as defined in
+/// Wasm Validation Algorithm https://webassembly.github.io/spec/core/appendix/algorithm.html.
+struct ControlFrame
 {
-    Instr instruction = Instr::unreachable;  ///< The instruction that created the label.
-    size_t immediates_offset{0};             ///< The immediates offset for block instructions.
+    /// The instruction that created the label.
+    Instr instruction{Instr::unreachable};
+
+    /// The immediates offset for block instructions.
+    size_t immediates_offset{0};
 };
 
 /// Parses blocktype.
@@ -53,15 +58,20 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
 {
     Code code;
 
-    // The stack of labels allowing to distinguish between block/if/else and label instructions.
+    // The stack of control frames allowing to distinguish between block/if/else and label
+    // instructions as defined in Wasm Validation Algorithm.
     // For a block/if/else instruction the value is the block/if/else's immediate offset.
-    Stack<LabelPosition> label_positions;
+    std::stack<ControlFrame> control_stack;
+
+    control_stack.push({Instr::block, 0});  // The function's implicit block.
 
     bool continue_parsing = true;
     while (continue_parsing)
     {
         if (pos == end)
             throw parser_error{"Unexpected EOF"};
+
+        const auto& frame = control_stack.top();
 
         const auto instr = static_cast<Instr>(*pos++);
         switch (instr)
@@ -220,20 +230,20 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
 
         case Instr::end:
         {
-            if (!label_positions.empty())
+            if (control_stack.size() > 1)
             {
-                const auto label_pos = label_positions.pop();
-                if (label_pos.instruction != Instr::loop)  // If end of block/if/else instruction.
+                if (frame.instruction != Instr::loop)  // If end of block/if/else instruction.
                 {
                     const auto target_pc = static_cast<uint32_t>(code.instructions.size() + 1);
                     const auto target_imm = static_cast<uint32_t>(code.immediates.size());
 
                     // Set the imm values for block instruction.
-                    auto* block_imm = code.immediates.data() + label_pos.immediates_offset;
+                    auto* block_imm = code.immediates.data() + frame.immediates_offset;
                     store(block_imm, target_pc);
                     block_imm += sizeof(target_pc);
                     store(block_imm, target_imm);
                 }
+                control_stack.pop();
             }
             else
                 continue_parsing = false;
@@ -247,7 +257,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
             code.immediates.push_back(arity);
 
             // Push label with immediates offset after arity.
-            label_positions.push_back({Instr::block, code.immediates.size()});
+            control_stack.push({Instr::block, code.immediates.size()});
 
             // Placeholders for immediate values, filled at the matching end instruction.
             push(code.immediates, uint32_t{0});  // Diff to the end instruction.
@@ -258,7 +268,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
         case Instr::loop:
         {
             std::tie(std::ignore, pos) = parse_blocktype(pos, end);
-            label_positions.push_back({Instr::loop, 0});  // Mark as not interested.
+            control_stack.push({Instr::loop, 0});  // Mark as not interested.
             break;
         }
 
@@ -268,7 +278,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
             std::tie(arity, pos) = parse_blocktype(pos, end);
             code.immediates.push_back(arity);
 
-            label_positions.push_back({Instr::if_, code.immediates.size()});
+            control_stack.push({Instr::if_, code.immediates.size()});
 
             // Placeholders for immediate values, filled at the matching end and else instructions.
             push(code.immediates, uint32_t{0});  // Diff to the end instruction.
@@ -282,17 +292,14 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
 
         case Instr::else_:
         {
-            if (label_positions.empty())
-                throw parser_error{"unexpected else instruction"};
-            const auto label_pos = label_positions.peek();
-            if (label_pos.instruction != Instr::if_)
+            if (frame.instruction != Instr::if_)
                 throw parser_error{"unexpected else instruction (if instruction missing)"};
             const auto target_pc = static_cast<uint32_t>(code.instructions.size() + 1);
             const auto target_imm = static_cast<uint32_t>(code.immediates.size());
 
             // Set the imm values for else instruction.
-            auto* block_imm = code.immediates.data() + label_pos.immediates_offset +
-                              sizeof(target_pc) + sizeof(target_imm);
+            auto* block_imm = code.immediates.data() + frame.immediates_offset + sizeof(target_pc) +
+                              sizeof(target_imm);
             store(block_imm, target_pc);
             block_imm += sizeof(target_pc);
             store(block_imm, target_imm);
@@ -306,7 +313,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
             uint32_t label_idx;
             std::tie(label_idx, pos) = leb128u_decode<uint32_t>(pos, end);
 
-            if (label_idx > label_positions.size())
+            if (label_idx >= control_stack.size())
                 throw validation_error{"invalid label index"};
 
             push(code.immediates, label_idx);
@@ -335,11 +342,11 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
 
             for (auto label_idx : label_indices)
             {
-                if (label_idx > label_positions.size())
+                if (label_idx >= control_stack.size())
                     throw validation_error{"invalid label index"};
             }
 
-            if (default_label_idx > label_positions.size())
+            if (default_label_idx >= control_stack.size())
                 throw validation_error{"invalid label index"};
 
             push(code.immediates, static_cast<uint32_t>(label_indices.size()));
@@ -429,7 +436,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
         }
         code.instructions.emplace_back(instr);
     }
-    assert(label_positions.empty());
+    assert(control_stack.size() == 1);
     return {code, pos};
 }
 }  // namespace fizzy

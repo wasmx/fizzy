@@ -189,7 +189,8 @@ TEST(parser, unexpected_else)
 {
     // (else)
     const auto code1_bin = "050b0b"_bytes;
-    EXPECT_THROW_MESSAGE(parse_expr(code1_bin), parser_error, "unexpected else instruction");
+    EXPECT_THROW_MESSAGE(parse_expr(code1_bin), parser_error,
+        "unexpected else instruction (if instruction missing)");
 
     // (block (else))
     const auto code2_bin = "0240050b0b0b"_bytes;
