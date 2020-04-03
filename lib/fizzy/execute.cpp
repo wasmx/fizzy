@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <stack>
 
 namespace fizzy
 {
@@ -17,6 +18,8 @@ struct LabelContext
     size_t arity = 0;                    ///< The type arity of the label instruction.
     size_t stack_height = 0;             ///< The stack height at the label instruction.
 };
+
+using LabelStack = std::stack<LabelContext, std::vector<LabelContext>>;
 
 inline bool operator==(const FuncType& lhs, const FuncType& rhs)
 {
@@ -286,12 +289,14 @@ uint64_t eval_constant_expression(ConstantExpression expr,
         return globals[global_idx - imported_globals.size()];
 }
 
-void branch(uint32_t label_idx, Stack<LabelContext>& labels, Stack<uint64_t>& stack,
-    const Instr*& pc, const uint8_t*& immediates) noexcept
+void branch(uint32_t label_idx, LabelStack& labels, Stack<uint64_t>& stack, const Instr*& pc,
+    const uint8_t*& immediates) noexcept
 {
     assert(labels.size() > label_idx);
-    labels.drop(label_idx);  // Drop skipped labels (does nothing for labelidx == 0).
-    const auto label = labels.pop();
+    while (label_idx-- > 0)
+        labels.pop();  // Drop skipped labels (does nothing for labelidx == 0).
+    const auto label = labels.top();
+    labels.pop();
 
     pc = label.pc;
     immediates = label.immediate;
@@ -648,7 +653,7 @@ execution_result execute(
     // TODO: preallocate fixed stack depth properly
     Stack<uint64_t> stack;
 
-    Stack<LabelContext> labels;
+    LabelStack labels;
 
     bool trap = false;
 
@@ -672,13 +677,13 @@ execution_result execute(
             const auto target_imm = read<uint32_t>(immediates);
             LabelContext label{code.instructions.data() + target_pc,
                 code.immediates.data() + target_imm, arity, stack.size()};
-            labels.emplace_back(label);
+            labels.push(label);
             break;
         }
         case Instr::loop:
         {
             LabelContext label{pc - 1, immediates, 0, stack.size()};  // Target this instruction.
-            labels.push_back(label);
+            labels.push(label);
             break;
         }
         case Instr::if_:
@@ -693,7 +698,7 @@ execution_result execute(
 
                 LabelContext label{code.instructions.data() + target_pc,
                     code.immediates.data() + target_imm, arity, stack.size()};
-                labels.emplace_back(label);
+                labels.push(label);
             }
             else
             {
@@ -704,7 +709,7 @@ execution_result execute(
                 {
                     LabelContext label{code.instructions.data() + target_pc,
                         code.immediates.data() + target_imm, arity, stack.size()};
-                    labels.emplace_back(label);
+                    labels.push(label);
                     pc = code.instructions.data() + target_else_pc;
                     immediates = code.immediates.data() + target_else_imm;
                 }
@@ -721,7 +726,8 @@ execution_result execute(
         {
             // We reach else only at the end of if block.
             assert(!labels.empty());
-            const auto label = labels.pop();
+            const auto label = labels.top();
+            labels.pop();
 
             pc = label.pc;
             immediates = label.immediate;
@@ -731,7 +737,7 @@ execution_result execute(
         case Instr::end:
         {
             if (!labels.empty())
-                labels.pop_back();
+                labels.pop();
             else
                 goto end;
             break;
@@ -823,7 +829,7 @@ execution_result execute(
         case_return:
         {
             // TODO: Not needed, but satisfies the assert in the end of the main loop.
-            labels.clear();
+            labels = {};
 
             assert(code_idx < instance.module.funcsec.size());
             const auto type_idx = instance.module.funcsec[code_idx];
