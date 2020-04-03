@@ -845,143 +845,115 @@ TEST(execute, start_section)
 
 TEST(execute, imported_function)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
-    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
+    /* wat2wasm
+    (import "mod" "foo" (func (param i32 i32) (result i32)))
+    */
+    const auto wasm = from_hex("0061736d0100000001070160027f7f017f020b01036d6f6403666f6f0000");
+    const auto module = parse(wasm);
+    ASSERT_EQ(module.typesec.size(), 1);
 
-    auto host_foo = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto host_foo = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] + args[1]}};
     };
 
     auto instance = instantiate(module, {{host_foo, module.typesec[0]}});
-
-    const auto [trap, ret] = execute(instance, 0, {20, 22});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    EXPECT_RESULT(execute(instance, 0, {20, 22}), 42);
 }
 
 TEST(execute, imported_two_functions)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
-    module.importsec.emplace_back(Import{"mod", "foo1", ExternalKind::Function, {0}});
-    module.importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {0}});
+    /* wat2wasm
+    (type (func (param i32 i32) (result i32)))
+    (import "mod" "foo1" (func (type 0)))
+    (import "mod" "foo2" (func (type 0)))
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001070160027f7f017f021702036d6f6404666f6f310000036d6f6404666f6f320000");
+    const auto module = parse(wasm);
+    ASSERT_EQ(module.typesec.size(), 1);
 
-    auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] + args[1]}};
     };
-    auto host_foo2 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto host_foo2 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] * args[1]}};
     };
 
     auto instance =
         instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[0]}});
-
-    const auto [trap1, ret1] = execute(instance, 0, {20, 22});
-
-    ASSERT_FALSE(trap1);
-    ASSERT_EQ(ret1.size(), 1);
-    EXPECT_EQ(ret1[0], 42);
-
-    const auto [trap2, ret2] = execute(instance, 1, {20, 22});
-
-    ASSERT_FALSE(trap2);
-    ASSERT_EQ(ret2.size(), 1);
-    EXPECT_EQ(ret2[0], 440);
+    EXPECT_RESULT(execute(instance, 0, {20, 22}), 42);
+    EXPECT_RESULT(execute(instance, 1, {20, 22}), 440);
 }
 
 TEST(execute, imported_functions_and_regular_one)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
-    module.typesec.emplace_back(FuncType{{ValType::i64}, {ValType::i64}});
-    module.importsec.emplace_back(Import{"mod", "foo1", ExternalKind::Function, {0}});
-    module.importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {0}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(Code{0, {Instr::i32_const, Instr::end}, {42, 0, 42, 0}});
+    /* wat2wasm
+    (type (func (param i32 i32) (result i32)))
+    (import "mod" "foo1" (func (type 0)))
+    (import "mod" "foo2" (func (type 0)))
+    (func (type 0)
+      i32.const 0x2a002a
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001070160027f7f017f021702036d6f6404666f6f310000036d6f6404666f6f320000030201"
+        "000a0901070041aa80a8010b");
 
-    auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] + args[1]}};
     };
-    auto host_foo2 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto host_foo2 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] * args[0]}};
     };
 
+    const auto module = parse(wasm);
+    ASSERT_EQ(module.typesec.size(), 1);
     auto instance =
         instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[0]}});
-
-    const auto [trap1, ret1] = execute(instance, 0, {20, 22});
-
-    ASSERT_FALSE(trap1);
-    ASSERT_EQ(ret1.size(), 1);
-    EXPECT_EQ(ret1[0], 42);
-
-    const auto [trap2, ret2] = execute(instance, 1, {20});
-
-    ASSERT_FALSE(trap2);
-    ASSERT_EQ(ret2.size(), 1);
-    EXPECT_EQ(ret2[0], 400);
+    EXPECT_RESULT(execute(instance, 0, {20, 22}), 42);
+    EXPECT_RESULT(execute(instance, 1, {20}), 400);
 
     // check correct number of arguments is passed to host
-    auto count_args = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto count_args = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args.size()}};
     };
 
-    auto instance_couner =
+    auto instance_counter =
         instantiate(module, {{count_args, module.typesec[0]}, {count_args, module.typesec[0]}});
-
-    const auto [trap3, ret3] = execute(instance_couner, 0, {20, 22});
-
-    ASSERT_FALSE(trap3);
-    ASSERT_EQ(ret3.size(), 1);
-    EXPECT_EQ(ret3[0], 2);
-
-    const auto [trap4, ret4] = execute(instance_couner, 1, {20});
-
-    ASSERT_FALSE(trap4);
-    ASSERT_EQ(ret4.size(), 1);
-    EXPECT_EQ(ret4[0], 1);
+    EXPECT_RESULT(execute(instance_counter, 0, {20, 22}), 2);
+    EXPECT_RESULT(execute(instance_counter, 1, {20}), 1);
 }
 
 TEST(execute, imported_two_functions_different_type)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
-    module.typesec.emplace_back(FuncType{{ValType::i64}, {ValType::i64}});
-    module.importsec.emplace_back(Import{"mod", "foo1", ExternalKind::Function, {0}});
-    module.importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {0}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(Code{0, {Instr::i32_const, Instr::end}, {42, 0, 42, 0}});
+    /* wat2wasm
+    (type (func (param i32 i32) (result i32)))
+    (type (func (param i64) (result i64)))
+    (import "mod" "foo1" (func (type 0)))
+    (import "mod" "foo2" (func (type 1)))
+    (func (type 1)
+      i64.const 0x2a002a
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010c0260027f7f017f60017e017e021702036d6f6404666f6f310000036d6f6404666f6f32"
+        "0001030201010a0901070042aa80a8010b");
 
-    auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] + args[1]}};
     };
-    auto host_foo2 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto host_foo2 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] * args[0]}};
     };
 
+    const auto module = parse(wasm);
+    ASSERT_EQ(module.typesec.size(), 2);
     auto instance =
-        instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[0]}});
+        instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[1]}});
 
-    const auto [trap1, ret1] = execute(instance, 0, {20, 22});
-
-    ASSERT_FALSE(trap1);
-    ASSERT_EQ(ret1.size(), 1);
-    EXPECT_EQ(ret1[0], 42);
-
-    const auto [trap2, ret2] = execute(instance, 1, {20});
-
-    ASSERT_FALSE(trap2);
-    ASSERT_EQ(ret2.size(), 1);
-    EXPECT_EQ(ret2[0], 400);
-
-    const auto [trap3, ret3] = execute(instance, 2, {20});
-
-    ASSERT_FALSE(trap3);
-    ASSERT_EQ(ret3.size(), 1);
-    EXPECT_EQ(ret3[0], 0x2a002a);
+    EXPECT_RESULT(execute(instance, 0, {20, 22}), 42);
+    EXPECT_RESULT(execute(instance, 1, {0x3000'0000}), 0x900'0000'0000'0000);
+    EXPECT_RESULT(execute(instance, 2, {20}), 0x2a002a);
 }
 
 TEST(execute, imported_function_traps)
