@@ -13,9 +13,7 @@ TEST(execute, end)
     (func)
     */
     const auto wasm = from_hex("0061736d01000000010401600000030201000a040102000b");
-    const auto [trap, ret] = execute(parse(wasm), 0, {});
-    ASSERT_FALSE(trap);
-    EXPECT_EQ(ret.size(), 0);
+    EXPECT_EMPTY_RESULT(execute(parse(wasm), 0, {}));
 }
 
 TEST(execute, drop)
@@ -28,9 +26,7 @@ TEST(execute, drop)
     )
     */
     const auto wasm = from_hex("0061736d01000000010401600000030201000a09010701017f20001a0b");
-    const auto [trap, ret] = execute(parse(wasm), 0, {});
-    ASSERT_FALSE(trap);
-    EXPECT_EQ(ret.size(), 0);
+    EXPECT_EMPTY_RESULT(execute(parse(wasm), 0, {}));
 }
 
 TEST(execute, select)
