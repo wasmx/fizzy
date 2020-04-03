@@ -1,3 +1,5 @@
+#pragma once
+
 #include "bytes.hpp"
 
 namespace fizzy::test
