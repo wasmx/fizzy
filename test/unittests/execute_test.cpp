@@ -621,25 +621,6 @@ TEST(execute, i32_store_overflow)
     ASSERT_TRUE(execute(*instance, 0, {0x80000001}).trapped);
 }
 
-TEST(execute, i64_store)
-{
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::local_get, Instr::i64_store, Instr::end},
-            {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
-
-    auto instance = instantiate(module);
-    const auto [trap, ret] = execute(*instance, 0, {0x2a0000002a, 0});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 0);
-    ASSERT_EQ(instance->memory->substr(0, 8), from_hex("2a0000002a000000"));
-
-    ASSERT_TRUE(execute(*instance, 0, {0x2a0000002a, 65537}).trapped);
-}
-
 TEST(execute, i64_store_overflow)
 {
     /* wat2wasm
@@ -717,61 +698,43 @@ TEST(execute, i32_store16)
     ASSERT_TRUE(execute(*instance, 0, {0xf1f28000, 65537}).trapped);
 }
 
-TEST(execute, i64_store8)
+TEST(execute, i64_store_all_variants)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::local_get, Instr::i64_store8, Instr::end},
-            {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
+    /* wat2wasm
+    (memory 1 1)
+    (func (param i64 i32)
+      get_local 1
+      get_local 0
+      i64.store  ;; to be replaced by variants of i64.store
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d0100000001060160027e7f00030201000504010101010a0b010900200120003703000b");
+    auto module = parse(wasm);
 
-    auto instance = instantiate(module);
-    const auto [trap, ret] = execute(*instance, 0, {0xf1f2f4f5f6f7f880, 0});
+    auto& store_instr = module.codesec[0].instructions[2];
+    ASSERT_EQ(store_instr, Instr::i64_store);
+    ASSERT_EQ(module.codesec[0].immediates.substr(8), "00000000"_bytes);  // store offset
 
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 0);
-    ASSERT_EQ(instance->memory->substr(0, 8), from_hex("8000000000000000"));
+    const std::tuple<Instr, bytes> test_cases[]{
+        {Instr::i64_store8, "ccb0cccccccccccccccc"_bytes},
+        {Instr::i64_store16, "ccb0b1cccccccccccccc"_bytes},
+        {Instr::i64_store32, "ccb0b1b2b3cccccccccc"_bytes},
+        {Instr::i64_store, "ccb0b1b2b3b4b5b6b7cc"_bytes},
+    };
 
-    ASSERT_TRUE(execute(*instance, 0, {0xf1f2f4f5f6f7f880, 65537}).trapped);
-}
+    for (const auto& test_case : test_cases)
+    {
+        store_instr = std::get<0>(test_case);
+        auto instance = instantiate(module);
+        std::fill_n(instance->memory->begin(), 10, uint8_t{0xcc});
+        const auto [trap, ret] = execute(*instance, 0, {0xb7b6b5b4b3b2b1b0, 1});
+        ASSERT_FALSE(trap);
+        EXPECT_EQ(ret.size(), 0);
+        EXPECT_EQ(instance->memory->substr(0, 10), std::get<1>(test_case));
 
-TEST(execute, i64_store16)
-{
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::local_get, Instr::i64_store16, Instr::end},
-            {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
-
-    auto instance = instantiate(module);
-    const auto [trap, ret] = execute(*instance, 0, {0xf1f2f4f5f6f78000, 0});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 0);
-    ASSERT_EQ(instance->memory->substr(0, 8), from_hex("0080000000000000"));
-
-    ASSERT_TRUE(execute(*instance, 0, {0xf1f2f4f5f6f78000, 65537}).trapped);
-}
-
-TEST(execute, i64_store32)
-{
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::local_get, Instr::i64_store32, Instr::end},
-            {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
-
-    auto instance = instantiate(module);
-    const auto [trap, ret] = execute(*instance, 0, {0xf1f2f4f580000000, 0});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 0);
-    ASSERT_EQ(instance->memory->substr(0, 8), from_hex("0000008000000000"));
-
-    ASSERT_TRUE(execute(*instance, 0, {0xf1f2f4f580000000, 65537}).trapped);
+        EXPECT_TRUE(execute(*instance, 0, {0xb7b6b5b4b3b2b1b0, 65537}).trapped);
+    }
 }
 
 TEST(execute, memory_size)
