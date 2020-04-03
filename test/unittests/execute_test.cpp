@@ -93,68 +93,60 @@ TEST(execute, local_tee)
 
 TEST(execute, global_get)
 {
-    Module module;
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
-    module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
-
-    auto instance = instantiate(module);
-
-    const auto [trap, ret] = execute(instance, 0, {});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    /* wat2wasm
+    (global i32 (i32.const 42))
+    (func (result i32)
+      get_global 0
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d010000000105016000017f030201000606017f00412a0b0a0601040023000b");
+    EXPECT_RESULT(execute(parse(wasm), 0, {}), 42);
 }
 
 TEST(execute, global_get_two_globals)
 {
-    Module module;
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {43}}});
-    module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
-    module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {1, 0, 0, 0}});
+    /* wat2wasm
+    (global i64 (i64.const 42))
+    (global i64 (i64.const 43))
+    (func (result i64)
+      get_global 0
+    )
+    (func (result i64)
+      get_global 1
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000105016000017e0303020000060b027e00422a0b7e00422b0b0a0b02040023000b04002301"
+        "0b");
 
-    auto instance = instantiate(module);
-
-    auto [trap, ret] = execute(instance, 0, {});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
-
-    auto [trap2, ret2] = execute(instance, 1, {});
-
-    ASSERT_FALSE(trap2);
-    ASSERT_EQ(ret2.size(), 1);
-    EXPECT_EQ(ret2[0], 43);
+    auto instance = instantiate(parse(wasm));
+    EXPECT_RESULT(execute(instance, 0, {}), 42);
+    EXPECT_RESULT(execute(instance, 1, {}), 43);
 }
 
 TEST(execute, global_get_imported)
 {
-    Module module;
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.importsec.emplace_back(Import{"mod", "glob", ExternalKind::Global, {false}});
-    module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
+    /* wat2wasm
+    (import "mod" "glob" (global i64))
+    (func (result i64)
+      get_global 0
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000105016000017e020d01036d6f6404676c6f62037e00030201000a0601040023000b");
+    const auto module = parse(wasm);
 
     uint64_t global_value = 42;
     auto instance = instantiate(module, {}, {}, {}, {ExternalGlobal{&global_value, false}});
 
-    const auto [trap, ret] = execute(instance, 0, {});
+    EXPECT_RESULT(execute(instance, 0, {}), 42);
 
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    global_value = 0;
+    EXPECT_RESULT(execute(instance, 0, {}), 0);
 
     global_value = 43;
-
-    const auto [trap2, ret2] = execute(instance, 0, {});
-
-    ASSERT_FALSE(trap2);
-    ASSERT_EQ(ret2.size(), 1);
-    EXPECT_EQ(ret2[0], 43);
+    EXPECT_RESULT(execute(instance, 0, {}), 43);
 }
 
 TEST(execute, global_get_imported_and_internal)
@@ -189,54 +181,62 @@ TEST(execute, global_get_imported_and_internal)
 
 TEST(execute, global_set)
 {
-    Module module;
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {41}}});
-    module.codesec.emplace_back(
-        Code{0, {Instr::i32_const, Instr::global_set, Instr::end}, {42, 0, 0, 0, 0, 0, 0, 0}});
+    /* wat2wasm
+    (global (mut i32) (i32.const 41))
+    (func
+      i32.const 42
+      set_global 0
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d01000000010401600000030201000606017f0141290b0a08010600412a24000b");
 
-    auto instance = instantiate(module);
-
-    const auto [trap, ret] = execute(instance, 0, {});
-
+    auto instance = instantiate(parse(wasm));
+    const auto [trap, _] = execute(instance, 0, {});
     ASSERT_FALSE(trap);
-    ASSERT_EQ(instance.globals[0], 42);
+    EXPECT_EQ(instance.globals[0], 42);
 }
 
 TEST(execute, global_set_two_globals)
 {
-    Module module;
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {43}}});
-    module.codesec.emplace_back(Code{0,
-        {Instr::i32_const, Instr::global_set, Instr::i32_const, Instr::global_set, Instr::end},
-        {44, 0, 0, 0, 0, 0, 0, 0, 45, 0, 0, 0, 1, 0, 0, 0}});
+    /* wat2wasm
+    (global (mut i32) (i32.const 42))
+    (global (mut i32) (i32.const 43))
+    (func
+      i32.const 44
+      set_global 0
+      i32.const 45
+      set_global 1
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001040160000003020100060b027f01412a0b7f01412b0b0a0c010a00412c2400412d24010"
+        "b");
 
-    auto instance = instantiate(module);
-
-    const auto [trap, ret] = execute(instance, 0, {});
-
+    auto instance = instantiate(parse(wasm));
+    const auto [trap, _] = execute(instance, 0, {});
     ASSERT_FALSE(trap);
-    ASSERT_EQ(instance.globals[0], 44);
-    ASSERT_EQ(instance.globals[1], 45);
+    EXPECT_EQ(instance.globals[0], 44);
+    EXPECT_EQ(instance.globals[1], 45);
 }
 
 TEST(execute, global_set_imported)
 {
-    Module module;
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.importsec.emplace_back(Import{"mod", "glob", ExternalKind::Global, {true}});
-    module.codesec.emplace_back(
-        Code{0, {Instr::i32_const, Instr::global_set, Instr::end}, {42, 0, 0, 0, 0, 0, 0, 0}});
+    /* wat2wasm
+    (import "mod" "glob" (global (mut i32)))
+    (func
+      i32.const 42
+      set_global 0
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010401600000020d01036d6f6404676c6f62037f01030201000a08010600412a24000b");
 
     uint64_t global_value = 41;
-    auto instance = instantiate(module, {}, {}, {}, {ExternalGlobal{&global_value, true}});
-
-    const auto [trap, ret] = execute(instance, 0, {});
-
+    auto instance = instantiate(parse(wasm), {}, {}, {}, {ExternalGlobal{&global_value, true}});
+    const auto [trap, _] = execute(instance, 0, {});
     ASSERT_FALSE(trap);
-    ASSERT_EQ(global_value, 42);
+    EXPECT_EQ(global_value, 42);
 }
 
 TEST(execute, i32_load)
