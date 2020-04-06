@@ -82,12 +82,19 @@ WasmEngine::Result WabtEngine::execute(
 
     const auto* e = reinterpret_cast<const wabt::interp::Export*>(func_ref);
 
+    const auto func_sig = m_env.GetFuncSignature(m_env.GetFunc(e->index)->sig_index);
+    assert(func_sig->param_types.size() == args.size());
+
     wabt::interp::TypedValues typed_args;
-    for (const auto arg : args)
+    for (size_t i = 0; i < args.size(); ++i)
     {
-        wabt::interp::Value v{};
-        v.i32 = static_cast<uint32_t>(arg);
-        typed_args.push_back(wabt::interp::TypedValue{wabt::Type::I32, v});
+        wabt::interp::Value value{};
+        const auto type = func_sig->param_types[i];
+        if (type == wabt::Type::I32)
+            value.i32 = static_cast<uint32_t>(args[i]);
+        else
+            value.i64 = args[i];
+        typed_args.push_back(wabt::interp::TypedValue{type, value});
     }
     wabt::interp::ExecResult r = executor.RunExport(e, typed_args);
 
