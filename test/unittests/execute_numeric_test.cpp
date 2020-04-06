@@ -30,29 +30,23 @@ execution_result execute_binary_operation(Instr instr, uint64_t lhs, uint64_t rh
 
 TEST(execute_numeric, i32_const)
 {
-    Module module;
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(Code{0, {Instr::i32_const, Instr::end}, {0x42, 0, 0x42, 0}});
+    /* wat2wasm
+    (func (result i32) (i32.const 0x420042))
+    */
+    const auto wasm = from_hex("0061736d010000000105016000017f030201000a0901070041c28088020b");
 
-    const auto [trap, ret] = execute(module, 0, {});
-
-    ASSERT_EQ(trap, false);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0x420042);
+    EXPECT_RESULT(execute(parse(wasm), 0, {}), 0x420042);
 }
 
 TEST(execute_numeric, i64_const)
 {
-    Module module;
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::i64_const, Instr::end}, {0x42, 0, 0x42, 0, 0, 0, 0, 1}});
+    /* wat2wasm
+    (func (result i64) (i64.const 0x0100000000420042))
+    */
+    const auto wasm =
+        from_hex("0061736d010000000105016000017e030201000a0e010c0042c280888280808080010b");
 
-    const auto [trap, ret] = execute(module, 0, {});
-
-    ASSERT_EQ(trap, false);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0x0100000000420042ULL);
+    EXPECT_RESULT(execute(parse(wasm), 0, {}), 0x0100000000420042);
 }
 
 TEST(execute_numeric, i32_eqz)
