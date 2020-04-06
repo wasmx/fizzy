@@ -260,36 +260,37 @@ TEST(execute, i32_load)
 
 TEST(execute, i32_load_imported_memory)
 {
-    Module module;
-    Import imp{"mod", "m", ExternalKind::Memory, {}};
-    imp.desc.memory = Memory{{1, 1}};
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.importsec.emplace_back(imp);
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::i32_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
+    /* wat2wasm
+    (import "mod" "m" (memory 1 1))
+    (func (param i32) (result i32)
+      get_local 0
+      i32.load
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017f020b01036d6f64016d02010101030201000a0901070020002802000b");
 
     bytes memory(PageSize, 0);
-    auto instance = instantiate(module, {}, {}, {{&memory, {1, 1}}});
-    memory[0] = 42;
-    const auto [trap, ret] = execute(instance, 0, {0});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    ASSERT_EQ(ret[0], 42);
+    auto instance = instantiate(parse(wasm), {}, {}, {{&memory, {1, 1}}});
+    memory[1] = 42;
+    EXPECT_RESULT(execute(instance, 0, {1}), 42);
 
     ASSERT_TRUE(execute(instance, 0, {65537}).trapped);
 }
 
 TEST(execute, i32_load_overflow)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    // NOTE: this is i32.load offset=0x7fffffff
-    module.codesec.emplace_back(Code{
-        0, {Instr::local_get, Instr::i32_load, Instr::end}, {0, 0, 0, 0, 0xff, 0xff, 0xff, 0x7f}});
+    /* wat2wasm
+    (memory 1 1)
+    (func (param i32) (result i32)
+      get_local 0
+      i32.load offset=0x7fffffff
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017f030201000504010101010a0d010b0020002802ffffffff070b");
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
     ASSERT_TRUE(execute(instance, 0, {0}).trapped);
@@ -321,14 +322,17 @@ TEST(execute, i64_load)
 
 TEST(execute, i64_load_overflow)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    // NOTE: this is i64.load offset=0x7fffffff
-    module.codesec.emplace_back(Code{
-        0, {Instr::local_get, Instr::i64_load, Instr::end}, {0, 0, 0, 0, 0xff, 0xff, 0xff, 0x7f}});
+    /* wat2wasm
+    (memory 1 1)
+    (func (param i32) (result i64)
+      get_local 0
+      i64.load offset=0x7fffffff
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017e030201000504010101010a0d010b0020002903ffffffff070b");
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
     ASSERT_TRUE(execute(instance, 0, {0}).trapped);
@@ -571,37 +575,43 @@ TEST(execute, i32_store)
 
 TEST(execute, i32_store_imported_memory)
 {
-    Module module;
-    Import imp{"mod", "m", ExternalKind::Memory, {}};
-    imp.desc.memory = Memory{{1, 1}};
-    module.importsec.emplace_back(imp);
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::local_get, Instr::i32_store, Instr::end},
-            {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
+    /* wat2wasm
+    (import "mod" "m" (memory 1 1))
+    (func (param i32 i32)
+      get_local 1
+      get_local 0
+      i32.store
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160027f7f00020b01036d6f64016d02010101030201000a0b01090020012000360200"
+        "0b");
 
     bytes memory(PageSize, 0);
-    auto instance = instantiate(module, {}, {}, {{&memory, {1, 1}}});
+    auto instance = instantiate(parse(wasm), {}, {}, {{&memory, {1, 1}}});
     const auto [trap, ret] = execute(instance, 0, {42, 0});
-
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 0);
-    ASSERT_EQ(memory.substr(0, 4), from_hex("2a000000"));
+    EXPECT_EQ(memory.substr(0, 4), from_hex("2a000000"));
 
-    ASSERT_TRUE(execute(instance, 0, {42, 65537}).trapped);
+    EXPECT_TRUE(execute(instance, 0, {42, 65537}).trapped);
 }
 
 TEST(execute, i32_store_overflow)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    // NOTE: this is i32.store offset=0x7fffffff
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::i32_const, Instr::i32_store, Instr::end},
-            {0, 0, 0, 0, 0x55, 0xaa, 0x55, 0xaa, 0xff, 0xff, 0xff, 0x7f}});
+    /* wat2wasm
+    (memory 1 1)
+    (func (param i32)
+      get_local 0
+      i32.const 0xaa55aa55
+      i32.store offset=0x7fffffff
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001050160017f00030201000504010101010a13011100200041d5d4d6d27a3602ffffffff07"
+        "0b");
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
     ASSERT_TRUE(execute(instance, 0, {0}).trapped);
@@ -632,15 +642,19 @@ TEST(execute, i64_store)
 
 TEST(execute, i64_store_overflow)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    // NOTE: this is i64.store offset=0x7fffffff
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::i32_const, Instr::i64_store, Instr::end},
-            {0, 0, 0, 0, 0x55, 0xaa, 0x55, 0xaa, 0xff, 0xff, 0xff, 0x7f}});
+    /* wat2wasm
+    (memory 1 1)
+    (func (param i32)
+      get_local 0
+      i64.const 0xaa55aa55aa55aa55
+      i64.store offset=0x7fffffff
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001050160017f00030201000504010101010a18011600200042d5d4d6d2dacaeaaaaa7f3703"
+        "ffffffff070b");
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
     ASSERT_TRUE(execute(instance, 0, {0}).trapped);
@@ -762,85 +776,70 @@ TEST(execute, i64_store32)
 
 TEST(execute, memory_size)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(Code{0, {Instr::memory_size, Instr::end}, {}});
+    /* wat2wasm
+    (memory 3 4)
+    (func (result i32)
+      memory.size
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d010000000105016000017f030201000504010103040a060104003f000b");
 
-    const auto [trap, ret] = execute(module, 0, {});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
+    EXPECT_RESULT(execute(parse(wasm), 0, {}), 3);
 }
 
 TEST(execute, memory_grow)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 4096}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::memory_grow, Instr::end}, {0, 0, 0, 0}});
+    /* wat2wasm
+    (memory 1 4096)
+    (func (param i32) (result i32)
+      get_local 0
+      memory.grow
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d0100000001060160017f017f03020100050501010180200a08010600200040000b");
 
-    auto result = execute(module, 0, {0});
+    const auto module = parse(wasm);
 
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
+    EXPECT_RESULT(execute(module, 0, {0}), 1);
 
-    result = execute(module, 0, {1});
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
+    EXPECT_RESULT(execute(module, 0, {1}), 1);
 
     // 256MB memory.
-    result = execute(module, 0, {4095});
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
+    EXPECT_RESULT(execute(module, 0, {4095}), 1);
 
     // >256MB memory.
-    result = execute(module, 0, {4096});
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], uint32_t(-1));
+    EXPECT_RESULT(execute(module, 0, {4096}), uint32_t(-1));
 
     // Way too high (but still within bounds)
-    result = execute(module, 0, {0xffffffe});
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], uint32_t(-1));
+    EXPECT_RESULT(execute(module, 0, {0xffffffe}), uint32_t(-1));
 }
 
 TEST(execute, start_section)
 {
     // In this test the start function (index 1) writes a i32 value to the memory
     // and the same is read back in the "main" function (index 0).
-    Module module;
-    module.startfunc = FuncIdx{1};
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    // TODO: add type section (once enforced)
-    module.funcsec.emplace_back(FuncIdx{0});
-    module.funcsec.emplace_back(FuncIdx{1});
-    module.codesec.emplace_back(
-        Code{0, {Instr::i32_const, Instr::i32_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
-    module.codesec.emplace_back(
-        Code{0, {Instr::i32_const, Instr::i32_const, Instr::i32_store, Instr::end},
-            {0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module);
-    // Start function sets this
-    ASSERT_EQ(instance.memory->substr(0, 4), from_hex("2a000000"));
+    /* wat2wasm
+    (memory 1 1)
+    (start 1)
+    (func (result i32)
+      (i32.load (i32.const 0))
+    )
+    (func
+      (i32.store (i32.const 0) (i32.const 42))
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000108026000017f60000003030200010504010101010801010a1302070041002802000b0900"
+        "4100412a3602000b");
 
-    const auto [trap, ret] = execute(instance, 0, {});
+    auto instance = instantiate(parse(wasm));
+    ASSERT_EQ(instance.memory->substr(0, 4), "2a000000"_bytes);  // Start function sets this.
 
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
-    EXPECT_EQ(instance.memory->substr(0, 4), from_hex("2a000000"));
+    EXPECT_RESULT(execute(instance, 0, {}), 42);
+    EXPECT_EQ(instance.memory->substr(0, 4), "2a000000"_bytes);
 }
 
 TEST(execute, imported_function)
