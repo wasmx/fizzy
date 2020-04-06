@@ -1,50 +1,29 @@
 #include "execute.hpp"
 #include "limits.hpp"
 #include "parser.hpp"
-#include <gmock/gmock-matchers.h>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
 
 using namespace fizzy;
 
-namespace fizzy
+MATCHER(Trapped, "")
 {
-inline bool operator==(const execution_result& lhs, const execution_result& rhs)
-{
-    return lhs.trapped == rhs.trapped && lhs.stack == rhs.stack;
+    return arg.trapped == true;
 }
-
-
-struct Trapped
+MATCHER(Result, "")
 {
-    bool operator==(const execution_result& lhs) { return lhs.trapped == true; }
-};
-
-struct Result
-{
-    explicit Result() : m_stack{} {}
-
-    // TODO: support both i32/i64
-    explicit Result(uint64_t value) : m_stack{value} {}
-
-    // TODO: remove this once the API changes
-    explicit Result(std::vector<uint64_t> stack) : m_stack{std::move(stack)} {}
-
-    std::vector<uint64_t> m_stack;
-
-//    bool operator==(const execution_result& lhs)
-//    {
-//        return lhs.trapped == false && lhs.stack == m_stack;
-//    }
-};
-
-inline bool operator==(const execution_result& lhs, const Result& rhs)
-{
-    return lhs.trapped == false && lhs.stack == rhs.m_stack;
+    return arg.trapped == false && arg.stack.size() == 0;
 }
-
-}  // namespace fizzy
+MATCHER_P(Result, value, "")
+{
+    return arg.trapped == false && arg.stack.size() == 1 && arg.stack[0] == uint64_t(value);
+}
+MATCHER_P2(Result, value1, value2, "")
+{
+    return arg.trapped == false && arg.stack.size() == 2 && arg.stack[0] == value1 && arg.stack[1] == value2;
+}
 
 TEST(execute, end)
 {
@@ -95,7 +74,7 @@ TEST(execute, local_get)
     )
     */
     const auto wasm = from_hex("0061736d0100000001060160017e017e030201000a0601040020000b");
-    EXPECT_RESULT(execute(parse(wasm), 0, {42}), 42);
+    EXPECT_THAT(execute(parse(wasm), 0, {42}), Result(42));
 }
 
 TEST(execute, local_set)
@@ -272,6 +251,7 @@ TEST(execute, global_set_imported)
     const auto [trap, _] = execute(*instance, 0, {});
     ASSERT_FALSE(trap);
     EXPECT_EQ(global_value, 42);
+
 }
 
 TEST(execute, i32_load_imported_memory)
