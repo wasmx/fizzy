@@ -14,6 +14,36 @@ inline bool operator==(const execution_result& lhs, const execution_result& rhs)
 {
     return lhs.trapped == rhs.trapped && lhs.stack == rhs.stack;
 }
+
+
+struct Trapped
+{
+    bool operator==(const execution_result& lhs) { return lhs.trapped == true; }
+};
+
+struct Result
+{
+    explicit Result() : m_stack{} {}
+
+    // TODO: support both i32/i64
+    explicit Result(uint64_t value) : m_stack{value} {}
+
+    // TODO: remove this once the API changes
+    explicit Result(std::vector<uint64_t> stack) : m_stack{std::move(stack)} {}
+
+    std::vector<uint64_t> m_stack;
+
+//    bool operator==(const execution_result& lhs)
+//    {
+//        return lhs.trapped == false && lhs.stack == m_stack;
+//    }
+};
+
+inline bool operator==(const execution_result& lhs, const Result& rhs)
+{
+    return lhs.trapped == false && lhs.stack == rhs.m_stack;
+}
+
 }  // namespace fizzy
 
 TEST(execute, end)
@@ -22,7 +52,7 @@ TEST(execute, end)
     (func)
     */
     const auto wasm = from_hex("0061736d01000000010401600000030201000a040102000b");
-    EXPECT_THAT(execute(parse(wasm), 0, {}), (execution_result{false, {}}));
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result());
 }
 
 TEST(execute, drop)
