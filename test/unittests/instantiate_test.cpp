@@ -1,5 +1,6 @@
 #include "execute.hpp"
 #include "limits.hpp"
+#include "parser.hpp"
 #include <gtest/gtest.h>
 #include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
@@ -678,14 +679,14 @@ TEST(instantiate, globals_initialized_from_imported)
         "Global can be initialized by another const global only if it's imported.");
 }
 
-TEST(execute, start_unreachable)
+TEST(instantiate, start_unreachable)
 {
-    Module module;
-    module.startfunc = FuncIdx{0};
-    // TODO: add type section (once enforced)
-    module.funcsec.emplace_back(FuncIdx{0});
-    module.codesec.emplace_back(Code{0, {Instr::unreachable}, {}});
+    /* wat2wasm
+    (start 0)
+    (func (unreachable))
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000801000a05010300000b");
 
     EXPECT_THROW_MESSAGE(
-        instantiate(module), instantiate_error, "Start function failed to execute");
+        instantiate(parse(wasm)), instantiate_error, "Start function failed to execute");
 }
