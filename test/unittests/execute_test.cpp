@@ -1,11 +1,20 @@
 #include "execute.hpp"
 #include "limits.hpp"
 #include "parser.hpp"
+#include <gmock/gmock-matchers.h>
 #include <gtest/gtest.h>
 #include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
 
 using namespace fizzy;
+
+namespace fizzy
+{
+inline bool operator==(const execution_result& lhs, const execution_result& rhs)
+{
+    return lhs.trapped == rhs.trapped && lhs.stack == rhs.stack;
+}
+}  // namespace fizzy
 
 TEST(execute, end)
 {
@@ -13,7 +22,7 @@ TEST(execute, end)
     (func)
     */
     const auto wasm = from_hex("0061736d01000000010401600000030201000a040102000b");
-    EXPECT_EMPTY_RESULT(execute(parse(wasm), 0, {}));
+    EXPECT_THAT(execute(parse(wasm), 0, {}), (execution_result{false, {}}));
 }
 
 TEST(execute, drop)
