@@ -239,25 +239,6 @@ TEST(execute, global_set_imported)
     EXPECT_EQ(global_value, 42);
 }
 
-TEST(execute, i32_load)
-{
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::i32_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
-
-    auto instance = instantiate(module);
-    (*instance->memory)[0] = 42;
-    const auto [trap, ret] = execute(*instance, 0, {0});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    ASSERT_EQ(ret[0], 42);
-
-    ASSERT_TRUE(execute(*instance, 0, {65537}).trapped);
-}
-
 TEST(execute, i32_load_imported_memory)
 {
     /* wat2wasm
@@ -300,26 +281,6 @@ TEST(execute, i32_load_overflow)
     ASSERT_TRUE(execute(*instance, 0, {0x80000001}).trapped);
 }
 
-TEST(execute, i64_load)
-{
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::i64_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
-
-    auto instance = instantiate(module);
-    (*instance->memory)[0] = 0x2a;
-    (*instance->memory)[4] = 0x2a;
-    const auto [trap, ret] = execute(*instance, 0, {0});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    ASSERT_EQ(ret[0], 0x2a0000002a);
-
-    ASSERT_TRUE(execute(*instance, 0, {65537}).trapped);
-}
-
 TEST(execute, i64_load_overflow)
 {
     /* wat2wasm
@@ -342,216 +303,82 @@ TEST(execute, i64_load_overflow)
     ASSERT_TRUE(execute(*instance, 0, {0x80000001}).trapped);
 }
 
-TEST(execute, i32_load8_s)
+TEST(execute, i32_load_all_variants)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::i32_load8_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
+    /* wat2wasm
+    (memory 1 1)
+    (func (param i32) (result i32)
+      get_local 0
+      i32.load  ;; to be replaced by variants of i32.load
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d0100000001060160017f017f030201000504010101010a0901070020002802000b");
+    auto module = parse(wasm);
 
-    auto instance = instantiate(module);
-    (*instance->memory)[0] = 0x80;
-    (*instance->memory)[1] = 0xf1;
-    const auto [trap, ret] = execute(*instance, 0, {0});
+    auto& load_instr = module.codesec[0].instructions[1];
+    ASSERT_EQ(load_instr, Instr::i32_load);
+    ASSERT_EQ(module.codesec[0].immediates.substr(4), "00000000"_bytes);  // load offset.
 
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    ASSERT_EQ(static_cast<int32_t>(ret[0]), -128);
+    const auto memory_fill = "deb0b1b2b3ed"_bytes;
 
-    ASSERT_TRUE(execute(*instance, 0, {65537}).trapped);
+    constexpr std::tuple<Instr, uint64_t> test_cases[]{
+        {Instr::i32_load8_u, 0x000000b0},
+        {Instr::i32_load8_s, 0xffffffb0},
+        {Instr::i32_load16_u, 0x0000b1b0},
+        {Instr::i32_load16_s, 0xffffb1b0},
+        {Instr::i32_load, 0xb3b2b1b0},
+    };
+
+    for (const auto& test_case : test_cases)
+    {
+        load_instr = std::get<0>(test_case);
+        auto instance = instantiate(module);
+        std::copy(std::begin(memory_fill), std::end(memory_fill), std::begin(*instance->memory));
+        EXPECT_RESULT(execute(*instance, 0, {1}), std::get<1>(test_case));
+
+        EXPECT_TRUE(execute(*instance, 0, {65537}).trapped);
+    }
 }
 
-TEST(execute, i32_load8_u)
+TEST(execute, i64_load_all_variants)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::i32_load8_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
+    /* wat2wasm
+    (memory 1 1)
+    (func (param i32) (result i64)
+      get_local 0
+      i64.load  ;; to be replaced by variants of i64.load
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d0100000001060160017f017e030201000504010101010a0901070020002903000b");
+    auto module = parse(wasm);
 
-    auto instance = instantiate(module);
-    (*instance->memory)[0] = 0x81;
-    (*instance->memory)[1] = 0xf1;
-    const auto [trap, ret] = execute(*instance, 0, {0});
+    auto& load_instr = module.codesec[0].instructions[1];
+    ASSERT_EQ(load_instr, Instr::i64_load);
+    ASSERT_EQ(module.codesec[0].immediates.substr(4), "00000000"_bytes);  // load offset.
 
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 0x01);
-    ASSERT_EQ(static_cast<uint32_t>(ret[0]), 129);
+    const auto memory_fill = "deb0b1b2b3b4b5b6b7ed"_bytes;
 
-    ASSERT_TRUE(execute(*instance, 0, {65537}).trapped);
-}
+    constexpr std::tuple<Instr, uint64_t> test_cases[]{
+        {Instr::i64_load8_u, 0x00000000000000b0},
+        {Instr::i64_load8_s, 0xffffffffffffffb0},
+        {Instr::i64_load16_u, 0x000000000000b1b0},
+        {Instr::i64_load16_s, 0xffffffffffffb1b0},
+        {Instr::i64_load32_u, 0x00000000b3b2b1b0},
+        {Instr::i64_load32_s, 0xffffffffb3b2b1b0},
+        {Instr::i64_load, 0xb7b6b5b4b3b2b1b0},
+    };
 
-TEST(execute, i32_load16_s)
-{
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::i32_load16_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
+    for (const auto& test_case : test_cases)
+    {
+        load_instr = std::get<0>(test_case);
+        auto instance = instantiate(module);
+        std::copy(std::begin(memory_fill), std::end(memory_fill), std::begin(*instance->memory));
+        EXPECT_RESULT(execute(*instance, 0, {1}), std::get<1>(test_case));
 
-    auto instance = instantiate(module);
-    (*instance->memory)[0] = 0x00;
-    (*instance->memory)[1] = 0x80;
-    (*instance->memory)[3] = 0xf1;
-    const auto [trap, ret] = execute(*instance, 0, {0});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    ASSERT_EQ(static_cast<int32_t>(ret[0]), -32768);
-
-    ASSERT_TRUE(execute(*instance, 0, {65537}).trapped);
-}
-
-TEST(execute, i32_load16_u)
-{
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::i32_load16_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
-
-    auto instance = instantiate(module);
-    (*instance->memory)[0] = 0x01;
-    (*instance->memory)[1] = 0x80;
-    (*instance->memory)[3] = 0xf1;
-    const auto [trap, ret] = execute(*instance, 0, {0});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 0x01);
-    ASSERT_EQ(static_cast<uint32_t>(ret[0]), 32769);
-
-    ASSERT_TRUE(execute(*instance, 0, {65537}).trapped);
-}
-
-TEST(execute, i64_load8_s)
-{
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::i64_load8_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
-
-    auto instance = instantiate(module);
-    (*instance->memory)[0] = 0x80;
-    (*instance->memory)[1] = 0xf1;
-    const auto [trap, ret] = execute(*instance, 0, {0});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    ASSERT_EQ(ret[0], uint64_t(-128));
-
-    ASSERT_TRUE(execute(*instance, 0, {65537}).trapped);
-}
-
-TEST(execute, i64_load8_u)
-{
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::i64_load8_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
-
-    auto instance = instantiate(module);
-    (*instance->memory)[0] = 0x81;
-    (*instance->memory)[1] = 0xf1;
-    const auto [trap, ret] = execute(*instance, 0, {0});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    ASSERT_EQ(ret[0], 0x81);
-
-    ASSERT_TRUE(execute(*instance, 0, {65537}).trapped);
-}
-
-TEST(execute, i64_load16_s)
-{
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::i64_load16_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
-
-    auto instance = instantiate(module);
-    (*instance->memory)[0] = 0x00;
-    (*instance->memory)[1] = 0x80;
-    (*instance->memory)[2] = 0xf1;
-    const auto [trap, ret] = execute(*instance, 0, {0});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    ASSERT_EQ(ret[0], uint64_t(-32768));
-
-    ASSERT_TRUE(execute(*instance, 0, {65537}).trapped);
-}
-
-TEST(execute, i64_load16_u)
-{
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::i64_load16_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
-
-    auto instance = instantiate(module);
-    (*instance->memory)[0] = 0x01;
-    (*instance->memory)[1] = 0x80;
-    (*instance->memory)[2] = 0xf1;
-    const auto [trap, ret] = execute(*instance, 0, {0});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    ASSERT_EQ(ret[0], 0x8001);
-
-    ASSERT_TRUE(execute(*instance, 0, {65537}).trapped);
-}
-
-TEST(execute, i64_load32_s)
-{
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::i64_load32_s, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
-
-    auto instance = instantiate(module);
-    auto& memory = *instance->memory;
-    memory[0] = 0x00;
-    memory[1] = 0x00;
-    memory[2] = 0x00;
-    memory[3] = 0x80;
-    memory[4] = 0xf1;
-    const auto [trap, ret] = execute(*instance, 0, {0});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    ASSERT_EQ(ret[0], uint64_t(-2147483648));
-
-    ASSERT_TRUE(execute(*instance, 0, {65537}).trapped);
-}
-
-TEST(execute, i64_load32_u)
-{
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::i64_load32_u, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
-
-    auto instance = instantiate(module);
-    auto& memory = *instance->memory;
-    memory[0] = 0x01;
-    memory[1] = 0x00;
-    memory[2] = 0x00;
-    memory[3] = 0x80;
-    memory[4] = 0xf1;
-    const auto [trap, ret] = execute(*instance, 0, {0});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    ASSERT_EQ(ret[0], 0x80000001);
-
-    ASSERT_TRUE(execute(*instance, 0, {65537}).trapped);
+        EXPECT_TRUE(execute(*instance, 0, {65537}).trapped);
+    }
 }
 
 TEST(execute, i32_store_imported_memory)
