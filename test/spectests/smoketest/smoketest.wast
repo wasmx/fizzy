@@ -13,6 +13,7 @@
   (func (export "foo.i32") (result i32) (i32.const 2))
   (func (export "foo.i64") (result i64) (i64.const 4))
   (func (export "trap") (unreachable))
+  (func $loop (export "loop") (call $loop))
   (global (export "glob") i32 (i32.const 55))
   (table (export "tab") 10 funcref)
   (memory (export "mem") 1)
@@ -34,6 +35,8 @@
 (assert_return (get $Mod1 "glob") (i32.const 55))
 
 (assert_trap (invoke $Mod1 "trap") "unreachable instruction")
+
+(assert_exhaustion (invoke $Mod1 "loop") "call stack exhausted")
 
 (assert_invalid (module (func $type-unary-operand-empty (drop))) "stack underflow")
 

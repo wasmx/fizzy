@@ -341,3 +341,49 @@ TEST(execute_call, imported_function_from_another_module)
 
     EXPECT_RESULT(execute(instance2, 1, {44, 2}), 42);
 }
+
+TEST(execute_call, call_infinite_recursion)
+{
+    /* wat2wasm
+    (module (func call 0))
+    */
+    const auto bin = from_hex("0061736d01000000010401600000030201000a0601040010000b");
+
+    const Module module = parse(bin);
+
+    EXPECT_TRUE(execute(module, 0, {}).trapped);
+}
+
+TEST(execute_call, call_indirect_infinite_recursion)
+{
+    /* wat2wasm
+      (type $out-i32 (func (result i32)))
+      (table anyfunc (elem $foo))
+      (func $foo (result i32)
+        (call_indirect (type $out-i32) (i32.const 0))
+      )
+    */
+    const auto bin = from_hex(
+        "0061736d010000000105016000017f03020100040501700101010907010041000b01000a090107004100110000"
+        "0b");
+
+    const Module module = parse(bin);
+
+    EXPECT_TRUE(execute(module, 0, {}).trapped);
+}
+
+TEST(execute, call_max_depth)
+{
+    /* wat2wasm
+    (func (result i32) (i32.const 42))
+    (func (result i32) (call 0))
+    */
+
+    const auto bin = from_hex("0061736d010000000105016000017f03030200000a0b020400412a0b040010000b");
+
+    const auto module = parse(bin);
+    auto instance = instantiate(module);
+
+    EXPECT_RESULT(execute(instance, 0, {}, 2048), 42);
+    EXPECT_TRUE(execute(instance, 1, {}, 2048).trapped);
+}

@@ -73,7 +73,8 @@ Instance instantiate(Module module, std::vector<ExternalFunction> imported_funct
     std::vector<ExternalGlobal> imported_globals = {});
 
 // Execute a function on an instance.
-execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint64_t> args);
+execution_result execute(
+    Instance& instance, FuncIdx func_idx, std::vector<uint64_t> args, int depth = 0);
 
 // TODO: remove this helper
 execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uint64_t> args);
