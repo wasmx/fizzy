@@ -158,20 +158,20 @@ TEST(execute_call, call_indirect_imported_table)
     {
         constexpr uint64_t expected_results[]{3, 2, 1};
 
-        const auto [trap, ret] = execute(instance, 5, {param});
+        const auto [trap, ret] = execute(*instance, 5, {param});
         ASSERT_FALSE(trap);
         ASSERT_EQ(ret.size(), 1);
         EXPECT_EQ(ret[0], expected_results[param]);
     }
 
     // immediate is incorrect type
-    EXPECT_TRUE(execute(instance, 5, {3}).trapped);
+    EXPECT_TRUE(execute(*instance, 5, {3}).trapped);
 
     // called function traps
-    EXPECT_TRUE(execute(instance, 5, {4}).trapped);
+    EXPECT_TRUE(execute(*instance, 5, {4}).trapped);
 
     // argument out of table bounds
-    EXPECT_TRUE(execute(instance, 5, {5}).trapped);
+    EXPECT_TRUE(execute(*instance, 5, {5}).trapped);
 }
 
 TEST(execute_call, call_indirect_uninited_table)
@@ -221,7 +221,7 @@ TEST(execute_call, imported_function_call)
 
     auto instance = instantiate(module, {{host_foo, host_foo_type}});
 
-    EXPECT_RESULT(execute(instance, 1, {}), 42);
+    EXPECT_RESULT(execute(*instance, 1, {}), 42);
 }
 
 TEST(execute_call, imported_function_call_with_arguments)
@@ -248,7 +248,7 @@ TEST(execute_call, imported_function_call_with_arguments)
 
     auto instance = instantiate(module, {{host_foo, host_foo_type}});
 
-    EXPECT_RESULT(execute(instance, 1, {20}), 42);
+    EXPECT_RESULT(execute(*instance, 1, {20}), 42);
 }
 
 TEST(execute_call, imported_functions_call_indirect)
@@ -293,9 +293,9 @@ TEST(execute_call, imported_functions_call_indirect)
     };
 
     auto instance = instantiate(module, {{sqr, module.typesec[0]}, {isqrt, module.typesec[0]}});
-    EXPECT_RESULT(execute(instance, 3, {0, 10}), 20);  // double(10)
-    EXPECT_RESULT(execute(instance, 3, {1, 9}), 81);   // sqr(9)
-    EXPECT_RESULT(execute(instance, 3, {2, 50}), 7);   // isqrt(50)
+    EXPECT_RESULT(execute(*instance, 3, {0, 10}), 20);  // double(10)
+    EXPECT_RESULT(execute(*instance, 3, {1, 9}), 81);   // sqr(9)
+    EXPECT_RESULT(execute(*instance, 3, {2, 50}), 7);   // isqrt(50)
 }
 
 TEST(execute_call, imported_function_from_another_module)
@@ -334,12 +334,12 @@ TEST(execute_call, imported_function_from_another_module)
     ASSERT_TRUE(func_idx.has_value());
 
     auto sub = [&instance1, func_idx](Instance&, std::vector<uint64_t> args) -> execution_result {
-        return fizzy::execute(instance1, *func_idx, std::move(args));
+        return fizzy::execute(*instance1, *func_idx, std::move(args));
     };
 
     auto instance2 = instantiate(module2, {{sub, module1.typesec[0]}});
 
-    EXPECT_RESULT(execute(instance2, 1, {44, 2}), 42);
+    EXPECT_RESULT(execute(*instance2, 1, {44, 2}), 42);
 }
 
 TEST(execute_call, call_infinite_recursion)
@@ -384,6 +384,6 @@ TEST(execute, call_max_depth)
     const auto module = parse(bin);
     auto instance = instantiate(module);
 
-    EXPECT_RESULT(execute(instance, 0, {}, 2048), 42);
-    EXPECT_TRUE(execute(instance, 1, {}, 2048).trapped);
+    EXPECT_RESULT(execute(*instance, 0, {}, 2048), 42);
+    EXPECT_TRUE(execute(*instance, 1, {}, 2048).trapped);
 }
