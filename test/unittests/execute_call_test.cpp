@@ -371,3 +371,19 @@ TEST(execute_call, call_indirect_infinite_recursion)
 
     EXPECT_TRUE(execute(module, 0, {}).trapped);
 }
+
+TEST(execute, call_max_depth)
+{
+    /* wat2wasm
+    (func (result i32) (i32.const 42))
+    (func (result i32) (call 0))
+    */
+
+    const auto bin = from_hex("0061736d010000000105016000017f03030200000a0b020400412a0b040010000b");
+
+    const auto module = parse(bin);
+    auto instance = instantiate(module);
+
+    EXPECT_RESULT(execute(instance, 0, {}, 2048), 42);
+    EXPECT_TRUE(execute(instance, 1, {}, 2048).trapped);
+}
