@@ -93,68 +93,60 @@ TEST(execute, local_tee)
 
 TEST(execute, global_get)
 {
-    Module module;
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
-    module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
-
-    auto instance = instantiate(module);
-
-    const auto [trap, ret] = execute(instance, 0, {});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    /* wat2wasm
+    (global i32 (i32.const 42))
+    (func (result i32)
+      get_global 0
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d010000000105016000017f030201000606017f00412a0b0a0601040023000b");
+    EXPECT_RESULT(execute(parse(wasm), 0, {}), 42);
 }
 
 TEST(execute, global_get_two_globals)
 {
-    Module module;
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {43}}});
-    module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
-    module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {1, 0, 0, 0}});
+    /* wat2wasm
+    (global i64 (i64.const 42))
+    (global i64 (i64.const 43))
+    (func (result i64)
+      get_global 0
+    )
+    (func (result i64)
+      get_global 1
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000105016000017e0303020000060b027e00422a0b7e00422b0b0a0b02040023000b04002301"
+        "0b");
 
-    auto instance = instantiate(module);
-
-    auto [trap, ret] = execute(instance, 0, {});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
-
-    auto [trap2, ret2] = execute(instance, 1, {});
-
-    ASSERT_FALSE(trap2);
-    ASSERT_EQ(ret2.size(), 1);
-    EXPECT_EQ(ret2[0], 43);
+    auto instance = instantiate(parse(wasm));
+    EXPECT_RESULT(execute(instance, 0, {}), 42);
+    EXPECT_RESULT(execute(instance, 1, {}), 43);
 }
 
 TEST(execute, global_get_imported)
 {
-    Module module;
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.importsec.emplace_back(Import{"mod", "glob", ExternalKind::Global, {false}});
-    module.codesec.emplace_back(Code{0, {Instr::global_get, Instr::end}, {0, 0, 0, 0}});
+    /* wat2wasm
+    (import "mod" "glob" (global i64))
+    (func (result i64)
+      get_global 0
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000105016000017e020d01036d6f6404676c6f62037e00030201000a0601040023000b");
+    const auto module = parse(wasm);
 
     uint64_t global_value = 42;
     auto instance = instantiate(module, {}, {}, {}, {ExternalGlobal{&global_value, false}});
 
-    const auto [trap, ret] = execute(instance, 0, {});
+    EXPECT_RESULT(execute(instance, 0, {}), 42);
 
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    global_value = 0;
+    EXPECT_RESULT(execute(instance, 0, {}), 0);
 
     global_value = 43;
-
-    const auto [trap2, ret2] = execute(instance, 0, {});
-
-    ASSERT_FALSE(trap2);
-    ASSERT_EQ(ret2.size(), 1);
-    EXPECT_EQ(ret2[0], 43);
+    EXPECT_RESULT(execute(instance, 0, {}), 43);
 }
 
 TEST(execute, global_get_imported_and_internal)
@@ -189,54 +181,62 @@ TEST(execute, global_get_imported_and_internal)
 
 TEST(execute, global_set)
 {
-    Module module;
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {41}}});
-    module.codesec.emplace_back(
-        Code{0, {Instr::i32_const, Instr::global_set, Instr::end}, {42, 0, 0, 0, 0, 0, 0, 0}});
+    /* wat2wasm
+    (global (mut i32) (i32.const 41))
+    (func
+      i32.const 42
+      set_global 0
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d01000000010401600000030201000606017f0141290b0a08010600412a24000b");
 
-    auto instance = instantiate(module);
-
-    const auto [trap, ret] = execute(instance, 0, {});
-
+    auto instance = instantiate(parse(wasm));
+    const auto [trap, _] = execute(instance, 0, {});
     ASSERT_FALSE(trap);
-    ASSERT_EQ(instance.globals[0], 42);
+    EXPECT_EQ(instance.globals[0], 42);
 }
 
 TEST(execute, global_set_two_globals)
 {
-    Module module;
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {43}}});
-    module.codesec.emplace_back(Code{0,
-        {Instr::i32_const, Instr::global_set, Instr::i32_const, Instr::global_set, Instr::end},
-        {44, 0, 0, 0, 0, 0, 0, 0, 45, 0, 0, 0, 1, 0, 0, 0}});
+    /* wat2wasm
+    (global (mut i32) (i32.const 42))
+    (global (mut i32) (i32.const 43))
+    (func
+      i32.const 44
+      set_global 0
+      i32.const 45
+      set_global 1
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001040160000003020100060b027f01412a0b7f01412b0b0a0c010a00412c2400412d24010"
+        "b");
 
-    auto instance = instantiate(module);
-
-    const auto [trap, ret] = execute(instance, 0, {});
-
+    auto instance = instantiate(parse(wasm));
+    const auto [trap, _] = execute(instance, 0, {});
     ASSERT_FALSE(trap);
-    ASSERT_EQ(instance.globals[0], 44);
-    ASSERT_EQ(instance.globals[1], 45);
+    EXPECT_EQ(instance.globals[0], 44);
+    EXPECT_EQ(instance.globals[1], 45);
 }
 
 TEST(execute, global_set_imported)
 {
-    Module module;
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.importsec.emplace_back(Import{"mod", "glob", ExternalKind::Global, {true}});
-    module.codesec.emplace_back(
-        Code{0, {Instr::i32_const, Instr::global_set, Instr::end}, {42, 0, 0, 0, 0, 0, 0, 0}});
+    /* wat2wasm
+    (import "mod" "glob" (global (mut i32)))
+    (func
+      i32.const 42
+      set_global 0
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010401600000020d01036d6f6404676c6f62037f01030201000a08010600412a24000b");
 
     uint64_t global_value = 41;
-    auto instance = instantiate(module, {}, {}, {}, {ExternalGlobal{&global_value, true}});
-
-    const auto [trap, ret] = execute(instance, 0, {});
-
+    auto instance = instantiate(parse(wasm), {}, {}, {}, {ExternalGlobal{&global_value, true}});
+    const auto [trap, _] = execute(instance, 0, {});
     ASSERT_FALSE(trap);
-    ASSERT_EQ(global_value, 42);
+    EXPECT_EQ(global_value, 42);
 }
 
 TEST(execute, i32_load)
@@ -260,36 +260,37 @@ TEST(execute, i32_load)
 
 TEST(execute, i32_load_imported_memory)
 {
-    Module module;
-    Import imp{"mod", "m", ExternalKind::Memory, {}};
-    imp.desc.memory = Memory{{1, 1}};
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.importsec.emplace_back(imp);
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::i32_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
+    /* wat2wasm
+    (import "mod" "m" (memory 1 1))
+    (func (param i32) (result i32)
+      get_local 0
+      i32.load
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017f020b01036d6f64016d02010101030201000a0901070020002802000b");
 
     bytes memory(PageSize, 0);
-    auto instance = instantiate(module, {}, {}, {{&memory, {1, 1}}});
-    memory[0] = 42;
-    const auto [trap, ret] = execute(instance, 0, {0});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    ASSERT_EQ(ret[0], 42);
+    auto instance = instantiate(parse(wasm), {}, {}, {{&memory, {1, 1}}});
+    memory[1] = 42;
+    EXPECT_RESULT(execute(instance, 0, {1}), 42);
 
     ASSERT_TRUE(execute(instance, 0, {65537}).trapped);
 }
 
 TEST(execute, i32_load_overflow)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    // NOTE: this is i32.load offset=0x7fffffff
-    module.codesec.emplace_back(Code{
-        0, {Instr::local_get, Instr::i32_load, Instr::end}, {0, 0, 0, 0, 0xff, 0xff, 0xff, 0x7f}});
+    /* wat2wasm
+    (memory 1 1)
+    (func (param i32) (result i32)
+      get_local 0
+      i32.load offset=0x7fffffff
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017f030201000504010101010a0d010b0020002802ffffffff070b");
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
     ASSERT_TRUE(execute(instance, 0, {0}).trapped);
@@ -321,14 +322,17 @@ TEST(execute, i64_load)
 
 TEST(execute, i64_load_overflow)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    // NOTE: this is i64.load offset=0x7fffffff
-    module.codesec.emplace_back(Code{
-        0, {Instr::local_get, Instr::i64_load, Instr::end}, {0, 0, 0, 0, 0xff, 0xff, 0xff, 0x7f}});
+    /* wat2wasm
+    (memory 1 1)
+    (func (param i32) (result i64)
+      get_local 0
+      i64.load offset=0x7fffffff
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017e030201000504010101010a0d010b0020002903ffffffff070b");
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
     ASSERT_TRUE(execute(instance, 0, {0}).trapped);
@@ -571,37 +575,43 @@ TEST(execute, i32_store)
 
 TEST(execute, i32_store_imported_memory)
 {
-    Module module;
-    Import imp{"mod", "m", ExternalKind::Memory, {}};
-    imp.desc.memory = Memory{{1, 1}};
-    module.importsec.emplace_back(imp);
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::local_get, Instr::i32_store, Instr::end},
-            {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}});
+    /* wat2wasm
+    (import "mod" "m" (memory 1 1))
+    (func (param i32 i32)
+      get_local 1
+      get_local 0
+      i32.store
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160027f7f00020b01036d6f64016d02010101030201000a0b01090020012000360200"
+        "0b");
 
     bytes memory(PageSize, 0);
-    auto instance = instantiate(module, {}, {}, {{&memory, {1, 1}}});
+    auto instance = instantiate(parse(wasm), {}, {}, {{&memory, {1, 1}}});
     const auto [trap, ret] = execute(instance, 0, {42, 0});
-
     ASSERT_FALSE(trap);
     ASSERT_EQ(ret.size(), 0);
-    ASSERT_EQ(memory.substr(0, 4), from_hex("2a000000"));
+    EXPECT_EQ(memory.substr(0, 4), from_hex("2a000000"));
 
-    ASSERT_TRUE(execute(instance, 0, {42, 65537}).trapped);
+    EXPECT_TRUE(execute(instance, 0, {42, 65537}).trapped);
 }
 
 TEST(execute, i32_store_overflow)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    // NOTE: this is i32.store offset=0x7fffffff
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::i32_const, Instr::i32_store, Instr::end},
-            {0, 0, 0, 0, 0x55, 0xaa, 0x55, 0xaa, 0xff, 0xff, 0xff, 0x7f}});
+    /* wat2wasm
+    (memory 1 1)
+    (func (param i32)
+      get_local 0
+      i32.const 0xaa55aa55
+      i32.store offset=0x7fffffff
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001050160017f00030201000504010101010a13011100200041d5d4d6d27a3602ffffffff07"
+        "0b");
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
     ASSERT_TRUE(execute(instance, 0, {0}).trapped);
@@ -632,15 +642,19 @@ TEST(execute, i64_store)
 
 TEST(execute, i64_store_overflow)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    // NOTE: this is i64.store offset=0x7fffffff
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::i32_const, Instr::i64_store, Instr::end},
-            {0, 0, 0, 0, 0x55, 0xaa, 0x55, 0xaa, 0xff, 0xff, 0xff, 0x7f}});
+    /* wat2wasm
+    (memory 1 1)
+    (func (param i32)
+      get_local 0
+      i64.const 0xaa55aa55aa55aa55
+      i64.store offset=0x7fffffff
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001050160017f00030201000504010101010a18011600200042d5d4d6d2dacaeaaaaa7f3703"
+        "ffffffff070b");
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
     ASSERT_TRUE(execute(instance, 0, {0}).trapped);
@@ -762,226 +776,183 @@ TEST(execute, i64_store32)
 
 TEST(execute, memory_size)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(Code{0, {Instr::memory_size, Instr::end}, {}});
+    /* wat2wasm
+    (memory 3 4)
+    (func (result i32)
+      memory.size
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d010000000105016000017f030201000504010103040a060104003f000b");
 
-    const auto [trap, ret] = execute(module, 0, {});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
+    EXPECT_RESULT(execute(parse(wasm), 0, {}), 3);
 }
 
 TEST(execute, memory_grow)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 4096}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::memory_grow, Instr::end}, {0, 0, 0, 0}});
+    /* wat2wasm
+    (memory 1 4096)
+    (func (param i32) (result i32)
+      get_local 0
+      memory.grow
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d0100000001060160017f017f03020100050501010180200a08010600200040000b");
 
-    auto result = execute(module, 0, {0});
+    const auto module = parse(wasm);
 
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
+    EXPECT_RESULT(execute(module, 0, {0}), 1);
 
-    result = execute(module, 0, {1});
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
+    EXPECT_RESULT(execute(module, 0, {1}), 1);
 
     // 256MB memory.
-    result = execute(module, 0, {4095});
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
+    EXPECT_RESULT(execute(module, 0, {4095}), 1);
 
     // >256MB memory.
-    result = execute(module, 0, {4096});
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], uint32_t(-1));
+    EXPECT_RESULT(execute(module, 0, {4096}), uint32_t(-1));
 
     // Way too high (but still within bounds)
-    result = execute(module, 0, {0xffffffe});
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], uint32_t(-1));
+    EXPECT_RESULT(execute(module, 0, {0xffffffe}), uint32_t(-1));
 }
 
 TEST(execute, start_section)
 {
     // In this test the start function (index 1) writes a i32 value to the memory
     // and the same is read back in the "main" function (index 0).
-    Module module;
-    module.startfunc = FuncIdx{1};
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    // TODO: add type section (once enforced)
-    module.funcsec.emplace_back(FuncIdx{0});
-    module.funcsec.emplace_back(FuncIdx{1});
-    module.codesec.emplace_back(
-        Code{0, {Instr::i32_const, Instr::i32_load, Instr::end}, {0, 0, 0, 0, 0, 0, 0, 0}});
-    module.codesec.emplace_back(
-        Code{0, {Instr::i32_const, Instr::i32_const, Instr::i32_store, Instr::end},
-            {0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0}});
 
-    auto instance = instantiate(module);
-    // Start function sets this
-    ASSERT_EQ(instance.memory->substr(0, 4), from_hex("2a000000"));
+    /* wat2wasm
+    (memory 1 1)
+    (start 1)
+    (func (result i32)
+      (i32.load (i32.const 0))
+    )
+    (func
+      (i32.store (i32.const 0) (i32.const 42))
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000108026000017f60000003030200010504010101010801010a1302070041002802000b0900"
+        "4100412a3602000b");
 
-    const auto [trap, ret] = execute(instance, 0, {});
+    auto instance = instantiate(parse(wasm));
+    ASSERT_EQ(instance.memory->substr(0, 4), "2a000000"_bytes);  // Start function sets this.
 
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
-    EXPECT_EQ(instance.memory->substr(0, 4), from_hex("2a000000"));
+    EXPECT_RESULT(execute(instance, 0, {}), 42);
+    EXPECT_EQ(instance.memory->substr(0, 4), "2a000000"_bytes);
 }
 
 TEST(execute, imported_function)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
-    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {0}});
+    /* wat2wasm
+    (import "mod" "foo" (func (param i32 i32) (result i32)))
+    */
+    const auto wasm = from_hex("0061736d0100000001070160027f7f017f020b01036d6f6403666f6f0000");
+    const auto module = parse(wasm);
+    ASSERT_EQ(module.typesec.size(), 1);
 
-    auto host_foo = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto host_foo = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] + args[1]}};
     };
 
     auto instance = instantiate(module, {{host_foo, module.typesec[0]}});
-
-    const auto [trap, ret] = execute(instance, 0, {20, 22});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    EXPECT_RESULT(execute(instance, 0, {20, 22}), 42);
 }
 
 TEST(execute, imported_two_functions)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
-    module.importsec.emplace_back(Import{"mod", "foo1", ExternalKind::Function, {0}});
-    module.importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {0}});
+    /* wat2wasm
+    (type (func (param i32 i32) (result i32)))
+    (import "mod" "foo1" (func (type 0)))
+    (import "mod" "foo2" (func (type 0)))
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001070160027f7f017f021702036d6f6404666f6f310000036d6f6404666f6f320000");
+    const auto module = parse(wasm);
+    ASSERT_EQ(module.typesec.size(), 1);
 
-    auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] + args[1]}};
     };
-    auto host_foo2 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto host_foo2 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] * args[1]}};
     };
 
     auto instance =
         instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[0]}});
-
-    const auto [trap1, ret1] = execute(instance, 0, {20, 22});
-
-    ASSERT_FALSE(trap1);
-    ASSERT_EQ(ret1.size(), 1);
-    EXPECT_EQ(ret1[0], 42);
-
-    const auto [trap2, ret2] = execute(instance, 1, {20, 22});
-
-    ASSERT_FALSE(trap2);
-    ASSERT_EQ(ret2.size(), 1);
-    EXPECT_EQ(ret2[0], 440);
+    EXPECT_RESULT(execute(instance, 0, {20, 22}), 42);
+    EXPECT_RESULT(execute(instance, 1, {20, 22}), 440);
 }
 
 TEST(execute, imported_functions_and_regular_one)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
-    module.typesec.emplace_back(FuncType{{ValType::i64}, {ValType::i64}});
-    module.importsec.emplace_back(Import{"mod", "foo1", ExternalKind::Function, {0}});
-    module.importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {0}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(Code{0, {Instr::i32_const, Instr::end}, {42, 0, 42, 0}});
+    /* wat2wasm
+    (type (func (param i32 i32) (result i32)))
+    (import "mod" "foo1" (func (type 0)))
+    (import "mod" "foo2" (func (type 0)))
+    (func (type 0)
+      i32.const 0x2a002a
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001070160027f7f017f021702036d6f6404666f6f310000036d6f6404666f6f320000030201"
+        "000a0901070041aa80a8010b");
 
-    auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] + args[1]}};
     };
-    auto host_foo2 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto host_foo2 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] * args[0]}};
     };
 
+    const auto module = parse(wasm);
+    ASSERT_EQ(module.typesec.size(), 1);
     auto instance =
         instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[0]}});
-
-    const auto [trap1, ret1] = execute(instance, 0, {20, 22});
-
-    ASSERT_FALSE(trap1);
-    ASSERT_EQ(ret1.size(), 1);
-    EXPECT_EQ(ret1[0], 42);
-
-    const auto [trap2, ret2] = execute(instance, 1, {20});
-
-    ASSERT_FALSE(trap2);
-    ASSERT_EQ(ret2.size(), 1);
-    EXPECT_EQ(ret2[0], 400);
+    EXPECT_RESULT(execute(instance, 0, {20, 22}), 42);
+    EXPECT_RESULT(execute(instance, 1, {20}), 400);
 
     // check correct number of arguments is passed to host
-    auto count_args = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto count_args = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args.size()}};
     };
 
-    auto instance_couner =
+    auto instance_counter =
         instantiate(module, {{count_args, module.typesec[0]}, {count_args, module.typesec[0]}});
-
-    const auto [trap3, ret3] = execute(instance_couner, 0, {20, 22});
-
-    ASSERT_FALSE(trap3);
-    ASSERT_EQ(ret3.size(), 1);
-    EXPECT_EQ(ret3[0], 2);
-
-    const auto [trap4, ret4] = execute(instance_couner, 1, {20});
-
-    ASSERT_FALSE(trap4);
-    ASSERT_EQ(ret4.size(), 1);
-    EXPECT_EQ(ret4[0], 1);
+    EXPECT_RESULT(execute(instance_counter, 0, {20, 22}), 2);
+    EXPECT_RESULT(execute(instance_counter, 1, {20}), 1);
 }
 
 TEST(execute, imported_two_functions_different_type)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
-    module.typesec.emplace_back(FuncType{{ValType::i64}, {ValType::i64}});
-    module.importsec.emplace_back(Import{"mod", "foo1", ExternalKind::Function, {0}});
-    module.importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {0}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(Code{0, {Instr::i32_const, Instr::end}, {42, 0, 42, 0}});
+    /* wat2wasm
+    (type (func (param i32 i32) (result i32)))
+    (type (func (param i64) (result i64)))
+    (import "mod" "foo1" (func (type 0)))
+    (import "mod" "foo2" (func (type 1)))
+    (func (type 1)
+      i64.const 0x2a002a
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010c0260027f7f017f60017e017e021702036d6f6404666f6f310000036d6f6404666f6f32"
+        "0001030201010a0901070042aa80a8010b");
 
-    auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] + args[1]}};
     };
-    auto host_foo2 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto host_foo2 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
         return {false, {args[0] * args[0]}};
     };
 
+    const auto module = parse(wasm);
+    ASSERT_EQ(module.typesec.size(), 2);
     auto instance =
-        instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[0]}});
+        instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[1]}});
 
-    const auto [trap1, ret1] = execute(instance, 0, {20, 22});
-
-    ASSERT_FALSE(trap1);
-    ASSERT_EQ(ret1.size(), 1);
-    EXPECT_EQ(ret1[0], 42);
-
-    const auto [trap2, ret2] = execute(instance, 1, {20});
-
-    ASSERT_FALSE(trap2);
-    ASSERT_EQ(ret2.size(), 1);
-    EXPECT_EQ(ret2[0], 400);
-
-    const auto [trap3, ret3] = execute(instance, 2, {20});
-
-    ASSERT_FALSE(trap3);
-    ASSERT_EQ(ret3.size(), 1);
-    EXPECT_EQ(ret3[0], 0x2a002a);
+    EXPECT_RESULT(execute(instance, 0, {20, 22}), 42);
+    EXPECT_RESULT(execute(instance, 1, {0x3000'0000}), 0x900'0000'0000'0000);
+    EXPECT_RESULT(execute(instance, 2, {20}), 0x2a002a);
 }
 
 TEST(execute, imported_function_traps)
