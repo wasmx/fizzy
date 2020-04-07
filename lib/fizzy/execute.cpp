@@ -322,15 +322,18 @@ const FuncType& function_type(const Instance& instance, FuncIdx idx)
     return instance.module.typesec[type_idx];
 }
 
-bool invoke_function(
-    const FuncType& func_type, uint32_t func_idx, Instance& instance, Stack<uint64_t>& stack)
+bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
+    Stack<uint64_t>& stack, int depth)
 {
+    if (depth == CallStackLimit)
+        return false;
+
     const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
     std::vector<uint64_t> call_args(stack.end() - static_cast<ptrdiff_t>(num_args), stack.end());
     stack.resize(stack.size() - num_args);
 
-    const auto ret = execute(instance, func_idx, std::move(call_args));
+    const auto ret = execute(instance, func_idx, std::move(call_args), depth + 1);
     // Bubble up traps
     if (ret.trapped)
         return false;
@@ -606,8 +609,11 @@ Instance instantiate(Module module, std::vector<ExternalFunction> imported_funct
     return instance;
 }
 
-execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint64_t> args)
+execution_result execute(
+    Instance& instance, FuncIdx func_idx, std::vector<uint64_t> args, int depth)
 {
+    assert(depth >= 0 && depth <= CallStackLimit);
+
     if (func_idx < instance.imported_functions.size())
         return instance.imported_functions[func_idx].function(instance, std::move(args));
 
@@ -750,7 +756,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
             const auto called_func_idx = read<uint32_t>(immediates);
             const auto& func_type = function_type(instance, called_func_idx);
 
-            if (!invoke_function(func_type, called_func_idx, instance, stack))
+            if (!invoke_function(func_type, called_func_idx, instance, stack, depth))
             {
                 trap = true;
                 goto end;
@@ -787,7 +793,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, std::vector<uint6
                 goto end;
             }
 
-            if (!invoke_function(actual_type, *called_func_idx, instance, stack))
+            if (!invoke_function(actual_type, *called_func_idx, instance, stack, depth))
             {
                 trap = true;
                 goto end;
