@@ -282,15 +282,16 @@ const FuncType& function_type(const Instance& instance, FuncIdx idx)
     return instance.module.typesec[type_idx];
 }
 
-bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
-    Stack<uint64_t>& stack, int depth)
+template <class F>
+bool invoke_function(
+    const FuncType& func_type, const F& func, Instance& instance, Stack<uint64_t>& stack, int depth)
 {
     const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
     std::vector<uint64_t> call_args(stack.end() - static_cast<ptrdiff_t>(num_args), stack.end());
     stack.resize(stack.size() - num_args);
 
-    const auto ret = execute(instance, func_idx, std::move(call_args), depth + 1);
+    const auto ret = func(instance, std::move(call_args), depth + 1);
     // Bubble up traps
     if (ret.trapped)
         return false;
@@ -304,6 +305,15 @@ bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& ins
         stack.push(ret.stack[0]);
 
     return true;
+}
+
+inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
+    Stack<uint64_t>& stack, int depth)
+{
+    const auto func = [func_idx](Instance& _instance, std::vector<uint64_t> args, int _depth) {
+        return execute(_instance, func_idx, std::move(args), _depth);
+    };
+    return invoke_function(func_type, func, instance, stack, depth);
 }
 
 template <typename T>
@@ -784,27 +794,11 @@ execution_result execute(
                 goto end;
             }
 
-            const auto num_args = actual_type.inputs.size();
-            assert(stack.size() >= num_args);
-            std::vector<uint64_t> call_args(
-                stack.end() - static_cast<ptrdiff_t>(num_args), stack.end());
-            stack.resize(stack.size() - num_args);
-
-            const auto ret = called_func->function(instance, std::move(call_args), depth + 1);
-            // Bubble up traps
-            if (ret.trapped)
+            if (!invoke_function(actual_type, called_func->function, instance, stack, depth))
             {
                 trap = true;
                 goto end;
             }
-
-            const auto num_outputs = actual_type.outputs.size();
-            // NOTE: we can assume these two from validation
-            assert(ret.stack.size() == num_outputs);
-            assert(num_outputs <= 1);
-            // Push back the result
-            if (num_outputs != 0)
-                stack.push(ret.stack[0]);
             break;
         }
         case Instr::return_:
