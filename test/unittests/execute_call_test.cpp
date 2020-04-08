@@ -373,7 +373,7 @@ TEST(execute_call, call_indirect_infinite_recursion)
     EXPECT_TRUE(execute(module, 0, {}).trapped);
 }
 
-TEST(execute, call_max_depth)
+TEST(execute_call, call_max_depth)
 {
     /* wat2wasm
     (func (result i32) (i32.const 42))
@@ -390,7 +390,7 @@ TEST(execute, call_max_depth)
 }
 
 // A regression test for incorrect number of arguments passed to a call.
-TEST(execute, call_nonempty_stack)
+TEST(execute_call, call_nonempty_stack)
 {
     /* wat2wasm
     (func (param i32) (result i32)
@@ -412,7 +412,7 @@ TEST(execute, call_nonempty_stack)
     EXPECT_RESULT(execute(*instance, 1, {}), 3);
 }
 
-TEST(execute, call_imported_infinite_recursion)
+TEST(execute_call, call_imported_infinite_recursion)
 {
     /* wat2wasm
     (import "mod" "foo" (func (result i32)))
