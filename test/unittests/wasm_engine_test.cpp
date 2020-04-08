@@ -117,8 +117,7 @@ TEST(wasm_engine, multi_mixed_args_ret_i32)
         "0061736d0100000001080160037f7e7f017f03020100070801047465737400000a0e010c00200020026bad2001"
         "7ea70b");
 
-    // TODO: wabt_engine can't support this due to typing shortcomings
-    for (auto engine_create_fn : {create_fizzy_engine, create_wasm3_engine})
+    for (auto engine_create_fn : {create_fizzy_engine, create_wabt_engine, create_wasm3_engine})
     {
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
