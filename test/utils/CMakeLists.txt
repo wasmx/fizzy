@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 include(ProjectWabt)
+include(ProjectWAMR)
 include(ProjectWasm3)
 
 add_library(test-utils STATIC)
@@ -19,6 +20,7 @@ target_sources(
     leb128_encode.cpp
     leb128_encode.hpp
     wabt_engine.cpp
+    wamr_engine.cpp
     wasm3_engine.cpp
     wasm_binary.hpp
     wasm_engine.cpp
@@ -27,4 +29,4 @@ target_sources(
 
 target_compile_features(test-utils PUBLIC cxx_std_17)
 target_include_directories(test-utils PUBLIC ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/lib/fizzy)
-target_link_libraries(test-utils PRIVATE fizzy::fizzy wabt::wabt wasm3::wasm3 GTest::gtest)
+target_link_libraries(test-utils PRIVATE fizzy::fizzy wabt::wabt wamr::wamr wasm3::wasm3 GTest::gtest)
