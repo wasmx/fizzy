@@ -251,7 +251,7 @@ uint64_t eval_constant_expression(ConstantExpression expr,
         return globals[global_idx - imported_globals.size()];
 }
 
-void branch(uint32_t label_idx, LabelStack& labels, Stack<uint64_t>& stack, const Instr*& pc,
+void branch(uint32_t label_idx, LabelStack& labels, OperandStack& stack, const Instr*& pc,
     const uint8_t*& immediates) noexcept
 {
     assert(labels.size() > label_idx);
@@ -278,11 +278,11 @@ void branch(uint32_t label_idx, LabelStack& labels, Stack<uint64_t>& stack, cons
 
 template <class F>
 bool invoke_function(
-    const FuncType& func_type, const F& func, Instance& instance, Stack<uint64_t>& stack, int depth)
+    const FuncType& func_type, const F& func, Instance& instance, OperandStack& stack, int depth)
 {
     const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
-    std::vector<uint64_t> call_args(stack.end() - static_cast<ptrdiff_t>(num_args), stack.end());
+    std::vector<uint64_t> call_args{stack.rend() - num_args, stack.rend()};
     stack.shrink(stack.size() - num_args);
 
     const auto ret = func(instance, std::move(call_args), depth + 1);
@@ -302,7 +302,7 @@ bool invoke_function(
 }
 
 inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
-    Stack<uint64_t>& stack, int depth)
+    OperandStack& stack, int depth)
 {
     const auto func = [func_idx](Instance& _instance, std::vector<uint64_t> args, int _depth) {
         return execute(_instance, func_idx, std::move(args), _depth);
@@ -346,7 +346,7 @@ inline DstT extend(SrcT in) noexcept
 }
 
 template <typename DstT, typename SrcT = DstT>
-inline bool load_from_memory(bytes_view memory, Stack<uint64_t>& stack, const uint8_t*& immediates)
+inline bool load_from_memory(bytes_view memory, OperandStack& stack, const uint8_t*& immediates)
 {
     const auto address = static_cast<uint32_t>(stack.pop());
     // NOTE: alignment is dropped by the parser
@@ -361,7 +361,7 @@ inline bool load_from_memory(bytes_view memory, Stack<uint64_t>& stack, const ui
 }
 
 template <typename DstT>
-inline bool store_into_memory(bytes& memory, Stack<uint64_t>& stack, const uint8_t*& immediates)
+inline bool store_into_memory(bytes& memory, OperandStack& stack, const uint8_t*& immediates)
 {
     const auto value = static_cast<DstT>(stack.pop());
     const auto address = static_cast<uint32_t>(stack.pop());
@@ -376,7 +376,7 @@ inline bool store_into_memory(bytes& memory, Stack<uint64_t>& stack, const uint8
 }
 
 template <typename Op>
-inline void unary_op(Stack<uint64_t>& stack, Op op) noexcept
+inline void unary_op(OperandStack& stack, Op op) noexcept
 {
     using T = decltype(op(stack.pop()));
     const auto a = static_cast<T>(stack.pop());
@@ -384,7 +384,7 @@ inline void unary_op(Stack<uint64_t>& stack, Op op) noexcept
 }
 
 template <typename Op>
-inline void binary_op(Stack<uint64_t>& stack, Op op) noexcept
+inline void binary_op(OperandStack& stack, Op op) noexcept
 {
     using T = decltype(op(stack.pop(), stack.pop()));
     const auto val2 = static_cast<T>(stack.pop());
@@ -393,7 +393,7 @@ inline void binary_op(Stack<uint64_t>& stack, Op op) noexcept
 }
 
 template <typename T, template <typename> class Op>
-inline void comparison_op(Stack<uint64_t>& stack, Op<T> op) noexcept
+inline void comparison_op(OperandStack& stack, Op<T> op) noexcept
 {
     const auto val2 = static_cast<T>(stack.pop());
     const auto val1 = static_cast<T>(stack.pop());
@@ -645,8 +645,7 @@ execution_result execute(
     std::vector<uint64_t> locals = std::move(args);
     locals.resize(locals.size() + code.local_count);
 
-    // TODO: preallocate fixed stack depth properly
-    Stack<uint64_t> stack;
+    OperandStack stack(static_cast<size_t>(code.max_stack_height));
 
     LabelStack labels;
     // The function's implicit block.
@@ -1540,8 +1539,7 @@ execution_result execute(
 
 end:
     assert(labels.empty() || trap);
-    // move allows to return derived Stack<uint64_t> instance into base vector<uint64_t> value
-    return {trap, std::move(stack)};
+    return {trap, {stack.rbegin(), stack.rend()}};
 }
 
 execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uint64_t> args)
