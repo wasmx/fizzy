@@ -134,44 +134,49 @@ TEST(execute_call, call_indirect_imported_table)
       (type $out_i32 (func (result i32)))
       (import "m" "t" (table 5 20 anyfunc))
 
-      (func $f1 (result i32) i32.const 1)
-      (func $f2 (result i32) i32.const 2)
-      (func $f3 (result i32) i32.const 3)
-      (func $f4 (result i64) i64.const 4)
-      (func $f5 (result i32) unreachable)
-
       (func (param i32) (result i32)
         (call_indirect (type $out_i32) (get_local 0))
       )
     )
     */
     const auto bin = from_hex(
-        "0061736d01000000010e036000017f6000017e60017f017f020a01016d01740170010514030706000000010002"
-        "0a2106040041010b040041020b040041030b040042040b0300000b070020001100000b");
+        "0061736d01000000010a026000017f60017f017f020a01016d01740170010514030201010a0901070020001100"
+        "000b");
 
     const Module module = parse(bin);
 
-    table_elements table{2, 1, 0, 3, 4};
+    auto f1 = [](std::vector<uint64_t>, int) { return execution_result{false, {1}}; };
+    auto f2 = [](std::vector<uint64_t>, int) { return execution_result{false, {2}}; };
+    auto f3 = [](std::vector<uint64_t>, int) { return execution_result{false, {3}}; };
+    auto f4 = [](std::vector<uint64_t>, int) { return execution_result{false, {4}}; };
+    auto f5 = [](std::vector<uint64_t>, int) { return execution_result{true, {}}; };
+
+    auto out_i32 = FuncType{{}, {ValType::i32}};
+    auto out_i64 = FuncType{{}, {ValType::i64}};
+
+    table_elements table{
+        {{f3, out_i32}}, {{f2, out_i32}}, {{f1, out_i32}}, {{f4, out_i64}}, {{f5, out_i32}}};
+
     auto instance = instantiate(module, {}, {{&table, {5, 20}}});
 
     for (const auto param : {0u, 1u, 2u})
     {
         constexpr uint64_t expected_results[]{3, 2, 1};
 
-        const auto [trap, ret] = execute(*instance, 5, {param});
+        const auto [trap, ret] = execute(*instance, 0, {param});
         ASSERT_FALSE(trap);
         ASSERT_EQ(ret.size(), 1);
         EXPECT_EQ(ret[0], expected_results[param]);
     }
 
     // immediate is incorrect type
-    EXPECT_TRUE(execute(*instance, 5, {3}).trapped);
+    EXPECT_TRUE(execute(*instance, 0, {3}).trapped);
 
     // called function traps
-    EXPECT_TRUE(execute(*instance, 5, {4}).trapped);
+    EXPECT_TRUE(execute(*instance, 0, {4}).trapped);
 
     // argument out of table bounds
-    EXPECT_TRUE(execute(*instance, 5, {5}).trapped);
+    EXPECT_TRUE(execute(*instance, 0, {5}).trapped);
 }
 
 TEST(execute_call, call_indirect_uninited_table)
@@ -377,12 +382,12 @@ TEST(execute_call, imported_table_from_another_module)
         "001100000b");
     const auto module2 = parse(bin2);
 
-    const auto table = fizzy::find_exported_table(instance1, "tab");
+    const auto table = fizzy::find_exported_table(*instance1, "tab");
     ASSERT_TRUE(table.has_value());
 
     auto instance2 = instantiate(module2, {}, {*table});
 
-    EXPECT_RESULT(execute(instance2, 0, {44, 2}), 42);
+    EXPECT_RESULT(execute(*instance2, 0, {44, 2}), 42);
 }
 
 TEST(execute_call, call_infinite_recursion)
@@ -415,7 +420,7 @@ TEST(execute_call, call_indirect_infinite_recursion)
     EXPECT_TRUE(execute(module, 0, {}).trapped);
 }
 
-TEST(execute, call_max_depth)
+TEST(execute_call, call_max_depth)
 {
     /* wat2wasm
     (func (result i32) (i32.const 42))

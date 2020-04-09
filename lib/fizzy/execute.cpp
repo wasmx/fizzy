@@ -319,8 +319,8 @@ const FuncType& function_type(const Instance& instance, FuncIdx idx)
     return instance.module.typesec[type_idx];
 }
 
-bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
-    Stack<uint64_t>& stack, int depth)
+template <class F>
+bool invoke_function(const FuncType& func_type, const F& func, Stack<uint64_t>& stack, int depth)
 {
     if (depth == CallStackLimit)
         return false;
@@ -330,7 +330,7 @@ bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& ins
     std::vector<uint64_t> call_args(stack.end() - static_cast<ptrdiff_t>(num_args), stack.end());
     stack.resize(stack.size() - num_args);
 
-    const auto ret = execute(instance, func_idx, std::move(call_args), depth + 1);
+    const auto ret = func(std::move(call_args), depth + 1);
     // Bubble up traps
     if (ret.trapped)
         return false;
@@ -344,6 +344,15 @@ bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& ins
         stack.push(ret.stack[0]);
 
     return true;
+}
+
+inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
+    Stack<uint64_t>& stack, int depth)
+{
+    const auto func = [&instance, func_idx](std::vector<uint64_t> args, int _depth) {
+        return execute(instance, func_idx, std::move(args), _depth);
+    };
+    return invoke_function(func_type, func, stack, depth);
 }
 
 template <typename T>
@@ -577,7 +586,7 @@ std::unique_ptr<Instance> instantiate(Module module,
     }
 
     assert(module.elementsec.empty() || table != nullptr);
-    std::vector<uint64_t> elementsec_offsets;
+    std::vector<ptrdiff_t> elementsec_offsets;
     elementsec_offsets.reserve(module.elementsec.size());
     for (const auto& element : module.elementsec)
     {
@@ -590,14 +599,6 @@ std::unique_ptr<Instance> instantiate(Module module,
         elementsec_offsets.emplace_back(offset);
     }
 
-    // Fill the table based on elements segment
-    for (size_t i = 0; i < module.elementsec.size(); ++i)
-    {
-        // Overwrite table[offset..] with element.init
-        std::copy(module.elementsec[i].init.begin(), module.elementsec[i].init.end(),
-            table->data() + elementsec_offsets[i]);
-    }
-
     // Fill out memory based on data segments
     for (size_t i = 0; i < module.datasec.size(); ++i)
     {
@@ -606,12 +607,29 @@ std::unique_ptr<Instance> instantiate(Module module,
             memory->data() + datasec_offsets[i]);
     }
 
+    // We need to create instance before filling table,
+    // because table functions will capture the pointer to instance.
     // FIXME: clang-tidy warns about potential memory leak for moving memory (which is in fact
     // safe), but also erroneously points this warning to std::move(table)
     auto instance = std::make_unique<Instance>(std::move(module), std::move(memory), memory_max,
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
         std::move(table), std::move(globals), std::move(imported_functions),
         std::move(imported_globals));
+
+    // Fill the table based on elements segment
+    for (size_t i = 0; i < instance->module.elementsec.size(); ++i)
+    {
+        // Overwrite table[offset..] with element.init
+        auto it_table = instance->table->begin() + elementsec_offsets[i];
+        for (const auto idx : instance->module.elementsec[i].init)
+        {
+            auto func = [idx, &instance_ref = *instance](std::vector<uint64_t> args, int depth) {
+                return execute(instance_ref, idx, std::move(args), depth);
+            };
+
+            *it_table++ = TableFunction{std::move(func), function_type(*instance, idx)};
+        }
+    }
 
     // Run start function if present
     if (instance->module.startfunc)
@@ -794,15 +812,15 @@ execution_result execute(
                 goto end;
             }
 
-            const auto called_func_idx = (*instance.table)[elem_idx];
-            if (!called_func_idx.has_value())
+            const auto called_func = (*instance.table)[elem_idx];
+            if (!called_func.has_value())
             {
                 trap = true;
                 goto end;
             }
 
             // check actual type against expected type
-            const auto& actual_type = function_type(instance, *called_func_idx);
+            const auto& actual_type = called_func->type;
             const auto& expected_type = instance.module.typesec[expected_type_idx];
             if (expected_type != actual_type)
             {
@@ -810,7 +828,7 @@ execution_result execute(
                 goto end;
             }
 
-            if (!invoke_function(actual_type, *called_func_idx, instance, stack, depth))
+            if (!invoke_function(actual_type, called_func->function, stack, depth))
             {
                 trap = true;
                 goto end;

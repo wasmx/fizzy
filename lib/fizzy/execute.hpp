@@ -26,7 +26,13 @@ struct ExternalFunction
     FuncType type;
 };
 
-using table_elements = std::vector<std::optional<FuncIdx>>;
+struct TableFunction
+{
+    std::function<execution_result(std::vector<uint64_t>, int depth)> function;
+    FuncType type;
+};
+
+using table_elements = std::vector<std::optional<TableFunction>>;
 using table_ptr = std::unique_ptr<table_elements, void (*)(table_elements*)>;
 
 struct ExternalTable
