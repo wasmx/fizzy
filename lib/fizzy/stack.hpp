@@ -30,7 +30,9 @@ public:
         return res;
     }
 
-    T peek(size_t depth = 0) const noexcept { return (*this)[size() - depth - 1]; }
+    T& operator[](size_t index) noexcept { return std::vector<T>::operator[](size() - index - 1); }
+
+    T& top() noexcept { return (*this)[0]; }
 
     /// Drops @a num_elements elements from the top of the stack.
     void drop(size_t num_elements = 1) noexcept { resize(size() - num_elements); }

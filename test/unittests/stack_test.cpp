@@ -34,19 +34,20 @@ TEST(stack, drop_and_peek)
 
     EXPECT_FALSE(stack.empty());
     EXPECT_EQ(stack.size(), 4);
-    EXPECT_EQ(stack.peek(), 'z');
-    EXPECT_EQ(stack.peek(1), 'y');
-    EXPECT_EQ(stack.peek(2), 'x');
-    EXPECT_EQ(stack.peek(3), 'w');
+    EXPECT_EQ(stack.top(), 'z');
+    EXPECT_EQ(stack[0], 'z');
+    EXPECT_EQ(stack[1], 'y');
+    EXPECT_EQ(stack[2], 'x');
+    EXPECT_EQ(stack[3], 'w');
     EXPECT_EQ(stack.size(), 4);
 
     stack.drop();
     EXPECT_EQ(stack.size(), 3);
-    EXPECT_EQ(stack.peek(), 'y');
+    EXPECT_EQ(stack.top(), 'y');
 
     stack.drop(2);
     EXPECT_EQ(stack.size(), 1);
-    EXPECT_EQ(stack.peek(), 'w');
+    EXPECT_EQ(stack.top(), 'w');
 
     stack.drop();
     EXPECT_EQ(stack.size(), 0);
@@ -83,10 +84,10 @@ TEST(stack, resize)
     // grow stack
     stack.resize(4);
     EXPECT_FALSE(stack.empty());
-    EXPECT_EQ(stack.peek(), 0);
-    EXPECT_EQ(stack.peek(1), 0);
-    EXPECT_EQ(stack.peek(2), 'b');
-    EXPECT_EQ(stack.peek(3), 'a');
+    EXPECT_EQ(stack.top(), 0);
+    EXPECT_EQ(stack[1], 0);
+    EXPECT_EQ(stack[2], 'b');
+    EXPECT_EQ(stack[3], 'a');
     EXPECT_EQ(stack.size(), 4);
 
     stack.drop();
@@ -122,7 +123,7 @@ TEST(stack, iterator)
         *it = 'x';
 
     for (unsigned item = 0; item < stack.size(); item++)
-        EXPECT_EQ(stack.peek(item), 'x');
+        EXPECT_EQ(stack[item], 'x');
 }
 
 TEST(stack, clear_on_empty)
