@@ -564,21 +564,10 @@ std::unique_ptr<Instance> instantiate(Module module,
     // Allocate memory
     auto [memory, memory_max] = allocate_memory(module.memorysec, imported_memories);
 
-    // Fill the table based on elements segment
-    assert(module.elementsec.empty() || table != nullptr);
-    for (const auto& element : module.elementsec)
-    {
-        const uint64_t offset =
-            eval_constant_expression(element.offset, imported_globals, module.globalsec, globals);
-
-        if (offset + element.init.size() > table->size())
-            throw instantiate_error("Element segment is out of table bounds");
-
-        // Overwrite table[offset..] with element.init
-        std::copy(element.init.begin(), element.init.end(), table->data() + offset);
-    }
-
-    // Fill out memory based on data segments
+    // Before starting to fill memory and table,
+    // check that data and element segments are within bounds.
+    std::vector<uint64_t> datasec_offsets;
+    datasec_offsets.reserve(module.datasec.size());
     for (const auto& data : module.datasec)
     {
         const uint64_t offset =
@@ -587,8 +576,37 @@ std::unique_ptr<Instance> instantiate(Module module,
         if (offset + data.init.size() > memory->size())
             throw instantiate_error("Data segment is out of memory bounds");
 
+        datasec_offsets.emplace_back(offset);
+    }
+
+    assert(module.elementsec.empty() || table != nullptr);
+    std::vector<uint64_t> elementsec_offsets;
+    elementsec_offsets.reserve(module.elementsec.size());
+    for (const auto& element : module.elementsec)
+    {
+        const uint64_t offset =
+            eval_constant_expression(element.offset, imported_globals, module.globalsec, globals);
+
+        if (offset + element.init.size() > table->size())
+            throw instantiate_error("Element segment is out of table bounds");
+
+        elementsec_offsets.emplace_back(offset);
+    }
+
+    // Fill the table based on elements segment
+    for (size_t i = 0; i < module.elementsec.size(); ++i)
+    {
+        // Overwrite table[offset..] with element.init
+        std::copy(module.elementsec[i].init.begin(), module.elementsec[i].init.end(),
+            table->data() + elementsec_offsets[i]);
+    }
+
+    // Fill out memory based on data segments
+    for (size_t i = 0; i < module.datasec.size(); ++i)
+    {
         // NOTE: these instructions can overlap
-        std::memcpy(memory->data() + offset, data.init.data(), data.init.size());
+        std::copy(module.datasec[i].init.begin(), module.datasec[i].init.end(),
+            memory->data() + datasec_offsets[i]);
     }
 
     // FIXME: clang-tidy warns about potential memory leak for moving memory (which is in fact
