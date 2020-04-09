@@ -390,6 +390,51 @@ TEST(execute_call, imported_table_from_another_module)
     EXPECT_RESULT(execute(*instance2, 0, {44, 2}), 42);
 }
 
+TEST(execute_call, imported_table_modified_by_uninstantiable_module)
+{
+    /* wat2wasm
+    (module
+      (type $t1 (func (param $lhs i32) (param $rhs i32) (result i32)))
+      (func (param i32) (param i32) (result i32)
+        get_local 0
+        get_local 1
+        (call_indirect (type $t1) (i32.const 0))
+      )
+      (table (export "tab") 1 funcref)
+    )
+    */
+    const auto bin1 = from_hex(
+        "0061736d0100000001070160027f7f017f030201000404017000010707010374616201000a0d010b0020002001"
+        "41001100000b");
+    const auto module1 = parse(bin1);
+    auto instance1 = instantiate(module1);
+
+    /* wat2wasm
+    (module
+      (import "m1" "tab" (table 1 funcref))
+      (func $sub (param $lhs i32) (param $rhs i32) (result i32)
+        get_local $lhs
+        get_local $rhs
+        i32.sub)
+      (elem (i32.const 0) $sub)
+      (func $main (unreachable))
+      (start $main)
+    )
+    */
+    const auto bin2 = from_hex(
+        "0061736d01000000010a0260027f7f017f600000020c01026d3103746162017000010303020001080101090701"
+        "0041000b01000a0d020700200020016b0b0300000b");
+    const auto module2 = parse(bin2);
+
+    const auto table = fizzy::find_exported_table(*instance1, "tab");
+    ASSERT_TRUE(table.has_value());
+
+    EXPECT_THROW_MESSAGE(
+        instantiate(module2, {}, {*table}), instantiate_error, "Start function failed to execute");
+
+    EXPECT_RESULT(execute(*instance1, 0, {44, 2}), 42);
+}
+
 TEST(execute_call, call_infinite_recursion)
 {
     /* wat2wasm
