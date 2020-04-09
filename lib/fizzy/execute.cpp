@@ -1262,8 +1262,8 @@ execution_result execute(
             auto const lhs = static_cast<int32_t>(stack[1]);
             if (lhs == std::numeric_limits<int32_t>::min() && rhs == -1)
             {
-                stack.drop(2);
-                stack.push(0);
+                stack.pop();
+                stack.top() = 0;
             }
             else
                 binary_op(stack, std::modulus<int32_t>());
@@ -1384,8 +1384,8 @@ execution_result execute(
             auto const lhs = static_cast<int64_t>(stack[1]);
             if (lhs == std::numeric_limits<int64_t>::min() && rhs == -1)
             {
-                stack.drop(2);
-                stack.push(0);
+                stack.pop();
+                stack.top() = 0;
             }
             else
                 binary_op(stack, std::modulus<int64_t>());
