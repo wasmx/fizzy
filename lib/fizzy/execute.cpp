@@ -477,10 +477,7 @@ ExecutionResult execute(
     const auto& code = instance.module.codesec[code_idx];
     auto* const memory = instance.memory.get();
 
-    std::vector<Value> locals(args.size() + code.local_count);
-    std::copy_n(args.begin(), args.size(), locals.begin());
-
-    OperandStack stack(static_cast<size_t>(code.max_stack_height));
+    OperandStack stack(args, code.local_count, static_cast<size_t>(code.max_stack_height));
 
     const Instr* pc = code.instructions.data();
     const uint8_t* immediates = code.immediates.data();
@@ -614,22 +611,19 @@ ExecutionResult execute(
         case Instr::local_get:
         {
             const auto idx = read<uint32_t>(immediates);
-            assert(idx <= locals.size());
-            stack.push(locals[idx]);
+            stack.push(stack.local(idx));
             break;
         }
         case Instr::local_set:
         {
             const auto idx = read<uint32_t>(immediates);
-            assert(idx <= locals.size());
-            locals[idx] = stack.pop();
+            stack.local(idx) = stack.pop();
             break;
         }
         case Instr::local_tee:
         {
             const auto idx = read<uint32_t>(immediates);
-            assert(idx <= locals.size());
-            locals[idx] = stack.top();
+            stack.local(idx) = stack.top();
             break;
         }
         case Instr::global_get:

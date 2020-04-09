@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "span.hpp"
 #include "value.hpp"
 #include <cassert>
 #include <cstdint>
@@ -61,6 +62,10 @@ class OperandStack
     /// in the constructor after the m_storage.
     Value* m_top;
 
+    Value* m_bottom;
+
+    Value* m_locals;
+
     /// The pre-allocated internal storage.
     Value m_small_storage[small_storage_size];
 
@@ -69,29 +74,43 @@ class OperandStack
 
     Value* bottom() noexcept { return m_large_storage ? m_large_storage.get() : m_small_storage; }
 
-    const Value* bottom() const noexcept
-    {
-        return m_large_storage ? m_large_storage.get() : m_small_storage;
-    }
-
 public:
     /// Default constructor.
     ///
     /// Based on @p max_stack_height decides if to use small pre-allocated storage or allocate
     /// large storage.
     /// Sets the top item pointer to below the stack bottom.
-    explicit OperandStack(size_t max_stack_height)
+    OperandStack(span<const Value> args, size_t num_locals, size_t max_stack_height)
     {
-        if (max_stack_height > small_storage_size)
-            m_large_storage = std::make_unique<Value[]>(max_stack_height);
-        m_top = bottom() - 1;
+        const auto num_args = args.size();
+        const auto storage_size_required = num_args + num_locals + max_stack_height;
+
+        Value* storage;
+        if (storage_size_required <= small_storage_size)
+        {
+            storage = &m_small_storage[0];
+        }
+        else
+        {
+            m_large_storage = std::make_unique<Value[]>(storage_size_required);
+            storage = &m_large_storage[0];
+        }
+
+        m_locals = storage;
+        m_bottom = m_locals + num_args + num_locals;
+        m_top = m_bottom - 1;
+
+        std::copy(std::begin(args), std::end(args), m_locals);
+        std::fill_n(m_locals + num_args, num_locals, 0);
     }
 
     OperandStack(const OperandStack&) = delete;
     OperandStack& operator=(const OperandStack&) = delete;
 
+    Value& local(size_t index) noexcept { return m_locals[index]; }
+
     /// The current number of items on the stack (aka stack height).
-    size_t size() const noexcept { return static_cast<size_t>(m_top + 1 - bottom()); }
+    size_t size() const noexcept { return static_cast<size_t>(m_top + 1 - m_bottom); }
 
     /// Returns the reference to the top item.
     /// Requires non-empty stack.
@@ -139,7 +158,7 @@ public:
     }
 
     /// Returns iterator to the bottom of the stack.
-    const Value* rbegin() const noexcept { return bottom(); }
+    const Value* rbegin() const noexcept { return m_bottom; }
 
     /// Returns end iterator counting from the bottom of the stack.
     const Value* rend() const noexcept { return m_top + 1; }
