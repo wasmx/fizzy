@@ -269,11 +269,11 @@ void branch(uint32_t label_idx, LabelStack& labels, Stack<uint64_t>& stack, cons
     {
         assert(label.arity == 1);
         const auto result = stack.top();
-        stack.resize(label.stack_height);
+        stack.shrink(label.stack_height);
         stack.push(result);
     }
     else
-        stack.resize(label.stack_height);
+        stack.shrink(label.stack_height);
 }
 
 template <class F>
@@ -283,7 +283,7 @@ bool invoke_function(
     const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
     std::vector<uint64_t> call_args(stack.end() - static_cast<ptrdiff_t>(num_args), stack.end());
-    stack.resize(stack.size() - num_args);
+    stack.shrink(stack.size() - num_args);
 
     const auto ret = func(instance, std::move(call_args), depth + 1);
     // Bubble up traps

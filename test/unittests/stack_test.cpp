@@ -105,6 +105,16 @@ TEST(stack, resize)
 
     stack.clear();
     EXPECT_TRUE(stack.empty());
+    EXPECT_EQ(stack.size(), 0);
+
+    // resize and shrink
+    stack.resize(4);
+    EXPECT_EQ(stack.size(), 4);
+    stack.shrink(2);
+    EXPECT_EQ(stack.size(), 2);
+    stack.shrink(0);
+    EXPECT_TRUE(stack.empty());
+    EXPECT_EQ(stack.size(), 0);
 }
 
 TEST(stack, iterator)

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <cassert>
 #include <cstdint>
 #include <vector>
 
@@ -40,5 +41,11 @@ public:
 
     /// Drops @a num_elements elements from the top of the stack.
     void drop(size_t num_elements = 1) noexcept { resize(size() - num_elements); }
+
+    void shrink(size_t new_size) noexcept
+    {
+        assert(new_size <= size());
+        resize(new_size);
+    }
 };
 }  // namespace fizzy
