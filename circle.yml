@@ -12,9 +12,9 @@ executors:
   linux-gcc-9:
     docker:
       - image: ethereum/cpp-build-env:14-gcc-9
-  linux-clang-9:
+  linux-clang-latest:
     docker:
-      - image: ethereum/cpp-build-env:14-clang-9
+      - image: ethereum/cpp-build-env:14-clang-10
   macos:
     macos:
       xcode: 11.3.0
@@ -177,11 +177,11 @@ jobs:
       - test
 
   coverage-tidy:
-    executor: linux-clang-9
+    executor: linux-clang-latest
     environment:
       BUILD_TYPE: Coverage
       TESTS_FILTER: unittests
-      CMAKE_OPTIONS: -DCMAKE_CXX_CLANG_TIDY=clang-tidy-9
+      CMAKE_OPTIONS: -DCMAKE_CXX_CLANG_TIDY=clang-tidy
     steps:
       - checkout
       - build
@@ -223,7 +223,7 @@ jobs:
             codecov --file ~/build/fizzy.lcov -X gcov
 
   sanitizers:
-    executor: linux-clang-9
+    executor: linux-clang-latest
     environment:
       BUILD_TYPE: RelWithDebInfo
       CMAKE_OPTIONS: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
@@ -290,7 +290,7 @@ jobs:
             benchmark/tools/compare.py --display_aggregates_only benchmarks ~/build/internal-old ~/build/internal-new
 
   fuzzing:
-    executor: linux-clang-9
+    executor: linux-clang-latest
     environment:
       BUILD_TYPE: RelWithDebInfo
       CMAKE_OPTIONS: -DFIZZY_FUZZING=ON -DENABLE_ASSERTIONS=ON
