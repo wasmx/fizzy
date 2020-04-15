@@ -378,26 +378,25 @@ inline bool store_into_memory(bytes& memory, OperandStack& stack, const uint8_t*
 template <typename Op>
 inline void unary_op(OperandStack& stack, Op op) noexcept
 {
-    using T = decltype(op(stack.pop()));
-    const auto a = static_cast<T>(stack.pop());
-    stack.push(op(a));
+    using T = decltype(op(stack.top()));
+    stack.top() = op(static_cast<T>(stack.top()));
 }
 
 template <typename Op>
 inline void binary_op(OperandStack& stack, Op op) noexcept
 {
-    using T = decltype(op(stack.pop(), stack.pop()));
+    using T = decltype(op(stack.top(), stack.top()));
     const auto val2 = static_cast<T>(stack.pop());
-    const auto val1 = static_cast<T>(stack.pop());
-    stack.push(static_cast<std::make_unsigned_t<T>>(op(val1, val2)));
+    const auto val1 = static_cast<T>(stack.top());
+    stack.top() = static_cast<std::make_unsigned_t<T>>(op(val1, val2));
 }
 
 template <typename T, template <typename> class Op>
 inline void comparison_op(OperandStack& stack, Op<T> op) noexcept
 {
     const auto val2 = static_cast<T>(stack.pop());
-    const auto val1 = static_cast<T>(stack.pop());
-    stack.push(uint32_t{op(val1, val2)});
+    const auto val1 = static_cast<T>(stack.top());
+    stack.top() = uint32_t{op(val1, val2)};
 }
 
 template <typename T>
