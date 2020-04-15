@@ -387,3 +387,26 @@ TEST(execute, call_max_depth)
     EXPECT_RESULT(execute(*instance, 0, {}, 2048), 42);
     EXPECT_TRUE(execute(*instance, 1, {}, 2048).trapped);
 }
+
+// A regression test for incorrect number of arguments passed to a call.
+TEST(execute, call_nonempty_stack)
+{
+    /* wat2wasm
+    (func (param i32) (result i32)
+      local.get 0
+    )
+    (func (result i32)
+      i32.const 1
+      i32.const 2
+      call 0
+      i32.add
+    )
+    */
+
+    const auto wasm = from_hex(
+        "0061736d01000000010a0260017f017f6000017f03030200010a1002040020000b09004101410210006a0b");
+
+    auto instance = instantiate(parse(wasm));
+
+    EXPECT_RESULT(execute(*instance, 1, {}), 3);
+}
