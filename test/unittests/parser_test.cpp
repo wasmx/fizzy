@@ -13,24 +13,6 @@ namespace
 constexpr uint8_t i32 = 0x7f;
 constexpr uint8_t i64 = 0x7e;
 
-bytes add_size_prefix(const bytes& content)
-{
-    return test::leb128u_encode(content.size()) + content;
-}
-
-bytes make_vec(std::initializer_list<bytes_view> contents)
-{
-    bytes ret = test::leb128u_encode(contents.size());
-    for (const auto& content : contents)
-        ret.append(content);
-    return ret;
-}
-
-bytes make_section(uint8_t id, const bytes& content)
-{
-    return bytes{id} + add_size_prefix(content);
-}
-
 bytes make_invalid_size_section(uint8_t id, size_t size, const bytes& content)
 {
     return bytes{id} + test::leb128u_encode(size) + content;
@@ -359,17 +341,6 @@ TEST(parser, import_multiple)
     EXPECT_EQ(*module.importsec[3].desc.table.limits.max, 0x42);
 }
 
-TEST(parser, import_memories_multiple)
-{
-    const auto section_contents =
-        make_vec({bytes{0x02, 'm', '1', 0x03, 'a', 'b', 'c', 0x02, 0x00, 0x7f},
-            bytes{0x02, 'm', '2', 0x03, 'd', 'e', 'f', 0x02, 0x00, 0x7f}});
-    const auto bin = bytes{wasm_prefix} + make_section(2, section_contents);
-
-    EXPECT_THROW_MESSAGE(
-        parse(bin), validation_error, "too many imported memories (at most one is allowed)");
-}
-
 TEST(parser, import_invalid_kind)
 {
     const auto wasm = bytes{wasm_prefix} + make_section(2, make_vec({"000004"_bytes}));
@@ -396,41 +367,6 @@ TEST(parser, import_invalid_utf8_in_name)
         bytes{0x01, 0x03, 'm', 'o', 'd', 0x03, 'f', 0x80, 'o', 0x00, 0x42};
     const auto wasm = bytes{wasm_prefix} + make_section(2, section_contents);
     EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Invalid UTF-8");
-}
-
-TEST(parser, memory_and_imported_memory)
-{
-    // (import "js" "mem"(memory 1))
-    const auto import_section = "020b01026a73036d656d0200010008046e616d65020100"_bytes;
-    // (memory 1)
-    const auto memory_section = "05030100010008046e616d65020100"_bytes;
-    const auto bin = bytes{wasm_prefix} + import_section + memory_section;
-
-    EXPECT_THROW_MESSAGE(parse(bin), validation_error,
-        "both module memory and imported memory are defined (at most one of them is allowed)");
-}
-
-TEST(parser, import_tables_multiple)
-{
-    const auto section_contents =
-        make_vec({bytes{0x02, 'm', '1', 0x03, 'a', 'b', 'c', 0x01, 0x70, 0x00, 0x01},
-            bytes{0x02, 'm', '2', 0x03, 'd', 'e', 'f', 0x01, 0x70, 0x01, 0x01, 0x03}});
-    const auto bin = bytes{wasm_prefix} + make_section(2, section_contents);
-
-    EXPECT_THROW_MESSAGE(
-        parse(bin), validation_error, "too many imported tables (at most one is allowed)");
-}
-
-TEST(parser, table_and_imported_table)
-{
-    // (import "js" "t" (table 1 anyfunc))
-    const auto import_section = "020a01026a730174017000010008046e616d65020100"_bytes;
-    // (table 2 anyfunc)
-    const auto table_section = "0404017000020008046e616d65020100"_bytes;
-    const auto bin = bytes{wasm_prefix} + import_section + table_section;
-
-    EXPECT_THROW_MESSAGE(parse(bin), validation_error,
-        "both module table and imported table are defined (at most one of them is allowed)");
 }
 
 TEST(parser, function_section_empty)
@@ -552,15 +488,6 @@ TEST(parser, table_single_malformed_minmax)
         parse(bin), parser_error, "malformed limits (minimum is larger than maximum)");
 }
 
-TEST(parser, table_multi_min_limit)
-{
-    const auto section_contents = "0270007f70007f"_bytes;
-    const auto bin = bytes{wasm_prefix} + make_section(4, section_contents);
-
-    EXPECT_THROW_MESSAGE(
-        parse(bin), validation_error, "too many table sections (at most one is allowed)");
-}
-
 TEST(parser, table_invalid_elemtype)
 {
     const auto wasm = bytes{wasm_prefix} + make_section(4, make_vec({"71"_bytes}));
@@ -609,15 +536,6 @@ TEST(parser, memory_single_malformed_minmax)
 
     EXPECT_THROW_MESSAGE(
         parse(bin), parser_error, "malformed limits (minimum is larger than maximum)");
-}
-
-TEST(parser, memory_multi_min_limit)
-{
-    const auto section_contents = "02007f007f"_bytes;
-    const auto bin = bytes{wasm_prefix} + make_section(5, section_contents);
-
-    EXPECT_THROW_MESSAGE(
-        parse(bin), validation_error, "too many memory sections (at most one is allowed)");
 }
 
 TEST(parser, memory_limits_kind_out_of_bounds)
