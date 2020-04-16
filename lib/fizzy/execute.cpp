@@ -285,9 +285,6 @@ const FuncType& function_type(const Instance& instance, FuncIdx idx)
 bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
     Stack<uint64_t>& stack, int depth)
 {
-    if (depth == CallStackLimit)
-        return false;
-
     const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
     std::vector<uint64_t> call_args(stack.end() - static_cast<ptrdiff_t>(num_args), stack.end());
@@ -593,10 +590,12 @@ std::unique_ptr<Instance> instantiate(Module module,
 execution_result execute(
     Instance& instance, FuncIdx func_idx, std::vector<uint64_t> args, int depth)
 {
-    assert(depth >= 0 && depth <= CallStackLimit);
+    assert(depth >= 0);
+    if (depth > CallStackLimit)
+        return {true, {}};
 
     if (func_idx < instance.imported_functions.size())
-        return instance.imported_functions[func_idx].function(instance, std::move(args));
+        return instance.imported_functions[func_idx].function(instance, std::move(args), depth);
 
     const auto code_idx = func_idx - instance.imported_functions.size();
     assert(code_idx < instance.module.codesec.size());
@@ -1544,8 +1543,8 @@ std::optional<ExternalFunction> find_exported_function(Instance& instance, std::
         return std::nullopt;
 
     const auto idx = *opt_index;
-    auto func = [idx, &instance](fizzy::Instance&, std::vector<uint64_t> args) {
-        return execute(instance, idx, std::move(args));
+    auto func = [idx, &instance](fizzy::Instance&, std::vector<uint64_t> args, int depth) {
+        return execute(instance, idx, std::move(args), depth);
     };
 
     return ExternalFunction{std::move(func), function_type(instance, idx)};

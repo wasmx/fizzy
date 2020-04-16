@@ -602,7 +602,7 @@ TEST(execute, imported_function)
     const auto module = parse(wasm);
     ASSERT_EQ(module.typesec.size(), 1);
 
-    constexpr auto host_foo = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto host_foo = [](Instance&, std::vector<uint64_t> args, int) -> execution_result {
         return {false, {args[0] + args[1]}};
     };
 
@@ -622,10 +622,10 @@ TEST(execute, imported_two_functions)
     const auto module = parse(wasm);
     ASSERT_EQ(module.typesec.size(), 1);
 
-    constexpr auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto host_foo1 = [](Instance&, std::vector<uint64_t> args, int) -> execution_result {
         return {false, {args[0] + args[1]}};
     };
-    constexpr auto host_foo2 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto host_foo2 = [](Instance&, std::vector<uint64_t> args, int) -> execution_result {
         return {false, {args[0] * args[1]}};
     };
 
@@ -649,10 +649,10 @@ TEST(execute, imported_functions_and_regular_one)
         "0061736d0100000001070160027f7f017f021702036d6f6404666f6f310000036d6f6404666f6f320000030201"
         "000a0901070041aa80a8010b");
 
-    constexpr auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto host_foo1 = [](Instance&, std::vector<uint64_t> args, int) -> execution_result {
         return {false, {args[0] + args[1]}};
     };
-    constexpr auto host_foo2 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto host_foo2 = [](Instance&, std::vector<uint64_t> args, int) -> execution_result {
         return {false, {args[0] * args[0]}};
     };
 
@@ -664,7 +664,7 @@ TEST(execute, imported_functions_and_regular_one)
     EXPECT_THAT(execute(*instance, 1, {20}), Result(400));
 
     // check correct number of arguments is passed to host
-    constexpr auto count_args = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto count_args = [](Instance&, std::vector<uint64_t> args, int) -> execution_result {
         return {false, {args.size()}};
     };
 
@@ -689,10 +689,10 @@ TEST(execute, imported_two_functions_different_type)
         "0061736d01000000010c0260027f7f017f60017e017e021702036d6f6404666f6f310000036d6f6404666f6f32"
         "0001030201010a0901070042aa80a8010b");
 
-    constexpr auto host_foo1 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto host_foo1 = [](Instance&, std::vector<uint64_t> args, int) -> execution_result {
         return {false, {args[0] + args[1]}};
     };
-    constexpr auto host_foo2 = [](Instance&, std::vector<uint64_t> args) -> execution_result {
+    constexpr auto host_foo2 = [](Instance&, std::vector<uint64_t> args, int) -> execution_result {
         return {false, {args[0] * args[0]}};
     };
 
@@ -713,7 +713,7 @@ TEST(execute, imported_function_traps)
     */
     const auto wasm = from_hex("0061736d0100000001070160027f7f017f020b01036d6f6403666f6f0000");
 
-    constexpr auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result {
+    constexpr auto host_foo = [](Instance&, std::vector<uint64_t>, int) -> execution_result {
         return {true, {}};
     };
 

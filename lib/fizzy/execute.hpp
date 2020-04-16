@@ -22,7 +22,7 @@ struct Instance;
 
 struct ExternalFunction
 {
-    std::function<execution_result(Instance&, std::vector<uint64_t>)> function;
+    std::function<execution_result(Instance&, std::vector<uint64_t>, int depth)> function;
     FuncType type;
 };
 

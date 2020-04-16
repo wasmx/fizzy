@@ -16,7 +16,9 @@ TEST(instantiate, imported_functions)
     const auto bin = from_hex("0061736d0100000001060160017f017f020b01036d6f6403666f6f0000");
     const auto module = parse(bin);
 
-    auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result { return {true, {}}; };
+    auto host_foo = [](Instance&, std::vector<uint64_t>, int) -> execution_result {
+        return {true, {}};
+    };
     auto instance = instantiate(module, {{host_foo, module.typesec[0]}});
 
     ASSERT_EQ(instance->imported_functions.size(), 1);
@@ -37,10 +39,10 @@ TEST(instantiate, imported_functions_multiple)
         "0061736d0100000001090260017f017f600000021702036d6f6404666f6f310000036d6f6404666f6f320001");
     const auto module = parse(bin);
 
-    auto host_foo1 = [](Instance&, std::vector<uint64_t>) -> execution_result {
+    auto host_foo1 = [](Instance&, std::vector<uint64_t>, int) -> execution_result {
         return {true, {0}};
     };
-    auto host_foo2 = [](Instance&, std::vector<uint64_t>) -> execution_result {
+    auto host_foo2 = [](Instance&, std::vector<uint64_t>, int) -> execution_result {
         return {true, {}};
     };
     auto instance =
@@ -77,7 +79,9 @@ TEST(instantiate, imported_function_wrong_type)
     const auto bin = from_hex("0061736d0100000001060160017f017f020b01036d6f6403666f6f0000");
     const auto module = parse(bin);
 
-    auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result { return {true, {}}; };
+    auto host_foo = [](Instance&, std::vector<uint64_t>, int) -> execution_result {
+        return {true, {}};
+    };
     const auto host_foo_type = FuncType{{}, {}};
 
     EXPECT_THROW_MESSAGE(instantiate(module, {{host_foo, host_foo_type}}), instantiate_error,
