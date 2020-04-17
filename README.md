@@ -1,5 +1,11 @@
 # Fizzy
 
+[![webassembly badge]][webassembly]
+[![readme style standard badge]][standard readme]
+[![circleci badge]][circleci]
+[![codecov badge]][codecov]
+[![license badge]][Apache License, Version 2.0]
+
 Fizzy aims to be a fast integer-only WebAssembly interpreter written in C++.
 
 ## Goals
@@ -26,4 +32,18 @@ To read about testing see [fizzy-spectests](./test/spectests/README.md).
 
 ## License
 
-Apache 2.0
+[![license badge]][Apache License, Version 2.0]
+
+Licensed under the [Apache License, Version 2.0].
+
+[webassembly]: https://webassembly.org/
+[standard readme]: https://github.com/RichardLitt/standard-readme
+[circleci]: https://circleci.com/gh/wasmx/fizzy/tree/master
+[codecov]: https://codecov.io/gh/wasmx/fizzy/
+[Apache License, Version 2.0]: LICENSE
+
+[webassembly badge]: https://img.shields.io/badge/WebAssembly-Engine-informational.svg?logo=webassembly
+[readme style standard badge]: https://img.shields.io/badge/readme%20style-standard-brightgreen.svg
+[circleci badge]: https://img.shields.io/circleci/project/github/wasmx/fizzy/master.svg?logo=circleci
+[codecov badge]: https://img.shields.io/codecov/c/github/wasmx/fizzy.svg?logo=codecov
+[license badge]: https://img.shields.io/github/license/wasmx/fizzy.svg?logo=apache
