@@ -10,9 +10,11 @@ using namespace fizzy;
 
 TEST(instantiate, imported_functions)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
-    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {FuncIdx{0}}});
+    /* wat2wasm
+      (func (import "mod" "foo") (param i32) (result i32))
+    */
+    const auto bin = from_hex("0061736d0100000001060160017f017f020b01036d6f6403666f6f0000");
+    const auto module = parse(bin);
 
     auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result { return {true, {}}; };
     auto instance = instantiate(module, {{host_foo, module.typesec[0]}});
@@ -27,11 +29,13 @@ TEST(instantiate, imported_functions)
 
 TEST(instantiate, imported_functions_multiple)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
-    module.typesec.emplace_back(FuncType{{}, {}});
-    module.importsec.emplace_back(Import{"mod", "foo1", ExternalKind::Function, {FuncIdx{0}}});
-    module.importsec.emplace_back(Import{"mod", "foo2", ExternalKind::Function, {FuncIdx{1}}});
+    /* wat2wasm
+      (func (import "mod" "foo1") (param i32) (result i32))
+      (func (import "mod" "foo2"))
+    */
+    const auto bin = from_hex(
+        "0061736d0100000001090260017f017f600000021702036d6f6404666f6f310000036d6f6404666f6f320001");
+    const auto module = parse(bin);
 
     auto host_foo1 = [](Instance&, std::vector<uint64_t>) -> execution_result {
         return {true, {0}};
@@ -55,9 +59,11 @@ TEST(instantiate, imported_functions_multiple)
 
 TEST(instantiate, imported_functions_not_enough)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
-    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {FuncIdx{0}}});
+    /* wat2wasm
+      (func (import "mod" "foo") (param i32) (result i32))
+    */
+    const auto bin = from_hex("0061736d0100000001060160017f017f020b01036d6f6403666f6f0000");
+    const auto module = parse(bin);
 
     EXPECT_THROW_MESSAGE(instantiate(module, {}), instantiate_error,
         "Module requires 1 imported functions, 0 provided");
@@ -65,22 +71,26 @@ TEST(instantiate, imported_functions_not_enough)
 
 TEST(instantiate, imported_function_wrong_type)
 {
-    Module module;
-    module.typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
-    module.importsec.emplace_back(Import{"mod", "foo", ExternalKind::Function, {FuncIdx{0}}});
+    /* wat2wasm
+      (func (import "mod" "foo") (param i32) (result i32))
+    */
+    const auto bin = from_hex("0061736d0100000001060160017f017f020b01036d6f6403666f6f0000");
+    const auto module = parse(bin);
 
     auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result { return {true, {}}; };
     const auto host_foo_type = FuncType{{}, {}};
 
-    ASSERT_THROW(instantiate(module, {{host_foo, host_foo_type}}), instantiate_error);
+    EXPECT_THROW_MESSAGE(instantiate(module, {{host_foo, host_foo_type}}), instantiate_error,
+        "Function 0 type doesn't match module's imported function type");
 }
 
 TEST(instantiate, imported_table)
 {
-    Module module;
-    Import imp{"mod", "t", ExternalKind::Table, {}};
-    imp.desc.table = Table{{10, 30}};
-    module.importsec.emplace_back(imp);
+    /* wat2wasm
+      (table (import "m" "t") 10 30 funcref)
+    */
+    const auto bin = from_hex("0061736d01000000020a01016d01740170010a1e");
+    const auto module = parse(bin);
 
     table_elements table(10);
     auto instance = instantiate(module, {}, {{&table, {10, 30}}});
@@ -92,10 +102,11 @@ TEST(instantiate, imported_table)
 
 TEST(instantiate, imported_table_stricter_limits)
 {
-    Module module;
-    Import imp{"mod", "t", ExternalKind::Table, {}};
-    imp.desc.table = Table{{10, 30}};
-    module.importsec.emplace_back(imp);
+    /* wat2wasm
+      (table (import "m" "t") 10 30 funcref)
+    */
+    const auto bin = from_hex("0061736d01000000020a01016d01740170010a1e");
+    const auto module = parse(bin);
 
     table_elements table(20);
     auto instance = instantiate(module, {}, {{&table, {20, 20}}});
@@ -107,10 +118,11 @@ TEST(instantiate, imported_table_stricter_limits)
 
 TEST(instantiate, imported_table_invalid)
 {
-    Module module;
-    Import imp{"mod", "t", ExternalKind::Table, {}};
-    imp.desc.table = Table{{10, 30}};
-    module.importsec.emplace_back(imp);
+    /* wat2wasm
+      (table (import "m" "t") 10 30 funcref)
+    */
+    const auto bin = from_hex("0061736d01000000020a01016d01740170010a1e");
+    const auto module = parse(bin);
 
     table_elements table(10);
 
@@ -119,7 +131,11 @@ TEST(instantiate, imported_table_invalid)
         instantiate_error, "Only 1 imported table is allowed.");
 
     // Providing table when none expected
-    Module module_no_imported_table;
+    /* wat2wasm
+      (module)
+    */
+    const auto bin_no_imported_table = from_hex("0061736d01000000");
+    const auto module_no_imported_table = parse(bin_no_imported_table);
     EXPECT_THROW_MESSAGE(instantiate(module_no_imported_table, {}, {{&table, {10, 30}}}),
         instantiate_error, "Trying to provide imported table to a module that doesn't define one.");
 
@@ -156,10 +172,11 @@ TEST(instantiate, imported_table_invalid)
 
 TEST(instantiate, imported_memory)
 {
-    Module module;
-    Import imp{"mod", "m", ExternalKind::Memory, {}};
-    imp.desc.memory = Memory{{1, 3}};
-    module.importsec.emplace_back(imp);
+    /* wat2wasm
+      (memory (import "mod" "m") 1 3)
+    */
+    const auto bin = from_hex("0061736d01000000020b01036d6f64016d02010103");
+    const auto module = parse(bin);
 
     bytes memory(PageSize, 0);
     auto instance = instantiate(module, {}, {}, {{&memory, {1, 3}}});
@@ -172,10 +189,11 @@ TEST(instantiate, imported_memory)
 
 TEST(instantiate, imported_memory_unlimited)
 {
-    Module module;
-    Import imp{"mod", "m", ExternalKind::Memory, {}};
-    imp.desc.memory = Memory{{1, std::nullopt}};
-    module.importsec.emplace_back(imp);
+    /* wat2wasm
+      (memory (import "mod" "m") 1)
+    */
+    const auto bin = from_hex("0061736d01000000020a01036d6f64016d020001");
+    const auto module = parse(bin);
 
     bytes memory(PageSize, 0);
     auto instance = instantiate(module, {}, {}, {{&memory, {1, std::nullopt}}});
@@ -188,10 +206,11 @@ TEST(instantiate, imported_memory_unlimited)
 
 TEST(instantiate, imported_memory_stricter_limits)
 {
-    Module module;
-    Import imp{"mod", "m", ExternalKind::Memory, {}};
-    imp.desc.memory = Memory{{1, 3}};
-    module.importsec.emplace_back(imp);
+    /* wat2wasm
+      (memory (import "mod" "m") 1 3)
+    */
+    const auto bin = from_hex("0061736d01000000020b01036d6f64016d02010103");
+    const auto module = parse(bin);
 
     bytes memory(PageSize * 2, 0);
     auto instance = instantiate(module, {}, {}, {{&memory, {2, 2}}});
@@ -204,10 +223,11 @@ TEST(instantiate, imported_memory_stricter_limits)
 
 TEST(instantiate, imported_memory_invalid)
 {
-    Module module;
-    Import imp{"mod", "m", ExternalKind::Memory, {}};
-    imp.desc.memory = Memory{{1, 3}};
-    module.importsec.emplace_back(imp);
+    /* wat2wasm
+      (memory (import "mod" "m") 1 3)
+    */
+    const auto bin = from_hex("0061736d01000000020b01036d6f64016d02010103");
+    const auto module = parse(bin);
 
     bytes memory(PageSize, 0);
 
@@ -216,7 +236,11 @@ TEST(instantiate, imported_memory_invalid)
         instantiate_error, "Only 1 imported memory is allowed.");
 
     // Providing memory when none expected
-    Module module_no_imported_memory;
+    /* wat2wasm
+      (module)
+    */
+    const auto bin_no_imported_memory = from_hex("0061736d01000000");
+    const auto module_no_imported_memory = parse(bin_no_imported_memory);
     EXPECT_THROW_MESSAGE(instantiate(module_no_imported_memory, {}, {}, {{&memory, {1, 3}}}),
         instantiate_error,
         "Trying to provide imported memory to a module that doesn't define one.");
@@ -252,10 +276,11 @@ TEST(instantiate, imported_memory_invalid)
         "Provided imported memory doesn't fit provided limits");
 
     // Provided max exceeds the hard limit
-    Module module_without_max;
-    Import imp_without_max{"mod", "m", ExternalKind::Memory, {}};
-    imp_without_max.desc.memory = Memory{{1, std::nullopt}};
-    module_without_max.importsec.emplace_back(imp_without_max);
+    /* wat2wasm
+      (memory (import "mod" "m") 1)
+    */
+    const auto bin_without_max = from_hex("0061736d01000000020a01036d6f64016d020001");
+    const auto module_without_max = parse(bin_without_max);
     EXPECT_THROW_MESSAGE(
         instantiate(module_without_max, {}, {}, {{&memory, {1, MemoryPagesLimit + 1}}}),
         instantiate_error,
@@ -264,8 +289,11 @@ TEST(instantiate, imported_memory_invalid)
 
 TEST(instantiate, imported_globals)
 {
-    Module module;
-    module.importsec.emplace_back(Import{"mod", "g", ExternalKind::Global, {true}});
+    /* wat2wasm
+      (global (import "mod" "g") (mut i32))
+    */
+    const auto bin = from_hex("0061736d01000000020a01036d6f640167037f01");
+    const auto module = parse(bin);
 
     uint64_t global_value = 42;
     ExternalGlobal g{&global_value, true};
@@ -279,9 +307,12 @@ TEST(instantiate, imported_globals)
 
 TEST(instantiate, imported_globals_multiple)
 {
-    Module module;
-    module.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {true}});
-    module.importsec.emplace_back(Import{"mod", "g2", ExternalKind::Global, {false}});
+    /* wat2wasm
+      (global (import "mod" "g1") (mut i32))
+      (global (import "mod" "g2") i32)
+    */
+    const auto bin = from_hex("0061736d01000000021502036d6f64026731037f01036d6f64026732037f00");
+    const auto module = parse(bin);
 
     uint64_t global_value1 = 42;
     ExternalGlobal g1{&global_value1, true};
@@ -299,9 +330,12 @@ TEST(instantiate, imported_globals_multiple)
 
 TEST(instantiate, imported_globals_mismatched_count)
 {
-    Module module;
-    module.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {true}});
-    module.importsec.emplace_back(Import{"mod", "g2", ExternalKind::Global, {false}});
+    /* wat2wasm
+      (global (import "mod" "g1") (mut i32))
+      (global (import "mod" "g2") i32)
+    */
+    const auto bin = from_hex("0061736d01000000021502036d6f64026731037f01036d6f64026732037f00");
+    const auto module = parse(bin);
 
     uint64_t global_value = 42;
     ExternalGlobal g{&global_value, true};
@@ -311,9 +345,12 @@ TEST(instantiate, imported_globals_mismatched_count)
 
 TEST(instantiate, imported_globals_mismatched_mutability)
 {
-    Module module;
-    module.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {true}});
-    module.importsec.emplace_back(Import{"mod", "g2", ExternalKind::Global, {false}});
+    /* wat2wasm
+      (global (import "mod" "g1") (mut i32))
+      (global (import "mod" "g2") i32)
+    */
+    const auto bin = from_hex("0061736d01000000021502036d6f64026731037f01036d6f64026732037f00");
+    const auto module = parse(bin);
 
     uint64_t global_value1 = 42;
     ExternalGlobal g1{&global_value1, false};
@@ -325,9 +362,12 @@ TEST(instantiate, imported_globals_mismatched_mutability)
 
 TEST(instantiate, imported_globals_nullptr)
 {
-    Module module;
-    module.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {false}});
-    module.importsec.emplace_back(Import{"mod", "g2", ExternalKind::Global, {false}});
+    /* wat2wasm
+      (global (import "mod" "g1") i32)
+      (global (import "mod" "g2") i32)
+    */
+    const auto bin = from_hex("0061736d01000000021502036d6f64026731037f00036d6f64026732037f00");
+    const auto module = parse(bin);
 
     ExternalGlobal g{nullptr, false};
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {g, g}), instantiate_error,
@@ -423,12 +463,17 @@ TEST(instantiate, element_section_offset_from_global)
 
 TEST(instantiate, element_section_offset_from_imported_global)
 {
-    Module module;
-    module.tablesec.emplace_back(Table{{4, std::nullopt}});
-    module.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {false}});
-    // Table contents: 0, 0xaa, 0xff, 0, ...
-    module.elementsec.emplace_back(
-        Element{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
+    /* wat2wasm
+      (global (import "mod" "g") i32)
+      (table 4 funcref)
+      (elem (global.get 0) 0 1)
+      (func (result i32) (i32.const 1))
+      (func (result i32) (i32.const 2))
+    */
+    const auto bin = from_hex(
+        "0061736d010000000105016000017f020a01036d6f640167037f0003030200000404017000040908010023000b"
+        "0200010a0b02040041010b040041020b");
+    const auto module = parse(bin);
 
     uint64_t global_value = 1;
     ExternalGlobal g{&global_value, false};
@@ -437,8 +482,8 @@ TEST(instantiate, element_section_offset_from_imported_global)
 
     ASSERT_EQ(instance->table->size(), 4);
     EXPECT_FALSE((*instance->table)[0].has_value());
-    EXPECT_EQ((*instance->table)[1], 0xaa);
-    EXPECT_EQ((*instance->table)[2], 0xff);
+    EXPECT_EQ((*instance->table)[1], 0);
+    EXPECT_EQ((*instance->table)[2], 1);
     EXPECT_FALSE((*instance->table)[3].has_value());
 }
 
@@ -470,16 +515,19 @@ TEST(instantiate, element_section_offset_too_large)
 
 TEST(instantiate, element_section_fills_imported_table)
 {
-    Module module;
-    Import imp{"mod", "t", ExternalKind::Table, {}};
-    imp.desc.table = Table{{4, std::nullopt}};
-    module.importsec.emplace_back(imp);
-    // Table contents: 0, 0xaa, 0xff, 0, ...
-    module.elementsec.emplace_back(
-        Element{{ConstantExpression::Kind::Constant, {1}}, {0xaa, 0xff}});
-    // Table contents: 0, 0xaa, 0x55, 0x55, 0, ...
-    module.elementsec.emplace_back(
-        Element{{ConstantExpression::Kind::Constant, {2}}, {0x55, 0x66}});
+    /* wat2wasm
+      (table (import "mod" "t") 4 funcref)
+      (elem (i32.const 1) 0 1) ;; Table contents: uninit, 0, 1, uninit
+      (elem (i32.const 2) 2 3) ;; Table contents: uninit, 0, 2, 3
+      (func (result i32) (i32.const 1))
+      (func (result i32) (i32.const 2))
+      (func (result i32) (i32.const 3))
+      (func (result i32) (i32.const 4))
+    */
+    const auto bin = from_hex(
+        "0061736d010000000105016000017f020b01036d6f6401740170000403050400000000090f020041010b020001"
+        "0041020b0202030a1504040041010b040041020b040041030b040041040b");
+    const auto module = parse(bin);
 
     table_elements table(4);
     table[0] = 0xbb;
@@ -487,9 +535,9 @@ TEST(instantiate, element_section_fills_imported_table)
 
     ASSERT_EQ(instance->table->size(), 4);
     EXPECT_EQ((*instance->table)[0], 0xbb);
-    EXPECT_EQ((*instance->table)[1], 0xaa);
-    EXPECT_EQ((*instance->table)[2], 0x55);
-    EXPECT_EQ((*instance->table)[3], 0x66);
+    EXPECT_EQ((*instance->table)[1], 0);
+    EXPECT_EQ((*instance->table)[2], 2);
+    EXPECT_EQ((*instance->table)[3], 3);
 }
 
 TEST(instantiate, element_section_out_of_bounds_doesnt_change_imported_table)
@@ -548,11 +596,14 @@ TEST(instantiate, data_section_offset_from_global)
 
 TEST(instantiate, data_section_offset_from_imported_global)
 {
-    Module module;
-    module.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {false}});
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    // Memory contents: 0, 0xaa, 0xff, 0, ...
-    module.datasec.emplace_back(Data{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
+    /* wat2wasm
+      (global (import "mod" "g") i32)
+      (memory 1 1)
+      (data (global.get 0) "\aa\ff")
+    */
+    const auto bin =
+        from_hex("0061736d01000000020a01036d6f640167037f000504010101010b08010023000b02aaff");
+    const auto module = parse(bin);
 
     uint64_t global_value = 42;
     ExternalGlobal g{&global_value, false};
@@ -587,14 +638,14 @@ TEST(instantiate, data_section_offset_too_large)
 
 TEST(instantiate, data_section_fills_imported_memory)
 {
-    Module module;
-    Import imp{"mod", "m", ExternalKind::Memory, {}};
-    imp.desc.memory = Memory{{1, 1}};
-    module.importsec.emplace_back(imp);
-    // Memory contents: 0, 0xaa, 0xff, 0, ...
-    module.datasec.emplace_back(Data{{ConstantExpression::Kind::Constant, {1}}, {0xaa, 0xff}});
-    // Memory contents: 0, 0xaa, 0x55, 0x55, 0, ...
-    module.datasec.emplace_back(Data{{ConstantExpression::Kind::Constant, {2}}, {0x55, 0x55}});
+    /* wat2wasm
+      (memory (import "mod" "m") 1 1)
+      (data (i32.const 1) "\aa\ff") ;; Memory contents: 0, 0xaa, 0xff, 0, ...
+      (data (i32.const 2) "\55\55") ;; Memory contents: 0, 0xaa, 0x55, 0x55, 0, ...
+    */
+    const auto bin =
+        from_hex("0061736d01000000020b01036d6f64016d020101010b0f020041010b02aaff0041020b025555");
+    const auto module = parse(bin);
 
     bytes memory(PageSize, 0);
     auto instance = instantiate(module, {}, {}, {{&memory, {1, 1}}});
@@ -700,10 +751,14 @@ TEST(instantiate, globals_multiple)
 
 TEST(instantiate, globals_with_imported)
 {
-    Module module;
-    module.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {true}});
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
-    module.globalsec.emplace_back(Global{false, {ConstantExpression::Kind::Constant, {43}}});
+    /* wat2wasm
+      (global (import "mod" "g1") (mut i32))
+      (global (mut i32) (i32.const 42))
+      (global i32 (i32.const 43))
+    */
+    const auto bin =
+        from_hex("0061736d01000000020b01036d6f64026731037f01060b027f01412a0b7f00412b0b");
+    const auto module = parse(bin);
 
     uint64_t global_value = 41;
     ExternalGlobal g{&global_value, true};
@@ -720,9 +775,12 @@ TEST(instantiate, globals_with_imported)
 
 TEST(instantiate, globals_initialized_from_imported)
 {
-    Module module;
-    module.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {false}});
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::GlobalGet, {0}}});
+    /* wat2wasm
+      (global (import "mod" "g1") i32)
+      (global (mut i32) (global.get 0))
+    */
+    const auto bin = from_hex("0061736d01000000020b01036d6f64026731037f000606017f0123000b");
+    const auto module = parse(bin);
 
     uint64_t global_value = 42;
     ExternalGlobal g{&global_value, false};
@@ -733,10 +791,13 @@ TEST(instantiate, globals_initialized_from_imported)
     EXPECT_EQ(instance->globals[0], 42);
 
     // initializing from mutable global is not allowed
-    Module module_invalid1;
-    module_invalid1.importsec.emplace_back(Import{"mod", "g1", ExternalKind::Global, {true}});
-    module_invalid1.globalsec.emplace_back(
-        Global{true, {ConstantExpression::Kind::GlobalGet, {0}}});
+    /* wat2wasm --no-check
+      (global (import "mod" "g1") (mut i32))
+      (global (mut i32) (global.get 0))
+    */
+    const auto bin_invalid1 =
+        from_hex("0061736d01000000020b01036d6f64026731037f010606017f0123000b");
+    const auto module_invalid1 = parse(bin_invalid1);
 
     ExternalGlobal g_mutable{&global_value, true};
 
@@ -744,11 +805,12 @@ TEST(instantiate, globals_initialized_from_imported)
         "Constant expression can use global_get only for const globals.");
 
     // initializing from non-imported global is not allowed
-    Module module_invalid2;
-    module_invalid2.globalsec.emplace_back(
-        Global{true, {ConstantExpression::Kind::Constant, {42}}});
-    module_invalid2.globalsec.emplace_back(
-        Global{true, {ConstantExpression::Kind::GlobalGet, {0}}});
+    /* wat2wasm --no-check
+      (global i32 (i32.const 42))
+      (global (mut i32) (global.get 0))
+    */
+    const auto bin_invalid2 = from_hex("0061736d01000000060b027f00412a0b7f0123000b");
+    const auto module_invalid2 = parse(bin_invalid2);
 
     EXPECT_THROW_MESSAGE(instantiate(module_invalid2, {}, {}), instantiate_error,
         "Global can be initialized by another const global only if it's imported.");
