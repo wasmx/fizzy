@@ -343,6 +343,10 @@ jobs:
           expected_passed: 4469
           expected_failed: 21
           expected_skipped: 7323
+      - spectest:
+          expected_passed: 4724
+          expected_failed: 708
+          expected_skipped: 6381
 
 workflows:
   version: 2
