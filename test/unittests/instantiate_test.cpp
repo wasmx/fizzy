@@ -152,13 +152,6 @@ TEST(instantiate, imported_table_invalid)
     table_elements table_big(40, 0);
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table_big, {10, 30}}}), instantiate_error,
         "Provided imported table doesn't fit provided limits");
-
-    // Imported table and regular table
-    Module module_with_two_tables;
-    module_with_two_tables.tablesec.emplace_back(Table{{10, 10}});
-    module_with_two_tables.importsec.emplace_back(imp);
-    EXPECT_THROW_MESSAGE(instantiate(module_with_two_tables, {}, {{&table, {10, 30}}}),
-        instantiate_error, "Cannot support more than 1 table section.");
 }
 
 TEST(instantiate, imported_memory)
@@ -267,13 +260,6 @@ TEST(instantiate, imported_memory_invalid)
         instantiate(module_without_max, {}, {}, {{&memory, {1, MemoryPagesLimit + 1}}}),
         instantiate_error,
         "Imported memory limits cannot exceed hard memory limit of 268435456 bytes.");
-
-    // Imported memory and regular memory
-    Module module_with_two_memories;
-    module_with_two_memories.memorysec.emplace_back(Memory{{1, 1}});
-    module_with_two_memories.importsec.emplace_back(imp);
-    EXPECT_THROW_MESSAGE(instantiate(module_with_two_memories, {}, {}, {{&memory, {1, 3}}}),
-        instantiate_error, "Cannot support more than 1 memory section.");
 }
 
 TEST(instantiate, imported_globals)
@@ -395,16 +381,6 @@ TEST(instantiate, memory_single_large_maximum)
 
     EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
         "Cannot exceed hard memory limit of 268435456 bytes.");
-}
-
-TEST(instantiate, memory_multiple)
-{
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.memorysec.emplace_back(Memory{{1, 1}});
-
-    EXPECT_THROW_MESSAGE(
-        instantiate(module), instantiate_error, "Cannot support more than 1 memory section.");
 }
 
 TEST(instantiate, element_section)
