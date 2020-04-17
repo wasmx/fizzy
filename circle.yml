@@ -95,21 +95,34 @@ commands:
 
   spectest:
     description: "Run spectest"
+    parameters:
+      skip_validation:
+        type: boolean
+        default: false
+      expected_passed:
+        type: integer
+      expected_failed:
+        type: integer
+        default: 0
+      expected_skipped:
+        type: integer
+        default: 0
+
     steps:
       - run:
           name: "Download spectest files"
           working_directory: ~/build
           command: |
-            git clone https://github.com/wasmx/wasm-spec --branch vanilla-json --depth 1
+            if [ ! -d wasm-spec ]; then
+              git clone https://github.com/wasmx/wasm-spec --branch vanilla-json --depth 1
+            fi
       - run:
-          name: "Run spectest"
+          name: "Run spectest<<#parameters.skip_validation>> (skip validation)<</parameters.skip_validation>>"
           working_directory: ~/build
           command: |
             set +e
-            expected="  PASSED 4469, FAILED 21, SKIPPED 7323."
-            result=$(bin/fizzy-spectests --skip-validation wasm-spec/test/core/json | tail -1)
-            echo "Expected: $expected"
-            echo "Result: $result"
+            expected="  PASSED <<parameters.expected_passed>>, FAILED <<parameters.expected_failed>>, SKIPPED <<parameters.expected_skipped>>."
+            result=$(bin/fizzy-spectests <<#parameters.skip_validation>>--skip-validation<</parameters.skip_validation>> wasm-spec/test/core/json | tail -1)
             if [ "$expected" != "$result" ]; then exit 1; fi
 
 jobs:
@@ -234,7 +247,10 @@ jobs:
       - test
       - benchmark:
           min_time: "0.01"
-      - spectest
+      - spectest:
+          expected_passed: 4724
+          expected_failed: 708
+          expected_skipped: 6381
 
   benchmark:
     machine:
@@ -322,7 +338,15 @@ jobs:
     steps:
       - attach_workspace:
           at: ~/build
-      - spectest
+      - spectest:
+          skip_validation: true
+          expected_passed: 4469
+          expected_failed: 21
+          expected_skipped: 7323
+      - spectest:
+          expected_passed: 4724
+          expected_failed: 708
+          expected_skipped: 6381
 
 workflows:
   version: 2
