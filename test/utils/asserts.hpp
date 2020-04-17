@@ -1,6 +1,8 @@
 #pragma once
 
+#include "execute.hpp"
 #include <gmock/gmock.h>
+#include <iosfwd>
 
 MATCHER(Traps, "")
 {
@@ -41,3 +43,8 @@ MATCHER_P(Result, value, "")
         ADD_FAILURE() << "Unexpected exception type thrown.";                                \
     }                                                                                        \
     (void)0
+
+namespace fizzy
+{
+std::ostream& operator<<(std::ostream& os, execution_result);
+}

@@ -3,6 +3,11 @@ if(HUNTER_ENABLED)
 endif()
 find_package(benchmark REQUIRED)
 
+if(HUNTER_ENABLED)
+    hunter_add_package(GTest)
+endif()
+find_package(GTest REQUIRED)
+
 set(fizzy_include_dir ${PROJECT_SOURCE_DIR}/lib/fizzy)
 
 add_subdirectory(utils)
