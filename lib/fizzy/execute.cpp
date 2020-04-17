@@ -200,13 +200,9 @@ table_ptr allocate_table(
     static const auto table_delete = [](table_elements* t) noexcept { delete t; };
     static const auto null_delete = [](table_elements*) noexcept {};
 
-    if (module_tables.size() + imported_tables.size() > 1)
-    {
-        // FIXME: turn this into an assert if instantiate is not exposed externally and it only
-        // takes validated modules
-        throw instantiate_error("Cannot support more than 1 table section.");
-    }
-    else if (module_tables.size() == 1)
+    assert(module_tables.size() + imported_tables.size() <= 1);
+
+    if (module_tables.size() == 1)
         return {new table_elements(module_tables[0].limits.min), table_delete};
     else if (imported_tables.size() == 1)
         return {imported_tables[0].table, null_delete};
@@ -220,13 +216,9 @@ std::tuple<bytes_ptr, size_t> allocate_memory(const std::vector<Memory>& module_
     static const auto bytes_delete = [](bytes* b) noexcept { delete b; };
     static const auto null_delete = [](bytes*) noexcept {};
 
-    if (module_memories.size() + imported_memories.size() > 1)
-    {
-        // FIXME: turn this into an assert if instantiate is not exposed externally and it only
-        // takes validated modules
-        throw instantiate_error("Cannot support more than 1 memory section.");
-    }
-    else if (module_memories.size() == 1)
+    assert(module_memories.size() + imported_memories.size() <= 1);
+
+    if (module_memories.size() == 1)
     {
         const size_t memory_min = module_memories[0].limits.min;
         const size_t memory_max =
