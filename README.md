@@ -26,9 +26,41 @@ IV) First class support for determistic applications (*blockchain*)
 - Support the bigint API
 - Support runtime metering in the interpreter
 
-## Testing
+## Building and using
 
-To read about testing see [fizzy-spectests](./test/spectests/README.md).
+Fizzy uses CMake as a build system:
+```sh
+$ mkdir build && cd build
+$ cmake ..
+$ cmake --build .
+```
+
+This will build Fizzy as a library and since there is no public API
+(the so called *embedder API* in WebAssembly) yet, this is not very useful.
+
+Building with the `FIZZY_TESTING` option will output a few useful utilities:
+
+```sh
+$ mkdir build && cd build
+$ cmake -DFIZZY_TESTING=ON ..
+$ cmake --build .
+```
+
+These utilities are as follows:
+
+### fizzy-bench
+
+This can be used to run benchmarks available in the `test/benchmarks` directory.
+Read [this guide](./test/benchmarks/README.md) for a short introduction.
+
+### fizzy-spectests
+
+Fizzy is capable of executing the official WebAssembly tests.
+Follow [this guide](./test/spectests/README.md) for using the tool.
+
+### fizzy-unittests
+
+This is the unit tests suite of Fizzy.
 
 ## License
 
