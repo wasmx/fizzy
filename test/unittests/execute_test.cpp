@@ -13,9 +13,7 @@ TEST(execute, end)
     (func)
     */
     const auto wasm = from_hex("0061736d01000000010401600000030201000a040102000b");
-    const auto [trap, ret] = execute(parse(wasm), 0, {});
-    ASSERT_FALSE(trap);
-    EXPECT_EQ(ret.size(), 0);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result());
 }
 
 TEST(execute, drop)
@@ -28,9 +26,7 @@ TEST(execute, drop)
     )
     */
     const auto wasm = from_hex("0061736d01000000010401600000030201000a09010701017f20001a0b");
-    const auto [trap, ret] = execute(parse(wasm), 0, {});
-    ASSERT_FALSE(trap);
-    EXPECT_EQ(ret.size(), 0);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result());
 }
 
 TEST(execute, select)
@@ -47,9 +43,9 @@ TEST(execute, select)
         from_hex("0061736d0100000001080160037e7e7f017e030201000a0b0109002000200120021b0b");
 
     const auto module = parse(wasm);
-    EXPECT_RESULT(execute(module, 0, {3, 6, 0}), 6);
-    EXPECT_RESULT(execute(module, 0, {3, 6, 1}), 3);
-    EXPECT_RESULT(execute(module, 0, {3, 6, 42}), 3);
+    EXPECT_THAT(execute(module, 0, {3, 6, 0}), Result(6));
+    EXPECT_THAT(execute(module, 0, {3, 6, 1}), Result(3));
+    EXPECT_THAT(execute(module, 0, {3, 6, 42}), Result(3));
 }
 
 TEST(execute, local_get)
@@ -60,7 +56,7 @@ TEST(execute, local_get)
     )
     */
     const auto wasm = from_hex("0061736d0100000001060160017e017e030201000a0601040020000b");
-    EXPECT_RESULT(execute(parse(wasm), 0, {42}), 42);
+    EXPECT_THAT(execute(parse(wasm), 0, {42}), Result(42));
 }
 
 TEST(execute, local_set)
@@ -75,7 +71,7 @@ TEST(execute, local_set)
     */
     const auto wasm =
         from_hex("0061736d0100000001060160017e017e030201000a0c010a01017e2000210120010b");
-    EXPECT_RESULT(execute(parse(wasm), 0, {42}), 42);
+    EXPECT_THAT(execute(parse(wasm), 0, {42}), Result(42));
 }
 
 TEST(execute, local_tee)
@@ -88,7 +84,7 @@ TEST(execute, local_tee)
     )
     */
     const auto wasm = from_hex("0061736d0100000001060160017e017e030201000a0a010801017e200022010b");
-    EXPECT_RESULT(execute(parse(wasm), 0, {42}), 42);
+    EXPECT_THAT(execute(parse(wasm), 0, {42}), Result(42));
 }
 
 TEST(execute, global_get)
@@ -101,7 +97,7 @@ TEST(execute, global_get)
     */
     const auto wasm =
         from_hex("0061736d010000000105016000017f030201000606017f00412a0b0a0601040023000b");
-    EXPECT_RESULT(execute(parse(wasm), 0, {}), 42);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result(42));
 }
 
 TEST(execute, global_get_two_globals)
@@ -121,8 +117,8 @@ TEST(execute, global_get_two_globals)
         "0b");
 
     auto instance = instantiate(parse(wasm));
-    EXPECT_RESULT(execute(*instance, 0, {}), 42);
-    EXPECT_RESULT(execute(*instance, 1, {}), 43);
+    EXPECT_THAT(execute(*instance, 0, {}), Result(42));
+    EXPECT_THAT(execute(*instance, 1, {}), Result(43));
 }
 
 TEST(execute, global_get_imported)
@@ -140,13 +136,13 @@ TEST(execute, global_get_imported)
     uint64_t global_value = 42;
     auto instance = instantiate(module, {}, {}, {}, {ExternalGlobal{&global_value, false}});
 
-    EXPECT_RESULT(execute(*instance, 0, {}), 42);
+    EXPECT_THAT(execute(*instance, 0, {}), Result(42));
 
     global_value = 0;
-    EXPECT_RESULT(execute(*instance, 0, {}), 0);
+    EXPECT_THAT(execute(*instance, 0, {}), Result(0));
 
     global_value = 43;
-    EXPECT_RESULT(execute(*instance, 0, {}), 43);
+    EXPECT_THAT(execute(*instance, 0, {}), Result(43));
 }
 
 TEST(execute, global_get_imported_and_internal)
@@ -173,10 +169,10 @@ TEST(execute, global_get_imported_and_internal)
     auto instance =
         instantiate(module, {}, {}, {}, {ExternalGlobal{&g1, false}, ExternalGlobal{&g2, false}});
 
-    EXPECT_RESULT(execute(*instance, 0, {}), 40);
-    EXPECT_RESULT(execute(*instance, 1, {}), 41);
-    EXPECT_RESULT(execute(*instance, 2, {}), 42);
-    EXPECT_RESULT(execute(*instance, 3, {}), 43);
+    EXPECT_THAT(execute(*instance, 0, {}), Result(40));
+    EXPECT_THAT(execute(*instance, 1, {}), Result(41));
+    EXPECT_THAT(execute(*instance, 2, {}), Result(42));
+    EXPECT_THAT(execute(*instance, 3, {}), Result(43));
 }
 
 TEST(execute, global_set)
@@ -234,8 +230,7 @@ TEST(execute, global_set_imported)
 
     uint64_t global_value = 41;
     auto instance = instantiate(parse(wasm), {}, {}, {}, {ExternalGlobal{&global_value, true}});
-    const auto [trap, _] = execute(*instance, 0, {});
-    ASSERT_FALSE(trap);
+    EXPECT_THAT(execute(*instance, 0, {}), Result());
     EXPECT_EQ(global_value, 42);
 }
 
@@ -254,9 +249,9 @@ TEST(execute, i32_load_imported_memory)
     bytes memory(PageSize, 0);
     auto instance = instantiate(parse(wasm), {}, {}, {{&memory, {1, 1}}});
     memory[1] = 42;
-    EXPECT_RESULT(execute(*instance, 0, {1}), 42);
+    EXPECT_THAT(execute(*instance, 0, {1}), Result(42));
 
-    ASSERT_TRUE(execute(*instance, 0, {65537}).trapped);
+    EXPECT_THAT(execute(*instance, 0, {65537}), Traps());
 }
 
 TEST(execute, i32_load_overflow)
@@ -335,9 +330,9 @@ TEST(execute, i32_load_all_variants)
         load_instr = std::get<0>(test_case);
         auto instance = instantiate(module);
         std::copy(std::begin(memory_fill), std::end(memory_fill), std::begin(*instance->memory));
-        EXPECT_RESULT(execute(*instance, 0, {1}), std::get<1>(test_case));
+        EXPECT_THAT(execute(*instance, 0, {1}), Result(std::get<1>(test_case)));
 
-        EXPECT_TRUE(execute(*instance, 0, {65537}).trapped);
+        EXPECT_THAT(execute(*instance, 0, {65537}), Traps());
     }
 }
 
@@ -375,9 +370,9 @@ TEST(execute, i64_load_all_variants)
         load_instr = std::get<0>(test_case);
         auto instance = instantiate(module);
         std::copy(std::begin(memory_fill), std::end(memory_fill), std::begin(*instance->memory));
-        EXPECT_RESULT(execute(*instance, 0, {1}), std::get<1>(test_case));
+        EXPECT_THAT(execute(*instance, 0, {1}), Result(std::get<1>(test_case)));
 
-        EXPECT_TRUE(execute(*instance, 0, {65537}).trapped);
+        EXPECT_THAT(execute(*instance, 0, {65537}), Traps());
     }
 }
 
@@ -541,7 +536,7 @@ TEST(execute, memory_size)
     const auto wasm =
         from_hex("0061736d010000000105016000017f030201000504010103040a060104003f000b");
 
-    EXPECT_RESULT(execute(parse(wasm), 0, {}), 3);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result(3));
 }
 
 TEST(execute, memory_grow)
@@ -558,18 +553,18 @@ TEST(execute, memory_grow)
 
     const auto module = parse(wasm);
 
-    EXPECT_RESULT(execute(module, 0, {0}), 1);
+    EXPECT_THAT(execute(module, 0, {0}), Result(1));
 
-    EXPECT_RESULT(execute(module, 0, {1}), 1);
+    EXPECT_THAT(execute(module, 0, {1}), Result(1));
 
     // 256MB memory.
-    EXPECT_RESULT(execute(module, 0, {4095}), 1);
+    EXPECT_THAT(execute(module, 0, {4095}), Result(1));
 
     // >256MB memory.
-    EXPECT_RESULT(execute(module, 0, {4096}), uint32_t(-1));
+    EXPECT_THAT(execute(module, 0, {4096}), Result(uint32_t(-1)));
 
     // Way too high (but still within bounds)
-    EXPECT_RESULT(execute(module, 0, {0xffffffe}), uint32_t(-1));
+    EXPECT_THAT(execute(module, 0, {0xffffffe}), Result(uint32_t(-1)));
 }
 
 TEST(execute, start_section)
@@ -594,7 +589,7 @@ TEST(execute, start_section)
     auto instance = instantiate(parse(wasm));
     ASSERT_EQ(instance->memory->substr(0, 4), "2a000000"_bytes);  // Start function sets this.
 
-    EXPECT_RESULT(execute(*instance, 0, {}), 42);
+    EXPECT_THAT(execute(*instance, 0, {}), Result(42));
     EXPECT_EQ(instance->memory->substr(0, 4), "2a000000"_bytes);
 }
 
@@ -612,7 +607,7 @@ TEST(execute, imported_function)
     };
 
     auto instance = instantiate(module, {{host_foo, module.typesec[0]}});
-    EXPECT_RESULT(execute(*instance, 0, {20, 22}), 42);
+    EXPECT_THAT(execute(*instance, 0, {20, 22}), Result(42));
 }
 
 TEST(execute, imported_two_functions)
@@ -636,8 +631,8 @@ TEST(execute, imported_two_functions)
 
     auto instance =
         instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[0]}});
-    EXPECT_RESULT(execute(*instance, 0, {20, 22}), 42);
-    EXPECT_RESULT(execute(*instance, 1, {20, 22}), 440);
+    EXPECT_THAT(execute(*instance, 0, {20, 22}), Result(42));
+    EXPECT_THAT(execute(*instance, 1, {20, 22}), Result(440));
 }
 
 TEST(execute, imported_functions_and_regular_one)
@@ -665,8 +660,8 @@ TEST(execute, imported_functions_and_regular_one)
     ASSERT_EQ(module.typesec.size(), 1);
     auto instance =
         instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[0]}});
-    EXPECT_RESULT(execute(*instance, 0, {20, 22}), 42);
-    EXPECT_RESULT(execute(*instance, 1, {20}), 400);
+    EXPECT_THAT(execute(*instance, 0, {20, 22}), Result(42));
+    EXPECT_THAT(execute(*instance, 1, {20}), Result(400));
 
     // check correct number of arguments is passed to host
     constexpr auto count_args = [](Instance&, std::vector<uint64_t> args) -> execution_result {
@@ -675,8 +670,8 @@ TEST(execute, imported_functions_and_regular_one)
 
     auto instance_counter =
         instantiate(module, {{count_args, module.typesec[0]}, {count_args, module.typesec[0]}});
-    EXPECT_RESULT(execute(*instance_counter, 0, {20, 22}), 2);
-    EXPECT_RESULT(execute(*instance_counter, 1, {20}), 1);
+    EXPECT_THAT(execute(*instance_counter, 0, {20, 22}), Result(2));
+    EXPECT_THAT(execute(*instance_counter, 1, {20}), Result(1));
 }
 
 TEST(execute, imported_two_functions_different_type)
@@ -706,9 +701,9 @@ TEST(execute, imported_two_functions_different_type)
     auto instance =
         instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[1]}});
 
-    EXPECT_RESULT(execute(*instance, 0, {20, 22}), 42);
-    EXPECT_RESULT(execute(*instance, 1, {0x3000'0000}), 0x900'0000'0000'0000);
-    EXPECT_RESULT(execute(*instance, 2, {20}), 0x2a002a);
+    EXPECT_THAT(execute(*instance, 0, {20, 22}), Result(42));
+    EXPECT_THAT(execute(*instance, 1, {0x3000'0000}), Result(0x900'0000'0000'0000));
+    EXPECT_THAT(execute(*instance, 2, {20}), Result(0x2a002a));
 }
 
 TEST(execute, imported_function_traps)
