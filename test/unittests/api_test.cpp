@@ -58,7 +58,7 @@ TEST(api, find_exported_function)
 
     auto opt_function = find_exported_function(*instance, "foo");
     ASSERT_TRUE(opt_function);
-    EXPECT_RESULT(opt_function->function(*instance, {}, 0), 42);
+    EXPECT_THAT(opt_function->function(*instance, {}, 0), Result(42));
     EXPECT_TRUE(opt_function->type.inputs.empty());
     ASSERT_EQ(opt_function->type.outputs.size(), 1);
     EXPECT_EQ(opt_function->type.outputs[0], ValType::i32);
@@ -85,7 +85,7 @@ TEST(api, find_exported_function)
 
     opt_function = find_exported_function(*instance_reexported_function, "foo");
     ASSERT_TRUE(opt_function);
-    EXPECT_RESULT(opt_function->function(*instance, {}, 0), 42);
+    EXPECT_THAT(opt_function->function(*instance, {}, 0), Result(42));
     EXPECT_TRUE(opt_function->type.inputs.empty());
     ASSERT_EQ(opt_function->type.outputs.size(), 1);
     EXPECT_EQ(opt_function->type.outputs[0], ValType::i32);
