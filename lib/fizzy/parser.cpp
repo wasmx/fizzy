@@ -3,6 +3,7 @@
 #include "types.hpp"
 #include "utf8.hpp"
 #include <algorithm>
+#include <cassert>
 
 namespace fizzy
 {
@@ -482,6 +483,30 @@ Module parse(bytes_view input)
     }
 
     // Validation checks
+
+    // Split imports by kind
+    for (const auto& import : module.importsec)
+    {
+        switch (import.kind)
+        {
+        case ExternalKind::Function:
+            module.imported_function_types.emplace_back(
+                module.typesec[import.desc.function_type_index]);
+            break;
+        case ExternalKind::Table:
+            module.imported_table_types.emplace_back(import.desc.table);
+            break;
+        case ExternalKind::Memory:
+            module.imported_memory_types.emplace_back(import.desc.memory);
+            break;
+        case ExternalKind::Global:
+            module.imported_globals_mutability.emplace_back(import.desc.global_mutable);
+            break;
+        default:
+            assert(false);
+        }
+    }
+
     if (module.tablesec.size() > 1)
         throw validation_error{"too many table sections (at most one is allowed)"};
 
