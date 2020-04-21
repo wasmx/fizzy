@@ -1,11 +1,6 @@
 
 include(GoogleTest)
 
-if(HUNTER_ENABLED)
-    hunter_add_package(GTest)
-endif()
-find_package(GTest REQUIRED)
-
 add_executable(fizzy-unittests)
 target_link_libraries(fizzy-unittests PRIVATE fizzy::fizzy fizzy::test-utils GTest::gtest_main GTest::gmock)
 
