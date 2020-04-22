@@ -64,7 +64,7 @@ TEST(execute_control, loop_void_empty)
     */
     const auto wasm = from_hex("0061736d01000000010401600000030201000a09010700034020000b0b");
     const auto result = execute(parse(wasm), 0, {1});
-    EXPECT_RESULT(result, 1);
+    EXPECT_THAT(result, Result(1));
 }
 
 TEST(execute_control, block_void_empty)
@@ -78,7 +78,7 @@ TEST(execute_control, block_void_empty)
     */
     const auto wasm = from_hex("0061736d01000000010401600000030201000a09010700024020000b0b");
     const auto result = execute(parse(wasm), 0, {100});
-    EXPECT_RESULT(result, 100);
+    EXPECT_THAT(result, Result(100));
 }
 
 TEST(execute_control, loop_void_br_if_16)
@@ -97,7 +97,7 @@ TEST(execute_control, loop_void_br_if_16)
     */
     const auto wasm =
         from_hex("0061736d0100000001050160017f00030201000a120110000340200041016b22000d0020000b0b");
-    EXPECT_RESULT(execute(parse(wasm), 0, {16}), 0);
+    EXPECT_THAT(execute(parse(wasm), 0, {16}), Result(0));
 }
 
 TEST(execute_control, loop_with_result)
@@ -110,7 +110,7 @@ TEST(execute_control, loop_with_result)
     )
     */
     const auto wasm = from_hex("0061736d010000000105016000017f030201000a09010700037f41010b0b");
-    EXPECT_RESULT(execute(parse(wasm), 0, {}), 1);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result(1));
 }
 
 TEST(execute_control, loop_with_result_br_if)
@@ -129,7 +129,7 @@ TEST(execute_control, loop_with_result_br_if)
     */
     const auto wasm = from_hex(
         "0061736d0100000001060160017f017f030201000a12011000037f417f200041016b22000d000b0b");
-    EXPECT_RESULT(execute(parse(wasm), 0, {2}), uint32_t(-1));
+    EXPECT_THAT(execute(parse(wasm), 0, {2}), Result(uint32_t(-1)));
 }
 
 TEST(execute_control, loop_with_result_br)
@@ -154,7 +154,7 @@ TEST(execute_control, loop_with_result_br)
     const auto wasm = from_hex(
         "0061736d0100000001060160017f017f03020100070801046d61696e00000a19011700027f037f41e707200041"
         "016b22000d011a0c000b0b0b");
-    EXPECT_RESULT(execute(parse(wasm), 0, {3}), 999);
+    EXPECT_THAT(execute(parse(wasm), 0, {3}), Result(999));
 }
 
 TEST(execute_control, loop_with_result_br_stack_cleanup)
@@ -178,7 +178,7 @@ TEST(execute_control, loop_with_result_br_stack_cleanup)
     const auto wasm = from_hex(
         "0061736d0100000001060160017f017f03020100070801046d61696e00000a1b011900027f037f41e707200041"
         "016b22000d01419a050c000b0b0b");
-    EXPECT_RESULT(execute(parse(wasm), 0, {3}), 999);
+    EXPECT_THAT(execute(parse(wasm), 0, {3}), Result(999));
 }
 
 TEST(execute_control, blocks_without_br)
@@ -265,7 +265,7 @@ TEST(execute_control, nested_blocks_0)
         "0061736d010000000105016000017f030201000a43014101017f02402000410172210002402000410272210002"
         "402000410472210041010c00200041087221000b200041107221000b200041207221000b200041c000720b");
 
-    EXPECT_RESULT(execute(parse(wasm), 0, {}), 0b1110111);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result(0b1110111));
 }
 
 TEST(execute_control, nested_blocks_1)
@@ -310,7 +310,7 @@ TEST(execute_control, nested_blocks_1)
         "0061736d010000000105016000017f030201000a43014101017f02402000410172210002402000410272210002"
         "402000410472210041010c01200041087221000b200041107221000b200041207221000b200041c000720b");
 
-    EXPECT_RESULT(execute(parse(wasm), 0, {}), 0b1100111);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result(0b1100111));
 }
 
 TEST(execute_control, nested_blocks_2)
@@ -355,7 +355,7 @@ TEST(execute_control, nested_blocks_2)
         "0061736d010000000105016000017f030201000a43014101017f02402000410172210002402000410272210002"
         "402000410472210041010c02200041087221000b200041107221000b200041207221000b200041c000720b");
 
-    EXPECT_RESULT(execute(parse(wasm), 0, {}), 0b1000111);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result(0b1000111));
 }
 
 TEST(execute_control, nested_blocks_3)
@@ -400,7 +400,7 @@ TEST(execute_control, nested_blocks_3)
         "0061736d010000000105016000017f030201000a43014101017f02402000410172210002402000410272210002"
         "402000410472210041010c03200041087221000b200041107221000b200041207221000b200041c000720b");
 
-    EXPECT_RESULT(execute(parse(wasm), 0, {}), 1);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result(1));
 }
 
 TEST(execute_control, nested_br_if)
@@ -754,7 +754,7 @@ TEST(execute_control, br_table_as_return)
     for (const auto param : {0u, 1u})
     {
         const auto result = execute(parse(wasm), 0, {param});
-        EXPECT_RESULT(result, 1000 + param);
+        EXPECT_THAT(result, Result(1000 + param));
     }
 }
 
