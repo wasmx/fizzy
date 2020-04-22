@@ -1,6 +1,7 @@
 #include "execute.hpp"
 #include "parser.hpp"
 #include <gtest/gtest.h>
+#include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
 
 using namespace fizzy;
@@ -26,11 +27,7 @@ TEST(end_to_end, milestone1)
         "0061736d0100000001070160027f7f017f030201000a13011101017f200020016a20026a220220006a0b");
     const auto module = parse(wasm);
 
-    const auto [trap, ret] = execute(module, 0, {20, 22});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 20 + 22 + 20);
+    EXPECT_THAT(execute(module, 0, {20, 22}), Result(20 + 22 + 20));
 }
 
 TEST(end_to_end, milestone2)
@@ -79,10 +76,7 @@ TEST(end_to_end, milestone2)
     memory[32] = 0xff;
     memory[63] = 0xc0;
     // TODO: use find_exported_function
-    const auto [trap, ret] = execute(*instance, 0, {64, 0, 32});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 0);
+    EXPECT_THAT(execute(*instance, 0, {64, 0, 32}), Result());
     EXPECT_EQ(hex(memory.substr(64, 64)),
         "ff00000000000000000000000000000000000000000000000000000000000040"
         "8000000000000000000000000000000000000000000000000000000000000060");
@@ -129,12 +123,7 @@ TEST(end_to_end, nested_loops_in_c)
     const auto func_idx = find_exported_function(module, "test");
     ASSERT_TRUE(func_idx);
 
-    // Ignore the results for now
-    const auto [trap, ret] = execute(module, *func_idx, {10, 2, 5});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 4);
+    EXPECT_THAT(execute(module, *func_idx, {10, 2, 5}), Result(4));
 }
 
 TEST(end_to_end, memset)
@@ -176,9 +165,6 @@ TEST(end_to_end, memset)
     ASSERT_TRUE(func_idx);
 
     auto instance = instantiate(module);
-    const auto [trap, ret] = execute(*instance, *func_idx, {0, 2});
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 0);
+    EXPECT_THAT(execute(*instance, *func_idx, {0, 2}), Result());
     EXPECT_EQ(hex(instance->memory->substr(0, 2 * sizeof(int))), "d2040000d2040000");
 }
