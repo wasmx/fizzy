@@ -489,6 +489,8 @@ Module parse(bytes_view input)
         switch (import.kind)
         {
         case ExternalKind::Function:
+            if (import.desc.function_type_index >= module.typesec.size())
+                throw validation_error{"invalid type index of an imported function"};
             module.imported_function_types.emplace_back(
                 module.typesec[import.desc.function_type_index]);
             break;
