@@ -79,20 +79,17 @@ TEST(execute_call, call_indirect)
     {
         constexpr uint64_t expected_results[]{3, 2, 1};
 
-        const auto [trap, ret] = execute(module, 5, {param});
-        ASSERT_FALSE(trap);
-        ASSERT_EQ(ret.size(), 1);
-        EXPECT_EQ(ret[0], expected_results[param]);
+        EXPECT_THAT(execute(module, 5, {param}), Result(expected_results[param]));
     }
 
     // immediate is incorrect type
-    EXPECT_TRUE(execute(module, 5, {3}).trapped);
+    EXPECT_THAT(execute(module, 5, {3}), Traps());
 
     // called function traps
-    EXPECT_TRUE(execute(module, 5, {4}).trapped);
+    EXPECT_THAT(execute(module, 5, {4}), Traps());
 
     // argument out of table bounds
-    EXPECT_TRUE(execute(module, 5, {5}).trapped);
+    EXPECT_THAT(execute(module, 5, {5}), Traps());
 }
 
 TEST(execute_call, call_indirect_with_argument)
@@ -123,7 +120,7 @@ TEST(execute_call, call_indirect_with_argument)
     EXPECT_THAT(execute(module, 3, {1}), Result(31 - 7));
 
     // immediate is incorrect type
-    EXPECT_TRUE(execute(module, 3, {2}).trapped);
+    EXPECT_THAT(execute(module, 3, {2}), Traps());
 }
 
 TEST(execute_call, call_indirect_imported_table)
@@ -198,8 +195,8 @@ TEST(execute_call, call_indirect_uninited_table)
     const Module module = parse(bin);
 
     // elements 3 and 4 are not initialized
-    EXPECT_TRUE(execute(module, 3, {3}).trapped);
-    EXPECT_TRUE(execute(module, 3, {4}).trapped);
+    EXPECT_THAT(execute(module, 3, {3}), Traps());
+    EXPECT_THAT(execute(module, 3, {4}), Traps());
 }
 
 TEST(execute_call, imported_function_call)
