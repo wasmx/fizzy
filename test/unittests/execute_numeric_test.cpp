@@ -35,7 +35,7 @@ TEST(execute_numeric, i32_const)
     */
     const auto wasm = from_hex("0061736d010000000105016000017f030201000a0901070041c28088020b");
 
-    EXPECT_RESULT(execute(parse(wasm), 0, {}), 0x420042);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result(0x420042));
 }
 
 TEST(execute_numeric, i64_const)
@@ -46,7 +46,7 @@ TEST(execute_numeric, i64_const)
     const auto wasm =
         from_hex("0061736d010000000105016000017e030201000a0e010c0042c280888280808080010b");
 
-    EXPECT_RESULT(execute(parse(wasm), 0, {}), 0x0100000000420042);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result(0x0100000000420042));
 }
 
 TEST(execute_numeric, i32_eqz)
@@ -679,7 +679,7 @@ TEST(execute_numeric, i32_div_s_stack_value)
     */
     const auto wasm = from_hex("0061736d010000000105016000017e030201000a0a010800417d41026dad0b");
 
-    EXPECT_RESULT(execute(parse(wasm), 0, {}), 0xffffffff);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result(0xffffffff));
 }
 
 TEST(execute_numeric, i32_div_u)
@@ -700,9 +700,11 @@ TEST(execute_numeric, i32_div_u_by_zero)
 
 TEST(execute_numeric, i32_rem_s)
 {
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_rem_s, uint64_t(-4242), 4200), uint32_t(-42));
+    EXPECT_THAT(
+        execute_binary_operation(Instr::i32_rem_s, uint64_t(-4242), 4200), Result(uint32_t(-42)));
     constexpr auto i32_min = std::numeric_limits<int32_t>::min();
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_rem_s, uint64_t(i32_min), uint64_t(-1)), 0);
+    EXPECT_THAT(
+        execute_binary_operation(Instr::i32_rem_s, uint64_t(i32_min), uint64_t(-1)), Result(0));
 }
 
 TEST(execute_numeric, i32_rem_s_by_zero)
@@ -722,7 +724,7 @@ TEST(execute_numeric, i32_rem_s_stack_value)
     */
     const auto wasm = from_hex("0061736d010000000105016000017e030201000a0a010800417d41026fad0b");
 
-    EXPECT_RESULT(execute(parse(wasm), 0, {}), 0xffffffff);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result(0xffffffff));
 }
 
 TEST(execute_numeric, i32_rem_u)
@@ -770,33 +772,34 @@ TEST(execute_numeric, i32_xor)
 
 TEST(execute_numeric, i32_shl)
 {
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shl, 21, 1), 42);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shl, 0xffffffff, 0), 0xffffffff);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shl, 0xffffffff, 1), 0xfffffffe);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shl, 0xffffffff, 31), 0x80000000);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shl, 0xffffffff, 32), 0xffffffff);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shl, 0xffffffff, 33), 0xfffffffe);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shl, 0xffffffff, 63), 0x80000000);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shl, 21, 1), Result(42));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shl, 0xffffffff, 0), Result(0xffffffff));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shl, 0xffffffff, 1), Result(0xfffffffe));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shl, 0xffffffff, 31), Result(0x80000000));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shl, 0xffffffff, 32), Result(0xffffffff));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shl, 0xffffffff, 33), Result(0xfffffffe));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shl, 0xffffffff, 63), Result(0x80000000));
 }
 
 TEST(execute_numeric, i32_shr_s)
 {
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, uint64_t(-84), 1), uint32_t(-42));
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 0), 0xffffffff);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 1), 0xffffffff);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 31), 0xffffffff);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 32), 0xffffffff);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 33), 0xffffffff);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 63), 0xffffffff);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 0), 0x7fffffff);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 1), 0x3fffffff);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 30), 1);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 31), 0);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 32), 0x7fffffff);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 33), 0x3fffffff);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 62), 1);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 63), 0);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_s, 1, uint32_t(-1)), 0);
+    EXPECT_THAT(
+        execute_binary_operation(Instr::i32_shr_s, uint64_t(-84), 1), Result(uint32_t(-42)));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 0), Result(0xffffffff));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 1), Result(0xffffffff));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 31), Result(0xffffffff));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 32), Result(0xffffffff));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 33), Result(0xffffffff));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 63), Result(0xffffffff));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 0), Result(0x7fffffff));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 1), Result(0x3fffffff));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 30), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 31), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 32), Result(0x7fffffff));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 33), Result(0x3fffffff));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 62), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, 0x7fffffff, 63), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, 1, uint32_t(-1)), Result(0));
 }
 
 TEST(execute_numeric, i32_shr_s_stack_value)
@@ -811,38 +814,38 @@ TEST(execute_numeric, i32_shr_s_stack_value)
     */
     const auto wasm = from_hex("0061736d010000000105016000017e030201000a0a010800417f410075ad0b");
 
-    EXPECT_RESULT(execute(parse(wasm), 0, {}), 0xffffffff);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result(0xffffffff));
 }
 
 TEST(execute_numeric, i32_shr_u)
 {
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_u, 84, 1), 42);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_u, 0xffffffff, 0), 0xffffffff);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_u, 0xffffffff, 1), 0x7fffffff);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_u, 0xffffffff, 31), 1);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_u, 0xffffffff, 32), 0xffffffff);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_u, 0xffffffff, 33), 0x7fffffff);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_shr_u, 0xffffffff, 63), 1);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_u, 84, 1), Result(42));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_u, 0xffffffff, 0), Result(0xffffffff));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_u, 0xffffffff, 1), Result(0x7fffffff));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_u, 0xffffffff, 31), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_u, 0xffffffff, 32), Result(0xffffffff));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_u, 0xffffffff, 33), Result(0x7fffffff));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_u, 0xffffffff, 63), Result(1));
 }
 
 TEST(execute_numeric, i32_rotl)
 {
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_rotl, 0xff000000, 0), 0xff000000);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_rotl, 0xff000000, 1), 0xfe000001);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_rotl, 0xff000000, 31), 0x7f800000);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_rotl, 0xff000000, 32), 0xff000000);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_rotl, 0xff000000, 33), 0xfe000001);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_rotl, 0xff000000, 63), 0x7f800000);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_rotl, 0xff000000, 0), Result(0xff000000));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_rotl, 0xff000000, 1), Result(0xfe000001));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_rotl, 0xff000000, 31), Result(0x7f800000));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_rotl, 0xff000000, 32), Result(0xff000000));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_rotl, 0xff000000, 33), Result(0xfe000001));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_rotl, 0xff000000, 63), Result(0x7f800000));
 }
 
 TEST(execute_numeric, i32_rotr)
 {
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_rotr, 0x000000ff, 0), 0x000000ff);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_rotr, 0x000000ff, 1), 0x8000007f);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_rotr, 0x000000ff, 31), 0x000001fe);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_rotr, 0x000000ff, 32), 0x000000ff);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_rotr, 0x000000ff, 33), 0x8000007f);
-    EXPECT_RESULT(execute_binary_operation(Instr::i32_rotr, 0x000000ff, 63), 0x000001fe);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_rotr, 0x000000ff, 0), Result(0x000000ff));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_rotr, 0x000000ff, 1), Result(0x8000007f));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_rotr, 0x000000ff, 31), Result(0x000001fe));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_rotr, 0x000000ff, 32), Result(0x000000ff));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_rotr, 0x000000ff, 33), Result(0x8000007f));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_rotr, 0x000000ff, 63), Result(0x000001fe));
 }
 
 TEST(execute_numeric, i32_wrap_i64)
@@ -1013,9 +1016,11 @@ TEST(execute_numeric, i64_div_u_by_zero)
 
 TEST(execute_numeric, i64_rem_s)
 {
-    EXPECT_RESULT(execute_binary_operation(Instr::i64_rem_s, uint64_t(-4242), 4200), uint64_t(-42));
+    EXPECT_THAT(
+        execute_binary_operation(Instr::i64_rem_s, uint64_t(-4242), 4200), Result(uint64_t(-42)));
     constexpr auto i64_min = std::numeric_limits<int64_t>::min();
-    EXPECT_RESULT(execute_binary_operation(Instr::i64_rem_s, uint64_t(i64_min), uint64_t(-1)), 0);
+    EXPECT_THAT(
+        execute_binary_operation(Instr::i64_rem_s, uint64_t(i64_min), uint64_t(-1)), Result(0));
 }
 
 TEST(execute_numeric, i64_rem_s_by_zero)
@@ -1071,66 +1076,66 @@ TEST(execute_numeric, i64_xor)
 TEST(execute_numeric, i64_shl)
 {
     constexpr auto ebo = execute_binary_operation;
-    EXPECT_RESULT(ebo(Instr::i64_shl, 21, 1), 42);
-    EXPECT_RESULT(ebo(Instr::i64_shl, 0xffffffffffffffff, 0), 0xffffffffffffffff);
-    EXPECT_RESULT(ebo(Instr::i64_shl, 0xffffffffffffffff, 1), 0xfffffffffffffffe);
-    EXPECT_RESULT(ebo(Instr::i64_shl, 0xffffffffffffffff, 63), 0x8000000000000000);
-    EXPECT_RESULT(ebo(Instr::i64_shl, 0xffffffffffffffff, 64), 0xffffffffffffffff);
-    EXPECT_RESULT(ebo(Instr::i64_shl, 0xffffffffffffffff, 65), 0xfffffffffffffffe);
-    EXPECT_RESULT(ebo(Instr::i64_shl, 0xffffffffffffffff, 127), 0x8000000000000000);
+    EXPECT_THAT(ebo(Instr::i64_shl, 21, 1), Result(42));
+    EXPECT_THAT(ebo(Instr::i64_shl, 0xffffffffffffffff, 0), Result(0xffffffffffffffff));
+    EXPECT_THAT(ebo(Instr::i64_shl, 0xffffffffffffffff, 1), Result(0xfffffffffffffffe));
+    EXPECT_THAT(ebo(Instr::i64_shl, 0xffffffffffffffff, 63), Result(0x8000000000000000));
+    EXPECT_THAT(ebo(Instr::i64_shl, 0xffffffffffffffff, 64), Result(0xffffffffffffffff));
+    EXPECT_THAT(ebo(Instr::i64_shl, 0xffffffffffffffff, 65), Result(0xfffffffffffffffe));
+    EXPECT_THAT(ebo(Instr::i64_shl, 0xffffffffffffffff, 127), Result(0x8000000000000000));
 }
 
 TEST(execute_numeric, i64_shr_s)
 {
     constexpr auto ebo = execute_binary_operation;
-    EXPECT_RESULT(ebo(Instr::i64_shr_s, uint64_t(-84), 1), uint64_t(-42));
-    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0xffffffffffffffff, 0), 0xffffffffffffffff);
-    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0xffffffffffffffff, 1), 0xffffffffffffffff);
-    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0xffffffffffffffff, 63), 0xffffffffffffffff);
-    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0xffffffffffffffff, 64), 0xffffffffffffffff);
-    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0xffffffffffffffff, 65), 0xffffffffffffffff);
-    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0xffffffffffffffff, 127), 0xffffffffffffffff);
-    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 0), 0x7fffffffffffffff);
-    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 1), 0x3fffffffffffffff);
-    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 62), 1);
-    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 63), 0);
-    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 64), 0x7fffffffffffffff);
-    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 65), 0x3fffffffffffffff);
-    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 126), 1);
-    EXPECT_RESULT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 127), 0);
-    EXPECT_RESULT(ebo(Instr::i64_shr_s, 1, uint64_t(-1)), 0);
+    EXPECT_THAT(ebo(Instr::i64_shr_s, uint64_t(-84), 1), Result(uint64_t(-42)));
+    EXPECT_THAT(ebo(Instr::i64_shr_s, 0xffffffffffffffff, 0), Result(0xffffffffffffffff));
+    EXPECT_THAT(ebo(Instr::i64_shr_s, 0xffffffffffffffff, 1), Result(0xffffffffffffffff));
+    EXPECT_THAT(ebo(Instr::i64_shr_s, 0xffffffffffffffff, 63), Result(0xffffffffffffffff));
+    EXPECT_THAT(ebo(Instr::i64_shr_s, 0xffffffffffffffff, 64), Result(0xffffffffffffffff));
+    EXPECT_THAT(ebo(Instr::i64_shr_s, 0xffffffffffffffff, 65), Result(0xffffffffffffffff));
+    EXPECT_THAT(ebo(Instr::i64_shr_s, 0xffffffffffffffff, 127), Result(0xffffffffffffffff));
+    EXPECT_THAT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 0), Result(0x7fffffffffffffff));
+    EXPECT_THAT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 1), Result(0x3fffffffffffffff));
+    EXPECT_THAT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 62), Result(1));
+    EXPECT_THAT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 63), Result(0));
+    EXPECT_THAT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 64), Result(0x7fffffffffffffff));
+    EXPECT_THAT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 65), Result(0x3fffffffffffffff));
+    EXPECT_THAT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 126), Result(1));
+    EXPECT_THAT(ebo(Instr::i64_shr_s, 0x7fffffffffffffff, 127), Result(0));
+    EXPECT_THAT(ebo(Instr::i64_shr_s, 1, uint64_t(-1)), Result(0));
 }
 
 TEST(execute_numeric, i64_shr_u)
 {
     constexpr auto ebo = execute_binary_operation;
-    EXPECT_RESULT(ebo(Instr::i64_shr_u, 84, 1), 42);
-    EXPECT_RESULT(ebo(Instr::i64_shr_u, 0xffffffffffffffff, 0), 0xffffffffffffffff);
-    EXPECT_RESULT(ebo(Instr::i64_shr_u, 0xffffffffffffffff, 1), 0x7fffffffffffffff);
-    EXPECT_RESULT(ebo(Instr::i64_shr_u, 0xffffffffffffffff, 63), 1);
-    EXPECT_RESULT(ebo(Instr::i64_shr_u, 0xffffffffffffffff, 64), 0xffffffffffffffff);
-    EXPECT_RESULT(ebo(Instr::i64_shr_u, 0xffffffffffffffff, 65), 0x7fffffffffffffff);
-    EXPECT_RESULT(ebo(Instr::i64_shr_u, 0xffffffffffffffff, 127), 1);
+    EXPECT_THAT(ebo(Instr::i64_shr_u, 84, 1), Result(42));
+    EXPECT_THAT(ebo(Instr::i64_shr_u, 0xffffffffffffffff, 0), Result(0xffffffffffffffff));
+    EXPECT_THAT(ebo(Instr::i64_shr_u, 0xffffffffffffffff, 1), Result(0x7fffffffffffffff));
+    EXPECT_THAT(ebo(Instr::i64_shr_u, 0xffffffffffffffff, 63), Result(1));
+    EXPECT_THAT(ebo(Instr::i64_shr_u, 0xffffffffffffffff, 64), Result(0xffffffffffffffff));
+    EXPECT_THAT(ebo(Instr::i64_shr_u, 0xffffffffffffffff, 65), Result(0x7fffffffffffffff));
+    EXPECT_THAT(ebo(Instr::i64_shr_u, 0xffffffffffffffff, 127), Result(1));
 }
 
 TEST(execute_numeric, i64_rotl)
 {
     constexpr auto ebo = execute_binary_operation;
-    EXPECT_RESULT(ebo(Instr::i64_rotl, 0xff00000000000000, 0), 0xff00000000000000);
-    EXPECT_RESULT(ebo(Instr::i64_rotl, 0xff00000000000000, 1), 0xfe00000000000001);
-    EXPECT_RESULT(ebo(Instr::i64_rotl, 0xff00000000000000, 63), 0x7f80000000000000);
-    EXPECT_RESULT(ebo(Instr::i64_rotl, 0xff00000000000000, 64), 0xff00000000000000);
-    EXPECT_RESULT(ebo(Instr::i64_rotl, 0xff00000000000000, 65), 0xfe00000000000001);
-    EXPECT_RESULT(ebo(Instr::i64_rotl, 0xff00000000000000, 127), 0x7f80000000000000);
+    EXPECT_THAT(ebo(Instr::i64_rotl, 0xff00000000000000, 0), Result(0xff00000000000000));
+    EXPECT_THAT(ebo(Instr::i64_rotl, 0xff00000000000000, 1), Result(0xfe00000000000001));
+    EXPECT_THAT(ebo(Instr::i64_rotl, 0xff00000000000000, 63), Result(0x7f80000000000000));
+    EXPECT_THAT(ebo(Instr::i64_rotl, 0xff00000000000000, 64), Result(0xff00000000000000));
+    EXPECT_THAT(ebo(Instr::i64_rotl, 0xff00000000000000, 65), Result(0xfe00000000000001));
+    EXPECT_THAT(ebo(Instr::i64_rotl, 0xff00000000000000, 127), Result(0x7f80000000000000));
 }
 
 TEST(execute_numeric, i64_rotr)
 {
     constexpr auto ebo = execute_binary_operation;
-    EXPECT_RESULT(ebo(Instr::i64_rotr, 0x00000000000000ff, 0), 0x00000000000000ff);
-    EXPECT_RESULT(ebo(Instr::i64_rotr, 0x00000000000000ff, 1), 0x800000000000007f);
-    EXPECT_RESULT(ebo(Instr::i64_rotr, 0x00000000000000ff, 63), 0x00000000000001fe);
-    EXPECT_RESULT(ebo(Instr::i64_rotr, 0x00000000000000ff, 64), 0x00000000000000ff);
-    EXPECT_RESULT(ebo(Instr::i64_rotr, 0x00000000000000ff, 65), 0x800000000000007f);
-    EXPECT_RESULT(ebo(Instr::i64_rotr, 0x00000000000000ff, 127), 0x00000000000001fe);
+    EXPECT_THAT(ebo(Instr::i64_rotr, 0x00000000000000ff, 0), Result(0x00000000000000ff));
+    EXPECT_THAT(ebo(Instr::i64_rotr, 0x00000000000000ff, 1), Result(0x800000000000007f));
+    EXPECT_THAT(ebo(Instr::i64_rotr, 0x00000000000000ff, 63), Result(0x00000000000001fe));
+    EXPECT_THAT(ebo(Instr::i64_rotr, 0x00000000000000ff, 64), Result(0x00000000000000ff));
+    EXPECT_THAT(ebo(Instr::i64_rotr, 0x00000000000000ff, 65), Result(0x800000000000007f));
+    EXPECT_THAT(ebo(Instr::i64_rotr, 0x00000000000000ff, 127), Result(0x00000000000001fe));
 }
