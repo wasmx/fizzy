@@ -188,8 +188,7 @@ TEST(execute, global_set)
         from_hex("0061736d01000000010401600000030201000606017f0141290b0a08010600412a24000b");
 
     auto instance = instantiate(parse(wasm));
-    const auto [trap, _] = execute(*instance, 0, {});
-    ASSERT_FALSE(trap);
+    EXPECT_THAT(execute(*instance, 0, {}), Result());
     EXPECT_EQ(instance->globals[0], 42);
 }
 
@@ -210,8 +209,7 @@ TEST(execute, global_set_two_globals)
         "b");
 
     auto instance = instantiate(parse(wasm));
-    const auto [trap, _] = execute(*instance, 0, {});
-    ASSERT_FALSE(trap);
+    EXPECT_THAT(execute(*instance, 0, {}), Result());
     EXPECT_EQ(instance->globals[0], 44);
     EXPECT_EQ(instance->globals[1], 45);
 }
@@ -269,11 +267,11 @@ TEST(execute, i32_load_overflow)
     auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
-    ASSERT_TRUE(execute(*instance, 0, {0}).trapped);
+    EXPECT_THAT(execute(*instance, 0, {0}), Traps());
     // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
-    ASSERT_TRUE(execute(*instance, 0, {0x80000000}).trapped);
+    EXPECT_THAT(execute(*instance, 0, {0x80000000}), Traps());
     // Offset is 0x7fffffff + 0x80000001 => 0x100000000
-    ASSERT_TRUE(execute(*instance, 0, {0x80000001}).trapped);
+    EXPECT_THAT(execute(*instance, 0, {0x80000001}), Traps());
 }
 
 TEST(execute, i64_load_overflow)
@@ -291,11 +289,11 @@ TEST(execute, i64_load_overflow)
     auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
-    ASSERT_TRUE(execute(*instance, 0, {0}).trapped);
+    EXPECT_THAT(execute(*instance, 0, {0}), Traps());
     // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
-    ASSERT_TRUE(execute(*instance, 0, {0x80000000}).trapped);
+    EXPECT_THAT(execute(*instance, 0, {0x80000000}), Traps());
     // Offset is 0x7fffffff + 0x80000001 => 0x100000000
-    ASSERT_TRUE(execute(*instance, 0, {0x80000001}).trapped);
+    EXPECT_THAT(execute(*instance, 0, {0x80000001}), Traps());
 }
 
 TEST(execute, i32_load_all_variants)
@@ -392,12 +390,10 @@ TEST(execute, i32_store_imported_memory)
 
     bytes memory(PageSize, 0);
     auto instance = instantiate(parse(wasm), {}, {}, {{&memory, {1, 1}}});
-    const auto [trap, ret] = execute(*instance, 0, {42, 0});
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 0);
+    EXPECT_THAT(execute(*instance, 0, {42, 0}), Result());
     EXPECT_EQ(memory.substr(0, 4), from_hex("2a000000"));
 
-    EXPECT_TRUE(execute(*instance, 0, {42, 65537}).trapped);
+    EXPECT_THAT(execute(*instance, 0, {42, 65537}), Traps());
 }
 
 TEST(execute, i32_store_overflow)
@@ -417,11 +413,11 @@ TEST(execute, i32_store_overflow)
     auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
-    ASSERT_TRUE(execute(*instance, 0, {0}).trapped);
+    EXPECT_THAT(execute(*instance, 0, {0}), Traps());
     // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
-    ASSERT_TRUE(execute(*instance, 0, {0x80000000}).trapped);
+    EXPECT_THAT(execute(*instance, 0, {0x80000000}), Traps());
     // Offset is 0x7fffffff + 0x80000001 => 0x100000000
-    ASSERT_TRUE(execute(*instance, 0, {0x80000001}).trapped);
+    EXPECT_THAT(execute(*instance, 0, {0x80000001}), Traps());
 }
 
 TEST(execute, i64_store_overflow)
@@ -441,11 +437,11 @@ TEST(execute, i64_store_overflow)
     auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
-    ASSERT_TRUE(execute(*instance, 0, {0}).trapped);
+    EXPECT_THAT(execute(*instance, 0, {0}), Traps());
     // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
-    ASSERT_TRUE(execute(*instance, 0, {0x80000000}).trapped);
+    EXPECT_THAT(execute(*instance, 0, {0x80000000}), Traps());
     // Offset is 0x7fffffff + 0x80000001 => 0x100000000
-    ASSERT_TRUE(execute(*instance, 0, {0x80000001}).trapped);
+    EXPECT_THAT(execute(*instance, 0, {0x80000001}), Traps());
 }
 
 TEST(execute, i32_store_all_variants)
@@ -477,12 +473,10 @@ TEST(execute, i32_store_all_variants)
         store_instr = std::get<0>(test_case);
         auto instance = instantiate(module);
         std::fill_n(instance->memory->begin(), 6, uint8_t{0xcc});
-        const auto [trap, ret] = execute(*instance, 0, {0xb3b2b1b0, 1});
-        ASSERT_FALSE(trap);
-        EXPECT_EQ(ret.size(), 0);
+        EXPECT_THAT(execute(*instance, 0, {0xb3b2b1b0, 1}), Result());
         EXPECT_EQ(instance->memory->substr(0, 6), std::get<1>(test_case));
 
-        EXPECT_TRUE(execute(*instance, 0, {0xb3b2b1b0, 65537}).trapped);
+        EXPECT_THAT(execute(*instance, 0, {0xb3b2b1b0, 65537}), Traps());
     }
 }
 
@@ -516,12 +510,10 @@ TEST(execute, i64_store_all_variants)
         store_instr = std::get<0>(test_case);
         auto instance = instantiate(module);
         std::fill_n(instance->memory->begin(), 10, uint8_t{0xcc});
-        const auto [trap, ret] = execute(*instance, 0, {0xb7b6b5b4b3b2b1b0, 1});
-        ASSERT_FALSE(trap);
-        EXPECT_EQ(ret.size(), 0);
+        EXPECT_THAT(execute(*instance, 0, {0xb7b6b5b4b3b2b1b0, 1}), Result());
         EXPECT_EQ(instance->memory->substr(0, 10), std::get<1>(test_case));
 
-        EXPECT_TRUE(execute(*instance, 0, {0xb7b6b5b4b3b2b1b0, 65537}).trapped);
+        EXPECT_THAT(execute(*instance, 0, {0xb7b6b5b4b3b2b1b0, 65537}), Traps());
     }
 }
 
@@ -719,8 +711,7 @@ TEST(execute, imported_function_traps)
 
     const auto module = parse(wasm);
     auto instance = instantiate(module, {{host_foo, module.typesec[0]}});
-    const auto [trap, _] = execute(*instance, 0, {20, 22});
-    EXPECT_TRUE(trap);
+    EXPECT_THAT(execute(*instance, 0, {20, 22}), Traps());
 }
 
 TEST(execute, memory_copy_32bytes)
@@ -759,9 +750,7 @@ TEST(execute, memory_copy_32bytes)
     const auto input = from_hex("0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20");
     ASSERT_EQ(input.size(), 32);
     std::copy(input.begin(), input.end(), instance->memory->begin());
-    const auto [trap, ret] = execute(*instance, 0, {33, 0});
-    ASSERT_FALSE(trap);
-    EXPECT_EQ(ret.size(), 0);
+    EXPECT_THAT(execute(*instance, 0, {33, 0}), Result());
     ASSERT_EQ(instance->memory->size(), 65536);
     bytes output;
     std::copy_n(&(*instance->memory)[33], input.size(), std::back_inserter(output));
@@ -982,5 +971,5 @@ TEST(execute, fp_instructions)
         execute(*instance, 0, {}), unsupported_feature, "Floating point instruction.");
 
     // Second function with floating point parameters.
-    ASSERT_TRUE(execute(*instance, 1, {}).trapped);
+    EXPECT_THAT(execute(*instance, 1, {}), Traps());
 }
