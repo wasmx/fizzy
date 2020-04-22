@@ -51,622 +51,226 @@ TEST(execute_numeric, i64_const)
 
 TEST(execute_numeric, i32_eqz)
 {
-    auto result = execute_unary_operation(Instr::i32_eqz, 0);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_unary_operation(Instr::i32_eqz, 1);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
+    EXPECT_THAT(execute_unary_operation(Instr::i32_eqz, 0), Result(1));
+    EXPECT_THAT(execute_unary_operation(Instr::i32_eqz, 1), Result(0));
     // Dirty stack
-    result = execute_unary_operation(fizzy::Instr::i32_eqz, 0xff00000000);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_unary_operation(fizzy::Instr::i32_eqz, 0xff00000001);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
+    EXPECT_THAT(execute_unary_operation(fizzy::Instr::i32_eqz, 0xff00000000), Result(1));
+    EXPECT_THAT(execute_unary_operation(fizzy::Instr::i32_eqz, 0xff00000001), Result(0));
 }
 
 TEST(execute_numeric, i32_eq)
 {
-    auto result = execute_binary_operation(Instr::i32_eq, 22, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i32_eq, 22, 22);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_eq, 22, 20), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_eq, 22, 22), Result(1));
 }
 
 TEST(execute_numeric, i32_ne)
 {
-    auto result = execute_binary_operation(Instr::i32_ne, 22, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i32_ne, 22, 22);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_ne, 22, 20), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_ne, 22, 22), Result(0));
 }
 
 TEST(execute_numeric, i32_lt_s)
 {
-    auto result = execute_binary_operation(Instr::i32_lt_s, 22, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i32_lt_s, 20, 22);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i32_lt_s, uint64_t(-41), uint64_t(-42));
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i32_lt_s, uint64_t(-42), uint64_t(-41));
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_lt_s, 22, 20), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_lt_s, 20, 22), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_lt_s, uint64_t(-41), uint64_t(-42)), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_lt_s, uint64_t(-42), uint64_t(-41)), Result(1));
 }
 
 TEST(execute_numeric, i32_lt_u)
 {
-    auto result = execute_binary_operation(Instr::i32_lt_u, 22, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i32_lt_u, 20, 22);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_lt_u, 22, 20), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_lt_u, 20, 22), Result(1));
 }
 
 TEST(execute_numeric, i32_gt_s)
 {
-    auto result = execute_binary_operation(Instr::i32_gt_s, 22, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i32_gt_s, 20, 22);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i32_gt_s, uint64_t(-41), uint64_t(-42));
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i32_gt_s, uint64_t(-42), uint64_t(-41));
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_gt_s, 22, 20), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_gt_s, 20, 22), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_gt_s, uint64_t(-41), uint64_t(-42)), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_gt_s, uint64_t(-42), uint64_t(-41)), Result(0));
 }
 
 TEST(execute_numeric, i32_gt_u)
 {
-    auto result = execute_binary_operation(Instr::i32_gt_u, 22, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i32_gt_u, 20, 22);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_gt_u, 22, 20), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_gt_u, 20, 22), Result(0));
 }
 
 TEST(execute_numeric, i32_le_s)
 {
-    auto result = execute_binary_operation(Instr::i32_le_s, 22, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i32_le_s, 20, 22);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i32_le_s, 20, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i32_le_s, uint64_t(-41), uint64_t(-42));
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i32_le_s, uint64_t(-42), uint64_t(-41));
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i32_le_s, uint64_t(-42), uint64_t(-42));
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_le_s, 22, 20), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_le_s, 20, 22), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_le_s, 20, 20), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_le_s, uint64_t(-41), uint64_t(-42)), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_le_s, uint64_t(-42), uint64_t(-41)), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_le_s, uint64_t(-42), uint64_t(-42)), Result(1));
 }
 
 TEST(execute_numeric, i32_le_u)
 {
-    auto result = execute_binary_operation(Instr::i32_le_u, 22, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i32_le_u, 20, 22);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i32_le_u, 20, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_le_u, 22, 20), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_le_u, 20, 22), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_le_u, 20, 20), Result(1));
 }
 
 TEST(execute_numeric, i32_ge_s)
 {
-    auto result = execute_binary_operation(Instr::i32_ge_s, 22, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i32_ge_s, 20, 22);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i32_ge_s, 20, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i32_ge_s, uint64_t(-41), uint64_t(-42));
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i32_ge_s, uint64_t(-42), uint64_t(-41));
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i32_ge_s, uint64_t(-42), uint64_t(-42));
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_ge_s, 22, 20), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_ge_s, 20, 22), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_ge_s, 20, 20), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_ge_s, uint64_t(-41), uint64_t(-42)), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_ge_s, uint64_t(-42), uint64_t(-41)), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_ge_s, uint64_t(-42), uint64_t(-42)), Result(1));
 }
 
 TEST(execute_numeric, i32_ge_u)
 {
-    auto result = execute_binary_operation(Instr::i32_ge_u, 22, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i32_ge_u, 20, 22);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i32_ge_u, 20, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_ge_u, 22, 20), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_ge_u, 20, 22), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_ge_u, 20, 20), Result(1));
 }
 
 TEST(execute_numeric, i64_eqz)
 {
-    auto result = execute_unary_operation(Instr::i64_eqz, 0);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_unary_operation(Instr::i64_eqz, 1);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
+    EXPECT_THAT(execute_unary_operation(Instr::i64_eqz, 0), Result(1));
+    EXPECT_THAT(execute_unary_operation(Instr::i64_eqz, 1), Result(0));
     // 64-bit value on the stack
-    result = execute_unary_operation(fizzy::Instr::i64_eqz, 0xff00000000);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_unary_operation(fizzy::Instr::i64_eqz, 0xff00000001);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
+    EXPECT_THAT(execute_unary_operation(fizzy::Instr::i64_eqz, 0xff00000000), Result(0));
+    EXPECT_THAT(execute_unary_operation(fizzy::Instr::i64_eqz, 0xff00000001), Result(0));
 }
 
 TEST(execute_numeric, i64_eq)
 {
-    auto result = execute_binary_operation(Instr::i64_eq, 22, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i64_eq, 22, 22);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_eq, 22, 20), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_eq, 22, 22), Result(1));
 }
 
 TEST(execute_numeric, i64_ne)
 {
-    auto result = execute_binary_operation(Instr::i64_ne, 22, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i64_ne, 22, 22);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_ne, 22, 20), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_ne, 22, 22), Result(0));
 }
 
 TEST(execute_numeric, i64_lt_s)
 {
-    auto result = execute_binary_operation(Instr::i64_lt_s, 22, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i64_lt_s, 20, 22);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i64_lt_s, uint64_t(-41), uint64_t(-42));
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i64_lt_s, uint64_t(-42), uint64_t(-41));
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_lt_s, 22, 20), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_lt_s, 20, 22), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_lt_s, uint64_t(-41), uint64_t(-42)), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_lt_s, uint64_t(-42), uint64_t(-41)), Result(1));
 }
 
 TEST(execute_numeric, i64_lt_u)
 {
-    auto result = execute_binary_operation(Instr::i64_lt_u, 22, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i64_lt_u, 20, 22);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_lt_u, 22, 20), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_lt_u, 20, 22), Result(1));
 }
 
 TEST(execute_numeric, i64_gt_s)
 {
-    auto result = execute_binary_operation(Instr::i64_gt_s, 22, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i64_gt_s, 20, 22);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i64_gt_s, uint64_t(-41), uint64_t(-42));
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i64_gt_s, uint64_t(-42), uint64_t(-41));
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_gt_s, 22, 20), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_gt_s, 20, 22), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_gt_s, uint64_t(-41), uint64_t(-42)), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_gt_s, uint64_t(-42), uint64_t(-41)), Result(0));
 }
 
 TEST(execute_numeric, i64_gt_u)
 {
-    auto result = execute_binary_operation(Instr::i64_gt_u, 22, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i64_gt_u, 20, 22);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_gt_u, 22, 20), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_gt_u, 20, 22), Result(0));
 }
 
 TEST(execute_numeric, i64_le_s)
 {
-    auto result = execute_binary_operation(Instr::i64_le_s, 22, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i64_le_s, 20, 22);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i64_le_s, 20, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i64_le_s, uint64_t(-41), uint64_t(-42));
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i64_le_s, uint64_t(-42), uint64_t(-41));
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i64_le_s, uint64_t(-42), uint64_t(-42));
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_le_s, 22, 20), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_le_s, 20, 22), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_le_s, 20, 20), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_le_s, uint64_t(-41), uint64_t(-42)), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_le_s, uint64_t(-42), uint64_t(-41)), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_le_s, uint64_t(-42), uint64_t(-42)), Result(1));
 }
 
 TEST(execute_numeric, i64_le_u)
 {
-    auto result = execute_binary_operation(Instr::i64_le_u, 22, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i64_le_u, 20, 22);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i64_le_u, 20, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_le_u, 22, 20), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_le_u, 20, 22), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_le_u, 20, 20), Result(1));
 }
 
 TEST(execute_numeric, i64_ge_s)
 {
-    auto result = execute_binary_operation(Instr::i64_ge_s, 22, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i64_ge_s, 20, 22);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i64_ge_s, 20, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i64_ge_s, uint64_t(-41), uint64_t(-42));
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i64_ge_s, uint64_t(-42), uint64_t(-41));
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i64_ge_s, uint64_t(-42), uint64_t(-42));
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_ge_s, 22, 20), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_ge_s, 20, 22), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_ge_s, 20, 20), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_ge_s, uint64_t(-41), uint64_t(-42)), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_ge_s, uint64_t(-42), uint64_t(-41)), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_ge_s, uint64_t(-42), uint64_t(-42)), Result(1));
 }
 
 TEST(execute_numeric, i64_ge_u)
 {
-    auto result = execute_binary_operation(Instr::i64_ge_u, 22, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
-
-    result = execute_binary_operation(Instr::i64_ge_u, 20, 22);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 0);
-
-    result = execute_binary_operation(Instr::i64_ge_u, 20, 20);
-
-    ASSERT_FALSE(result.trapped);
-    ASSERT_EQ(result.stack.size(), 1);
-    EXPECT_EQ(result.stack[0], 1);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_ge_u, 22, 20), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_ge_u, 20, 22), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i64_ge_u, 20, 20), Result(1));
 }
 
 TEST(execute_numeric, i32_clz)
 {
-    const auto [trap, ret] = execute_unary_operation(Instr::i32_clz, 0x7f);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 32 - 7);
+    EXPECT_THAT(execute_unary_operation(Instr::i32_clz, 0x7f), Result(32 - 7));
 }
 
 TEST(execute_numeric, i32_clz0)
 {
-    const auto [trap, ret] = execute_unary_operation(Instr::i32_clz, 0);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 32);
+    EXPECT_THAT(execute_unary_operation(Instr::i32_clz, 0), Result(32));
 }
 
 TEST(execute_numeric, i32_ctz)
 {
-    const auto [trap, ret] = execute_unary_operation(Instr::i32_ctz, 0x80);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 7);
+    EXPECT_THAT(execute_unary_operation(Instr::i32_ctz, 0x80), Result(7));
 }
 
 TEST(execute_numeric, i32_ctz0)
 {
-    const auto [trap, ret] = execute_unary_operation(Instr::i32_ctz, 0);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 32);
+    EXPECT_THAT(execute_unary_operation(Instr::i32_ctz, 0), Result(32));
 }
 
 TEST(execute_numeric, i32_popcnt)
 {
-    const auto [trap, ret] = execute_unary_operation(Instr::i32_popcnt, 0x7fff00);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 7 + 8);
+    EXPECT_THAT(execute_unary_operation(Instr::i32_popcnt, 0x7fff00), Result(7 + 8));
 }
 
 TEST(execute_numeric, i32_add)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_add, 22, 20);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_add, 22, 20), Result(42));
 }
 
 TEST(execute_numeric, i32_sub)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_sub, 424242, 424200);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_sub, 424242, 424200), Result(42));
 }
 
 TEST(execute_numeric, i32_mul)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_mul, 2, 21);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_mul, 2, 21), Result(42));
 }
 
 TEST(execute_numeric, i32_div_s)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_div_s, uint64_t(-84), 2);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], uint32_t(-42));
+    EXPECT_THAT(
+        execute_binary_operation(Instr::i32_div_s, uint64_t(-84), 2), Result(uint32_t(-42)));
 }
 
 TEST(execute_numeric, i32_div_s_by_zero)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_div_s, 84, 0);
-
-    ASSERT_TRUE(trap);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_div_s, 84, 0), Traps());
 }
 
 TEST(execute_numeric, i32_div_s_overflow)
 {
-    const auto [trap, ret] = execute_binary_operation(
-        Instr::i32_div_s, uint64_t(std::numeric_limits<int32_t>::min()), uint64_t(-1));
-
-    ASSERT_TRUE(trap);
+    EXPECT_THAT(execute_binary_operation(
+                    Instr::i32_div_s, uint64_t(std::numeric_limits<int32_t>::min()), uint64_t(-1)),
+        Traps());
 }
 
 TEST(execute_numeric, i32_div_s_stack_value)
@@ -684,18 +288,12 @@ TEST(execute_numeric, i32_div_s_stack_value)
 
 TEST(execute_numeric, i32_div_u)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_div_u, 84, 2);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_div_u, 84, 2), Result(42));
 }
 
 TEST(execute_numeric, i32_div_u_by_zero)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_div_u, 84, 0);
-
-    ASSERT_TRUE(trap);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_div_u, 84, 0), Traps());
 }
 
 TEST(execute_numeric, i32_rem_s)
@@ -709,9 +307,7 @@ TEST(execute_numeric, i32_rem_s)
 
 TEST(execute_numeric, i32_rem_s_by_zero)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_rem_s, uint64_t(-4242), 0);
-
-    ASSERT_TRUE(trap);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_rem_s, uint64_t(-4242), 0), Traps());
 }
 
 TEST(execute_numeric, i32_rem_s_stack_value)
@@ -729,45 +325,27 @@ TEST(execute_numeric, i32_rem_s_stack_value)
 
 TEST(execute_numeric, i32_rem_u)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_rem_u, 4242, 4200);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_rem_u, 4242, 4200), Result(42));
 }
 
 TEST(execute_numeric, i32_rem_u_by_zero)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_rem_u, 4242, 0);
-
-    ASSERT_TRUE(trap);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_rem_u, 4242, 0), Traps());
 }
 
 TEST(execute_numeric, i32_and)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_and, 0x00ffff, 0xffff00);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0xff00);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_and, 0x00ffff, 0xffff00), Result(0xff00));
 }
 
 TEST(execute_numeric, i32_or)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_or, 0x00ffff, 0xffff00);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0xffffff);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_or, 0x00ffff, 0xffff00), Result(0xffffff));
 }
 
 TEST(execute_numeric, i32_xor)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i32_xor, 0x00ffff, 0xffff00);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0xff00ff);
+    EXPECT_THAT(execute_binary_operation(Instr::i32_xor, 0x00ffff, 0xffff00), Result(0xff00ff));
 }
 
 TEST(execute_numeric, i32_shl)
@@ -850,168 +428,104 @@ TEST(execute_numeric, i32_rotr)
 
 TEST(execute_numeric, i32_wrap_i64)
 {
-    const auto [trap, ret] = execute_unary_operation(Instr::i32_wrap_i64, 0xffffffffffffffff);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0xffffffff);
+    EXPECT_THAT(
+        execute_unary_operation(Instr::i32_wrap_i64, 0xffffffffffffffff), Result(0xffffffff));
 }
 
 TEST(execute_numeric, i64_extend_i32_s_all_bits_set)
 {
-    const auto [trap, ret] = execute_unary_operation(Instr::i64_extend_i32_s, 0xffffffff);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0xffffffffffffffff);
+    EXPECT_THAT(
+        execute_unary_operation(Instr::i64_extend_i32_s, 0xffffffff), Result(0xffffffffffffffff));
 }
 
 TEST(execute_numeric, i64_extend_i32_s_one_bit_set)
 {
-    const auto [trap, ret] = execute_unary_operation(Instr::i64_extend_i32_s, 0x80000000);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0xffffffff80000000);
+    EXPECT_THAT(
+        execute_unary_operation(Instr::i64_extend_i32_s, 0x80000000), Result(0xffffffff80000000));
 }
 
 TEST(execute_numeric, i64_extend_i32_s_0)
 {
-    const auto [trap, ret] = execute_unary_operation(Instr::i64_extend_i32_s, 0);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0);
+    EXPECT_THAT(execute_unary_operation(Instr::i64_extend_i32_s, 0), Result(0));
 }
 
 TEST(execute_numeric, i64_extend_i32_s_1)
 {
-    const auto [trap, ret] = execute_unary_operation(Instr::i64_extend_i32_s, 0x01);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0x01);
+    EXPECT_THAT(execute_unary_operation(Instr::i64_extend_i32_s, 0x01), Result(0x01));
 }
 
 TEST(execute_numeric, i64_extend_i32_u)
 {
-    const auto [trap, ret] = execute_unary_operation(Instr::i64_extend_i32_u, 0xff000000);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0x00000000ff000000);
+    EXPECT_THAT(
+        execute_unary_operation(Instr::i64_extend_i32_u, 0xff000000), Result(0x00000000ff000000));
 }
 
 TEST(execute_numeric, i64_clz)
 {
-    const auto [trap, ret] = execute_unary_operation(Instr::i64_clz, 0x7f);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 64 - 7);
+    EXPECT_THAT(execute_unary_operation(Instr::i64_clz, 0x7f), Result(64 - 7));
 }
 
 TEST(execute_numeric, i64_clz0)
 {
-    const auto [trap, ret] = execute_unary_operation(Instr::i64_clz, 0);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 64);
+    EXPECT_THAT(execute_unary_operation(Instr::i64_clz, 0), Result(64));
 }
 
 TEST(execute_numeric, i64_ctz)
 {
-    const auto [trap, ret] = execute_unary_operation(Instr::i64_ctz, 0x80);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 7);
+    EXPECT_THAT(execute_unary_operation(Instr::i64_ctz, 0x80), Result(7));
 }
 
 TEST(execute_numeric, i64_ctz0)
 {
-    const auto [trap, ret] = execute_unary_operation(Instr::i64_ctz, 0);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 64);
+    EXPECT_THAT(execute_unary_operation(Instr::i64_ctz, 0), Result(64));
 }
 
 TEST(execute_numeric, i64_popcnt)
 {
-    const auto [trap, ret] = execute_unary_operation(Instr::i64_popcnt, 0x7fff00);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 7 + 8);
+    EXPECT_THAT(execute_unary_operation(Instr::i64_popcnt, 0x7fff00), Result(7 + 8));
 }
 
 TEST(execute_numeric, i64_add)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_add, 22, 20);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_add, 22, 20), Result(42));
 }
 
 TEST(execute_numeric, i64_sub)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_sub, 424242, 424200);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_sub, 424242, 424200), Result(42));
 }
 
 TEST(execute_numeric, i64_mul)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_mul, 2, 21);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_mul, 2, 21), Result(42));
 }
 
 TEST(execute_numeric, i64_div_s)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_div_s, uint64_t(-84), 2);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], uint64_t(-42));
+    EXPECT_THAT(
+        execute_binary_operation(Instr::i64_div_s, uint64_t(-84), 2), Result(uint64_t(-42)));
 }
 
 TEST(execute_numeric, i64_div_s_by_zero)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_div_s, 84, 0);
-
-    ASSERT_TRUE(trap);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_div_s, 84, 0), Traps());
 }
 
 TEST(execute_numeric, i64_div_s_overflow)
 {
-    const auto [trap, ret] = execute_binary_operation(
-        Instr::i64_div_s, uint64_t(std::numeric_limits<int64_t>::min()), uint64_t(-1));
-
-    ASSERT_TRUE(trap);
+    EXPECT_THAT(execute_binary_operation(
+                    Instr::i64_div_s, uint64_t(std::numeric_limits<int64_t>::min()), uint64_t(-1)),
+        Traps());
 }
 
 TEST(execute_numeric, i64_div_u)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_div_u, 84, 2);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_div_u, 84, 2), Result(42));
 }
 
 TEST(execute_numeric, i64_div_u_by_zero)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_div_u, 84, 0);
-
-    ASSERT_TRUE(trap);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_div_u, 84, 0), Traps());
 }
 
 TEST(execute_numeric, i64_rem_s)
@@ -1025,52 +539,32 @@ TEST(execute_numeric, i64_rem_s)
 
 TEST(execute_numeric, i64_rem_s_by_zero)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_rem_s, uint64_t(-4242), 0);
-
-    ASSERT_TRUE(trap);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_rem_s, uint64_t(-4242), 0), Traps());
 }
 
 TEST(execute_numeric, i64_rem_u)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_rem_u, 4242, 4200);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 42);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_rem_u, 4242, 4200), Result(42));
 }
 
 TEST(execute_numeric, i64_rem_u_by_zero)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_rem_u, 4242, 0);
-
-    ASSERT_TRUE(trap);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_rem_u, 4242, 0), Traps());
 }
 
 TEST(execute_numeric, i64_and)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_and, 0x00ffff, 0xffff00);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0xff00);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_and, 0x00ffff, 0xffff00), Result(0xff00));
 }
 
 TEST(execute_numeric, i64_or)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_or, 0x00ffff, 0xffff00);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0xffffff);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_or, 0x00ffff, 0xffff00), Result(0xffffff));
 }
 
 TEST(execute_numeric, i64_xor)
 {
-    const auto [trap, ret] = execute_binary_operation(Instr::i64_xor, 0x00ffff, 0xffff00);
-
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0xff00ff);
+    EXPECT_THAT(execute_binary_operation(Instr::i64_xor, 0x00ffff, 0xffff00), Result(0xff00ff));
 }
 
 TEST(execute_numeric, i64_shl)
