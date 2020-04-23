@@ -498,7 +498,6 @@ TEST(instantiate, element_section_offset_from_imported_global)
     const auto bin = from_hex(
         "0061736d010000000105016000017f020a01036d6f640167037f0003030200000404017000040908010023000b"
         "0200010a0b02040041010b040041020b");
-    const auto module = parse(bin);
 
     uint64_t global_value = 1;
     ExternalGlobal g{&global_value, false};
