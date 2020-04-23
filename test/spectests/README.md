@@ -14,6 +14,12 @@ It can then be executed:
 $ bin/fizzy-spectests <test directory>
 ```
 
+This will execute all test cases, but since Fizzy does not implement the complete validation specification, most of
+those cases will fail. It is possible to skip them:
+```sh
+$ bin/fizzy-spectests --skip-validation <test directory>
+```
+
 ## Preparing tests
 
 Fizzy uses the official WebAssembly "[spec tests]", albeit not directly.
