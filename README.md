@@ -64,6 +64,12 @@ Follow [this guide](./test/spectests/README.md) for using the tool.
 
 This is the unit tests suite of Fizzy.
 
+## Maintainers
+
+- Alex Beregszaszi [@axic]
+- Andrei Maiboroda [@gumb0]
+- Paweł Bylica [@chfast]
+
 ## License
 
 [![license badge]][Apache License, Version 2.0]
@@ -75,6 +81,9 @@ Licensed under the [Apache License, Version 2.0].
 [circleci]: https://circleci.com/gh/wasmx/fizzy/tree/master
 [codecov]: https://codecov.io/gh/wasmx/fizzy/
 [Apache License, Version 2.0]: LICENSE
+[@axic]: https://github.com/axic
+[@chfast]: https://github.com/chfast
+[@gumb0]: https://github.com/gumb0
 
 [webassembly badge]: https://img.shields.io/badge/WebAssembly-Engine-informational.svg?logo=webassembly
 [readme style standard badge]: https://img.shields.io/badge/readme%20style-standard-brightgreen.svg
