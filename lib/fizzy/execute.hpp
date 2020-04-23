@@ -26,7 +26,7 @@ struct ExternalFunction
     FuncType type;
 };
 
-using table_elements = std::vector<std::optional<FuncIdx>>;
+using table_elements = std::vector<std::optional<ExternalFunction>>;
 using table_ptr = std::unique_ptr<table_elements, void (*)(table_elements*)>;
 
 struct ExternalTable
