@@ -1,3 +1,7 @@
+# Fizzy: A fast WebAssembly interpreter
+# Copyright 2019-2020 The Fizzy Authors.
+# SPDX-License-Identifier: Apache-2.0
+
 add_executable(fizzy-bench bench.cpp)
 target_compile_features(fizzy-bench PRIVATE cxx_std_17)
 target_link_libraries(fizzy-bench PRIVATE fizzy::fizzy fizzy::test-utils benchmark::benchmark)

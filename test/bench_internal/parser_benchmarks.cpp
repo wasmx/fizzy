@@ -1,3 +1,7 @@
+// Fizzy: A fast WebAssembly interpreter
+// Copyright 2019-2020 The Fizzy Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 #include "parser.hpp"
 #include <benchmark/benchmark.h>
 #include <test/utils/leb128_encode.hpp>
