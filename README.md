@@ -11,22 +11,22 @@ Fizzy aims to be a fast integer-only WebAssembly interpreter written in C++.
 ## Goals
 
 I) Code quality
-- Clean and modern C++17 codebase
-- Easily embeddable (*and take part of the standardisation of the "C embedding API"*)
+- [x] Clean and modern C++17 codebase without external dependencies
+- [ ] Easily embeddable (*and take part of the standardisation of the "C/C++ embedding API"*)
 
 II) Simplicity
-- Interpreter only
-- Provide no support for floating point operations (initially)
-- Support only WebAssembly binary encoding as an input (no support for WAT)
+- [x] Interpreter only
+- [x] Provide no support for floating point operations (initially)
+- [x] Support only WebAssembly binary encoding as an input (no support for the text format (`.wat`/`.wast`))
 
 III) Conformance
-- Should pass the official WebAssembly test suite
+- [ ] Should pass the official WebAssembly test suite
 
 IV) First class support for determistic applications (*blockchain*)
-- Support an efficient big integer API (256-bit and perhaps 384-bit)
-- Support runtime metering in the interpreter
-- Support enforcing a call depth bound
-- Further restrictions of complexity (e.g. number of locals, number of function parameters, number of labels, etc.)
+- [ ] Support an efficient big integer API (256-bit and perhaps 384-bit)
+- [ ] Support optional runtime metering in the interpreter
+- [ ] Support enforcing a call depth bound
+- [ ] Further restrictions of complexity (e.g. number of locals, number of function parameters, number of labels, etc.)
 
 ## Building and using
 
