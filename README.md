@@ -17,14 +17,16 @@ I) Code quality
 II) Simplicity
 - Interpreter only
 - Provide no support for floating point operations (initially)
-- Support only Wasm binary encoding as an input (no support for WAT)
+- Support only WebAssembly binary encoding as an input (no support for WAT)
 
 III) Conformance
-- Should pass the official Wasm test suite
+- Should pass the official WebAssembly test suite
 
 IV) First class support for determistic applications (*blockchain*)
-- Support the bigint API
+- Support an efficient big integer API (256-bit and perhaps 384-bit)
 - Support runtime metering in the interpreter
+- Support enforcing a call depth bound
+- Further restrictions of complexity (e.g. number of locals, number of function parameters, number of labels, etc.)
 
 ## Building and using
 
