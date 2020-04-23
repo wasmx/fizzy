@@ -13,8 +13,7 @@ TEST(execute_control, unreachable)
     */
     const auto wasm = from_hex("0061736d01000000010401600000030201000a05010300000b");
 
-    const auto [trap, ret] = execute(parse(wasm), 0, {});
-    EXPECT_TRUE(trap);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Traps());
 }
 
 TEST(execute_control, nop)
@@ -24,9 +23,7 @@ TEST(execute_control, nop)
     */
     const auto wasm = from_hex("0061736d01000000010401600000030201000a05010300010b");
 
-    const auto [trap, ret] = execute(parse(wasm), 0, {});
-    ASSERT_FALSE(trap);
-    EXPECT_EQ(ret.size(), 0);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result());
 }
 
 TEST(execute_control, block_br)
@@ -47,10 +44,7 @@ TEST(execute_control, block_br)
     const auto wasm = from_hex(
         "0061736d01000000010401600000030201000a15011301027f0240410a21010c00410b21010b20010b");
 
-    const auto [trap, ret] = execute(parse(wasm), 0, {});
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0xa);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result(0xa));
 }
 
 TEST(execute_control, loop_void_empty)
@@ -64,7 +58,7 @@ TEST(execute_control, loop_void_empty)
     */
     const auto wasm = from_hex("0061736d01000000010401600000030201000a09010700034020000b0b");
     const auto result = execute(parse(wasm), 0, {1});
-    EXPECT_RESULT(result, 1);
+    EXPECT_THAT(result, Result(1));
 }
 
 TEST(execute_control, block_void_empty)
@@ -78,7 +72,7 @@ TEST(execute_control, block_void_empty)
     */
     const auto wasm = from_hex("0061736d01000000010401600000030201000a09010700024020000b0b");
     const auto result = execute(parse(wasm), 0, {100});
-    EXPECT_RESULT(result, 100);
+    EXPECT_THAT(result, Result(100));
 }
 
 TEST(execute_control, loop_void_br_if_16)
@@ -97,7 +91,7 @@ TEST(execute_control, loop_void_br_if_16)
     */
     const auto wasm =
         from_hex("0061736d0100000001050160017f00030201000a120110000340200041016b22000d0020000b0b");
-    EXPECT_RESULT(execute(parse(wasm), 0, {16}), 0);
+    EXPECT_THAT(execute(parse(wasm), 0, {16}), Result(0));
 }
 
 TEST(execute_control, loop_with_result)
@@ -110,7 +104,7 @@ TEST(execute_control, loop_with_result)
     )
     */
     const auto wasm = from_hex("0061736d010000000105016000017f030201000a09010700037f41010b0b");
-    EXPECT_RESULT(execute(parse(wasm), 0, {}), 1);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result(1));
 }
 
 TEST(execute_control, loop_with_result_br_if)
@@ -129,7 +123,7 @@ TEST(execute_control, loop_with_result_br_if)
     */
     const auto wasm = from_hex(
         "0061736d0100000001060160017f017f030201000a12011000037f417f200041016b22000d000b0b");
-    EXPECT_RESULT(execute(parse(wasm), 0, {2}), uint32_t(-1));
+    EXPECT_THAT(execute(parse(wasm), 0, {2}), Result(uint32_t(-1)));
 }
 
 TEST(execute_control, loop_with_result_br)
@@ -154,7 +148,7 @@ TEST(execute_control, loop_with_result_br)
     const auto wasm = from_hex(
         "0061736d0100000001060160017f017f03020100070801046d61696e00000a19011700027f037f41e707200041"
         "016b22000d011a0c000b0b0b");
-    EXPECT_RESULT(execute(parse(wasm), 0, {3}), 999);
+    EXPECT_THAT(execute(parse(wasm), 0, {3}), Result(999));
 }
 
 TEST(execute_control, loop_with_result_br_stack_cleanup)
@@ -178,7 +172,7 @@ TEST(execute_control, loop_with_result_br_stack_cleanup)
     const auto wasm = from_hex(
         "0061736d0100000001060160017f017f03020100070801046d61696e00000a1b011900027f037f41e707200041"
         "016b22000d01419a050c000b0b0b");
-    EXPECT_RESULT(execute(parse(wasm), 0, {3}), 999);
+    EXPECT_THAT(execute(parse(wasm), 0, {3}), Result(999));
 }
 
 TEST(execute_control, blocks_without_br)
@@ -217,10 +211,7 @@ TEST(execute_control, blocks_without_br)
         "0061736d010000000105016000017f030201000a30012e01017f0240200041016a21000340200041016a210002"
         "40200041016a21000340200041016a21000b0b0b0b20000b");
 
-    const auto [trap, ret] = execute(parse(bin), 0, {});
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 4);
+    EXPECT_THAT(execute(parse(bin), 0, {}), Result(4));
 }
 
 TEST(execute_control, nested_blocks_0)
@@ -265,7 +256,7 @@ TEST(execute_control, nested_blocks_0)
         "0061736d010000000105016000017f030201000a43014101017f02402000410172210002402000410272210002"
         "402000410472210041010c00200041087221000b200041107221000b200041207221000b200041c000720b");
 
-    EXPECT_RESULT(execute(parse(wasm), 0, {}), 0b1110111);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result(0b1110111));
 }
 
 TEST(execute_control, nested_blocks_1)
@@ -310,7 +301,7 @@ TEST(execute_control, nested_blocks_1)
         "0061736d010000000105016000017f030201000a43014101017f02402000410172210002402000410272210002"
         "402000410472210041010c01200041087221000b200041107221000b200041207221000b200041c000720b");
 
-    EXPECT_RESULT(execute(parse(wasm), 0, {}), 0b1100111);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result(0b1100111));
 }
 
 TEST(execute_control, nested_blocks_2)
@@ -355,7 +346,7 @@ TEST(execute_control, nested_blocks_2)
         "0061736d010000000105016000017f030201000a43014101017f02402000410172210002402000410272210002"
         "402000410472210041010c02200041087221000b200041107221000b200041207221000b200041c000720b");
 
-    EXPECT_RESULT(execute(parse(wasm), 0, {}), 0b1000111);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result(0b1000111));
 }
 
 TEST(execute_control, nested_blocks_3)
@@ -400,7 +391,7 @@ TEST(execute_control, nested_blocks_3)
         "0061736d010000000105016000017f030201000a43014101017f02402000410172210002402000410272210002"
         "402000410472210041010c03200041087221000b200041107221000b200041207221000b200041c000720b");
 
-    EXPECT_RESULT(execute(parse(wasm), 0, {}), 1);
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result(1));
 }
 
 TEST(execute_control, nested_br_if)
@@ -454,10 +445,8 @@ TEST(execute_control, nested_br_if)
 
     for (auto loop_count : {1u, 2u})
     {
-        const auto [trap, ret] = execute(parse(bin), 0, {loop_count});
-        ASSERT_FALSE(trap);
-        ASSERT_EQ(ret.size(), 1);
-        EXPECT_EQ(ret[0], (0b11001000 << 8) + loop_count) << loop_count;
+        EXPECT_THAT(execute(parse(bin), 0, {loop_count}), Result((0b11001000 << 8) + loop_count))
+            << loop_count;
     }
 }
 
@@ -476,10 +465,7 @@ TEST(execute_control, br_stack_cleanup)
     const auto bin =
         from_hex("0061736d010000000105016000017f030201000a0d010b004101024041020c000b0b");
 
-    const auto [trap, ret] = execute(parse(bin), 0, {});
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 1);
+    EXPECT_THAT(execute(parse(bin), 0, {}), Result(1));
 }
 
 TEST(execute_control, br_if_stack_cleanup)
@@ -502,10 +488,7 @@ TEST(execute_control, br_if_stack_cleanup)
     const auto bin = from_hex(
         "0061736d0100000001060160017f017e030201000a1501130042000340427e417f20006a22000d001a0b0b");
 
-    const auto [trap, ret] = execute(parse(bin), 0, {7});
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 0);
+    EXPECT_THAT(execute(parse(bin), 0, {7}), Result(0));
 }
 
 TEST(execute_control, br_multiple_blocks_stack_cleanup)
@@ -526,9 +509,7 @@ TEST(execute_control, br_multiple_blocks_stack_cleanup)
     const auto bin =
         from_hex("0061736d01000000010401600000030201000a11010f0002404101034042020c010b1a0b0b");
 
-    const auto [trap, ret] = execute(parse(bin), 0, {7});
-    ASSERT_FALSE(trap);
-    EXPECT_EQ(ret.size(), 0);
+    EXPECT_THAT(execute(parse(bin), 0, {7}), Result());
 }
 
 TEST(execute_control, block_with_result)
@@ -542,10 +523,7 @@ TEST(execute_control, block_with_result)
     */
     const auto bin = from_hex("0061736d010000000105016000017e030201000a09010700027e427f0b0b");
 
-    const auto [trap, ret] = execute(parse(bin), 0, {});
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], uint64_t(-1));
+    EXPECT_THAT(execute(parse(bin), 0, {}), Result(uint64_t(-1)));
 }
 
 TEST(execute_control, trap_inside_block)
@@ -559,8 +537,7 @@ TEST(execute_control, trap_inside_block)
     */
     const auto bin = from_hex("0061736d010000000105016000017e030201000a08010600027e000b0b");
 
-    const auto [trap, ret] = execute(parse(bin), 0, {});
-    ASSERT_TRUE(trap);
+    EXPECT_THAT(execute(parse(bin), 0, {}), Traps());
 }
 
 TEST(execute_control, br_with_result)
@@ -578,10 +555,7 @@ TEST(execute_control, br_with_result)
     const auto bin =
         from_hex("0061736d010000000105016000017f030201000a0f010d00027f4101410241030c000b0b");
 
-    const auto [trap, ret] = execute(parse(bin), 0, {});
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 3);
+    EXPECT_THAT(execute(parse(bin), 0, {}), Result(3));
 }
 
 TEST(execute_control, br_if_with_result)
@@ -607,10 +581,7 @@ TEST(execute_control, br_if_with_result)
             2,  // br_if taken, result: 2, remaining item dropped.
         };
 
-        const auto [trap, ret] = execute(parse(bin), 0, {param});
-        ASSERT_FALSE(trap);
-        ASSERT_EQ(ret.size(), 1);
-        EXPECT_EQ(ret[0], expected_results[param]);
+        EXPECT_THAT(execute(parse(bin), 0, {param}), Result(expected_results[param]));
     }
 }
 
@@ -635,10 +606,7 @@ TEST(execute_control, br_if_out_of_function)
             2,  // br_if taken.
         };
 
-        const auto [trap, ret] = execute(parse(bin), 0, {param});
-        ASSERT_FALSE(trap);
-        ASSERT_EQ(ret.size(), 1);
-        EXPECT_EQ(ret[0], expected_results[param]);
+        EXPECT_THAT(execute(parse(bin), 0, {param}), Result(expected_results[param]));
     }
 }
 
@@ -663,10 +631,7 @@ TEST(execute_control, br_1_out_of_function_and_imported_function)
 
     const auto module = parse(bin);
     auto instance = instantiate(module, {{fake_imported_function, module.typesec[0]}});
-    const auto [trap, ret] = execute(*instance, 1, {});
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 1);
+    EXPECT_THAT(execute(*instance, 1, {}), Result(1));
 }
 
 TEST(execute_control, br_table)
@@ -700,16 +665,10 @@ TEST(execute_control, br_table)
     {
         constexpr uint64_t expected_results[]{103, 102, 101, 100, 104, 104};
 
-        const auto [trap, ret] = execute(parse(bin), 0, {param});
-        ASSERT_FALSE(trap);
-        ASSERT_EQ(ret.size(), 1);
-        EXPECT_EQ(ret[0], expected_results[param]);
+        EXPECT_THAT(execute(parse(bin), 0, {param}), Result(expected_results[param]));
     }
 
-    const auto [trap, ret] = execute(parse(bin), 0, {42});
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 104);
+    EXPECT_THAT(execute(parse(bin), 0, {42}), Result(104));
 }
 
 TEST(execute_control, br_table_empty_vector)
@@ -728,10 +687,7 @@ TEST(execute_control, br_table_empty_vector)
 
     for (const auto param : {0u, 1u, 2u})
     {
-        const auto [trap, ret] = execute(parse(bin), 0, {param});
-        ASSERT_FALSE(trap);
-        ASSERT_EQ(ret.size(), 1);
-        EXPECT_EQ(ret[0], 100);
+        EXPECT_THAT(execute(parse(bin), 0, {param}), Result(100));
     }
 }
 
@@ -753,8 +709,7 @@ TEST(execute_control, br_table_as_return)
 
     for (const auto param : {0u, 1u})
     {
-        const auto result = execute(parse(wasm), 0, {param});
-        EXPECT_RESULT(result, 1000 + param);
+        EXPECT_THAT(execute(parse(wasm), 0, {param}), Result(1000 + param));
     }
 }
 
@@ -773,10 +728,7 @@ TEST(execute_control, return_from_loop)
     const auto bin =
         from_hex("0061736d010000000105016000017f030201000a0e010c00034041010f0c000b41000b");
 
-    const auto [trap, ret] = execute(parse(bin), 0, {});
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 1);
+    EXPECT_THAT(execute(parse(bin), 0, {}), Result(1));
 }
 
 TEST(execute_control, return_stack_cleanup)
@@ -791,9 +743,7 @@ TEST(execute_control, return_stack_cleanup)
     */
     const auto bin = from_hex("0061736d01000000010401600000030201000a0b0109004101410241030f0b");
 
-    const auto [trap, ret] = execute(parse(bin), 0, {});
-    ASSERT_FALSE(trap);
-    EXPECT_EQ(ret.size(), 0);
+    EXPECT_THAT(execute(parse(bin), 0, {}), Result());
 }
 
 TEST(execute_control, return_from_block_stack_cleanup)
@@ -811,10 +761,7 @@ TEST(execute_control, return_from_block_stack_cleanup)
     const auto bin =
         from_hex("0061736d010000000105016000017f030201000a0e010c000240417f41010f0b417e0b");
 
-    const auto [trap, ret] = execute(parse(bin), 0, {});
-    ASSERT_FALSE(trap);
-    ASSERT_EQ(ret.size(), 1);
-    EXPECT_EQ(ret[0], 1);
+    EXPECT_THAT(execute(parse(bin), 0, {}), Result(1));
 }
 
 TEST(execute_control, if_smoke)
@@ -844,10 +791,7 @@ TEST(execute_control, if_smoke)
             4,  // if branch.
         };
 
-        const auto [trap, ret] = execute(module, 0, {param});
-        ASSERT_FALSE(trap);
-        ASSERT_EQ(ret.size(), 1);
-        EXPECT_EQ(ret[0], expected_results[param]);
+        EXPECT_THAT(execute(module, 0, {param}), Result(expected_results[param]));
     }
 }
 
@@ -878,10 +822,7 @@ TEST(execute_control, if_else_smoke)
             1,  // if branch.
         };
 
-        const auto [trap, ret] = execute(module, 0, {param});
-        ASSERT_FALSE(trap);
-        ASSERT_EQ(ret.size(), 1);
-        EXPECT_EQ(ret[0], expected_results[param]);
+        EXPECT_THAT(execute(module, 0, {param}), Result(expected_results[param]));
     }
 }
 
@@ -918,10 +859,7 @@ TEST(execute_control, if_return_from_branch)
             1,  // if branch.
         };
 
-        const auto [trap, ret] = execute(module, 0, {param});
-        ASSERT_FALSE(trap);
-        ASSERT_EQ(ret.size(), 1);
-        EXPECT_EQ(ret[0], expected_results[param]);
+        EXPECT_THAT(execute(module, 0, {param}), Result(expected_results[param]));
     }
 }
 
@@ -960,9 +898,6 @@ TEST(execute_control, if_br_from_branch)
             21,  // if branch.
         };
 
-        const auto [trap, ret] = execute(module, 0, {param});
-        ASSERT_FALSE(trap);
-        ASSERT_EQ(ret.size(), 1);
-        EXPECT_EQ(ret[0], expected_results[param]);
+        EXPECT_THAT(execute(module, 0, {param}), Result(expected_results[param]));
     }
 }

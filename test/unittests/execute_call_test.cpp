@@ -15,7 +15,7 @@ TEST(execute_call, call)
     */
     const auto wasm =
         from_hex("0061736d010000000105016000017f03030200000a0e02070041aa80a8010b040010000b");
-    EXPECT_RESULT(execute(parse(wasm), 1, {}), 0x2a002a);
+    EXPECT_THAT(execute(parse(wasm), 1, {}), Result(0x2a002a));
 }
 
 TEST(execute_call, call_trap)
@@ -26,8 +26,7 @@ TEST(execute_call, call_trap)
     */
     const auto wasm = from_hex("0061736d010000000105016000017f03030200000a0a020300000b040010000b");
 
-    const auto [trap, _] = execute(parse(wasm), 1, {});
-    EXPECT_TRUE(trap);
+    EXPECT_THAT(execute(parse(wasm), 1, {}), Traps());
 }
 
 TEST(execute_call, call_with_arguments)
@@ -50,7 +49,7 @@ TEST(execute_call, call_with_arguments)
         "0061736d01000000010b0260027f7f017f6000017f03030200010a12020700200120006b0b0800410d41111000"
         "0b");
 
-    EXPECT_RESULT(execute(parse(wasm), 1, {}), 4);
+    EXPECT_THAT(execute(parse(wasm), 1, {}), Result(4));
 }
 
 TEST(execute_call, call_indirect)
@@ -80,20 +79,17 @@ TEST(execute_call, call_indirect)
     {
         constexpr uint64_t expected_results[]{3, 2, 1};
 
-        const auto [trap, ret] = execute(module, 5, {param});
-        ASSERT_FALSE(trap);
-        ASSERT_EQ(ret.size(), 1);
-        EXPECT_EQ(ret[0], expected_results[param]);
+        EXPECT_THAT(execute(module, 5, {param}), Result(expected_results[param]));
     }
 
     // immediate is incorrect type
-    EXPECT_TRUE(execute(module, 5, {3}).trapped);
+    EXPECT_THAT(execute(module, 5, {3}), Traps());
 
     // called function traps
-    EXPECT_TRUE(execute(module, 5, {4}).trapped);
+    EXPECT_THAT(execute(module, 5, {4}), Traps());
 
     // argument out of table bounds
-    EXPECT_TRUE(execute(module, 5, {5}).trapped);
+    EXPECT_THAT(execute(module, 5, {5}), Traps());
 }
 
 TEST(execute_call, call_indirect_with_argument)
@@ -120,11 +116,11 @@ TEST(execute_call, call_indirect_with_argument)
 
     const Module module = parse(bin);
 
-    EXPECT_RESULT(execute(module, 3, {0}), 31 / 7);
-    EXPECT_RESULT(execute(module, 3, {1}), 31 - 7);
+    EXPECT_THAT(execute(module, 3, {0}), Result(31 / 7));
+    EXPECT_THAT(execute(module, 3, {1}), Result(31 - 7));
 
     // immediate is incorrect type
-    EXPECT_TRUE(execute(module, 3, {2}).trapped);
+    EXPECT_THAT(execute(module, 3, {2}), Traps());
 }
 
 TEST(execute_call, call_indirect_imported_table)
@@ -199,8 +195,8 @@ TEST(execute_call, call_indirect_uninited_table)
     const Module module = parse(bin);
 
     // elements 3 and 4 are not initialized
-    EXPECT_TRUE(execute(module, 3, {3}).trapped);
-    EXPECT_TRUE(execute(module, 3, {4}).trapped);
+    EXPECT_THAT(execute(module, 3, {3}), Traps());
+    EXPECT_THAT(execute(module, 3, {4}), Traps());
 }
 
 TEST(execute_call, imported_function_call)
@@ -223,7 +219,7 @@ TEST(execute_call, imported_function_call)
 
     auto instance = instantiate(module, {{host_foo, host_foo_type}});
 
-    EXPECT_RESULT(execute(*instance, 1, {}), 42);
+    EXPECT_THAT(execute(*instance, 1, {}), Result(42));
 }
 
 TEST(execute_call, imported_function_call_with_arguments)
@@ -250,7 +246,7 @@ TEST(execute_call, imported_function_call_with_arguments)
 
     auto instance = instantiate(module, {{host_foo, host_foo_type}});
 
-    EXPECT_RESULT(execute(*instance, 1, {20}), 42);
+    EXPECT_THAT(execute(*instance, 1, {20}), Result(42));
 }
 
 TEST(execute_call, imported_functions_call_indirect)
@@ -295,9 +291,9 @@ TEST(execute_call, imported_functions_call_indirect)
     };
 
     auto instance = instantiate(module, {{sqr, module.typesec[0]}, {isqrt, module.typesec[0]}});
-    EXPECT_RESULT(execute(*instance, 3, {0, 10}), 20);  // double(10)
-    EXPECT_RESULT(execute(*instance, 3, {1, 9}), 81);   // sqr(9)
-    EXPECT_RESULT(execute(*instance, 3, {2, 50}), 7);   // isqrt(50)
+    EXPECT_THAT(execute(*instance, 3, {0, 10}), Result(20));  // double(10)
+    EXPECT_THAT(execute(*instance, 3, {1, 9}), Result(81));   // sqr(9)
+    EXPECT_THAT(execute(*instance, 3, {2, 50}), Result(7));   // isqrt(50)
 }
 
 TEST(execute_call, imported_function_from_another_module)
@@ -342,7 +338,7 @@ TEST(execute_call, imported_function_from_another_module)
 
     auto instance2 = instantiate(module2, {{sub, module1.typesec[0]}});
 
-    EXPECT_RESULT(execute(*instance2, 1, {44, 2}), 42);
+    EXPECT_THAT(execute(*instance2, 1, {44, 2}), Result(42));
 }
 
 TEST(execute_call, imported_table_from_another_module)
@@ -442,7 +438,7 @@ TEST(execute_call, call_infinite_recursion)
 
     const Module module = parse(bin);
 
-    EXPECT_TRUE(execute(module, 0, {}).trapped);
+    EXPECT_THAT(execute(module, 0, {}), Traps());
 }
 
 TEST(execute_call, call_indirect_infinite_recursion)
@@ -475,8 +471,8 @@ TEST(execute_call, call_max_depth)
     const auto module = parse(bin);
     auto instance = instantiate(module);
 
-    EXPECT_RESULT(execute(*instance, 0, {}, 2048), 42);
-    EXPECT_TRUE(execute(*instance, 1, {}, 2048).trapped);
+    EXPECT_THAT(execute(*instance, 0, {}, 2048), Result(42));
+    EXPECT_THAT(execute(*instance, 1, {}, 2048), Traps());
 }
 
 // A regression test for incorrect number of arguments passed to a call.
@@ -499,7 +495,7 @@ TEST(execute_call, call_nonempty_stack)
 
     auto instance = instantiate(parse(wasm));
 
-    EXPECT_RESULT(execute(*instance, 1, {}), 3);
+    EXPECT_THAT(execute(*instance, 1, {}), Result(3));
 }
 
 TEST(execute_call, call_imported_infinite_recursion)

@@ -15,7 +15,7 @@ inline auto parse_expr(const bytes& input)
 }
 }  // namespace
 
-TEST(parser, instr_loop)
+TEST(parser_expr, instr_loop)
 {
     const auto loop_void_empty = "03400b0b"_bytes;
     const auto [code1, pos1] = parse_expr(loop_void_empty);
@@ -38,14 +38,14 @@ TEST(parser, instr_loop)
     EXPECT_EQ(code4.immediates.size(), 0);
 }
 
-TEST(parser, instr_loop_input_buffer_overflow)
+TEST(parser_expr, instr_loop_input_buffer_overflow)
 {
     // The function end opcode 0b is missing causing reading out of input buffer.
     const auto loop_missing_end = "03400b"_bytes;
     EXPECT_THROW_MESSAGE(parse_expr(loop_missing_end), parser_error, "Unexpected EOF");
 }
 
-TEST(parser, instr_block)
+TEST(parser_expr, instr_block)
 {
     const auto wrong_type = "0200"_bytes;
     EXPECT_THROW_MESSAGE(parse_expr(wrong_type), parser_error, "invalid valtype 0");
@@ -76,14 +76,14 @@ TEST(parser, instr_block)
         "09000000"_bytes);
 }
 
-TEST(parser, instr_block_input_buffer_overflow)
+TEST(parser_expr, instr_block_input_buffer_overflow)
 {
     // The function end opcode 0b is missing causing reading out of input buffer.
     const auto block_missing_end = "02400b"_bytes;
     EXPECT_THROW_MESSAGE(parse_expr(block_missing_end), parser_error, "Unexpected EOF");
 }
 
-TEST(parser, block_br)
+TEST(parser_expr, block_br)
 {
     // nop
     // block
@@ -113,7 +113,7 @@ TEST(parser, block_br)
         "01000000"_bytes);
 }
 
-TEST(parser, instr_br_table)
+TEST(parser_expr, instr_br_table)
 {
     /*
      (block
@@ -161,7 +161,7 @@ TEST(parser, instr_br_table)
     EXPECT_EQ(code.immediates.substr(br_table_imm_offset, expected_br_imm.size()), expected_br_imm);
 }
 
-TEST(parser, instr_br_table_empty_vector)
+TEST(parser_expr, instr_br_table_empty_vector)
 {
     /*
       (block
@@ -187,7 +187,7 @@ TEST(parser, instr_br_table_empty_vector)
     EXPECT_EQ(code.immediates.substr(br_table_imm_offset, expected_br_imm.size()), expected_br_imm);
 }
 
-TEST(parser, unexpected_else)
+TEST(parser_expr, unexpected_else)
 {
     // (else)
     const auto code1_bin = "050b0b"_bytes;
@@ -200,7 +200,7 @@ TEST(parser, unexpected_else)
         "unexpected else instruction (if instruction missing)");
 }
 
-TEST(parser, call_indirect_table_index)
+TEST(parser_expr, call_indirect_table_index)
 {
     const auto code1_bin = i32_const(0) + "1122000b"_bytes;
     const auto [code, pos] = parse_expr(code1_bin);
@@ -211,14 +211,14 @@ TEST(parser, call_indirect_table_index)
         parse_expr(code2_bin), parser_error, "invalid tableidx encountered with call_indirect");
 }
 
-TEST(parser, control_instr_out_of_bounds)
+TEST(parser_expr, control_instr_out_of_bounds)
 {
     EXPECT_THROW_MESSAGE(parse_expr("02"_bytes), parser_error, "Unexpected EOF");
     EXPECT_THROW_MESSAGE(parse_expr("03"_bytes), parser_error, "Unexpected EOF");
     EXPECT_THROW_MESSAGE(parse_expr(i32_const(0) + "04"_bytes), parser_error, "Unexpected EOF");
 }
 
-TEST(parser, immediate_leb128_out_of_bounds)
+TEST(parser_expr, immediate_leb128_out_of_bounds)
 {
     for (const auto instr : {Instr::local_get, Instr::local_set, Instr::local_tee,
              Instr::global_get, Instr::global_set, Instr::br, Instr::br_if, Instr::call,
@@ -229,7 +229,7 @@ TEST(parser, immediate_leb128_out_of_bounds)
     }
 }
 
-TEST(parser, load_store_immediates_out_of_bounds)
+TEST(parser_expr, load_store_immediates_out_of_bounds)
 {
     for (const auto instr : {Instr::i32_load, Instr::i64_load, Instr::i32_load8_s,
              Instr::i32_load8_u, Instr::i32_load16_s, Instr::i32_load16_u, Instr::i64_load8_s,
@@ -244,7 +244,7 @@ TEST(parser, load_store_immediates_out_of_bounds)
     }
 }
 
-TEST(parser, br_table_out_of_bounds)
+TEST(parser_expr, br_table_out_of_bounds)
 {
     EXPECT_THROW_MESSAGE(parse_expr(i32_const(0) + "0e008f"_bytes), parser_error, "Unexpected EOF");
     EXPECT_THROW_MESSAGE(parse_expr(i32_const(0) + "0e018f"_bytes), parser_error, "Unexpected EOF");
@@ -253,12 +253,12 @@ TEST(parser, br_table_out_of_bounds)
         parse_expr(i32_const(0) + "0e02018f"_bytes), parser_error, "Unexpected EOF");
 }
 
-TEST(parser, call_indirect_out_of_bounds)
+TEST(parser_expr, call_indirect_out_of_bounds)
 {
     EXPECT_THROW_MESSAGE(parse_expr(i32_const(0) + "1100"_bytes), parser_error, "Unexpected EOF");
 }
 
-TEST(parser, memory_grow_out_of_bounds)
+TEST(parser_expr, memory_grow_out_of_bounds)
 {
     for (const auto instr : {Instr::memory_size, Instr::memory_grow})
     {
