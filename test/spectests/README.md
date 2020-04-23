@@ -14,6 +14,12 @@ It can then be executed:
 $ bin/fizzy-spectests <test directory>
 ```
 
+This will execute all test cases, but since Fizzy does not implement the complete validation specification, most of
+those cases will fail. It is possible to skip them:
+```sh
+$ bin/fizzy-spectests --skip-validation <test directory>
+```
+
 ## Preparing tests
 
 Fizzy uses the official WebAssembly "[spec tests]", albeit not directly.
@@ -27,17 +33,7 @@ In order to prepare the tests, run the following command for each file:
 $ wast2json <file.wast> -o <file.json>
 ```
 
-## Fizzy's fork of the spec tests
-
-A further limitation of Fizzy is the decision to (initially) not support floating point instructions.
-The official test suite has some files purely for floating point instructions, but unfortunately many general
-files (such as `memory`, `traps`, etc.) also make use of them.
-
-As an interim solution there is a fork for an [integer-only suite here](https://github.com/wasmx/wasm-spec/tree/nofp)
-(observe the `nofp` branch).
-
-For ease of use (and integration into CircleCI) there is also a different branch containing the
-[translated JSON files](https://github.com/wasmx/wasm-spec/tree/nofp-json) (the `nofp-json` branch).
+For ease of use, we have placed the JSON files of the [spec tests] v1.1 release here: https://github.com/wasmx/wasm-spec/tree/vanilla-json
 
 [spec tests]: https://github.com/WebAssembly/spec/tree/master/test/core
 [wabt]: https://github.com/WebAssembly/wabt
