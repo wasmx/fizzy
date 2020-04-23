@@ -248,8 +248,8 @@ jobs:
       - benchmark:
           min_time: "0.01"
       - spectest:
-          expected_passed: 4734
-          expected_failed: 698
+          expected_passed: 4747
+          expected_failed: 685
           expected_skipped: 6381
 
   benchmark:
@@ -340,12 +340,12 @@ jobs:
           at: ~/build
       - spectest:
           skip_validation: true
-          expected_passed: 4469
-          expected_failed: 21
+          expected_passed: 4482
+          expected_failed: 8
           expected_skipped: 7323
       - spectest:
-          expected_passed: 4734
-          expected_failed: 698
+          expected_passed: 4747
+          expected_failed: 685
           expected_skipped: 6381
 
 workflows:

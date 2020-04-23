@@ -7,6 +7,15 @@
 
 using namespace fizzy;
 
+namespace
+{
+uint64_t call_table_func(Instance& instance, size_t idx)
+{
+    const auto& elem = (*instance.table)[idx];
+    const auto res = elem->function(instance, {}, 0);
+    return res.stack.front();
+}
+}  // namespace
 
 TEST(instantiate, imported_functions)
 {
@@ -16,7 +25,9 @@ TEST(instantiate, imported_functions)
     const auto bin = from_hex("0061736d0100000001060160017f017f020b01036d6f6403666f6f0000");
     const auto module = parse(bin);
 
-    auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result { return {true, {}}; };
+    auto host_foo = [](Instance&, std::vector<uint64_t>, int) -> execution_result {
+        return {true, {}};
+    };
     auto instance = instantiate(module, {{host_foo, module.typesec[0]}});
 
     ASSERT_EQ(instance->imported_functions.size(), 1);
@@ -37,10 +48,10 @@ TEST(instantiate, imported_functions_multiple)
         "0061736d0100000001090260017f017f600000021702036d6f6404666f6f310000036d6f6404666f6f320001");
     const auto module = parse(bin);
 
-    auto host_foo1 = [](Instance&, std::vector<uint64_t>) -> execution_result {
+    auto host_foo1 = [](Instance&, std::vector<uint64_t>, int) -> execution_result {
         return {true, {0}};
     };
-    auto host_foo2 = [](Instance&, std::vector<uint64_t>) -> execution_result {
+    auto host_foo2 = [](Instance&, std::vector<uint64_t>, int) -> execution_result {
         return {true, {}};
     };
     auto instance =
@@ -77,7 +88,9 @@ TEST(instantiate, imported_function_wrong_type)
     const auto bin = from_hex("0061736d0100000001060160017f017f020b01036d6f6403666f6f0000");
     const auto module = parse(bin);
 
-    auto host_foo = [](Instance&, std::vector<uint64_t>) -> execution_result { return {true, {}}; };
+    auto host_foo = [](Instance&, std::vector<uint64_t>, int) -> execution_result {
+        return {true, {}};
+    };
     const auto host_foo_type = FuncType{{}, {}};
 
     EXPECT_THROW_MESSAGE(instantiate(module, {{host_foo, host_foo_type}}), instantiate_error,
@@ -165,7 +178,7 @@ TEST(instantiate, imported_table_invalid)
         "Provided imported table doesn't fit provided limits");
 
     // Allocated more than max
-    table_elements table_big(40, 0);
+    table_elements table_big(40);
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table_big, {10, 30}}}), instantiate_error,
         "Provided imported table doesn't fit provided limits");
 }
@@ -425,39 +438,51 @@ TEST(instantiate, memory_single_large_maximum)
 
 TEST(instantiate, element_section)
 {
-    Module module;
-    module.tablesec.emplace_back(Table{{4, std::nullopt}});
-    // Table contents: 0, 0xaa, 0xff, 0, ...
-    module.elementsec.emplace_back(
-        Element{{ConstantExpression::Kind::Constant, {1}}, {0xaa, 0xff}});
-    // Table contents: 0, 0xaa, 0x55, 0x55, 0, ...
-    module.elementsec.emplace_back(
-        Element{{ConstantExpression::Kind::Constant, {2}}, {0x55, 0x55}});
+    /* wat2wasm
+    (module
+      (table (export "tab") 4 funcref)
+      (elem (i32.const 1) $f1 $f2) ;; Table contents: uninit, f1, f2, uninit
+      (elem (i32.const 2) $f3 $f3) ;; Table contents: uninit, f1, f3, f3
+      (func $f1 (result i32) (i32.const 1))
+      (func $f2 (result i32) (i32.const 2))
+      (func $f3 (result i32) (i32.const 3))
+    )
+    */
+    const auto bin = from_hex(
+        "0061736d010000000105016000017f030403000000040401700004070701037461620100090f020041010b0200"
+        "010041020b0202020a1003040041010b040041020b040041030b");
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(parse(bin));
 
     ASSERT_EQ(instance->table->size(), 4);
     EXPECT_FALSE((*instance->table)[0].has_value());
-    EXPECT_EQ((*instance->table)[1], 0xaa);
-    EXPECT_EQ((*instance->table)[2], 0x55);
-    EXPECT_EQ((*instance->table)[3], 0x55);
+    EXPECT_EQ(call_table_func(*instance, 1), 1);
+    EXPECT_EQ(call_table_func(*instance, 2), 3);
+    EXPECT_EQ(call_table_func(*instance, 3), 3);
 }
 
 TEST(instantiate, element_section_offset_from_global)
 {
-    Module module;
-    module.tablesec.emplace_back(Table{{4, std::nullopt}});
-    module.globalsec.emplace_back(Global{false, {ConstantExpression::Kind::Constant, {1}}});
-    // Table contents: 0, 0xaa, 0xff, 0, ...
-    module.elementsec.emplace_back(
-        Element{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
-
-    auto instance = instantiate(module);
+    // Manually generated binary,
+    // because wabt doesn't support offset initied from non-imported global
+    /*
+    (module
+      (global $offset i32 (i32.const 1))
+      (table (export "tab") 4 funcref)
+      (elem (global.get $offset) $f1 $f2) ;; Table contents: uninit, f1, f2, uninit
+      (func $f1 (result i32) (i32.const 1))
+      (func $f2 (result i32) (i32.const 2))
+    )
+    */
+    const auto bin = from_hex(
+        "0061736d010000000105016000017f03030200000404017000040606017f0041010b0707010374616201"
+        "000908010023000b0200010a0b02040041010b040041020b");
+    auto instance = instantiate(parse(bin));
 
     ASSERT_EQ(instance->table->size(), 4);
     EXPECT_FALSE((*instance->table)[0].has_value());
-    EXPECT_EQ((*instance->table)[1], 0xaa);
-    EXPECT_EQ((*instance->table)[2], 0xff);
+    EXPECT_EQ(call_table_func(*instance, 1), 1);
+    EXPECT_EQ(call_table_func(*instance, 2), 2);
     EXPECT_FALSE((*instance->table)[3].has_value());
 }
 
@@ -478,12 +503,12 @@ TEST(instantiate, element_section_offset_from_imported_global)
     uint64_t global_value = 1;
     ExternalGlobal g{&global_value, false};
 
-    auto instance = instantiate(module, {}, {}, {}, {g});
+    auto instance = instantiate(parse(bin), {}, {}, {}, {g});
 
     ASSERT_EQ(instance->table->size(), 4);
     EXPECT_FALSE((*instance->table)[0].has_value());
-    EXPECT_EQ((*instance->table)[1], 0);
-    EXPECT_EQ((*instance->table)[2], 1);
+    EXPECT_EQ(call_table_func(*instance, 1), 1);
+    EXPECT_EQ(call_table_func(*instance, 2), 2);
     EXPECT_FALSE((*instance->table)[3].has_value());
 }
 
@@ -516,28 +541,31 @@ TEST(instantiate, element_section_offset_too_large)
 TEST(instantiate, element_section_fills_imported_table)
 {
     /* wat2wasm
-      (table (import "mod" "t") 4 funcref)
-      (elem (i32.const 1) 0 1) ;; Table contents: uninit, 0, 1, uninit
-      (elem (i32.const 2) 2 3) ;; Table contents: uninit, 0, 2, 3
-      (func (result i32) (i32.const 1))
-      (func (result i32) (i32.const 2))
-      (func (result i32) (i32.const 3))
-      (func (result i32) (i32.const 4))
+    (module
+      (table (import "m" "tab") 4 funcref)
+      (elem (i32.const 1) $f1 $f2) ;; Table contents: uninit, f1, f2, uninit
+      (elem (i32.const 2) $f3 $f4) ;; Table contents: uninit, f1, f3, f4
+      (func $f1 (result i32) (i32.const 1))
+      (func $f2 (result i32) (i32.const 2))
+      (func $f3 (result i32) (i32.const 3))
+      (func $f4 (result i32) (i32.const 4))
+    )
     */
     const auto bin = from_hex(
-        "0061736d010000000105016000017f020b01036d6f6401740170000403050400000000090f020041010b020001"
+        "0061736d010000000105016000017f020b01016d037461620170000403050400000000090f020041010b020001"
         "0041020b0202030a1504040041010b040041020b040041030b040041040b");
-    const auto module = parse(bin);
+
+    auto f0 = [](Instance&, std::vector<uint64_t>, int) { return execution_result{false, {0}}; };
 
     table_elements table(4);
-    table[0] = 0xbb;
-    auto instance = instantiate(module, {}, {{&table, {4, std::nullopt}}});
+    table[0] = ExternalFunction{f0, FuncType{{}, {ValType::i32}}};
+    auto instance = instantiate(parse(bin), {}, {{&table, {4, std::nullopt}}});
 
     ASSERT_EQ(instance->table->size(), 4);
-    EXPECT_EQ((*instance->table)[0], 0xbb);
-    EXPECT_EQ((*instance->table)[1], 0);
-    EXPECT_EQ((*instance->table)[2], 2);
-    EXPECT_EQ((*instance->table)[3], 3);
+    EXPECT_EQ(call_table_func(*instance, 0), 0);
+    EXPECT_EQ(call_table_func(*instance, 1), 1);
+    EXPECT_EQ(call_table_func(*instance, 2), 3);
+    EXPECT_EQ(call_table_func(*instance, 3), 4);
 }
 
 TEST(instantiate, element_section_out_of_bounds_doesnt_change_imported_table)
@@ -555,14 +583,16 @@ TEST(instantiate, element_section_out_of_bounds_doesnt_change_imported_table)
         "0b0200000a0601040041010b");
     Module module = parse(bin);
 
+    auto f0 = [](Instance&, std::vector<uint64_t>, int) { return execution_result{false, {0}}; };
+
     table_elements table(3);
-    table[0] = 0xbb;
+    table[0] = ExternalFunction{f0, FuncType{{}, {ValType::i32}}};
 
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table, {3, std::nullopt}}}), instantiate_error,
         "Element segment is out of table bounds");
 
     ASSERT_EQ(table.size(), 3);
-    EXPECT_EQ(table[0], 0xbb);
+    EXPECT_EQ(*table[0]->function.target<decltype(f0)>(), f0);
     EXPECT_FALSE(table[1].has_value());
     EXPECT_FALSE(table[2].has_value());
 }

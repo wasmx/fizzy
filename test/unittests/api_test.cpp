@@ -58,7 +58,7 @@ TEST(api, find_exported_function)
 
     auto opt_function = find_exported_function(*instance, "foo");
     ASSERT_TRUE(opt_function);
-    EXPECT_RESULT(opt_function->function(*instance, {}), 42);
+    EXPECT_RESULT(opt_function->function(*instance, {}, 0), 42);
     EXPECT_TRUE(opt_function->type.inputs.empty());
     ASSERT_EQ(opt_function->type.outputs.size(), 1);
     EXPECT_EQ(opt_function->type.outputs[0], ValType::i32);
@@ -77,7 +77,7 @@ TEST(api, find_exported_function)
         "0061736d010000000105016000017f021001087370656374657374036261720000040401700000050401010102"
         "0606017f0041000b07170403666f6f000001670300037461620100036d656d0200");
 
-    auto bar = [](Instance&, std::vector<uint64_t>) { return execution_result{false, {42}}; };
+    auto bar = [](Instance&, std::vector<uint64_t>, int) { return execution_result{false, {42}}; };
     const auto bar_type = FuncType{{}, {ValType::i32}};
 
     auto instance_reexported_function =
@@ -85,7 +85,7 @@ TEST(api, find_exported_function)
 
     opt_function = find_exported_function(*instance_reexported_function, "foo");
     ASSERT_TRUE(opt_function);
-    EXPECT_RESULT(opt_function->function(*instance, {}), 42);
+    EXPECT_RESULT(opt_function->function(*instance, {}, 0), 42);
     EXPECT_TRUE(opt_function->type.inputs.empty());
     ASSERT_EQ(opt_function->type.outputs.size(), 1);
     EXPECT_EQ(opt_function->type.outputs[0], ValType::i32);
@@ -202,8 +202,8 @@ TEST(api, find_exported_table)
 {
     /* wat2wasm
     (module
-      (func $f (export "f") nop)
-      (func $g nop)
+      (func $f (export "f") (result i32) (i32.const 1))
+      (func $g (result i32) (i32.const 2))
       (global (export "g1") i32 (i32.const 0))
       (table (export "tab") 2 20 anyfunc)
       (elem 0 (i32.const 0) $g $f)
@@ -211,8 +211,8 @@ TEST(api, find_exported_table)
     )
      */
     const auto wasm = from_hex(
-        "0061736d0100000001040160000003030200000405017001021405030100000606017f0041000b071604016600"
-        "000267310300037461620100036d656d02000908010041000b0201000a09020300010b0300010b");
+        "0061736d010000000105016000017f03030200000405017001021405030100000606017f0041000b0716040166"
+        "00000267310300037461620100036d656d02000908010041000b0201000a0b02040041010b040041020b");
 
     auto instance = instantiate(parse(wasm));
 
@@ -220,8 +220,8 @@ TEST(api, find_exported_table)
     ASSERT_TRUE(opt_table);
     EXPECT_EQ(opt_table->table, instance->table.get());
     EXPECT_EQ(opt_table->table->size(), 2);
-    EXPECT_EQ((*opt_table->table)[0], 1);
-    EXPECT_EQ((*opt_table->table)[1], 0);
+    EXPECT_THAT((*opt_table->table)[0]->function(*instance, {}, 0), Result(2));
+    EXPECT_THAT((*opt_table->table)[1]->function(*instance, {}, 0), Result(1));
     EXPECT_EQ(opt_table->limits.min, 2);
     ASSERT_TRUE(opt_table->limits.max.has_value());
     EXPECT_EQ(opt_table->limits.max, 20);
@@ -242,7 +242,7 @@ TEST(api, find_exported_table)
         "0061736d010000000104016000000211010474657374057461626c650170010214030302000005030100000606"
         "017f0041000b071604037461620100016600000267310300036d656d02000a09020300010b0300010b");
 
-    table_elements table = {1, 0};
+    table_elements table(2);
     auto instance_reexported_table =
         instantiate(parse(wasm_reexported_table), {}, {ExternalTable{&table, {2, 20}}});
 
