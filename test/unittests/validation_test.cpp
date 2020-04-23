@@ -9,6 +9,17 @@
 using namespace fizzy;
 using namespace fizzy::test;
 
+TEST(validation, imported_function_unknown_type)
+{
+    /* wat2wasm --no-check
+    (type (func (result i32)))
+    (func (import "m" "f") (type 1))
+    */
+    const auto wasm = from_hex("0061736d010000000105016000017f020701016d01660001");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm), validation_error, "invalid type index of an imported function");
+}
+
 TEST(validation, import_memories_multiple)
 {
     const auto section_contents =

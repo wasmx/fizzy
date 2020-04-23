@@ -157,43 +157,6 @@ void match_imported_globals(const std::vector<bool>& module_imports_mutability,
     }
 }
 
-void match_imports(const Module& module, const std::vector<ExternalFunction>& imported_functions,
-    const std::vector<ExternalTable>& imported_tables,
-    const std::vector<ExternalMemory>& imported_memories,
-    const std::vector<ExternalGlobal>& imported_globals)
-{
-    std::vector<FuncType> imported_function_types;
-    std::vector<Table> imported_table_types;
-    std::vector<Memory> imported_memory_types;
-    std::vector<bool> imported_globals_mutability;
-    for (auto const& import : module.importsec)
-    {
-        switch (import.kind)
-        {
-        case ExternalKind::Function:
-            assert(import.desc.function_type_index < module.typesec.size());
-            imported_function_types.emplace_back(module.typesec[import.desc.function_type_index]);
-            break;
-        case ExternalKind::Table:
-            imported_table_types.emplace_back(import.desc.table);
-            break;
-        case ExternalKind::Memory:
-            imported_memory_types.emplace_back(import.desc.memory);
-            break;
-        case ExternalKind::Global:
-            imported_globals_mutability.emplace_back(import.desc.global_mutable);
-            break;
-        default:
-            assert(false);
-        }
-    }
-
-    match_imported_functions(imported_function_types, imported_functions);
-    match_imported_tables(imported_table_types, imported_tables);
-    match_imported_memories(imported_memory_types, imported_memories);
-    match_imported_globals(imported_globals_mutability, imported_globals);
-}
-
 table_ptr allocate_table(
     const std::vector<Table>& module_tables, const std::vector<ExternalTable>& imported_tables)
 {
@@ -518,13 +481,12 @@ inline uint64_t popcnt64(uint64_t value) noexcept
     return static_cast<uint64_t>(__builtin_popcountll(value));
 }
 
-std::optional<uint32_t> find_export(
-    const Instance& instance, ExternalKind kind, std::string_view name)
+std::optional<uint32_t> find_export(const Module& module, ExternalKind kind, std::string_view name)
 {
-    const auto it = std::find_if(instance.module.exportsec.begin(), instance.module.exportsec.end(),
+    const auto it = std::find_if(module.exportsec.begin(), module.exportsec.end(),
         [kind, name](const auto& export_) { return export_.kind == kind && export_.name == name; });
 
-    return (it != instance.module.exportsec.end() ? std::make_optional(it->index) : std::nullopt);
+    return (it != module.exportsec.end() ? std::make_optional(it->index) : std::nullopt);
 }
 
 }  // namespace
@@ -535,7 +497,10 @@ std::unique_ptr<Instance> instantiate(Module module,
 {
     assert(module.funcsec.size() == module.codesec.size());
 
-    match_imports(module, imported_functions, imported_tables, imported_memories, imported_globals);
+    match_imported_functions(module.imported_function_types, imported_functions);
+    match_imported_tables(module.imported_table_types, imported_tables);
+    match_imported_memories(module.imported_memory_types, imported_memories);
+    match_imported_globals(module.imported_globals_mutability, imported_globals);
 
     // Init globals
     std::vector<uint64_t> globals;
@@ -1574,7 +1539,7 @@ std::optional<FuncIdx> find_exported_function(const Module& module, std::string_
 
 std::optional<ExternalFunction> find_exported_function(Instance& instance, std::string_view name)
 {
-    const auto opt_index = find_export(instance, ExternalKind::Function, name);
+    const auto opt_index = find_export(instance.module, ExternalKind::Function, name);
     if (!opt_index.has_value())
         return std::nullopt;
 
@@ -1588,7 +1553,7 @@ std::optional<ExternalFunction> find_exported_function(Instance& instance, std::
 
 std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::string_view name)
 {
-    const auto opt_index = find_export(instance, ExternalKind::Global, name);
+    const auto opt_index = find_export(instance.module, ExternalKind::Global, name);
     if (!opt_index.has_value())
         return std::nullopt;
 
@@ -1610,51 +1575,53 @@ std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::stri
 
 std::optional<ExternalTable> find_exported_table(Instance& instance, std::string_view name)
 {
-    if (!find_export(instance, ExternalKind::Table, name))
+    const auto& module = instance.module;
+
+    // Index returned from find_export is discarded, because there's no more than 1 table
+    if (!find_export(module, ExternalKind::Table, name))
         return std::nullopt;
 
-    if (instance.module.tablesec.size() == 1)
+    if (module.tablesec.size() == 1)
     {
         // table owned by instance
-        return ExternalTable{instance.table.get(), instance.module.tablesec[0].limits};
+        assert(module.imported_table_types.size() == 0);
+        return ExternalTable{instance.table.get(), module.tablesec[0].limits};
     }
     else
     {
         // imported table is reexported
-        const auto it_import =
-            std::find_if(instance.module.importsec.begin(), instance.module.importsec.end(),
-                [](const auto& import) { return import.kind == ExternalKind::Table; });
-        assert(it_import != instance.module.importsec.end());
+        assert(module.imported_table_types.size() == 1);
 
         // FIXME: Limits here are not exactly correct: table could have been imported with limits
         // narrower than the ones defined in module's import definition, we don't save those during
         // instantiate.
-        return ExternalTable{instance.table.get(), it_import->desc.table.limits};
+        return ExternalTable{instance.table.get(), module.imported_table_types[0].limits};
     }
 }
 
 std::optional<ExternalMemory> find_exported_memory(Instance& instance, std::string_view name)
 {
-    if (!find_export(instance, ExternalKind::Memory, name))
+    const auto& module = instance.module;
+
+    // Index returned from find_export is discarded, because there's no more than 1 memory
+    if (!find_export(module, ExternalKind::Memory, name))
         return std::nullopt;
 
-    if (instance.module.memorysec.size() == 1)
+    if (module.memorysec.size() == 1)
     {
         // memory owned by instance
-        return ExternalMemory{instance.memory.get(), instance.module.memorysec[0].limits};
+        assert(module.imported_memory_types.size() == 0);
+        return ExternalMemory{instance.memory.get(), module.memorysec[0].limits};
     }
     else
     {
         // imported memory is reexported
-        const auto it_import =
-            std::find_if(instance.module.importsec.begin(), instance.module.importsec.end(),
-                [](const auto& import) { return import.kind == ExternalKind::Memory; });
-        assert(it_import != instance.module.importsec.end());
+        assert(module.imported_memory_types.size() == 1);
 
         // FIXME: Limits min here is not correct: memory could have been imported with limits
         // narrower than the ones defined in module's import definition, we save only max during
         // instantiate, but not min.
-        Limits limits = it_import->desc.memory.limits;
+        Limits limits = module.imported_memory_types[0].limits;
         if (instance.memory_max_pages < MemoryPagesLimit)
             limits.max = instance.memory_max_pages;
 

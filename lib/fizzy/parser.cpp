@@ -2,7 +2,7 @@
 #include "leb128.hpp"
 #include "types.hpp"
 #include "utf8.hpp"
-#include <algorithm>
+#include <cassert>
 
 namespace fizzy
 {
@@ -482,50 +482,69 @@ Module parse(bytes_view input)
     }
 
     // Validation checks
+
+    // Split imports by kind
+    for (const auto& import : module.importsec)
+    {
+        switch (import.kind)
+        {
+        case ExternalKind::Function:
+            if (import.desc.function_type_index >= module.typesec.size())
+                throw validation_error{"invalid type index of an imported function"};
+            module.imported_function_types.emplace_back(
+                module.typesec[import.desc.function_type_index]);
+            break;
+        case ExternalKind::Table:
+            module.imported_table_types.emplace_back(import.desc.table);
+            break;
+        case ExternalKind::Memory:
+            module.imported_memory_types.emplace_back(import.desc.memory);
+            break;
+        case ExternalKind::Global:
+            module.imported_globals_mutability.emplace_back(import.desc.global_mutable);
+            break;
+        default:
+            assert(false);
+        }
+    }
+
     if (module.tablesec.size() > 1)
         throw validation_error{"too many table sections (at most one is allowed)"};
 
     if (module.memorysec.size() > 1)
         throw validation_error{"too many memory sections (at most one is allowed)"};
 
-    const auto imported_mem_count = std::count_if(module.importsec.begin(), module.importsec.end(),
-        [](const auto& import) noexcept { return import.kind == ExternalKind::Memory; });
-
-    if (imported_mem_count > 1)
+    if (module.imported_memory_types.size() > 1)
         throw validation_error{"too many imported memories (at most one is allowed)"};
 
-    if (!module.memorysec.empty() && imported_mem_count > 0)
+    if (!module.memorysec.empty() && !module.imported_memory_types.empty())
     {
         throw validation_error{
             "both module memory and imported memory are defined (at most one of them is allowed)"};
     }
 
-    const auto imported_tbl_count = std::count_if(module.importsec.begin(), module.importsec.end(),
-        [](const auto& import) noexcept { return import.kind == ExternalKind::Table; });
-
-    if (imported_tbl_count > 1)
+    if (module.imported_table_types.size() > 1)
         throw validation_error{"too many imported tables (at most one is allowed)"};
 
-    if (!module.tablesec.empty() && imported_tbl_count > 0)
+    if (!module.tablesec.empty() && !module.imported_table_types.empty())
     {
         throw validation_error{
             "both module table and imported table are defined (at most one of them is allowed)"};
     }
 
-    if (!module.elementsec.empty() && module.tablesec.empty() && imported_tbl_count == 0)
+    if (!module.elementsec.empty() && module.tablesec.empty() &&
+        module.imported_table_types.empty())
         throw parser_error("element section encountered without a table section");
 
     if (module.funcsec.size() != code_binaries.size())
         throw parser_error("malformed binary: number of function and code entries must match");
 
-    const auto imported_func_count = std::count_if(module.importsec.begin(), module.importsec.end(),
-        [](const auto& import) noexcept { return import.kind == ExternalKind::Function; });
-    const auto total_func_count = static_cast<size_t>(imported_func_count) + module.funcsec.size();
+    const auto total_func_count = module.imported_function_types.size() + module.funcsec.size();
 
     if (module.startfunc && *module.startfunc >= total_func_count)
         throw parser_error{"invalid start function index"};
 
-    const auto have_memory = !module.memorysec.empty() || imported_mem_count != 0;
+    const auto have_memory = !module.memorysec.empty() || !module.imported_memory_types.empty();
     // Process code. TODO: This can be done lazily.
     module.codesec.reserve(code_binaries.size());
     for (size_t i = 0; i < code_binaries.size(); ++i)

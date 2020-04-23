@@ -299,31 +299,35 @@ TEST(parser, import_section_empty)
 
 TEST(parser, import_single_function)
 {
-    const auto section_contents = bytes{0x01, 0x03, 'm', 'o', 'd', 0x03, 'f', 'o', 'o', 0x00, 0x42};
-    const auto bin = bytes{wasm_prefix} + make_section(2, section_contents);
+    const auto type_section = make_vec({make_functype({}, {}), make_functype({0x7f}, {})});
+    const auto import_section = bytes{0x01, 0x03, 'm', 'o', 'd', 0x03, 'f', 'o', 'o', 0x00, 0x01};
+    const auto bin =
+        bytes{wasm_prefix} + make_section(1, type_section) + make_section(2, import_section);
 
     const auto module = parse(bin);
     ASSERT_EQ(module.importsec.size(), 1);
     EXPECT_EQ(module.importsec[0].module, "mod");
     EXPECT_EQ(module.importsec[0].name, "foo");
     EXPECT_EQ(module.importsec[0].kind, ExternalKind::Function);
-    EXPECT_EQ(module.importsec[0].desc.function_type_index, 0x42);
+    EXPECT_EQ(module.importsec[0].desc.function_type_index, 1);
 }
 
 TEST(parser, import_multiple)
 {
-    const auto section_contents = make_vec({bytes{0x02, 'm', '1', 0x03, 'a', 'b', 'c', 0x00, 0x42},
+    const auto type_section = make_vec({make_functype({}, {}), make_functype({0x7f}, {})});
+    const auto import_section = make_vec({bytes{0x02, 'm', '1', 0x03, 'a', 'b', 'c', 0x00, 0x01},
         bytes{0x02, 'm', '2', 0x03, 'f', 'o', 'o', 0x02, 0x00, 0x7f},
         bytes{0x02, 'm', '3', 0x03, 'b', 'a', 'r', 0x03, 0x7f, 0x00},
         bytes{0x02, 'm', '4', 0x03, 't', 'a', 'b', 0x01, 0x70, 0x01, 0x01, 0x42}});
-    const auto bin = bytes{wasm_prefix} + make_section(2, section_contents);
+    const auto bin =
+        bytes{wasm_prefix} + make_section(1, type_section) + make_section(2, import_section);
 
     const auto module = parse(bin);
     ASSERT_EQ(module.importsec.size(), 4);
     EXPECT_EQ(module.importsec[0].module, "m1");
     EXPECT_EQ(module.importsec[0].name, "abc");
     EXPECT_EQ(module.importsec[0].kind, ExternalKind::Function);
-    EXPECT_EQ(module.importsec[0].desc.function_type_index, 0x42);
+    EXPECT_EQ(module.importsec[0].desc.function_type_index, 0x01);
     EXPECT_EQ(module.importsec[1].module, "m2");
     EXPECT_EQ(module.importsec[1].name, "foo");
     EXPECT_EQ(module.importsec[1].kind, ExternalKind::Memory);
@@ -758,7 +762,7 @@ TEST(parser, start_module_with_imports)
 {
     const auto type_section = make_vec({make_functype({}, {})});
     const auto import_section =
-        make_vec({bytes{0x03, 'm', 'o', 'd', 0x03, 'f', 'o', 'o', 0x00, 0x42}});
+        make_vec({bytes{0x03, 'm', 'o', 'd', 0x03, 'f', 'o', 'o', 0x00, 0x00}});
     const auto func_section = make_vec({"00"_bytes, "00"_bytes});
     const auto code_section = make_vec({"02000b"_bytes, "02000b"_bytes});
     const auto start_section = "02"_bytes;
@@ -773,14 +777,15 @@ TEST(parser, start_module_with_imports)
 
 TEST(parser, start_module_with_imports_invalid_index)
 {
+    const auto type_section = make_vec({make_functype({}, {})});
     const auto import_section =
-        make_vec({bytes{0x03, 'm', 'o', 'd', 0x03, 'f', 'o', 'o', 0x00, 0x42}});
+        make_vec({bytes{0x03, 'm', 'o', 'd', 0x03, 'f', 'o', 'o', 0x00, 0x00}});
     const auto func_section = make_vec({"00"_bytes, "00"_bytes});
     const auto code_section = make_vec({"02000b"_bytes, "02000b"_bytes});
     const auto start_section = "03"_bytes;
-    const auto bin = bytes{wasm_prefix} + make_section(2, import_section) +
-                     make_section(3, func_section) + make_section(8, start_section) +
-                     make_section(10, code_section);
+    const auto bin = bytes{wasm_prefix} + make_section(1, type_section) +
+                     make_section(2, import_section) + make_section(3, func_section) +
+                     make_section(8, start_section) + make_section(10, code_section);
 
     EXPECT_THROW_MESSAGE(parse(bin), parser_error, "invalid start function index");
 }
