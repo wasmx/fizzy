@@ -652,6 +652,14 @@ TEST(parser, global_constant_expression_out_of_bounds)
     // i32, immutable, i64_const, 0x808081, EOF.
     const auto wasm4 = bytes{wasm_prefix} + make_section(6, make_vec({"7f0042808081"_bytes}));
     EXPECT_THROW_MESSAGE(parse(wasm4), parser_error, "Unexpected EOF");
+
+    // i32, immutable, f32_const, 0xaabbcc, EOF.
+    const auto wasm5 = bytes{wasm_prefix} + make_section(6, make_vec({"7f0043aabbcc"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm5), parser_error, "Unexpected EOF");
+
+    // i32, immutable, f64_const, 0xaabbccddee, EOF.
+    const auto wasm6 = bytes{wasm_prefix} + make_section(6, make_vec({"7f0044aabbccddee"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm6), parser_error, "Unexpected EOF");
 }
 
 TEST(parser, export_section_empty)
@@ -1209,6 +1217,15 @@ TEST(parser, data_section_memidx_nonzero)
     const auto bin = bytes{wasm_prefix} + make_section(11, section_contents);
 
     EXPECT_THROW_MESSAGE(parse(bin), parser_error, "unexpected memidx value 1");
+}
+
+TEST(parser, data_section_out_of_bounds)
+{
+    const auto wasm1 = bytes{wasm_prefix} + make_section(11, make_vec({"0041000b01"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm1), parser_error, "Unexpected EOF");
+    const auto wasm2 =
+        bytes{wasm_prefix} + make_section(11, make_vec({"0041000b09d0d1d2d3d4d5d6d7"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm2), parser_error, "Unexpected EOF");
 }
 
 TEST(parser, unknown_section_empty)
