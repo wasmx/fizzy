@@ -20,6 +20,7 @@ target_sources(
     parser_expr_test.cpp
     parser_test.cpp
     stack_test.cpp
+    test_utils_test.cpp
     utf8_test.cpp
     validation_stack_test.cpp
     validation_test.cpp
