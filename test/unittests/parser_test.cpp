@@ -1219,6 +1219,15 @@ TEST(parser, data_section_memidx_nonzero)
     EXPECT_THROW_MESSAGE(parse(bin), parser_error, "unexpected memidx value 1");
 }
 
+TEST(parser, data_section_out_of_bounds)
+{
+    const auto wasm1 = bytes{wasm_prefix} + make_section(11, make_vec({"0041000b01"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm1), parser_error, "Unexpected EOF");
+    const auto wasm2 =
+        bytes{wasm_prefix} + make_section(11, make_vec({"0041000b09d0d1d2d3d4d5d6d7"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm2), parser_error, "Unexpected EOF");
+}
+
 TEST(parser, unknown_section_empty)
 {
     const auto bin = bytes{wasm_prefix} + make_section(12, bytes{});
