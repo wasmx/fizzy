@@ -229,6 +229,15 @@ TEST(parser_expr, immediate_leb128_out_of_bounds)
     }
 }
 
+TEST(parser_expr, immediate_float_out_of_bounds)
+{
+    const auto expr_f32_const = bytes{uint8_t(Instr::f32_const), 0x01};
+    EXPECT_THROW_MESSAGE(parse_expr(expr_f32_const), parser_error, "Unexpected EOF");
+    const auto expr_f64_const =
+        bytes{uint8_t(Instr::f64_const), 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
+    EXPECT_THROW_MESSAGE(parse_expr(expr_f64_const), parser_error, "Unexpected EOF");
+}
+
 TEST(parser_expr, load_store_immediates_out_of_bounds)
 {
     for (const auto instr : {Instr::i32_load, Instr::i64_load, Instr::i32_load8_s,
