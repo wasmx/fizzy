@@ -28,7 +28,7 @@ public:
 
     bool parse(bytes_view input) final;
     std::optional<FuncRef> find_function(std::string_view name) const final;
-    bool instantiate() final;
+    bool instantiate(bytes_view wasm_binary) final;
     bool init_memory(fizzy::bytes_view memory) final;
     fizzy::bytes_view get_memory() const final;
     Result execute(FuncRef func_ref, const std::vector<uint64_t>& args) final;
@@ -64,9 +64,29 @@ bool Wasm3Engine::parse(bytes_view input)
     return true;
 }
 
-bool Wasm3Engine::instantiate()
+bool Wasm3Engine::instantiate(bytes_view wasm_binary)
 {
-    // Already done in parse (with owernship transfer).
+    // Replace runtime (e.g. instance + module)
+    if (m_runtime != nullptr)
+        m3_FreeRuntime(m_runtime);
+
+    // The 64k stack size comes from wasm3/platforms/app
+    m_runtime = m3_NewRuntime(m_env, 64 * 1024, nullptr);
+    if (m_runtime == nullptr)
+        return false;
+
+    IM3Module module;
+    if (m3_ParseModule(m_env, &module, wasm_binary.data(), uint32_t(wasm_binary.size())) !=
+        m3Err_none)
+        return false;
+
+    // Transfers ownership to runtime.
+    if (m3_LoadModule(m_runtime, module) != m3Err_none)
+    {
+        m3_FreeModule(module);
+        return false;
+    }
+
     return true;
 }
 

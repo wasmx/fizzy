@@ -40,7 +40,7 @@ TEST(wasm_engine, instantiate_error)
     {
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
-        ASSERT_FALSE(engine->instantiate());
+        ASSERT_FALSE(engine->instantiate(wasm));
     }
 
     // NOTE: wabt doesn't differentiate between parse/instantiate errors
@@ -65,7 +65,7 @@ TEST(wasm_engine, trapped)
     {
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
-        ASSERT_TRUE(engine->instantiate());
+        ASSERT_TRUE(engine->instantiate(wasm));
         const auto func = engine->find_function("test");
         ASSERT_TRUE(func.has_value());
         const auto result = engine->execute(*func, {});
@@ -93,7 +93,7 @@ TEST(wasm_engine, multi_i32_args_ret_i32)
     {
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
-        ASSERT_TRUE(engine->instantiate());
+        ASSERT_TRUE(engine->instantiate(wasm));
         ASSERT_FALSE(engine->find_function("notfound").has_value());
         const auto func = engine->find_function("test");
         ASSERT_TRUE(func.has_value());
@@ -126,7 +126,7 @@ TEST(wasm_engine, multi_mixed_args_ret_i32)
     {
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
-        ASSERT_TRUE(engine->instantiate());
+        ASSERT_TRUE(engine->instantiate(wasm));
         ASSERT_FALSE(engine->find_function("notfound").has_value());
         const auto func = engine->find_function("test");
         ASSERT_TRUE(func.has_value());
@@ -158,7 +158,7 @@ TEST(wasm_engine, multi_mixed_args_ret_i64)
     {
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
-        ASSERT_TRUE(engine->instantiate());
+        ASSERT_TRUE(engine->instantiate(wasm));
         ASSERT_FALSE(engine->find_function("notfound").has_value());
         const auto func = engine->find_function("test");
         ASSERT_TRUE(func.has_value());
@@ -182,7 +182,7 @@ TEST(wasm_engine, no_memory)
     {
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
-        ASSERT_TRUE(engine->instantiate());
+        ASSERT_TRUE(engine->instantiate(wasm));
         const auto func = engine->find_function("test");
         EXPECT_TRUE(func.has_value());
         const auto mem = engine->get_memory();
@@ -210,7 +210,7 @@ TEST(wasm_engine, memory)
     {
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
-        ASSERT_TRUE(engine->instantiate());
+        ASSERT_TRUE(engine->instantiate(wasm));
         const auto func = engine->find_function("test");
         ASSERT_TRUE(func.has_value());
         const auto mem_input = bytes{engine->get_memory()};

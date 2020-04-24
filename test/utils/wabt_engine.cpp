@@ -18,7 +18,7 @@ class WabtEngine : public WasmEngine
 public:
     bool parse(bytes_view input) final;
     std::optional<FuncRef> find_function(std::string_view name) const final;
-    bool instantiate() final;
+    bool instantiate(bytes_view wasm_binary) final;
     bool init_memory(fizzy::bytes_view memory) final;
     bytes_view get_memory() const final;
     Result execute(FuncRef func_ref, const std::vector<uint64_t>& args) final;
@@ -31,15 +31,20 @@ std::unique_ptr<WasmEngine> create_wabt_engine()
 
 bool WabtEngine::parse(bytes_view input)
 {
+    wabt::interp::Environment env;
+    wabt::interp::DefinedModule* module{nullptr};
     wabt::Errors errors;
     wabt::Result result = wabt::ReadBinaryInterp(
-        &m_env, input.data(), input.size(), wabt::ReadBinaryOptions{}, &errors, &m_module);
+        &env, input.data(), input.size(), wabt::ReadBinaryOptions{}, &errors, &module);
     return (result == wabt::Result::Ok);
 }
 
-bool WabtEngine::instantiate()
+bool WabtEngine::instantiate(bytes_view wasm_binary)
 {
-    return true;
+    wabt::Errors errors;
+    wabt::Result result = wabt::ReadBinaryInterp(&m_env, wasm_binary.data(), wasm_binary.size(),
+        wabt::ReadBinaryOptions{}, &errors, &m_module);
+    return (result == wabt::Result::Ok);
 }
 
 bool WabtEngine::init_memory(bytes_view memory)

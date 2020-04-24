@@ -18,7 +18,7 @@ class FizzyEngine : public WasmEngine
 public:
     bool parse(bytes_view input) final;
     std::optional<FuncRef> find_function(std::string_view name) const final;
-    bool instantiate() final;
+    bool instantiate(bytes_view wasm_binary) final;
     bool init_memory(bytes_view memory) final;
     bytes_view get_memory() const final;
     Result execute(FuncRef func_ref, const std::vector<uint64_t>& args) final;
@@ -46,13 +46,13 @@ bool FizzyEngine::parse(bytes_view input)
     return true;
 }
 
-bool FizzyEngine::instantiate()
+bool FizzyEngine::instantiate(bytes_view wasm_binary)
 {
     try
     {
-        m_instance = fizzy::instantiate(std::move(m_instance->module));
+        m_instance = fizzy::instantiate(fizzy::parse(wasm_binary));
     }
-    catch (const fizzy::instantiate_error&)
+    catch (...)
     {
         return false;
     }
