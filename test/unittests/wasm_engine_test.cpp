@@ -2,6 +2,7 @@
 // Copyright 2019-2020 The Fizzy Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#include "limits.hpp"
 #include <gtest/gtest.h>
 #include <test/utils/hex.hpp>
 #include <test/utils/wasm_engine.hpp>
@@ -137,6 +138,38 @@ TEST(wasm_engine, multi_mixed_args_ret_i32)
     }
 }
 
+TEST(wasm_engine, multi_mixed_args_ret_i64)
+{
+    /* wat2wasm
+    (func $test (export "test") (param $a i32) (param $b i64) (param $c i32) (result i64)
+      local.get $a
+      local.get $c
+      i32.sub
+      i64.extend_i32_u
+      local.get $b
+      i64.mul
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001080160037f7e7f017e03020100070801047465737400000a0d010b00200020026bad2001"
+        "7e0b");
+
+    for (auto engine_create_fn : {create_fizzy_engine, create_wabt_engine, create_wasm3_engine})
+    {
+        auto engine = engine_create_fn();
+        ASSERT_TRUE(engine->parse(wasm));
+        ASSERT_TRUE(engine->instantiate());
+        ASSERT_FALSE(engine->find_function("notfound").has_value());
+        const auto func = engine->find_function("test");
+        ASSERT_TRUE(func.has_value());
+        // (52 - 21) * 0x1fffffff => 0x3dfffffe1
+        const auto result = engine->execute(*func, {52, 0x1fffffff, 21});
+        ASSERT_FALSE(result.trapped);
+        ASSERT_TRUE(result.value.has_value());
+        ASSERT_EQ(*result.value, 0x3dfffffe1);
+    }
+}
+
 TEST(wasm_engine, no_memory)
 {
     /* wat2wasm
@@ -154,6 +187,7 @@ TEST(wasm_engine, no_memory)
         EXPECT_TRUE(func.has_value());
         const auto mem = engine->get_memory();
         EXPECT_TRUE(mem.empty());
+        EXPECT_FALSE(engine->init_memory({}));
     }
 }
 
@@ -184,7 +218,7 @@ TEST(wasm_engine, memory)
         EXPECT_EQ(mem_input, bytes(64 * 1024, 0));
 
         const auto mem_init = bytes{0x12, 0, 0, 0x34};
-        engine->init_memory(mem_init);
+        EXPECT_TRUE(engine->init_memory(mem_init));
         const auto mem_check = engine->get_memory();
         EXPECT_EQ(mem_check.substr(0, 4), mem_init);
 
@@ -197,5 +231,8 @@ TEST(wasm_engine, memory)
         EXPECT_EQ(mem_output[5], 0);
         EXPECT_EQ(mem_output[6], 0);
         EXPECT_EQ(mem_output[7], 0x34);
+
+        // Try initialising with oversized buffer.
+        EXPECT_FALSE(engine->init_memory(bytes(PageSize + 4, 0)));
     }
 }

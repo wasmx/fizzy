@@ -43,6 +43,8 @@ public:
 
     /// Initializes the beginning of the instance's memory.
     /// The `memory` must not be empty.
+    /// Returns false if no memory is available (exported)
+    /// or if `memory` doesn't fit into instance's memory.
     /// Requires instantiate().
     virtual bool init_memory(bytes_view memory) = 0;
 
