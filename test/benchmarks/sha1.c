@@ -28,8 +28,29 @@
 
 #define IS_ALIGNED_32(p) (0 == (3 & ((const char*)(p) - (const char*)0)))
 
-#define be2me_32(x) (x)
-#define be32_copy(to, index, from, length) memcpy((to) + (index), (from), (length))
+#if __BYTE_ORDER != __LITTLE_ENDIAN
+#warning Only little endian supported.
+#endif
+
+#define be2me_32(x) __builtin_bswap32(x)
+#define be32_copy(to, index, from, length) rhash_swap_copy_str_to_u32((to), (index), (from), (length))
+
+void rhash_swap_copy_str_to_u32(void* to, int index, const void* from, size_t length)
+{
+    /* if all pointers and length are 32-bits aligned */
+    if ( 0 == (( (int)((char*)to - (char*)0) | ((char*)from - (char*)0) | index | length ) & 3) ) {
+        /* copy memory as 32-bit words */
+        const uint32_t* src = (const uint32_t*)from;
+        const uint32_t* end = (const uint32_t*)((const char*)src + length);
+        uint32_t* dst = (uint32_t*)((char*)to + index);
+        for (; src < end; dst++, src++)
+            *dst = __builtin_bswap32(*src);
+    } else {
+        const char* src = (const char*)from;
+        for (length += index; (size_t)index < length; index++)
+            ((char*)to)[index ^ 3] = *(src++);
+    }
+}
 
 #define sha1_block_size 64
 #define sha1_hash_size  20
