@@ -16,7 +16,7 @@ class WabtEngine : public WasmEngine
     wabt::interp::DefinedModule* m_module{nullptr};
 
 public:
-    bool parse(bytes_view input) final;
+    bool parse(bytes_view input) const final;
     std::optional<FuncRef> find_function(std::string_view name) const final;
     bool instantiate(bytes_view wasm_binary) final;
     bool init_memory(fizzy::bytes_view memory) final;
@@ -29,7 +29,7 @@ std::unique_ptr<WasmEngine> create_wabt_engine()
     return std::make_unique<WabtEngine>();
 }
 
-bool WabtEngine::parse(bytes_view input)
+bool WabtEngine::parse(bytes_view input) const
 {
     wabt::interp::Environment env;
     wabt::interp::DefinedModule* module{nullptr};
