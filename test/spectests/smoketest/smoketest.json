@@ -22,6 +22,11 @@
   {"type": "assert_unlinkable", "line": 72, "filename": "smoketest.9.wasm", "text": "unknown import", "module_type": "binary"}, 
   {"type": "assert_unlinkable", "line": 76, "filename": "smoketest.10.wasm", "text": "data segment does not fit", "module_type": "binary"}, 
   {"type": "assert_uninstantiable", "line": 81, "filename": "smoketest.11.wasm", "text": "unreachable", "module_type": "binary"}, 
-  {"type": "module", "line": 86, "filename": "smoketest.12.wasm"}, 
-  {"type": "assert_return", "line": 91, "action": {"type": "invoke", "field": "foo.f32", "args": []}, "expected": [{"type": "f32", "value": "1067282596"}]}, 
-  {"type": "assert_return", "line": 92, "action": {"type": "invoke", "field": "foo.f64", "args": []}, "expected": [{"type": "f64", "value": "4616820122002590269"}]}]}
+  {"type": "module", "line": 88, "filename": "smoketest.12.wasm"}, 
+  {"type": "assert_return", "line": 95, "action": {"type": "invoke", "field": "foo.f32", "args": []}, "expected": [{"type": "f32", "value": "1067282596"}]}, 
+  {"type": "assert_return", "line": 96, "action": {"type": "invoke", "field": "foo.f64", "args": []}, "expected": [{"type": "f64", "value": "4616820122002590269"}]}, 
+  {"type": "action", "line": 97, "action": {"type": "invoke", "field": "param.f64", "args": [{"type": "f64", "value": "4607182418800017408"}]}, "expected": []}, 
+  {"type": "assert_return", "line": 98, "action": {"type": "get", "field": "glob.f32"}, "expected": [{"type": "f32", "value": "1085276160"}]}, 
+  {"type": "register", "line": 100, "name": "$Mod-unknown", "as": "Mod-unknown"}, 
+  {"type": "assert_malformed", "line": 103, "filename": "smoketest.13.wat", "text": "error", "module_type": "text"}, 
+  {"type": "assert_unlinkable", "line": 104, "filename": "smoketest.14.wat", "text": "error", "module_type": "text"}]}

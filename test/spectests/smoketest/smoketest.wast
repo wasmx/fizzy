@@ -82,11 +82,23 @@
   "unreachable"
 )
 
+;; cases that will be skipped
+
 ;; floating point module
 (module
   (func (export "foo.f32") (result f32) (f32.const 1.23))
   (func (export "foo.f64") (result f64) (f64.const 4.56))
+  (func (export "param.f64") (param f64) (drop (local.get 0)))
+  (global (export "glob.f32") f32 (f32.const 5.5))
 )
 
 (assert_return (invoke "foo.f32") (f32.const 1.23))
 (assert_return (invoke "foo.f64") (f64.const 4.56))
+(invoke "param.f64" (f64.const 1))
+(assert_return (get "glob.f32") (f32.const 5.5))
+
+(register "Mod-unknown" $Mod-unknown)
+
+;; module_type=text
+(assert_malformed (module quote "") "error")
+(assert_unlinkable (module quote "") "error")
