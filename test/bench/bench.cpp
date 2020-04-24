@@ -90,54 +90,65 @@ struct ExecutionBenchmarkCase
     fizzy::bytes expected_memory;
 };
 
-void benchmark_execute(
-    benchmark::State& state, EngineCreateFn create_fn, const ExecutionBenchmarkCase& benchmark_case)
+/// Performs test run of the benchmark case and checks results produces by the engine
+/// against the expected values.
+void validate_benchmark_case(benchmark::State& state, fizzy::test::WasmEngine& engine,
+    const ExecutionBenchmarkCase& benchmark_case)
 {
-    const auto engine = create_fn();
-    if (!engine->parse(*benchmark_case.wasm_binary))
+    if (!engine.parse(*benchmark_case.wasm_binary))
         return state.SkipWithError("Parsing failed");
-    const auto func_ref = engine->find_function(benchmark_case.func_name);
+
+    const auto func_ref = engine.find_function(benchmark_case.func_name);
     if (!func_ref)
     {
         return state.SkipWithError(
             ("Function \"" + benchmark_case.func_name + "\" not found").c_str());
     }
 
-    if (!engine->instantiate())
+    if (!engine.instantiate())
         return state.SkipWithError("Instantiation failed");
 
-    const bool has_memory = !benchmark_case.memory.empty();
-    if (has_memory)
+    if (!benchmark_case.memory.empty())
     {
-        if (!engine->init_memory(benchmark_case.memory))
-            state.SkipWithError("Memory initialization failed");
+        if (!engine.init_memory(benchmark_case.memory))
+            return state.SkipWithError("Memory initialization failed");
     }
 
-    {  // Execute once and check results against expectations.
-        const auto result = engine->execute(*func_ref, benchmark_case.func_args);
-        if (result.trapped)
-            return state.SkipWithError("Trapped");
+    // Execute once and check results against expectations.
+    const auto result = engine.execute(*func_ref, benchmark_case.func_args);
+    if (result.trapped)
+        return state.SkipWithError("Trapped");
 
-        if (benchmark_case.expected_result)
-        {
-            if (!result.value)
-                return state.SkipWithError("Missing result value");
-            else if (*result.value != *benchmark_case.expected_result)
-                return state.SkipWithError("Incorrect result");
-        }
-        else if (result.value)
-            return state.SkipWithError("Unexpected result");
-
-        const auto memory = engine->get_memory();
-        if (memory.size() < benchmark_case.expected_memory.size())
-            return state.SkipWithError("Result memory is shorter than expected");
-
-        // Compare _beginning_ segment of the memory with expected.
-        // Specifying expected full memory pages is impractical.
-        if (!std::equal(std::begin(benchmark_case.expected_memory),
-                std::end(benchmark_case.expected_memory), std::begin(memory)))
-            return state.SkipWithError("Incorrect result memory");
+    if (benchmark_case.expected_result)
+    {
+        if (!result.value)
+            return state.SkipWithError("Missing result value");
+        else if (*result.value != *benchmark_case.expected_result)
+            return state.SkipWithError("Incorrect result");
     }
+    else if (result.value)
+        return state.SkipWithError("Unexpected result");
+
+    const auto memory = engine.get_memory();
+    if (memory.size() < benchmark_case.expected_memory.size())
+        return state.SkipWithError("Result memory is shorter than expected");
+
+    // Compare _beginning_ segment of the memory with expected.
+    // Specifying expected full memory pages is impractical.
+    if (!std::equal(std::begin(benchmark_case.expected_memory),
+            std::end(benchmark_case.expected_memory), std::begin(memory)))
+        return state.SkipWithError("Incorrect result memory");
+}
+
+void benchmark_execute(
+    benchmark::State& state, EngineCreateFn create_fn, const ExecutionBenchmarkCase& benchmark_case)
+{
+    const auto engine = create_fn();
+
+    validate_benchmark_case(state, *engine, benchmark_case);
+
+    const auto has_memory = !benchmark_case.memory.empty();
+    const auto func_ref = engine->find_function(benchmark_case.func_name);
 
     for ([[maybe_unused]] auto _ : state)
     {
