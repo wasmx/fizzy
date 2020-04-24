@@ -41,5 +41,8 @@ parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end);
 /// This is used in parse_expr() (parser_expr.cpp).
 parser_result<std::vector<uint32_t>> parse_vec_i32(const uint8_t* pos, const uint8_t* end);
 
+/// Validates and converts the given byte to valtype.
+ValType validate_valtype(uint8_t byte);
+
 const uint8_t* validate_valtype(const uint8_t* pos, const uint8_t* end);
 }  // namespace fizzy
