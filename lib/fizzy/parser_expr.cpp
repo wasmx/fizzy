@@ -53,15 +53,13 @@ parser_result<uint8_t> parse_blocktype(const uint8_t* pos, const uint8_t* end)
     // https://webassembly.github.io/spec/core/binary/types.html#result-types
     constexpr uint8_t BlockTypeEmpty = 0x40;
 
-    if (pos == end)
-        throw parser_error{"Unexpected EOF"};
-
-    const uint8_t type{*pos};
+    uint8_t type;
+    std::tie(type, pos) = parse_byte(pos, end);
 
     if (type == BlockTypeEmpty)
-        return {0, pos + 1};
+        return {0, pos};
 
-    pos = validate_valtype(pos, end);
+    validate_valtype(type);
     return {1, pos};
 }
 }  // namespace
@@ -82,12 +80,10 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
     bool continue_parsing = true;
     while (continue_parsing)
     {
-        if (pos == end)
-            throw parser_error{"Unexpected EOF"};
+        uint8_t opcode;
+        std::tie(opcode, pos) = parse_byte(pos, end);
 
         auto& frame = control_stack.top();
-
-        const auto opcode = *pos++;
         const auto& metrics = metrics_table[opcode];
 
         if (frame.stack_height < metrics.stack_height_required && !frame.unreachable)

@@ -27,6 +27,14 @@ inline const uint8_t* skip(size_t num_bytes, const uint8_t* input, const uint8_t
     return ret;
 }
 
+inline parser_result<uint8_t> parse_byte(const uint8_t* pos, const uint8_t* end)
+{
+    if (pos == end)
+        throw parser_error{"Unexpected EOF"};
+
+    return {*pos, pos + 1};
+}
+
 /// Parse `expr`, i.e. a function's instructions residing in the code section.
 /// https://webassembly.github.io/spec/core/binary/instructions.html#binary-expr
 ///
@@ -41,5 +49,6 @@ parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end);
 /// This is used in parse_expr() (parser_expr.cpp).
 parser_result<std::vector<uint32_t>> parse_vec_i32(const uint8_t* pos, const uint8_t* end);
 
-const uint8_t* validate_valtype(const uint8_t* pos, const uint8_t* end);
+/// Validates and converts the given byte to valtype.
+ValType validate_valtype(uint8_t byte);
 }  // namespace fizzy
