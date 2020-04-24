@@ -2,6 +2,7 @@
 // Copyright 2019-2020 The Fizzy Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#include "limits.hpp"
 #include <gtest/gtest.h>
 #include <test/utils/hex.hpp>
 #include <test/utils/wasm_engine.hpp>
@@ -230,5 +231,8 @@ TEST(wasm_engine, memory)
         EXPECT_EQ(mem_output[5], 0);
         EXPECT_EQ(mem_output[6], 0);
         EXPECT_EQ(mem_output[7], 0x34);
+
+        // Try initialising with oversized buffer.
+        EXPECT_FALSE(engine->init_memory(bytes(PageSize + 4, 0)));
     }
 }
