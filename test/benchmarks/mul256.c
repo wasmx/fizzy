@@ -1,4 +1,5 @@
 // Source: https://gist.github.com/poemm/356ba2c6826c6f5953db874e37783417
+// Licensed under the Apache License, Version 2.0. - Paul Dworzanski
 
 typedef unsigned int uint32_t;
 typedef unsigned long long uint64_t;
