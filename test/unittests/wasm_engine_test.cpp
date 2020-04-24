@@ -154,6 +154,7 @@ TEST(wasm_engine, no_memory)
         EXPECT_TRUE(func.has_value());
         const auto mem = engine->get_memory();
         EXPECT_TRUE(mem.empty());
+        EXPECT_FALSE(engine->init_memory({}));
     }
 }
 
@@ -184,7 +185,7 @@ TEST(wasm_engine, memory)
         EXPECT_EQ(mem_input, bytes(64 * 1024, 0));
 
         const auto mem_init = bytes{0x12, 0, 0, 0x34};
-        engine->init_memory(mem_init);
+        EXPECT_TRUE(engine->init_memory(mem_init));
         const auto mem_check = engine->get_memory();
         EXPECT_EQ(mem_check.substr(0, 4), mem_init);
 
