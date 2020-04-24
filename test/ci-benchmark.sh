@@ -1,8 +1,8 @@
+#!/usr/bin/env sh
+
 # Fizzy: A fast WebAssembly interpreter
 # Copyright 2019-2020 The Fizzy Authors.
 # SPDX-License-Identifier: Apache-2.0
-
-#!/usr/bin/env sh
 
 if [ -z "$CIRCLECI_TOKEN" ]; then
   echo "CIRCLECI_TOKEN env var is required"
