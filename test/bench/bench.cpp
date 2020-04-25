@@ -172,7 +172,8 @@ void register_benchmark(const std::string& name, Lambda&& fn)
     (void)name;
     (void)fn;
 #else
-    benchmark::RegisterBenchmark(name.c_str(), std::forward<Lambda>(fn));
+    benchmark::RegisterBenchmark(name.c_str(), std::forward<Lambda>(fn))
+        ->Unit(benchmark::kMicrosecond);
 #endif
 }
 
