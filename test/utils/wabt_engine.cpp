@@ -15,6 +15,9 @@ class WabtEngine : public WasmEngine
     wabt::interp::Environment m_env;
     wabt::interp::DefinedModule* m_module{nullptr};
 
+    // WABT Executor/Thread with default options.
+    wabt::interp::Executor m_executor{&m_env};
+
 public:
     bool parse(bytes_view input) const final;
     std::optional<FuncRef> find_function(std::string_view name) const final;
@@ -81,14 +84,6 @@ std::optional<WasmEngine::FuncRef> WabtEngine::find_function(std::string_view na
 WasmEngine::Result WabtEngine::execute(
     WasmEngine::FuncRef func_ref, const std::vector<uint64_t>& args)
 {
-    // WABT Executor/Thread will init both value and call stack vectors with zeros up front.
-    // To mitigate the performance overhead, we set sizes to much lower values
-    // than default ones.
-    wabt::interp::Thread::Options thread_options;
-    thread_options.value_stack_size = 1024;  // Default: 32k.
-    thread_options.call_stack_size = 1024;   // Default: 64k.
-    wabt::interp::Executor executor{&m_env, nullptr, thread_options};
-
     const auto* e = reinterpret_cast<const wabt::interp::Export*>(func_ref);
 
     const auto func_sig = m_env.GetFuncSignature(m_env.GetFunc(e->index)->sig_index);
@@ -105,7 +100,7 @@ WasmEngine::Result WabtEngine::execute(
             value.i64 = args[i];
         typed_args.push_back(wabt::interp::TypedValue{type, value});
     }
-    wabt::interp::ExecResult r = executor.RunExport(e, typed_args);
+    wabt::interp::ExecResult r = m_executor.RunExport(e, typed_args);
 
     if (r.result != wabt::interp::Result::Ok)
         return {true, {}};
