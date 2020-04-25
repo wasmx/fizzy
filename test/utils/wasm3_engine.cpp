@@ -19,7 +19,7 @@ class Wasm3Engine : public WasmEngine
 
 public:
     Wasm3Engine() : m_env{m3_NewEnvironment()} {}
-    ~Wasm3Engine()
+    ~Wasm3Engine() override
     {
         if (m_runtime)
             m3_FreeRuntime(m_runtime);
@@ -41,18 +41,21 @@ std::unique_ptr<WasmEngine> create_wasm3_engine()
 
 bool Wasm3Engine::parse(bytes_view input)
 {
+    IM3Module module;
+    if (m3_ParseModule(m_env, &module, input.data(), uint32_t(input.size())) != m3Err_none)
+        return false;
+
     // Replace runtime (e.g. instance + module)
     if (m_runtime != nullptr)
         m3_FreeRuntime(m_runtime);
 
-    // The 64k stack size comes from wasm3/platorms/app
+    // The 64k stack size comes from wasm3/platforms/app
     m_runtime = m3_NewRuntime(m_env, 64 * 1024, nullptr);
     if (m_runtime == nullptr)
+    {
+        m3_FreeModule(module);
         return false;
-
-    IM3Module module;
-    if (m3_ParseModule(m_env, &module, input.data(), uint32_t(input.size())) != m3Err_none)
-        return false;
+    }
 
     // Transfers ownership to runtime.
     if (m3_LoadModule(m_runtime, module) != m3Err_none)
