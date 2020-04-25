@@ -148,12 +148,12 @@ void benchmark_execute(
     validate_benchmark_case(state, *engine, benchmark_case);
 
     const auto has_memory = !benchmark_case.memory.empty();
-    const auto func_ref = engine->find_function(benchmark_case.func_name);
 
     for ([[maybe_unused]] auto _ : state)
     {
         state.PauseTiming();
         engine->instantiate();
+        const auto func_ref = engine->find_function(benchmark_case.func_name);
         if (has_memory)
             engine->init_memory(benchmark_case.memory);
         state.ResumeTiming();
