@@ -67,9 +67,17 @@ commands:
         working_directory: ~/build
         command: ctest -R ${TESTS_FILTER:-'.*'} -j4 --schedule-random --output-on-failure
     - run:
+        name: "Run smoketest with fizzy-spectests --skip-validation"
+        working_directory: ~/build
+        environment:
+          LLVM_PROFILE_FILE: spectests-validation.profraw
+        command: bin/fizzy-spectests ~/project/test/spectests/smoketest --skip-validation
+    - run:
         name: "Run smoketest with fizzy-spectests"
         working_directory: ~/build
-        command: bin/fizzy-spectests --skip-validation ~/project/test/spectests/smoketest
+        environment:
+          LLVM_PROFILE_FILE: spectests-skipvalidation.profraw
+        command: bin/fizzy-spectests ~/project/test/spectests/smoketest
 
   benchmark:
     description: "Run benchmarks"
