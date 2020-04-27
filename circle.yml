@@ -78,6 +78,12 @@ commands:
         environment:
           LLVM_PROFILE_FILE: spectests-skipvalidation.profraw
         command: bin/fizzy-spectests ~/project/test/spectests/smoketest
+    - run:
+        name: "Run smoketest failures with fizzy-spectests"
+        working_directory: ~/build
+        environment:
+          LLVM_PROFILE_FILE: spectests-failures.profraw
+        command: bin/fizzy-spectests ~/project/test/spectests/smoketest-failures || true
 
   benchmark:
     description: "Run benchmarks"
