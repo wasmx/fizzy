@@ -583,7 +583,8 @@ std::unique_ptr<Instance> instantiate(Module module,
                 return execute(instance_ref, idx, std::move(args), depth);
             };
 
-            *it_table++ = ExternalFunction{std::move(func), function_type(instance->module, idx)};
+            *it_table++ =
+                ExternalFunction{std::move(func), instance->module.get_function_type(idx)};
         }
     }
 
@@ -775,7 +776,7 @@ execution_result execute(
         case Instr::call:
         {
             const auto called_func_idx = read<uint32_t>(immediates);
-            const auto& func_type = function_type(instance.module, called_func_idx);
+            const auto& func_type = instance.module.get_function_type(called_func_idx);
 
             if (!invoke_function(func_type, called_func_idx, instance, stack, depth))
             {
@@ -1587,7 +1588,7 @@ std::optional<ExternalFunction> find_exported_function(Instance& instance, std::
         return execute(instance, idx, std::move(args), depth);
     };
 
-    return ExternalFunction{std::move(func), function_type(instance.module, idx)};
+    return ExternalFunction{std::move(func), instance.module.get_function_type(idx)};
 }
 
 std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::string_view name)

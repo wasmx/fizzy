@@ -44,18 +44,18 @@ struct Module
     std::vector<Memory> imported_memory_types;
     // Mutability of globals defined in import section
     std::vector<bool> imported_globals_mutability;
+
+    const FuncType& get_function_type(FuncIdx idx) const noexcept
+    {
+        assert(idx < imported_function_types.size() + funcsec.size());
+
+        if (idx < imported_function_types.size())
+            return imported_function_types[idx];
+
+        const auto type_idx = funcsec[idx - imported_function_types.size()];
+        assert(type_idx < typesec.size());
+
+        return typesec[type_idx];
+    }
 };
-
-inline const FuncType& function_type(const Module& module, FuncIdx idx) noexcept
-{
-    assert(idx < module.imported_function_types.size() + module.funcsec.size());
-
-    if (idx < module.imported_function_types.size())
-        return module.imported_function_types[idx];
-
-    const auto type_idx = module.funcsec[idx - module.imported_function_types.size()];
-    assert(type_idx < module.typesec.size());
-
-    return module.typesec[type_idx];
-}
 }  // namespace fizzy
