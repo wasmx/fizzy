@@ -1,10 +1,12 @@
 ;; unnamed module
 (module
   (func (export "foo") (param i32) (drop (local.get 0)))
+  (func (export "bar") (param i64) (drop (local.get 0)))
 )
 
 ;; invoke command translates into "action" command in json
 (invoke "foo" (i32.const 1))
+(invoke "bar" (i64.const 1))
 
 (register "Mod0")
 
@@ -51,8 +53,28 @@
 )
 
 (assert_unlinkable
+  (module (import "Mod-unknown" "foo" (func)))
+  "unknown module"
+)
+(assert_unlinkable
   (module (import "Mod0" "unknown" (func)))
   "unknown import"
+)
+(assert_unlinkable
+  (module (import "Mod0" "unknown" (table 1 funcref)))
+  "unknown import"
+)
+(assert_unlinkable
+  (module (import "Mod0" "unknown" (memory 1)))
+  "unknown import"
+)
+(assert_unlinkable
+  (module (import "Mod0" "unknown" (global i32)))
+  "unknown import"
+)
+(assert_unlinkable
+  (module (memory 0) (data (i32.const 0) "a"))
+  "data segment does not fit"
 )
 
 (assert_trap
