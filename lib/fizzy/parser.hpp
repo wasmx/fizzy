@@ -6,7 +6,7 @@
 
 #include "exceptions.hpp"
 #include "leb128.hpp"
-#include "types.hpp"
+#include "module.hpp"
 #include <tuple>
 
 namespace fizzy
