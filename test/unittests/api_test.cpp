@@ -275,7 +275,7 @@ TEST(api, find_exported_table)
     EXPECT_FALSE(find_exported_table(*instance_no_table, "tab").has_value());
 }
 
-TEST(api, DISABLED_find_exported_table_reimport)
+TEST(api, find_exported_table_reimport)
 {
     /* wat2wasm
     (module

@@ -162,7 +162,7 @@ void match_imported_globals(const std::vector<bool>& module_imports_mutability,
     }
 }
 
-table_ptr allocate_table(
+std::tuple<table_ptr, Limits> allocate_table(
     const std::vector<Table>& module_tables, const std::vector<ExternalTable>& imported_tables)
 {
     static const auto table_delete = [](table_elements* t) noexcept { delete t; };
@@ -171,11 +171,14 @@ table_ptr allocate_table(
     assert(module_tables.size() + imported_tables.size() <= 1);
 
     if (module_tables.size() == 1)
-        return {new table_elements(module_tables[0].limits.min), table_delete};
+    {
+        return {table_ptr{new table_elements(module_tables[0].limits.min), table_delete},
+            module_tables[0].limits};
+    }
     else if (imported_tables.size() == 1)
-        return {imported_tables[0].table, null_delete};
+        return {table_ptr{imported_tables[0].table, null_delete}, imported_tables[0].limits};
     else
-        return {nullptr, null_delete};
+        return {table_ptr{nullptr, null_delete}, Limits{}};
 }
 
 std::tuple<bytes_ptr, size_t> allocate_memory(const std::vector<Memory>& module_memories,
@@ -520,7 +523,7 @@ std::unique_ptr<Instance> instantiate(Module module,
         globals.emplace_back(value);
     }
 
-    auto table = allocate_table(module.tablesec, imported_tables);
+    auto [table, table_limits] = allocate_table(module.tablesec, imported_tables);
 
     // Allocate memory
     auto [memory, memory_max] = allocate_memory(module.memorysec, imported_memories);
@@ -568,7 +571,7 @@ std::unique_ptr<Instance> instantiate(Module module,
     // safe), but also erroneously points this warning to std::move(table)
     auto instance = std::make_unique<Instance>(std::move(module), std::move(memory), memory_max,
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-        std::move(table), std::move(globals), std::move(imported_functions),
+        std::move(table), table_limits, std::move(globals), std::move(imported_functions),
         std::move(imported_globals));
 
     // Fill the table based on elements segment
@@ -1621,22 +1624,7 @@ std::optional<ExternalTable> find_exported_table(Instance& instance, std::string
     if (!find_export(module, ExternalKind::Table, name))
         return std::nullopt;
 
-    if (module.tablesec.size() == 1)
-    {
-        // table owned by instance
-        assert(module.imported_table_types.size() == 0);
-        return ExternalTable{instance.table.get(), module.tablesec[0].limits};
-    }
-    else
-    {
-        // imported table is reexported
-        assert(module.imported_table_types.size() == 1);
-
-        // FIXME: Limits here are not exactly correct: table could have been imported with limits
-        // narrower than the ones defined in module's import definition, we don't save those during
-        // instantiate.
-        return ExternalTable{instance.table.get(), module.imported_table_types[0].limits};
-    }
+    return ExternalTable{instance.table.get(), instance.table_limits};
 }
 
 std::optional<ExternalMemory> find_exported_memory(Instance& instance, std::string_view name)
