@@ -195,3 +195,14 @@ TEST(validation, br_table_default_invalid_label_index)
 
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "invalid label index");
 }
+
+TEST(validation, call_unknown_function)
+{
+    /* wat2wasm --no-check
+    (func (import "m" "f"))
+    (func (result i32) call 2)
+    */
+    const auto wasm =
+        from_hex("0061736d010000000108026000006000017f020701016d01660000030201010a0601040010020b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "invalid funcidx encountered with call");
+}

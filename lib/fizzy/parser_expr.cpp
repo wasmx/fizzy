@@ -405,6 +405,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
             FuncIdx func_idx;
             std::tie(func_idx, pos) = leb128u_decode<uint32_t>(pos, end);
 
+            if (func_idx >= module.imported_function_types.size() + module.funcsec.size())
+                throw validation_error{"invalid funcidx encountered with call"};
+
             const auto& func_type = module.get_function_type(func_idx);
             const auto stack_height_required = static_cast<int>(func_type.inputs.size());
 
