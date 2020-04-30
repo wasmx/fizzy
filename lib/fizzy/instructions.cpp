@@ -22,9 +22,6 @@ constexpr InstructionMetrics instruction_metrics_table[256] = {
     /*                       0x09 */ {},
     /*                       0x0a */ {},
     /* end                 = 0x0b */ {0, 0},
-
-    // TODO: After br code is unreachable so stack height should be reset (according to the target
-    //       label?) Similarly for return.
     /* br                  = 0x0c */ {0, 0},
     /* br_if               = 0x0d */ {1, -1},
     /* br_table            = 0x0e */ {1, -1},
