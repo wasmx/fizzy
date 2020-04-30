@@ -14,6 +14,7 @@ target_sources(
     instructions.hpp
     leb128.hpp
     limits.hpp
+    module.hpp
     parser.cpp
     parser.hpp
     parser_expr.cpp

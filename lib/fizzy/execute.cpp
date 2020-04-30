@@ -4,6 +4,7 @@
 
 #include "execute.hpp"
 #include "limits.hpp"
+#include "module.hpp"
 #include "stack.hpp"
 #include "types.hpp"
 #include <algorithm>
@@ -271,19 +272,6 @@ void branch(uint32_t label_idx, LabelStack& labels, Stack<uint64_t>& stack, cons
     }
     else
         stack.resize(label.stack_height);
-}
-
-const FuncType& function_type(const Module& module, FuncIdx idx)
-{
-    assert(idx < module.imported_function_types.size() + module.funcsec.size());
-
-    if (idx < module.imported_function_types.size())
-        return module.imported_function_types[idx];
-
-    const auto type_idx = module.funcsec[idx - module.imported_function_types.size()];
-    assert(type_idx < module.typesec.size());
-
-    return module.typesec[type_idx];
 }
 
 template <class F>
