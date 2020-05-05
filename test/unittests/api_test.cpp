@@ -222,8 +222,10 @@ TEST(api, find_exported_table)
 
     auto opt_table = find_exported_table(*instance, "tab");
     ASSERT_TRUE(opt_table);
-    EXPECT_EQ(opt_table->table, instance->table.get());
-    EXPECT_EQ(opt_table->table->size(), 2);
+
+    const auto& table_elems = instance->table.get_table_elements();
+    EXPECT_EQ(opt_table->table, &table_elems);
+    EXPECT_EQ(table_elems.size(), 2);
     EXPECT_THAT((*opt_table->table)[0]->function(*instance, {}, 0), Result(2));
     EXPECT_THAT((*opt_table->table)[1]->function(*instance, {}, 0), Result(1));
     EXPECT_EQ(opt_table->limits.min, 2);
@@ -275,7 +277,7 @@ TEST(api, find_exported_table)
     EXPECT_FALSE(find_exported_table(*instance_no_table, "tab").has_value());
 }
 
-TEST(api, DISABLED_find_exported_table_reimport)
+TEST(api, find_exported_table_reimport)
 {
     /* wat2wasm
     (module

@@ -11,16 +11,6 @@
 
 using namespace fizzy;
 
-namespace
-{
-uint64_t call_table_func(Instance& instance, size_t idx)
-{
-    const auto& elem = (*instance.table)[idx];
-    const auto res = elem->function(instance, {}, 0);
-    return res.stack.front();
-}
-}  // namespace
-
 TEST(instantiate, imported_functions)
 {
     /* wat2wasm
@@ -112,9 +102,10 @@ TEST(instantiate, imported_table)
     table_elements table(10);
     auto instance = instantiate(module, {}, {{&table, {10, 30}}});
 
-    ASSERT_TRUE(instance->table);
-    EXPECT_EQ(instance->table->size(), 10);
-    EXPECT_EQ(instance->table->data(), table.data());
+    ASSERT_TRUE(instance->table.has_table());
+    const auto& table_elems = instance->table.get_table_elements();
+    EXPECT_EQ(table_elems.size(), 10);
+    EXPECT_EQ(table_elems.data(), table.data());
 }
 
 TEST(instantiate, imported_table_stricter_limits)
@@ -128,9 +119,10 @@ TEST(instantiate, imported_table_stricter_limits)
     table_elements table(20);
     auto instance = instantiate(module, {}, {{&table, {20, 20}}});
 
-    ASSERT_TRUE(instance->table);
-    EXPECT_EQ(instance->table->size(), 20);
-    EXPECT_EQ(instance->table->data(), table.data());
+    ASSERT_TRUE(instance->table.has_table());
+    const auto& table_elems = instance->table.get_table_elements();
+    EXPECT_EQ(table_elems.size(), 20);
+    EXPECT_EQ(table_elems.data(), table.data());
 }
 
 TEST(instantiate, imported_table_invalid)
@@ -458,11 +450,12 @@ TEST(instantiate, element_section)
 
     auto instance = instantiate(parse(bin));
 
-    ASSERT_EQ(instance->table->size(), 4);
-    EXPECT_FALSE((*instance->table)[0].has_value());
-    EXPECT_EQ(call_table_func(*instance, 1), 1);
-    EXPECT_EQ(call_table_func(*instance, 2), 3);
-    EXPECT_EQ(call_table_func(*instance, 3), 3);
+    const auto& table_elems = instance->table.get_table_elements();
+    ASSERT_EQ(table_elems.size(), 4);
+    EXPECT_FALSE(table_elems[0].has_value());
+    EXPECT_THAT(table_elems[1]->function(*instance, {}, 0), Result(1));
+    EXPECT_THAT(table_elems[2]->function(*instance, {}, 0), Result(3));
+    EXPECT_THAT(table_elems[3]->function(*instance, {}, 0), Result(3));
 }
 
 TEST(instantiate, element_section_offset_from_global)
@@ -483,11 +476,12 @@ TEST(instantiate, element_section_offset_from_global)
         "000908010023000b0200010a0b02040041010b040041020b");
     auto instance = instantiate(parse(bin));
 
-    ASSERT_EQ(instance->table->size(), 4);
-    EXPECT_FALSE((*instance->table)[0].has_value());
-    EXPECT_EQ(call_table_func(*instance, 1), 1);
-    EXPECT_EQ(call_table_func(*instance, 2), 2);
-    EXPECT_FALSE((*instance->table)[3].has_value());
+    const auto& table_elems = instance->table.get_table_elements();
+    ASSERT_EQ(table_elems.size(), 4);
+    EXPECT_FALSE(table_elems[0].has_value());
+    EXPECT_THAT(table_elems[1]->function(*instance, {}, 0), Result(1));
+    EXPECT_THAT(table_elems[2]->function(*instance, {}, 0), Result(2));
+    EXPECT_FALSE(table_elems[3].has_value());
 }
 
 TEST(instantiate, element_section_offset_from_imported_global)
@@ -508,11 +502,12 @@ TEST(instantiate, element_section_offset_from_imported_global)
 
     auto instance = instantiate(parse(bin), {}, {}, {}, {g});
 
-    ASSERT_EQ(instance->table->size(), 4);
-    EXPECT_FALSE((*instance->table)[0].has_value());
-    EXPECT_EQ(call_table_func(*instance, 1), 1);
-    EXPECT_EQ(call_table_func(*instance, 2), 2);
-    EXPECT_FALSE((*instance->table)[3].has_value());
+    const auto& table_elems = instance->table.get_table_elements();
+    ASSERT_EQ(table_elems.size(), 4);
+    EXPECT_FALSE(table_elems[0].has_value());
+    EXPECT_THAT(table_elems[1]->function(*instance, {}, 0), Result(1));
+    EXPECT_THAT(table_elems[2]->function(*instance, {}, 0), Result(2));
+    EXPECT_FALSE(table_elems[3].has_value());
 }
 
 TEST(instantiate, element_section_offset_from_mutable_global)
@@ -564,11 +559,12 @@ TEST(instantiate, element_section_fills_imported_table)
     table[0] = ExternalFunction{f0, FuncType{{}, {ValType::i32}}};
     auto instance = instantiate(parse(bin), {}, {{&table, {4, std::nullopt}}});
 
-    ASSERT_EQ(instance->table->size(), 4);
-    EXPECT_EQ(call_table_func(*instance, 0), 0);
-    EXPECT_EQ(call_table_func(*instance, 1), 1);
-    EXPECT_EQ(call_table_func(*instance, 2), 3);
-    EXPECT_EQ(call_table_func(*instance, 3), 4);
+    const auto& table_elems = instance->table.get_table_elements();
+    ASSERT_EQ(table_elems.size(), 4);
+    EXPECT_THAT(table_elems[0]->function(*instance, {}, 0), Result(0));
+    EXPECT_THAT(table_elems[1]->function(*instance, {}, 0), Result(1));
+    EXPECT_THAT(table_elems[2]->function(*instance, {}, 0), Result(3));
+    EXPECT_THAT(table_elems[3]->function(*instance, {}, 0), Result(4));
 }
 
 TEST(instantiate, element_section_out_of_bounds_doesnt_change_imported_table)
