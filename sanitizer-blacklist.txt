@@ -1,0 +1,2 @@
+# Ignore std::variant.
+src:*/include/c\+\+/*/variant
