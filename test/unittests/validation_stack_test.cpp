@@ -124,7 +124,8 @@ TEST(validation_stack, call_stack_underflow)
     */
     const auto wasm =
         from_hex("0061736d01000000010a0260017f017f6000017f03030200010a0b02040020000b040010000b");
-    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "call instruction stack underflow");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm), validation_error, "call/call_indirect instruction stack underflow");
 }
 
 TEST(validation_stack, call_stack_underflow_imported_function)
@@ -138,6 +139,24 @@ TEST(validation_stack, call_stack_underflow_imported_function)
     */
     const auto wasm = from_hex(
         "0061736d01000000010a0260017f017f6000017f020701016d01660000030201010a0601040010000b");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm), validation_error, "call/call_indirect instruction stack underflow");
+}
+
+TEST(validation_stack, call_indirect_stack_underflow)
+{
+    /* wat2wasm --no-check
+      (type (func (param i32)))
+      (table anyfunc (elem 0))
+      (func (param i32) nop)
+      (func (param i32)
+        ;; Call argument missing.
+        (call_indirect (type 0) (get_local 0))
+      )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001050160017f000303020000040501700101010907010041000b01000a0d020300010b0700"
+        "20001100000b");
     EXPECT_THROW_MESSAGE(
         parse(wasm), validation_error, "call/call_indirect instruction stack underflow");
 }
@@ -185,6 +204,25 @@ TEST(validation_stack, unreachable_call)
     */
     const auto wasm =
         from_hex("0061736d01000000010a0260017f017f6000017f03030200010a0c02040020000b05000010000b");
+
+    parse(wasm);
+}
+
+TEST(validation_stack, unreachable_call_indirect)
+{
+    /* wat2wasm
+      (type (func (param i32)))
+      (table anyfunc (elem 0))
+      (func (param i32) nop)
+      (func (param i32)
+        unreachable
+        ;; Call argument missing.
+        (call_indirect (type 0) (get_local 0))
+      )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001050160017f000303020000040501700101010907010041000b01000a0e020300010b0800"
+        "0020001100000b");
 
     parse(wasm);
 }

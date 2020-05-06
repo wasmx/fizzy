@@ -31,7 +31,7 @@ constexpr InstructionMetrics instruction_metrics_table[256] = {
     // (call_indirect one more item). They can return 0 or 1 item.
     // Function types are inspected and accounted for during call instuctions parsing.
     /* call                = 0x10 */ {0, 0},
-    /* call_indirect       = 0x11 */ {1, 0},
+    /* call_indirect       = 0x11 */ {1, -1},
 
     /*                       0x12 */ {},
     /*                       0x13 */ {},

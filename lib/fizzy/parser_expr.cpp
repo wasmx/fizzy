@@ -63,6 +63,19 @@ parser_result<uint8_t> parse_blocktype(const uint8_t* pos, const uint8_t* end)
     validate_valtype(type);
     return {1, pos};
 }
+
+void update_caller_frame(ControlFrame& frame, const FuncType& func_type)
+{
+    const auto stack_height_required = static_cast<int>(func_type.inputs.size());
+
+    if (frame.stack_height < stack_height_required && !frame.unreachable)
+        throw validation_error{"call/call_indirect instruction stack underflow"};
+
+    const auto stack_height_change =
+        static_cast<int>(func_type.outputs.size()) - stack_height_required;
+    frame.stack_height += stack_height_change;
+}
+
 }  // namespace
 
 parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Module& module)
@@ -409,14 +422,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
                 throw validation_error{"invalid funcidx encountered with call"};
 
             const auto& func_type = module.get_function_type(func_idx);
-            const auto stack_height_required = static_cast<int>(func_type.inputs.size());
-
-            if (frame.stack_height < stack_height_required && !frame.unreachable)
-                throw validation_error{"call instruction stack underflow"};
-
-            const auto stack_height_change =
-                static_cast<int>(func_type.outputs.size()) - stack_height_required;
-            frame.stack_height += stack_height_change;
+            update_caller_frame(frame, func_type);
 
             push(code.immediates, func_idx);
             break;
@@ -424,9 +430,18 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
 
         case Instr::call_indirect:
         {
-            uint32_t imm;
-            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, end);
-            push(code.immediates, imm);
+            // TODO check table exists
+
+            FuncIdx type_idx;
+            std::tie(type_idx, pos) = leb128u_decode<uint32_t>(pos, end);
+
+            if (type_idx >= module.typesec.size())
+                throw validation_error{"invalid type index with call_indirect"};
+
+            const auto& func_type = module.typesec[type_idx];
+            update_caller_frame(frame, func_type);
+
+            push(code.immediates, type_idx);
 
             if (pos == end)
                 throw parser_error{"Unexpected EOF"};
