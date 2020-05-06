@@ -377,7 +377,7 @@ TEST(api, find_exported_memory)
     EXPECT_FALSE(find_exported_table(*instance_no_memory, "mem").has_value());
 }
 
-TEST(api, DISABLED_find_exported_memory_reimport)
+TEST(api, find_exported_memory_reimport)
 {
     /* wat2wasm
     (module

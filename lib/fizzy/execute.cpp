@@ -181,7 +181,7 @@ std::tuple<table_ptr, Limits> allocate_table(
         return {table_ptr{nullptr, null_delete}, Limits{}};
 }
 
-std::tuple<bytes_ptr, size_t> allocate_memory(const std::vector<Memory>& module_memories,
+std::tuple<bytes_ptr, Limits> allocate_memory(const std::vector<Memory>& module_memories,
     const std::vector<ExternalMemory>& imported_memories)
 {
     static const auto bytes_delete = [](bytes* b) noexcept { delete b; };
@@ -191,12 +191,12 @@ std::tuple<bytes_ptr, size_t> allocate_memory(const std::vector<Memory>& module_
 
     if (module_memories.size() == 1)
     {
-        const size_t memory_min = module_memories[0].limits.min;
-        const size_t memory_max =
-            (module_memories[0].limits.max.has_value() ? *module_memories[0].limits.max :
-                                                         MemoryPagesLimit);
+        const auto memory_min = module_memories[0].limits.min;
+        const auto memory_max = module_memories[0].limits.max;
+
         // FIXME: better error handling
-        if ((memory_min > MemoryPagesLimit) || (memory_max > MemoryPagesLimit))
+        if ((memory_min > MemoryPagesLimit) ||
+            (memory_max.has_value() && *memory_max > MemoryPagesLimit))
         {
             throw instantiate_error("Cannot exceed hard memory limit of " +
                                     std::to_string(MemoryPagesLimit * PageSize) + " bytes.");
@@ -204,29 +204,28 @@ std::tuple<bytes_ptr, size_t> allocate_memory(const std::vector<Memory>& module_
 
         // NOTE: fill it with zeroes
         bytes_ptr memory{new bytes(memory_min * PageSize, 0), bytes_delete};
-        return {std::move(memory), memory_max};
+        return {std::move(memory), module_memories[0].limits};
     }
     else if (imported_memories.size() == 1)
     {
-        const size_t memory_min = imported_memories[0].limits.min;
-        const size_t memory_max =
-            (imported_memories[0].limits.max.has_value() ? *imported_memories[0].limits.max :
-                                                           MemoryPagesLimit);
+        const auto memory_min = imported_memories[0].limits.min;
+        const auto memory_max = imported_memories[0].limits.max;
 
         // FIXME: better error handling
-        if ((memory_min > MemoryPagesLimit) || (memory_max > MemoryPagesLimit))
+        if ((memory_min > MemoryPagesLimit) ||
+            (memory_max.has_value() && *memory_max > MemoryPagesLimit))
         {
             throw instantiate_error("Imported memory limits cannot exceed hard memory limit of " +
                                     std::to_string(MemoryPagesLimit * PageSize) + " bytes.");
         }
 
         bytes_ptr memory{imported_memories[0].data, null_delete};
-        return {std::move(memory), memory_max};
+        return {std::move(memory), imported_memories[0].limits};
     }
     else
     {
         bytes_ptr memory{nullptr, null_delete};
-        return {std::move(memory), MemoryPagesLimit};
+        return {std::move(memory), Limits{}};
     }
 }
 
@@ -525,8 +524,7 @@ std::unique_ptr<Instance> instantiate(Module module,
 
     auto [table, table_limits] = allocate_table(module.tablesec, imported_tables);
 
-    // Allocate memory
-    auto [memory, memory_max] = allocate_memory(module.memorysec, imported_memories);
+    auto [memory, memory_limits] = allocate_memory(module.memorysec, imported_memories);
 
     // Before starting to fill memory and table,
     // check that data and element segments are within bounds.
@@ -569,7 +567,7 @@ std::unique_ptr<Instance> instantiate(Module module,
     // because table functions will capture the pointer to instance.
     // FIXME: clang-tidy warns about potential memory leak for moving memory (which is in fact
     // safe), but also erroneously points this warning to std::move(table)
-    auto instance = std::make_unique<Instance>(std::move(module), std::move(memory), memory_max,
+    auto instance = std::make_unique<Instance>(std::move(module), std::move(memory), memory_limits,
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
         std::move(table), table_limits, std::move(globals), std::move(imported_functions),
         std::move(imported_globals));
@@ -1088,7 +1086,10 @@ execution_result execute(
             uint32_t ret = static_cast<uint32_t>(cur_pages);
             try
             {
-                if (new_pages > instance.memory_max_pages)
+                const size_t memory_max_pages =
+                    (instance.memory_limits.max.has_value() ? *instance.memory_limits.max :
+                                                              MemoryPagesLimit);
+                if (new_pages > memory_max_pages)
                     throw std::bad_alloc();
                 memory->resize(new_pages * PageSize);
             }
@@ -1635,26 +1636,7 @@ std::optional<ExternalMemory> find_exported_memory(Instance& instance, std::stri
     if (!find_export(module, ExternalKind::Memory, name))
         return std::nullopt;
 
-    if (module.memorysec.size() == 1)
-    {
-        // memory owned by instance
-        assert(module.imported_memory_types.size() == 0);
-        return ExternalMemory{instance.memory.get(), module.memorysec[0].limits};
-    }
-    else
-    {
-        // imported memory is reexported
-        assert(module.imported_memory_types.size() == 1);
-
-        // FIXME: Limits min here is not correct: memory could have been imported with limits
-        // narrower than the ones defined in module's import definition, we save only max during
-        // instantiate, but not min.
-        Limits limits = module.imported_memory_types[0].limits;
-        if (instance.memory_max_pages < MemoryPagesLimit)
-            limits.max = instance.memory_max_pages;
-
-        return ExternalMemory{instance.memory.get(), limits};
-    }
+    return ExternalMemory{instance.memory.get(), instance.memory_limits};
 }
 
 }  // namespace fizzy
