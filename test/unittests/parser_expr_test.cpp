@@ -15,7 +15,8 @@ namespace
 {
 inline auto parse_expr(const bytes& input)
 {
-    return fizzy::parse_expr(input.data(), input.data() + input.size(), false);
+    // TODO: may need to expose Module for some validation cases
+    return fizzy::parse_expr(input.data(), input.data() + input.size(), Module{});
 }
 }  // namespace
 

@@ -57,5 +57,10 @@ struct Module
 
         return typesec[type_idx];
     }
+
+    bool has_memory() const noexcept
+    {
+        return !memorysec.empty() || !imported_memory_types.empty();
+    }
 };
 }  // namespace fizzy

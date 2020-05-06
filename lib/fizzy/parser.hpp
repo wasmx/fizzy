@@ -38,10 +38,10 @@ inline parser_result<uint8_t> parse_byte(const uint8_t* pos, const uint8_t* end)
 /// Parse `expr`, i.e. a function's instructions residing in the code section.
 /// https://webassembly.github.io/spec/core/binary/instructions.html#binary-expr
 ///
-/// @param input        The beginning of the expr binary input.
-/// @param end          The end of the binary input.
-/// @param have_memory  If the module (the context) contains imported or defined memory.
-parser_result<Code> parse_expr(const uint8_t* input, const uint8_t* end, bool have_memory);
+/// @param input    The beginning of the expr binary input.
+/// @param end      The end of the binary input.
+/// @param module   Module that this code is part of.
+parser_result<Code> parse_expr(const uint8_t* input, const uint8_t* end, const Module& module);
 
 parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end);
 

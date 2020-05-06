@@ -335,13 +335,13 @@ inline parser_result<code_view> parse(const uint8_t* pos, const uint8_t* end)
     return {{code_begin, code_size}, code_end};
 }
 
-inline Code parse_code(code_view code_binary, bool have_memory)
+inline Code parse_code(code_view code_binary, const Module& module)
 {
     const auto begin = code_binary.begin();
     const auto end = code_binary.end();
     const auto [locals_vec, pos1] = parse_vec<Locals>(begin, end);
 
-    auto [code, pos2] = parse_expr(pos1, end, have_memory);
+    auto [code, pos2] = parse_expr(pos1, end, module);
 
     // Size is the total bytes of locals and expressions.
     if (pos2 != end)
@@ -525,7 +525,6 @@ Module parse(bytes_view input)
     if (module.startfunc && *module.startfunc >= total_func_count)
         throw parser_error{"invalid start function index"};
 
-    const auto have_memory = !module.memorysec.empty() || !module.imported_memory_types.empty();
     // Process code. TODO: This can be done lazily.
     module.codesec.reserve(code_binaries.size());
     for (size_t i = 0; i < code_binaries.size(); ++i)
@@ -533,7 +532,7 @@ Module parse(bytes_view input)
         const auto type_idx = module.funcsec[i];
         if (type_idx >= module.typesec.size())
             throw validation_error{"invalid function type index"};
-        module.codesec.emplace_back(parse_code(code_binaries[i], have_memory));
+        module.codesec.emplace_back(parse_code(code_binaries[i], module));
     }
 
     return module;
