@@ -208,6 +208,7 @@ TEST(parser_expr, call_indirect_table_index)
 {
     Module module;
     module.typesec.emplace_back(FuncType{{}, {}});
+    module.tablesec.emplace_back(Table{{1, 1}});
 
     const auto code1_bin = i32_const(0) + "1100000b"_bytes;
     const auto [code, pos] = parse_expr(code1_bin, module);
@@ -227,12 +228,15 @@ TEST(parser_expr, control_instr_out_of_bounds)
 
 TEST(parser_expr, immediate_leb128_out_of_bounds)
 {
+    Module module;
+    module.tablesec.emplace_back(Table{{1, 1}});  // needed for call_indirect
+
     for (const auto instr : {Instr::local_get, Instr::local_set, Instr::local_tee,
              Instr::global_get, Instr::global_set, Instr::br, Instr::br_if, Instr::call,
              Instr::call_indirect, Instr::i32_const, Instr::i64_const})
     {
         const auto code = i32_const(0) + i32_const(0) + bytes{uint8_t(instr), 0x99};
-        EXPECT_THROW_MESSAGE(parse_expr(code), parser_error, "Unexpected EOF");
+        EXPECT_THROW_MESSAGE(parse_expr(code, module), parser_error, "Unexpected EOF");
     }
 }
 
@@ -273,6 +277,7 @@ TEST(parser_expr, call_indirect_out_of_bounds)
 {
     Module module;
     module.typesec.emplace_back(FuncType{{}, {}});
+    module.tablesec.emplace_back(Table{{1, 1}});
 
     EXPECT_THROW_MESSAGE(
         parse_expr(i32_const(0) + "1100"_bytes, module), parser_error, "Unexpected EOF");

@@ -430,7 +430,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
 
         case Instr::call_indirect:
         {
-            // TODO check table exists
+            if (!module.has_table())
+                throw validation_error{"call_indirect without defined table"};
 
             FuncIdx type_idx;
             std::tie(type_idx, pos) = leb128u_decode<uint32_t>(pos, end);

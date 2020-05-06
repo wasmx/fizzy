@@ -220,3 +220,14 @@ TEST(validation, call_indirect_unknown_type)
         "0b");
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "invalid type index with call_indirect");
 }
+
+TEST(validation, call_indirect_no_table)
+{
+    /* wat2wasm --no-check
+    (func (param i32)
+      (call_indirect (type 1) (get_local 0))
+    )
+    */
+    const auto wasm = from_hex("0061736d0100000001050160017f00030201000a0901070020001101000b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "call_indirect without defined table");
+}
