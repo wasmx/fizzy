@@ -27,11 +27,10 @@ constexpr InstructionMetrics instruction_metrics_table[256] = {
     /* br_table            = 0x0e */ {1, -1},
     /* return_             = 0x0f */ {0, 0},
 
-    // TODO: Call require number of stack items equal the number of inputs in the target function
-    //       (call_indirect one more item). They can return 0 or 1 item.
-    //       Here is simplified setup without inspecting function types where we assume zero
-    //       function arguments and one returned value.
-    /* call                = 0x10 */ {0, 1},
+    // Call requires number of stack items equal the number of inputs in the target function
+    // (call_indirect one more item). They can return 0 or 1 item.
+    // Function types are inspected and accounted for during call instuctions parsing.
+    /* call                = 0x10 */ {0, 0},
     /* call_indirect       = 0x11 */ {1, 0},
 
     /*                       0x12 */ {},

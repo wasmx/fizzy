@@ -111,7 +111,7 @@ TEST(validation_stack, loop_with_result_stack_underflow)
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "stack underflow");
 }
 
-TEST(validation_stack, DISABLED_call_stack_underflow)
+TEST(validation_stack, call_stack_underflow)
 {
     /* wat2wasm --no-check
     (func $f (param i32) (result i32)
@@ -124,7 +124,22 @@ TEST(validation_stack, DISABLED_call_stack_underflow)
     */
     const auto wasm =
         from_hex("0061736d01000000010a0260017f017f6000017f03030200010a0b02040020000b040010000b");
-    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "stack underflow");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "call instruction stack underflow");
+}
+
+TEST(validation_stack, call_stack_underflow_imported_function)
+{
+    /* wat2wasm --no-check
+    (func $f (import "m" "f") (param i32) (result i32))
+    (func (result i32)
+      ;; Call argument missing.
+      call $f
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010a0260017f017f6000017f020701016d01660000030201010a0601040010000b");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm), validation_error, "call/call_indirect instruction stack underflow");
 }
 
 TEST(validation_stack, unreachable)
@@ -154,6 +169,24 @@ TEST(validation_stack, unreachable_2)
     const auto wasm = from_hex("0061736d01000000010401600000030201000a09010700006a6a6a1a0b");
     parse(wasm);
     // TODO: Add max stack height check.
+}
+
+TEST(validation_stack, unreachable_call)
+{
+    /* wat2wasm
+    (func $f (param i32) (result i32)
+      get_local 0
+    )
+    (func (result i32)
+      unreachable
+      ;; Call argument missing.
+      call $f
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d01000000010a0260017f017f6000017f03030200010a0c02040020000b05000010000b");
+
+    parse(wasm);
 }
 
 TEST(validation_stack, br)

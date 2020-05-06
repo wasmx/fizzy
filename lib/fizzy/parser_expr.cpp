@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "instructions.hpp"
+#include "module.hpp"
 #include "parser.hpp"
 #include <cassert>
 #include <stack>
@@ -366,7 +367,6 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
         case Instr::local_tee:
         case Instr::global_get:
         case Instr::global_set:
-        case Instr::call:
         {
             uint32_t imm;
             std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, end);
@@ -397,6 +397,25 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
 
             frame.unreachable = true;
 
+            break;
+        }
+
+        case Instr::call:
+        {
+            FuncIdx func_idx;
+            std::tie(func_idx, pos) = leb128u_decode<uint32_t>(pos, end);
+
+            const auto& func_type = module.get_function_type(func_idx);
+            const auto stack_height_required = static_cast<int>(func_type.inputs.size());
+
+            if (frame.stack_height < stack_height_required && !frame.unreachable)
+                throw validation_error{"call instruction stack underflow"};
+
+            const auto stack_height_change =
+                static_cast<int>(func_type.outputs.size()) - stack_height_required;
+            frame.stack_height += stack_height_change;
+
+            push(code.immediates, func_idx);
             break;
         }
 

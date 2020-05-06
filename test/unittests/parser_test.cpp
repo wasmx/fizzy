@@ -753,11 +753,13 @@ TEST(parser, start)
 
 TEST(parser, start_invalid_index)
 {
+    const auto type_section = make_vec({make_functype({}, {})});
     const auto func_section = make_vec({"00"_bytes, "00"_bytes});
     const auto code_section = make_vec({"02000b"_bytes, "02000b"_bytes});
     const auto start_section = "02"_bytes;
-    const auto bin = bytes{wasm_prefix} + make_section(3, func_section) +
-                     make_section(8, start_section) + make_section(10, code_section);
+    const auto bin = bytes{wasm_prefix} + make_section(1, type_section) +
+                     make_section(3, func_section) + make_section(8, start_section) +
+                     make_section(10, code_section);
 
     EXPECT_THROW_MESSAGE(parse(bin), parser_error, "invalid start function index");
 }
