@@ -649,6 +649,15 @@ execution_result execute(
     Stack<uint64_t> stack;
 
     LabelStack labels;
+    // The function's implicit block.
+    const auto func_arity = instance.module.get_function_type(func_idx).outputs.size();
+    LabelContext func_block{
+        &code.instructions.back(),  // jump target is final end instruction
+        nullptr,                    // end doesn't have immediates
+        func_arity,                 // block's arity is function arity
+        0                           // stack height on entering the function
+    };
+    labels.push(func_block);
 
     bool trap = false;
 
@@ -731,23 +740,22 @@ execution_result execute(
         }
         case Instr::end:
         {
+            // Labels can be already empty when we reach final `end`  via `return` or `br MAX`.
             if (!labels.empty())
                 labels.pop();
-            else
+            if (labels.empty())
                 goto end;
             break;
         }
         case Instr::br:
         case Instr::br_if:
+        case Instr::return_:
         {
             const auto label_idx = read<uint32_t>(immediates);
 
             // Check condition for br_if.
             if (instruction == Instr::br_if && static_cast<uint32_t>(stack.pop()) == 0)
                 break;
-
-            if (label_idx == labels.size())
-                goto case_return;
 
             branch(label_idx, labels, stack, pc, immediates);
             break;
@@ -764,9 +772,6 @@ execution_result execute(
             immediates += label_idx_offset;
 
             const auto label_idx = read<uint32_t>(immediates);
-
-            if (label_idx == labels.size())
-                goto case_return;
 
             branch(label_idx, labels, stack, pc, immediates);
             break;
@@ -819,28 +824,6 @@ execution_result execute(
                 goto end;
             }
             break;
-        }
-        case Instr::return_:
-        case_return:
-        {
-            // TODO: Not needed, but satisfies the assert in the end of the main loop.
-            labels = {};
-
-            assert(code_idx < instance.module.funcsec.size());
-            const auto type_idx = instance.module.funcsec[code_idx];
-            assert(type_idx < instance.module.typesec.size());
-            const bool have_result = !instance.module.typesec[type_idx].outputs.empty();
-
-            if (have_result)
-            {
-                const auto result = stack.peek();
-                stack.clear();
-                stack.push(result);
-            }
-            else
-                stack.clear();
-
-            goto end;
         }
         case Instr::drop:
         {
