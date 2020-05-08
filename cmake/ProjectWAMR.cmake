@@ -14,12 +14,12 @@ set(wamr_library ${binary_dir}/source/${CMAKE_STATIC_LIBRARY_PREFIX}m3${CMAKE_ST
 ExternalProject_Add(wamr
     EXCLUDE_FROM_ALL 1
     PREFIX ${prefix}
-    DOWNLOAD_NAME wamr-03-30-2020.tar.gz
+    DOWNLOAD_NAME WAMR-04-15-2020.tar.gz
     DOWNLOAD_DIR ${prefix}/downloads
     SOURCE_DIR ${source_dir}
     BINARY_DIR ${binary_dir}
-    URL https://github.com/bytecodealliance/wasm-micro-runtime/archive/WAMR-03-30-2020.tar.gz
-    URL_HASH SHA256=a71165b5da04ab594a2bd5a3f775b96125d0d99efcab57bb0614eee45628fc8c
+    URL https://github.com/bytecodealliance/wasm-micro-runtime/archive/WAMR-04-15-2020.tar.gz
+    URL_HASH SHA256=46f74568caec7abf51e7192e1eb73619cf2bf44f987ea22d86a1b103c6184751
     PATCH_COMMAND sh ${CMAKE_CURRENT_LIST_DIR}/patch_wamr.sh
     SOURCE_SUBDIR core/iwasm/interpreter
     CMAKE_ARGS
