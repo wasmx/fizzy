@@ -12,23 +12,23 @@ namespace fizzy::test
 {
 static_assert(sizeof(IM3Function) <= sizeof(WasmEngine::FuncRef));
 
-class Wasm3Engine : public WasmEngine
+class WAMREngine : public WasmEngine
 {
     IM3Environment m_env{nullptr};
     IM3Runtime m_runtime{nullptr};
 
 public:
-    Wasm3Engine() : m_env{m3_NewEnvironment()} {}
-    ~Wasm3Engine()
+    WAMREngine() : m_env{m3_NewEnvironment()} {}
+    ~WAMREngine()
     {
         if (m_runtime)
             m3_FreeRuntime(m_runtime);
         m3_FreeEnvironment(m_env);
     }
 
-    bool parse(bytes_view input) final;
+    bool parse(bytes_view input) const final;
     std::optional<FuncRef> find_function(std::string_view name) const final;
-    bool instantiate() final;
+    bool instantiate(bytes_view wasm_file) final;
     bool init_memory(fizzy::bytes_view memory) final;
     fizzy::bytes_view get_memory() const final;
     Result execute(FuncRef func_ref, const std::vector<uint64_t>& args) final;
@@ -36,10 +36,11 @@ public:
 
 std::unique_ptr<WasmEngine> create_wasm3_engine()
 {
-    return std::make_unique<Wasm3Engine>();
+    return std::make_unique<WAMREngine>();
 }
 
-bool Wasm3Engine::parse(bytes_view input)
+#if 0
+bool WAMREngine::parse(bytes_view input)
 {
     // Replace runtime (e.g. instance + module)
     if (m_runtime != nullptr)
@@ -64,13 +65,13 @@ bool Wasm3Engine::parse(bytes_view input)
     return true;
 }
 
-bool Wasm3Engine::instantiate()
+bool WAMREngine::instantiate()
 {
     // Already done in parse (with owernship transfer).
     return true;
 }
 
-bool Wasm3Engine::init_memory(fizzy::bytes_view memory)
+bool WAMREngine::init_memory(fizzy::bytes_view memory)
 {
     uint32_t size;
     const auto data = m3_GetMemory(m_runtime, &size, 0);
@@ -80,7 +81,7 @@ bool Wasm3Engine::init_memory(fizzy::bytes_view memory)
     return true;
 }
 
-fizzy::bytes_view Wasm3Engine::get_memory() const
+fizzy::bytes_view WAMREngine::get_memory() const
 {
     uint32_t size;
     auto data = m3_GetMemory(m_runtime, &size, 0);
@@ -89,7 +90,7 @@ fizzy::bytes_view Wasm3Engine::get_memory() const
     return {data, size};
 }
 
-std::optional<WasmEngine::FuncRef> Wasm3Engine::find_function(std::string_view name) const
+std::optional<WasmEngine::FuncRef> WAMREngine::find_function(std::string_view name) const
 {
     IM3Function function;
     if (m3_FindFunction(&function, m_runtime, name.data()) == m3Err_none)
@@ -97,7 +98,7 @@ std::optional<WasmEngine::FuncRef> Wasm3Engine::find_function(std::string_view n
     return std::nullopt;
 }
 
-WasmEngine::Result Wasm3Engine::execute(
+WasmEngine::Result WAMREngine::execute(
     WasmEngine::FuncRef func_ref, const std::vector<uint64_t>& args)
 {
     unsigned ret_valid;
@@ -109,4 +110,5 @@ WasmEngine::Result Wasm3Engine::execute(
         return {false, ret_valid ? ret_value : std::optional<uint64_t>{}};
     return {true, std::nullopt};
 }
+#endif
 }  // namespace fizzy::test
