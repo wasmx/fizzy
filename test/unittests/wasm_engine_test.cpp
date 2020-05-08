@@ -36,21 +36,12 @@ TEST(wasm_engine, instantiate_error)
         "0061736d0100000001090260017f017f600000020f0103656e760765787466756e630000030201010708010474"
         "65737400010a05010300000b");
 
-    // TODO: parse/instantiate is not properly separated in wabt and wasm3
-    // (and wasm3 doesn't care about imports, until execution)
-
-    for (auto engine_create_fn : {create_fizzy_engine})
+    // TODO: wasm3 doesn't care about imports, until execution
+    // NOTE: wabt doesn't differentiate between parse/instantiate errors.
+    for (auto engine_create_fn : {create_fizzy_engine, create_wabt_engine})
     {
         auto engine = engine_create_fn();
-        ASSERT_TRUE(engine->parse(wasm));
-        ASSERT_FALSE(engine->instantiate(wasm));
-    }
-
-    // NOTE: wabt doesn't differentiate between parse/instantiate errors
-    for (auto engine_create_fn : {create_wabt_engine})
-    {
-        auto engine = engine_create_fn();
-        ASSERT_FALSE(engine->parse(wasm));
+        EXPECT_FALSE(engine->instantiate(wasm));
     }
 }
 
