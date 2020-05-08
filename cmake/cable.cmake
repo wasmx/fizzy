@@ -1,7 +1,7 @@
-#!/usr/bin/cmake -P
+#!/usr/bin/env -S cmake -P
 
 # Cable: CMake Bootstrap Library <https://github.com/ethereum/cable>
-# Copyright 2019 Pawel Bylica.
+# Copyright 2019-2020 Pawel Bylica.
 # Licensed under the Apache License, Version 2.0.
 
 # The cable command-line tool, version 1.0.0
