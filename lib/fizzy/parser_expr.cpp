@@ -64,7 +64,7 @@ parser_result<uint8_t> parse_blocktype(const uint8_t* pos, const uint8_t* end)
 }
 }  // namespace
 
-parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have_memory)
+parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Module& module)
 {
     Code code;
 
@@ -102,7 +102,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
         case Instr::f64_load:
         case Instr::f32_store:
         case Instr::f64_store:
-            if (!have_memory)
+            if (!module.has_memory())
                 throw validation_error{"memory instructions require imported or defined memory"};
             // alignment
             std::tie(std::ignore, pos) = leb128u_decode<uint32_t>(pos, end);
@@ -459,7 +459,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
             std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, end);
             push(code.immediates, imm);
 
-            if (!have_memory)
+            if (!module.has_memory())
                 throw validation_error{"memory instructions require imported or defined memory"};
             break;
         }
@@ -473,7 +473,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
             if (memory_idx != 0)
                 throw parser_error{"invalid memory index encountered"};
 
-            if (!have_memory)
+            if (!module.has_memory())
                 throw validation_error{"memory instructions require imported or defined memory"};
             break;
         }
