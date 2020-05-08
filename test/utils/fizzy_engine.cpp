@@ -59,6 +59,34 @@ fizzy::execution_result env_adler32(fizzy::Instance& instance, std::vector<uint6
     const auto ret = fizzy::adler32(bytes_view{*instance.memory}.substr(args[0], args[1]));
     return {false, {ret}};
 }
+fizzy::execution_result bignum_int_add(fizzy::Instance&, std::vector<uint64_t>, int)
+{
+    return {true, {}};
+}
+fizzy::execution_result bignum_int_sub(fizzy::Instance&, std::vector<uint64_t>, int)
+{
+    return {true, {}};
+}
+fizzy::execution_result bignum_int_mul(fizzy::Instance&, std::vector<uint64_t>, int)
+{
+    return {true, {}};
+}
+fizzy::execution_result bignum_int_div(fizzy::Instance&, std::vector<uint64_t>, int)
+{
+    return {true, {}};
+}
+fizzy::execution_result bignum_f1m_add(fizzy::Instance&, std::vector<uint64_t>, int)
+{
+    return {true, {}};
+}
+fizzy::execution_result bignum_f1m_sub(fizzy::Instance&, std::vector<uint64_t>, int)
+{
+    return {true, {}};
+}
+fizzy::execution_result bignum_f1m_mul(fizzy::Instance&, std::vector<uint64_t>, int)
+{
+    return {true, {}};
+}
 }  // namespace
 
 std::unique_ptr<WasmEngine> create_fizzy_engine()
@@ -88,6 +116,27 @@ bool FizzyEngine::instantiate(bytes_view wasm_binary)
             module, {
                         {"env", "adler32", {fizzy::ValType::i32, fizzy::ValType::i32},
                             fizzy::ValType::i32, env_adler32},
+                        {"env", "bignum_int_add",
+                            {fizzy::ValType::i32, fizzy::ValType::i32, fizzy::ValType::i32},
+                            fizzy::ValType::i32, bignum_int_add},
+                        {"env", "bignum_int_sub",
+                            {fizzy::ValType::i32, fizzy::ValType::i32, fizzy::ValType::i32},
+                            fizzy::ValType::i32, bignum_int_sub},
+                        {"env", "bignum_int_mul",
+                            {fizzy::ValType::i32, fizzy::ValType::i32, fizzy::ValType::i32},
+                            std::nullopt, bignum_int_mul},
+                        {"env", "bignum_int_div",
+                            {fizzy::ValType::i32, fizzy::ValType::i32, fizzy::ValType::i32},
+                            std::nullopt, bignum_int_div},
+                        {"env", "bignum_f1m_add",
+                            {fizzy::ValType::i32, fizzy::ValType::i32, fizzy::ValType::i32},
+                            std::nullopt, bignum_f1m_add},
+                        {"env", "bignum_f1m_sub",
+                            {fizzy::ValType::i32, fizzy::ValType::i32, fizzy::ValType::i32},
+                            std::nullopt, bignum_f1m_sub},
+                        {"env", "bignum_f1m_mul",
+                            {fizzy::ValType::i32, fizzy::ValType::i32, fizzy::ValType::i32},
+                            std::nullopt, bignum_f1m_mul},
                     });
         m_instance = fizzy::instantiate(module, imports);
     }
