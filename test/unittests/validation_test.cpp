@@ -195,3 +195,39 @@ TEST(validation, br_table_default_invalid_label_index)
 
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "invalid label index");
 }
+
+TEST(validation, call_unknown_function)
+{
+    /* wat2wasm --no-check
+    (func (import "m" "f"))
+    (func (result i32) call 2)
+    */
+    const auto wasm =
+        from_hex("0061736d010000000108026000006000017f020701016d01660000030201010a0601040010020b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "invalid funcidx encountered with call");
+}
+
+TEST(validation, call_indirect_unknown_type)
+{
+    /* wat2wasm --no-check
+    (table anyfunc (elem 0))
+    (func (param i32)
+      (call_indirect (type 1) (get_local 0))
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001050160017f0003020100040501700101010907010041000b01000a090107002000110100"
+        "0b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "invalid type index with call_indirect");
+}
+
+TEST(validation, call_indirect_no_table)
+{
+    /* wat2wasm --no-check
+    (func (param i32)
+      (call_indirect (type 1) (get_local 0))
+    )
+    */
+    const auto wasm = from_hex("0061736d0100000001050160017f00030201000a0901070020001101000b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "call_indirect without defined table");
+}

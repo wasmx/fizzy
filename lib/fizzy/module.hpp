@@ -58,6 +58,8 @@ struct Module
         return typesec[type_idx];
     }
 
+    bool has_table() const noexcept { return !tablesec.empty() || !imported_table_types.empty(); }
+
     bool has_memory() const noexcept
     {
         return !memorysec.empty() || !imported_memory_types.empty();
