@@ -10,11 +10,14 @@
 using namespace fizzy;
 using namespace fizzy::test;
 
+static const decltype(&create_fizzy_engine) all_engines[]{
+    create_fizzy_engine, create_wabt_engine, create_wasm3_engine};
+
 TEST(wasm_engine, parse_error)
 {
     const auto wasm = "0102"_bytes;
 
-    for (auto engine_create_fn : {create_fizzy_engine, create_wabt_engine, create_wasm3_engine})
+    for (auto engine_create_fn : all_engines)
     {
         auto engine = engine_create_fn();
         ASSERT_FALSE(engine->parse(wasm));
@@ -33,21 +36,12 @@ TEST(wasm_engine, instantiate_error)
         "0061736d0100000001090260017f017f600000020f0103656e760765787466756e630000030201010708010474"
         "65737400010a05010300000b");
 
-    // TODO: parse/instantiate is not properly separated in wabt and wasm3
-    // (and wasm3 doesn't care about imports, until execution)
-
-    for (auto engine_create_fn : {create_fizzy_engine})
+    // TODO: wasm3 doesn't care about imports, until execution
+    // NOTE: wabt doesn't differentiate between parse/instantiate errors.
+    for (auto engine_create_fn : {create_fizzy_engine, create_wabt_engine})
     {
         auto engine = engine_create_fn();
-        ASSERT_TRUE(engine->parse(wasm));
-        ASSERT_FALSE(engine->instantiate());
-    }
-
-    // NOTE: wabt doesn't differentiate between parse/instantiate errors
-    for (auto engine_create_fn : {create_wabt_engine})
-    {
-        auto engine = engine_create_fn();
-        ASSERT_FALSE(engine->parse(wasm));
+        EXPECT_FALSE(engine->instantiate(wasm));
     }
 }
 
@@ -61,11 +55,11 @@ TEST(wasm_engine, trapped)
     const auto wasm =
         from_hex("0061736d0100000001040160000003020100070801047465737400000a05010300000b");
 
-    for (auto engine_create_fn : {create_fizzy_engine, create_wabt_engine, create_wasm3_engine})
+    for (auto engine_create_fn : all_engines)
     {
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
-        ASSERT_TRUE(engine->instantiate());
+        ASSERT_TRUE(engine->instantiate(wasm));
         const auto func = engine->find_function("test");
         ASSERT_TRUE(func.has_value());
         const auto result = engine->execute(*func, {});
@@ -89,11 +83,11 @@ TEST(wasm_engine, multi_i32_args_ret_i32)
         "0061736d0100000001080160037f7f7f017f03020100070801047465737400000a0c010a00200020026b20016c"
         "0b");
 
-    for (auto engine_create_fn : {create_fizzy_engine, create_wabt_engine, create_wasm3_engine})
+    for (auto engine_create_fn : all_engines)
     {
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
-        ASSERT_TRUE(engine->instantiate());
+        ASSERT_TRUE(engine->instantiate(wasm));
         ASSERT_FALSE(engine->find_function("notfound").has_value());
         const auto func = engine->find_function("test");
         ASSERT_TRUE(func.has_value());
@@ -122,11 +116,11 @@ TEST(wasm_engine, multi_mixed_args_ret_i32)
         "0061736d0100000001080160037f7e7f017f03020100070801047465737400000a0e010c00200020026bad2001"
         "7ea70b");
 
-    for (auto engine_create_fn : {create_fizzy_engine, create_wabt_engine, create_wasm3_engine})
+    for (auto engine_create_fn : all_engines)
     {
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
-        ASSERT_TRUE(engine->instantiate());
+        ASSERT_TRUE(engine->instantiate(wasm));
         ASSERT_FALSE(engine->find_function("notfound").has_value());
         const auto func = engine->find_function("test");
         ASSERT_TRUE(func.has_value());
@@ -154,11 +148,11 @@ TEST(wasm_engine, multi_mixed_args_ret_i64)
         "0061736d0100000001080160037f7e7f017e03020100070801047465737400000a0d010b00200020026bad2001"
         "7e0b");
 
-    for (auto engine_create_fn : {create_fizzy_engine, create_wabt_engine, create_wasm3_engine})
+    for (auto engine_create_fn : all_engines)
     {
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
-        ASSERT_TRUE(engine->instantiate());
+        ASSERT_TRUE(engine->instantiate(wasm));
         ASSERT_FALSE(engine->find_function("notfound").has_value());
         const auto func = engine->find_function("test");
         ASSERT_TRUE(func.has_value());
@@ -178,11 +172,11 @@ TEST(wasm_engine, no_memory)
     const auto wasm =
         from_hex("0061736d0100000001040160000003020100070801047465737400000a040102000b");
 
-    for (auto engine_create_fn : {create_fizzy_engine, create_wabt_engine, create_wasm3_engine})
+    for (auto engine_create_fn : all_engines)
     {
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
-        ASSERT_TRUE(engine->instantiate());
+        ASSERT_TRUE(engine->instantiate(wasm));
         const auto func = engine->find_function("test");
         EXPECT_TRUE(func.has_value());
         const auto mem = engine->get_memory();
@@ -206,11 +200,11 @@ TEST(wasm_engine, memory)
         "0061736d0100000001060160027f7f00030201000503010001071102066d656d6f72790200047465737400000a"
         "0e010c00200120002802003602000b");
 
-    for (auto engine_create_fn : {create_fizzy_engine, create_wabt_engine, create_wasm3_engine})
+    for (auto engine_create_fn : all_engines)
     {
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
-        ASSERT_TRUE(engine->instantiate());
+        ASSERT_TRUE(engine->instantiate(wasm));
         const auto func = engine->find_function("test");
         ASSERT_TRUE(func.has_value());
         const auto mem_input = bytes{engine->get_memory()};

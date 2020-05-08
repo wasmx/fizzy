@@ -16,9 +16,9 @@ class FizzyEngine : public WasmEngine
     std::unique_ptr<Instance> m_instance;
 
 public:
-    bool parse(bytes_view input) final;
+    bool parse(bytes_view input) const final;
     std::optional<FuncRef> find_function(std::string_view name) const final;
-    bool instantiate() final;
+    bool instantiate(bytes_view wasm_binary) final;
     bool init_memory(bytes_view memory) final;
     bytes_view get_memory() const final;
     Result execute(FuncRef func_ref, const std::vector<uint64_t>& args) final;
@@ -29,30 +29,26 @@ std::unique_ptr<WasmEngine> create_fizzy_engine()
     return std::make_unique<FizzyEngine>();
 }
 
-bool FizzyEngine::parse(bytes_view input)
+bool FizzyEngine::parse(bytes_view input) const
 {
     try
     {
-        auto module = fizzy::parse(input);
-        m_instance =
-            std::make_unique<Instance>(std::move(module), bytes_ptr{nullptr, [](bytes*) {}}, 0,
-                table_ptr{nullptr, [](table_elements*) {}}, std::vector<uint64_t>{},
-                std::vector<ExternalFunction>{}, std::vector<ExternalGlobal>{});
+        fizzy::parse(input);
     }
-    catch (const fizzy::parser_error&)
+    catch (...)
     {
         return false;
     }
     return true;
 }
 
-bool FizzyEngine::instantiate()
+bool FizzyEngine::instantiate(bytes_view wasm_binary)
 {
     try
     {
-        m_instance = fizzy::instantiate(std::move(m_instance->module));
+        m_instance = fizzy::instantiate(fizzy::parse(wasm_binary));
     }
-    catch (const fizzy::instantiate_error&)
+    catch (...)
     {
         return false;
     }

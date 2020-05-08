@@ -67,16 +67,10 @@ void benchmark_instantiate(
 {
     const auto engine = create_fn();
 
-    if (!engine->parse(wasm_binary))
-        return state.SkipWithError("Parsing failed");
-
-    // Pre-run for validation
-    if (!engine->instantiate())
-        return state.SkipWithError("Instantiaton failed");
-
     for ([[maybe_unused]] auto _ : state)
     {
-        engine->instantiate();
+        if (!engine->instantiate(wasm_binary))
+            state.SkipWithError("Instantiation failed");
     }
 }
 
@@ -95,8 +89,8 @@ struct ExecutionBenchmarkCase
 void validate_benchmark_case(benchmark::State& state, fizzy::test::WasmEngine& engine,
     const ExecutionBenchmarkCase& benchmark_case)
 {
-    if (!engine.parse(*benchmark_case.wasm_binary))
-        return state.SkipWithError("Parsing failed");
+    if (!engine.instantiate(*benchmark_case.wasm_binary))
+        return state.SkipWithError("Instantiation failed");
 
     const auto func_ref = engine.find_function(benchmark_case.func_name);
     if (!func_ref)
@@ -104,9 +98,6 @@ void validate_benchmark_case(benchmark::State& state, fizzy::test::WasmEngine& e
         return state.SkipWithError(
             ("Function \"" + benchmark_case.func_name + "\" not found").c_str());
     }
-
-    if (!engine.instantiate())
-        return state.SkipWithError("Instantiation failed");
 
     if (!benchmark_case.memory.empty())
     {
@@ -148,12 +139,12 @@ void benchmark_execute(
     validate_benchmark_case(state, *engine, benchmark_case);
 
     const auto has_memory = !benchmark_case.memory.empty();
+    engine->instantiate(*benchmark_case.wasm_binary);
     const auto func_ref = engine->find_function(benchmark_case.func_name);
 
     for ([[maybe_unused]] auto _ : state)
     {
         state.PauseTiming();
-        engine->instantiate();
         if (has_memory)
             engine->init_memory(benchmark_case.memory);
         state.ResumeTiming();

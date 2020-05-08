@@ -26,16 +26,14 @@ public:
 
     virtual ~WasmEngine() noexcept = default;
 
-    /// Parses input bytes and creates internal wasm module out of it.
+    /// Parses input wasm binary. The created module is discarded.
     /// Returns false on parsing error.
-    /// Consecutive invocations replace the internal module and invalidate the internal instance.
-    virtual bool parse(bytes_view input) = 0;
+    virtual bool parse(bytes_view input) const = 0;
 
-    /// Instantiates the internal module creating an internal instance.
-    /// Returns false on instantiation error.
-    /// Consecutive invocations replace the internal instance with a new one.
-    /// Requires parse().
-    virtual bool instantiate() = 0;
+    /// Instantiates the internal module from the wasm binary input (parsing included).
+    /// Returns false in case an instance could not be made (e.g. because of parsing error,
+    /// instantiation error, etc).
+    virtual bool instantiate(bytes_view wasm_binary) = 0;
 
     /// Finds an exported function in the internal instance.
     /// Requires instantiate().

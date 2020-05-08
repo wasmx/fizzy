@@ -26,9 +26,9 @@ public:
         m3_FreeEnvironment(m_env);
     }
 
-    bool parse(bytes_view input) final;
+    bool parse(bytes_view input) const final;
     std::optional<FuncRef> find_function(std::string_view name) const final;
-    bool instantiate() final;
+    bool instantiate(bytes_view wasm_binary) final;
     bool init_memory(fizzy::bytes_view memory) final;
     fizzy::bytes_view get_memory() const final;
     Result execute(FuncRef func_ref, const std::vector<uint64_t>& args) final;
@@ -39,19 +39,32 @@ std::unique_ptr<WasmEngine> create_wasm3_engine()
     return std::make_unique<Wasm3Engine>();
 }
 
-bool Wasm3Engine::parse(bytes_view input)
+bool Wasm3Engine::parse(bytes_view input) const
+{
+    auto env = m3_NewEnvironment();
+
+    IM3Module module;
+    const auto err = m3_ParseModule(env, &module, input.data(), uint32_t(input.size()));
+
+    m3_FreeModule(module);
+    m3_FreeEnvironment(env);
+    return err == m3Err_none;
+}
+
+bool Wasm3Engine::instantiate(bytes_view wasm_binary)
 {
     // Replace runtime (e.g. instance + module)
     if (m_runtime != nullptr)
         m3_FreeRuntime(m_runtime);
 
-    // The 64k stack size comes from wasm3/platorms/app
+    // The 64k stack size comes from wasm3/platforms/app
     m_runtime = m3_NewRuntime(m_env, 64 * 1024, nullptr);
     if (m_runtime == nullptr)
         return false;
 
     IM3Module module;
-    if (m3_ParseModule(m_env, &module, input.data(), uint32_t(input.size())) != m3Err_none)
+    if (m3_ParseModule(m_env, &module, wasm_binary.data(), uint32_t(wasm_binary.size())) !=
+        m3Err_none)
         return false;
 
     // Transfers ownership to runtime.
@@ -61,12 +74,6 @@ bool Wasm3Engine::parse(bytes_view input)
         return false;
     }
 
-    return true;
-}
-
-bool Wasm3Engine::instantiate()
-{
-    // Already done in parse (with owernship transfer).
     return true;
 }
 
