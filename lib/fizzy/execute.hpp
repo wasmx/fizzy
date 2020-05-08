@@ -5,6 +5,7 @@
 #pragma once
 
 #include "exceptions.hpp"
+#include "module.hpp"
 #include "types.hpp"
 #include <cstdint>
 #include <functional>
