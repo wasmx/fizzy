@@ -20,6 +20,7 @@ ExternalProject_Add(wasm3
     BINARY_DIR ${binary_dir}
     URL https://github.com/wasm3/wasm3/archive/v0.4.7.tar.gz
     URL_HASH SHA256=11e863a643f605d62a5276e342abb01a65d33d138d01ea0070622a3f78fa1bd5
+    PATCH_COMMAND ${CMAKE_CURRENT_LIST_DIR}/apply_patches.sh
     CMAKE_ARGS
     -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
     -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
