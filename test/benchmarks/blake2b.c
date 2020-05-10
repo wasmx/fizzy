@@ -216,9 +216,9 @@ int blake2b(void *out, size_t outlen,
     return 0;
 }
 
-WASM_EXPORT unsigned blake2b_bench(unsigned fill, unsigned rounds)
+WASM_EXPORT unsigned blake2b_bench(unsigned input_len, unsigned fill, unsigned rounds)
 {
-    unsigned char input[512];
+    unsigned char input[input_len];
     memset(input, (uint8_t)fill, sizeof(input));
 
     blake2b_ctx ctx;

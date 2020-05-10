@@ -1,12 +1,12 @@
-rounds_1
+512_bytes_rounds_1
 sha1_bench
-85 1
+512 85 1
 
 2039494368
 
-rounds_16
+512_bytes_rounds_16
 sha1_bench
-85 16
+512 85 16
 
 2669532376
 
