@@ -62,21 +62,24 @@ struct Instance
     // and owned externally.
     // For these cases unique_ptr would either have a normal deleter or noop deleter respectively
     bytes_ptr memory = {nullptr, [](bytes*) {}};
-    size_t memory_max_pages = 0;
+    Limits memory_limits;
     // Table is either allocated and owned by the instance or imported and owned externally.
     // For these cases unique_ptr would either have a normal deleter or noop deleter respectively.
     table_ptr table = {nullptr, [](table_elements*) {}};
+    Limits table_limits;
     std::vector<uint64_t> globals;
     std::vector<ExternalFunction> imported_functions;
     std::vector<ExternalGlobal> imported_globals;
 
-    Instance(Module _module, bytes_ptr _memory, size_t _memory_max_pages, table_ptr _table,
-        std::vector<uint64_t> _globals, std::vector<ExternalFunction> _imported_functions,
+    Instance(Module _module, bytes_ptr _memory, Limits _memory_limits, table_ptr _table,
+        Limits _table_limits, std::vector<uint64_t> _globals,
+        std::vector<ExternalFunction> _imported_functions,
         std::vector<ExternalGlobal> _imported_globals)
       : module(std::move(_module)),
         memory(std::move(_memory)),
-        memory_max_pages(_memory_max_pages),
+        memory_limits(_memory_limits),
         table(std::move(_table)),
+        table_limits(_table_limits),
         globals(std::move(_globals)),
         imported_functions(std::move(_imported_functions)),
         imported_globals(std::move(_imported_globals))

@@ -201,7 +201,9 @@ TEST(instantiate, imported_memory)
     ASSERT_TRUE(instance->memory);
     EXPECT_EQ(instance->memory->size(), PageSize);
     EXPECT_EQ(instance->memory->data(), memory.data());
-    EXPECT_EQ(instance->memory_max_pages, 3);
+    EXPECT_EQ(instance->memory_limits.min, 1);
+    ASSERT_TRUE(instance->memory_limits.max.has_value());
+    EXPECT_EQ(instance->memory_limits.max, 3);
 }
 
 TEST(instantiate, imported_memory_unlimited)
@@ -218,7 +220,8 @@ TEST(instantiate, imported_memory_unlimited)
     ASSERT_TRUE(instance->memory);
     EXPECT_EQ(instance->memory->size(), PageSize);
     EXPECT_EQ(instance->memory->data(), memory.data());
-    EXPECT_EQ(instance->memory_max_pages, MemoryPagesLimit);
+    EXPECT_EQ(instance->memory_limits.min, 1);
+    EXPECT_FALSE(instance->memory_limits.max.has_value());
 }
 
 TEST(instantiate, imported_memory_stricter_limits)
@@ -235,7 +238,9 @@ TEST(instantiate, imported_memory_stricter_limits)
     ASSERT_TRUE(instance->memory);
     EXPECT_EQ(instance->memory->size(), PageSize * 2);
     EXPECT_EQ(instance->memory->data(), memory.data());
-    EXPECT_EQ(instance->memory_max_pages, 2);
+    EXPECT_EQ(instance->memory_limits.min, 2);
+    ASSERT_TRUE(instance->memory_limits.max.has_value());
+    EXPECT_EQ(instance->memory_limits.max, 2);
 }
 
 TEST(instantiate, imported_memory_invalid)
@@ -408,7 +413,9 @@ TEST(instantiate, memory_single)
     auto instance = instantiate(module);
 
     ASSERT_EQ(instance->memory->size(), PageSize);
-    EXPECT_EQ(instance->memory_max_pages, 1);
+    EXPECT_EQ(instance->memory_limits.min, 1);
+    ASSERT_TRUE(instance->memory_limits.max.has_value());
+    EXPECT_EQ(instance->memory_limits.max, 1);
 }
 
 TEST(instantiate, memory_single_unspecified_maximum)
@@ -419,7 +426,8 @@ TEST(instantiate, memory_single_unspecified_maximum)
     auto instance = instantiate(module);
 
     ASSERT_EQ(instance->memory->size(), PageSize);
-    EXPECT_EQ(instance->memory_max_pages * PageSize, 256 * 1024 * 1024);
+    EXPECT_EQ(instance->memory_limits.min, 1);
+    EXPECT_FALSE(instance->memory_limits.max.has_value());
 }
 
 TEST(instantiate, memory_single_large_minimum)
