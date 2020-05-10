@@ -493,7 +493,7 @@ TEST(parser, table_single_malformed_minmax)
     const auto bin = bytes{wasm_prefix} + make_section(4, section_contents);
 
     EXPECT_THROW_MESSAGE(
-        parse(bin), parser_error, "malformed limits (minimum is larger than maximum)");
+        parse(bin), validation_error, "malformed limits (minimum is larger than maximum)");
 }
 
 TEST(parser, table_invalid_elemtype)
@@ -543,7 +543,7 @@ TEST(parser, memory_single_malformed_minmax)
     const auto bin = bytes{wasm_prefix} + make_section(5, section_contents);
 
     EXPECT_THROW_MESSAGE(
-        parse(bin), parser_error, "malformed limits (minimum is larger than maximum)");
+        parse(bin), validation_error, "malformed limits (minimum is larger than maximum)");
 }
 
 TEST(parser, memory_single_invalid_min_limit)
