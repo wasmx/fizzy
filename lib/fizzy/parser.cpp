@@ -4,6 +4,7 @@
 
 #include "parser.hpp"
 #include "leb128.hpp"
+#include "limits.hpp"
 #include "types.hpp"
 #include "utf8.hpp"
 #include <cassert>
@@ -187,7 +188,7 @@ inline parser_result<Limits> parse_limits(const uint8_t* pos, const uint8_t* end
         std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos, end);
         std::tie(result.max, pos) = leb128u_decode<uint32_t>(pos, end);
         if (result.min > *result.max)
-            throw parser_error("malformed limits (minimum is larger than maximum)");
+            throw validation_error("malformed limits (minimum is larger than maximum)");
         return {result, pos};
     default:
         throw parser_error{"invalid limits " + std::to_string(b)};
@@ -213,6 +214,9 @@ inline parser_result<Memory> parse(const uint8_t* pos, const uint8_t* end)
 {
     Limits limits;
     std::tie(limits, pos) = parse_limits(pos, end);
+    if ((limits.min > MemoryPagesValidationLimit) ||
+        (limits.max.has_value() && *limits.max > MemoryPagesValidationLimit))
+        throw validation_error{"maximum memory page limit exceeded"};
     return {{limits}, pos};
 }
 

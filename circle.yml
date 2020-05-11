@@ -262,8 +262,8 @@ jobs:
       - benchmark:
           min_time: "0.01"
       - spectest:
-          expected_passed: 4776
-          expected_failed: 656
+          expected_passed: 4783
+          expected_failed: 649
           expected_skipped: 6381
 
   benchmark:
@@ -358,8 +358,8 @@ jobs:
           expected_failed: 8
           expected_skipped: 7323
       - spectest:
-          expected_passed: 4776
-          expected_failed: 656
+          expected_passed: 4783
+          expected_failed: 649
           expected_skipped: 6381
 
 workflows:
