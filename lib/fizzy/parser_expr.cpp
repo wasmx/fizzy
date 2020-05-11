@@ -678,8 +678,12 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
         case Instr::i64_store16:
         case Instr::i64_store32:
         {
-            // alignment
-            std::tie(std::ignore, pos) = leb128u_decode<uint32_t>(pos, end);
+            uint32_t align;
+            std::tie(align, pos) = leb128u_decode<uint32_t>(pos, end);
+            // NOTE: [0, 3] is the correct range (the hard limit is log2(64 / 8)) and checking it to
+            // avoid overflows
+            if (align > metrics.max_align)
+                throw validation_error{"alignment cannot exceed operand size"};
 
             uint32_t offset;
             std::tie(offset, pos) = leb128u_decode<uint32_t>(pos, end);
