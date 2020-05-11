@@ -16,7 +16,7 @@ std::ostream& operator<<(std::ostream& os, execution_result result)
     std::string_view separator;
     for (const auto& x : result.stack)
     {
-        os << x << separator;
+        os << separator << x;
         separator = ", ";
     }
     os << ")";
