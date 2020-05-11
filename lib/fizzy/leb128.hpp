@@ -25,19 +25,19 @@ inline std::pair<T, const uint8_t*> leb128u_decode(const uint8_t* input, const u
     for (; result_shift < std::numeric_limits<T>::digits; ++input, result_shift += 7)
     {
         if (input == end)
-            throw parser_error("Unexpected EOF");
+            throw parser_error("unexpected EOF");
 
         result |= static_cast<T>((static_cast<T>(*input) & 0x7F) << result_shift);
         if ((*input & 0x80) == 0)
         {
             if (*input != (result >> result_shift))
-                throw parser_error("Invalid LEB128 encoding: unused bits set.");
+                throw parser_error("invalid LEB128 encoding: unused bits set");
 
             return {result, input + 1};
         }
     }
 
-    throw parser_error("Invalid LEB128 encoding: too many bytes.");
+    throw parser_error("invalid LEB128 encoding: too many bytes");
 }
 
 template <typename T>
@@ -52,7 +52,7 @@ inline std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* input, const u
     for (; result_shift < std::numeric_limits<T_unsigned>::digits; ++input, result_shift += 7)
     {
         if (input == end)
-            throw parser_error("Unexpected EOF");
+            throw parser_error("unexpected EOF");
 
         result |= static_cast<T_unsigned>((static_cast<T_unsigned>(*input) & 0x7F) << result_shift);
         if ((*input & 0x80) == 0)
@@ -76,7 +76,7 @@ inline std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* input, const u
                 if (*input != expected)
                 {
                     throw parser_error(
-                        "Invalid LEB128 encoding: unused bits not equal to sign bit.");
+                        "invalid LEB128 encoding: unused bits not equal to sign bit");
                 }
             }
 
@@ -84,7 +84,7 @@ inline std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* input, const u
         }
     }
 
-    throw parser_error("Invalid LEB128 encoding: too many bytes.");
+    throw parser_error("invalid LEB128 encoding: too many bytes");
 }
 
 }  // namespace fizzy

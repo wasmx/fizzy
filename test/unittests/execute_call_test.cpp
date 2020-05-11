@@ -428,7 +428,7 @@ TEST(execute_call, imported_table_modified_by_uninstantiable_module)
     ASSERT_TRUE(table.has_value());
 
     EXPECT_THROW_MESSAGE(
-        instantiate(module2, {}, {*table}), instantiate_error, "Start function failed to execute");
+        instantiate(module2, {}, {*table}), instantiate_error, "start function failed to execute");
 
     EXPECT_THAT(execute(*instance1, 0, {44, 2}), Result(42));
 }

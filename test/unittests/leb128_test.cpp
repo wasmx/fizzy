@@ -59,26 +59,26 @@ TEST(leb128, decode_u64_invalid)
 {
     bytes encoded_624485_invalid{0xe5, 0x8e, 0xa6};
     EXPECT_THROW_MESSAGE(
-        leb128u_decode<uint64_t>(encoded_624485_invalid), parser_error, "Unexpected EOF");
+        leb128u_decode<uint64_t>(encoded_624485_invalid), parser_error, "unexpected EOF");
 
     bytes encoded_1_too_many_leading_zeroes{
         0x81, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80};
     EXPECT_THROW_MESSAGE(leb128u_decode<uint64_t>(encoded_1_too_many_leading_zeroes), parser_error,
-        "Invalid LEB128 encoding: too many bytes.");
+        "invalid LEB128 encoding: too many bytes");
 
     bytes encoded_max_leading_zeroes{
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x81, 0x00};
     EXPECT_THROW_MESSAGE(leb128u_decode<uint64_t>(encoded_max_leading_zeroes), parser_error,
-        "Invalid LEB128 encoding: too many bytes.");
+        "invalid LEB128 encoding: too many bytes");
 
     bytes encoded_max_unused_bits_set{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f};
     EXPECT_THROW_MESSAGE(leb128u_decode<uint64_t>(encoded_max_unused_bits_set), parser_error,
-        "Invalid LEB128 encoding: unused bits set.");
+        "invalid LEB128 encoding: unused bits set");
 
     bytes encoded_max_some_unused_bits_set{
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x19};
     EXPECT_THROW_MESSAGE(leb128u_decode<uint64_t>(encoded_max_some_unused_bits_set), parser_error,
-        "Invalid LEB128 encoding: unused bits set.");
+        "invalid LEB128 encoding: unused bits set");
 }
 
 TEST(leb128, decode_u32)
@@ -111,27 +111,27 @@ TEST(leb128, decode_u32_invalid)
 {
     bytes encoded_624485_invalid{0xe5, 0x8e, 0xa6};
     EXPECT_THROW_MESSAGE(
-        leb128u_decode<uint32_t>(encoded_624485_invalid), parser_error, "Unexpected EOF");
+        leb128u_decode<uint32_t>(encoded_624485_invalid), parser_error, "unexpected EOF");
 
     bytes encoded_1_too_many_leading_zeroes{0x81, 0x80, 0x80, 0x80, 0x80, 0x00};
     EXPECT_THROW_MESSAGE(leb128u_decode<uint32_t>(encoded_1_too_many_leading_zeroes), parser_error,
-        "Invalid LEB128 encoding: too many bytes.");
+        "invalid LEB128 encoding: too many bytes");
 
     bytes encoded_max_leading_zeroes{0xff, 0xff, 0xff, 0xff, 0xff, 0x00};
     EXPECT_THROW_MESSAGE(leb128u_decode<uint32_t>(encoded_max_leading_zeroes), parser_error,
-        "Invalid LEB128 encoding: too many bytes.");
+        "invalid LEB128 encoding: too many bytes");
 
     bytes encoded_max_unused_bits_set{0xff, 0xff, 0xff, 0xff, 0x7f};
     EXPECT_THROW_MESSAGE(leb128u_decode<uint32_t>(encoded_max_unused_bits_set), parser_error,
-        "Invalid LEB128 encoding: unused bits set.");
+        "invalid LEB128 encoding: unused bits set");
 
     bytes encoded_2_unused_bits_set{0x82, 0x80, 0x80, 0x80, 0x70};
     EXPECT_THROW_MESSAGE(leb128u_decode<uint32_t>(encoded_2_unused_bits_set), parser_error,
-        "Invalid LEB128 encoding: unused bits set.");
+        "invalid LEB128 encoding: unused bits set");
 
     bytes encoded_0_some_unused_bits_set{0x80, 0x80, 0x80, 0x80, 0x1f};
     EXPECT_THROW_MESSAGE(leb128u_decode<uint32_t>(encoded_0_some_unused_bits_set), parser_error,
-        "Invalid LEB128 encoding: unused bits set.");
+        "invalid LEB128 encoding: unused bits set");
 }
 
 TEST(leb128, decode_u8)
@@ -159,24 +159,24 @@ TEST(leb128, decode_u8_invalid)
 {
     bytes encoded_1_too_many_leading_zeroes{0x81, 0x80, 0x80};
     EXPECT_THROW_MESSAGE(leb128u_decode<uint8_t>(encoded_1_too_many_leading_zeroes.data()),
-        parser_error, "Invalid LEB128 encoding: too many bytes.");
+        parser_error, "invalid LEB128 encoding: too many bytes");
 
     bytes encoded_too_big{0xe5, 0x8e, 0x26};
     EXPECT_THROW_MESSAGE(leb128u_decode<uint8_t>(encoded_too_big.data()), parser_error,
-        "Invalid LEB128 encoding: too many bytes.");
+        "invalid LEB128 encoding: too many bytes");
 
     bytes encoded_max_unused_bits_set{0xff, 0x7f};
     EXPECT_THROW_MESSAGE(leb128u_decode<uint8_t>(encoded_max_unused_bits_set), parser_error,
-        "Invalid LEB128 encoding: unused bits set.");
+        "invalid LEB128 encoding: unused bits set");
 
     bytes encoded_max_some_unused_bits_set{0xff, 0x19};
     EXPECT_THROW_MESSAGE(leb128u_decode<uint8_t>(encoded_max_some_unused_bits_set), parser_error,
-        "Invalid LEB128 encoding: unused bits set.");
+        "invalid LEB128 encoding: unused bits set");
 }
 
 TEST(leb128, decode_out_of_buffer)
 {
-    constexpr auto m = "Unexpected EOF";
+    constexpr auto m = "unexpected EOF";
     EXPECT_THROW_MESSAGE(leb128u_decode<uint8_t>(bytes{}), parser_error, m);
     EXPECT_THROW_MESSAGE(leb128u_decode<uint8_t>(bytes{0x80}), parser_error, m);
 
@@ -245,22 +245,22 @@ TEST(leb128, decode_s64_invalid)
     const bytes encoded_1_too_many_leading_zeroes{
         0x81, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80};
     EXPECT_THROW_MESSAGE(leb128s_decode<int64_t>(encoded_1_too_many_leading_zeroes), parser_error,
-        "Invalid LEB128 encoding: too many bytes.");
+        "invalid LEB128 encoding: too many bytes");
 
     const bytes encoded_minus1_too_many_leading_1s{
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01};
     EXPECT_THROW_MESSAGE(leb128s_decode<int64_t>(encoded_minus1_too_many_leading_1s), parser_error,
-        "Invalid LEB128 encoding: too many bytes.");
+        "invalid LEB128 encoding: too many bytes");
 
     const bytes minus1_unused_bits_unset{
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01};
     EXPECT_THROW_MESSAGE(leb128s_decode<int64_t>(minus1_unused_bits_unset), parser_error,
-        "Invalid LEB128 encoding: unused bits not equal to sign bit.");
+        "invalid LEB128 encoding: unused bits not equal to sign bit");
 
     const bytes minus1_some_unused_bits_unset{
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x79};
     EXPECT_THROW_MESSAGE(leb128s_decode<int64_t>(minus1_some_unused_bits_unset), parser_error,
-        "Invalid LEB128 encoding: unused bits not equal to sign bit.");
+        "invalid LEB128 encoding: unused bits not equal to sign bit");
 }
 
 TEST(leb128, decode_s32)
@@ -298,19 +298,19 @@ TEST(leb128, decode_s32_invalid)
 {
     const bytes encoded_0_unused_bits_set{0x80, 0x80, 0x80, 0x80, 0x70};
     EXPECT_THROW_MESSAGE(leb128s_decode<int32_t>(encoded_0_unused_bits_set), parser_error,
-        "Invalid LEB128 encoding: unused bits not equal to sign bit.");
+        "invalid LEB128 encoding: unused bits not equal to sign bit");
 
     const bytes encoded_0_some_unused_bits_set{0x80, 0x80, 0x80, 0x80, 0x10};
     EXPECT_THROW_MESSAGE(leb128s_decode<int32_t>(encoded_0_some_unused_bits_set), parser_error,
-        "Invalid LEB128 encoding: unused bits not equal to sign bit.");
+        "invalid LEB128 encoding: unused bits not equal to sign bit");
 
     const bytes minus1_unused_bits_unset{0xff, 0xff, 0xff, 0xff, 0x0f};
     EXPECT_THROW_MESSAGE(leb128s_decode<int32_t>(minus1_unused_bits_unset), parser_error,
-        "Invalid LEB128 encoding: unused bits not equal to sign bit.");
+        "invalid LEB128 encoding: unused bits not equal to sign bit");
 
     const bytes minus1_some_unused_bits_set{0xff, 0xff, 0xff, 0xff, 0x4f};
     EXPECT_THROW_MESSAGE(leb128s_decode<int32_t>(minus1_some_unused_bits_set), parser_error,
-        "Invalid LEB128 encoding: unused bits not equal to sign bit.");
+        "invalid LEB128 encoding: unused bits not equal to sign bit");
 }
 
 TEST(leb128, decode_s8)
@@ -341,28 +341,28 @@ TEST(leb128, decode_s8_invalid)
 {
     const bytes encoded_1_too_many_leading_zeroes{0x81, 0x80, 0x80};
     EXPECT_THROW_MESSAGE(leb128s_decode<int8_t>(encoded_1_too_many_leading_zeroes), parser_error,
-        "Invalid LEB128 encoding: too many bytes.");
+        "invalid LEB128 encoding: too many bytes");
 
     const bytes encoded_too_big{0xe5, 0x8e, 0x26};
     EXPECT_THROW_MESSAGE(leb128s_decode<int8_t>(encoded_too_big), parser_error,
-        "Invalid LEB128 encoding: too many bytes.");
+        "invalid LEB128 encoding: too many bytes");
 
     const bytes minus1_unused_bits_unset{0xff, 0x01};
     EXPECT_THROW_MESSAGE(leb128s_decode<int8_t>(minus1_unused_bits_unset), parser_error,
-        "Invalid LEB128 encoding: unused bits not equal to sign bit.");
+        "invalid LEB128 encoding: unused bits not equal to sign bit");
 
     const bytes minus2_unused_bits_unset{0xfe, 0x01};
     EXPECT_THROW_MESSAGE(leb128s_decode<int8_t>(minus2_unused_bits_unset), parser_error,
-        "Invalid LEB128 encoding: unused bits not equal to sign bit.");
+        "invalid LEB128 encoding: unused bits not equal to sign bit");
 
     const bytes minus1_some_unused_bits_unset{0xff, 0x71};
     EXPECT_THROW_MESSAGE(leb128s_decode<int8_t>(minus1_some_unused_bits_unset), parser_error,
-        "Invalid LEB128 encoding: unused bits not equal to sign bit.");
+        "invalid LEB128 encoding: unused bits not equal to sign bit");
 }
 
 TEST(leb128, decode_s_out_of_buffer)
 {
-    constexpr auto m = "Unexpected EOF";
+    constexpr auto m = "unexpected EOF";
     const auto input = bytes{0x82, 0x81};
 
     EXPECT_THROW_MESSAGE(leb128s_decode<int16_t>(nullptr, nullptr), parser_error, m);
