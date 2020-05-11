@@ -546,6 +546,24 @@ TEST(parser, memory_single_malformed_minmax)
         parse(bin), parser_error, "malformed limits (minimum is larger than maximum)");
 }
 
+TEST(parser, memory_single_invalid_min_limit)
+{
+    // min=65537
+    const auto section_contents = "0100818004"_bytes;
+    const auto bin = bytes{wasm_prefix} + make_section(5, section_contents);
+
+    EXPECT_THROW_MESSAGE(parse(bin), validation_error, "maximum memory page limit exceeded");
+}
+
+TEST(parser, memory_single_invalid_max_limit)
+{
+    // min=1 max=65537
+    const auto section_contents = "010101818004"_bytes;
+    const auto bin = bytes{wasm_prefix} + make_section(5, section_contents);
+
+    EXPECT_THROW_MESSAGE(parse(bin), validation_error, "maximum memory page limit exceeded");
+}
+
 TEST(parser, memory_limits_kind_out_of_bounds)
 {
     const auto wasm = bytes{wasm_prefix} + make_section(5, make_vec({""_bytes}));
