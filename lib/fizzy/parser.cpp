@@ -144,13 +144,13 @@ inline parser_result<ConstantExpression> parse_constant_expression(
             break;
         }
         case Instr::f32_const:
-            // FIXME: support this once floating points are implemented
+            // TODO: support this once floating points are implemented
             result.kind = ConstantExpression::Kind::Constant;
             result.value.constant = 0;
             pos = skip(4, pos, end);
             break;
         case Instr::f64_const:
-            // FIXME: support this once floating points are implemented
+            // TODO: support this once floating points are implemented
             result.kind = ConstantExpression::Kind::Constant;
             result.value.constant = 0;
             pos = skip(8, pos, end);

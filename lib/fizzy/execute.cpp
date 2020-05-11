@@ -194,7 +194,7 @@ std::tuple<bytes_ptr, Limits> allocate_memory(const std::vector<Memory>& module_
         const auto memory_min = module_memories[0].limits.min;
         const auto memory_max = module_memories[0].limits.max;
 
-        // FIXME: better error handling
+        // TODO: better error handling
         if ((memory_min > MemoryPagesLimit) ||
             (memory_max.has_value() && *memory_max > MemoryPagesLimit))
         {
@@ -211,7 +211,7 @@ std::tuple<bytes_ptr, Limits> allocate_memory(const std::vector<Memory>& module_
         const auto memory_min = imported_memories[0].limits.min;
         const auto memory_max = imported_memories[0].limits.max;
 
-        // FIXME: better error handling
+        // TODO: better error handling
         if ((memory_min > MemoryPagesLimit) ||
             (memory_max.has_value() && *memory_max > MemoryPagesLimit))
         {
@@ -565,7 +565,8 @@ std::unique_ptr<Instance> instantiate(Module module,
 
     // We need to create instance before filling table,
     // because table functions will capture the pointer to instance.
-    // FIXME: clang-tidy warns about potential memory leak for moving memory (which is in fact
+    //
+    // TODO: clang-tidy warns about potential memory leak for moving memory (which is in fact
     // safe), but also erroneously points this warning to std::move(table)
     auto instance = std::make_unique<Instance>(std::move(module), std::move(memory), memory_limits,
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
