@@ -6,3 +6,7 @@ extraction:
       - export PATH=$(pwd)/custom_cmake/bin:${PATH}
       - mkdir $LGTM_SRC/_lgtm_build_dir
       - cd $LGTM_SRC/_lgtm_build_dir
+    configure:
+      command:
+        - cd $LGTM_SRC/_lgtm_build_dir
+        - cmake -DFIZZY_TESTING=ON -DCMAKE_BUILD_TYPE=Release ..
