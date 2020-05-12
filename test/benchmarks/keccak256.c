@@ -408,9 +408,9 @@ void rhash_keccak_final(sha3_ctx* ctx, unsigned char* result)
 }
 #endif /* USE_KECCAK */
 
-WASM_EXPORT unsigned keccak256_bench(unsigned fill, unsigned rounds)
+WASM_EXPORT unsigned keccak256_bench(unsigned input_len, unsigned fill, unsigned rounds)
 {
-	unsigned char input[512];
+	unsigned char input[input_len];
 	memset(input, (uint8_t)fill, sizeof(input));
 
 	sha3_ctx ctx;

@@ -239,9 +239,9 @@ static void rhash_sha1_final(sha1_ctx* ctx, unsigned char* result)
 	if (result) be32_copy(result, 0, &ctx->hash, sha1_hash_size);
 }
 
-WASM_EXPORT unsigned sha1_bench(unsigned fill, unsigned rounds)
+WASM_EXPORT unsigned sha1_bench(unsigned input_len, unsigned fill, unsigned rounds)
 {
-	unsigned char input[512];
+	unsigned char input[input_len];
 	memset(input, (uint8_t)fill, sizeof(input));
 
 	sha1_ctx ctx;

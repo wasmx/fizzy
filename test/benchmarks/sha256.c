@@ -287,9 +287,9 @@ void rhash_sha256_final(sha256_ctx* ctx, unsigned char* result)
     if (result) be32_copy(result, 0, ctx->hash, ctx->digest_length);
 }
 
-WASM_EXPORT unsigned sha256_bench(unsigned fill, unsigned rounds)
+WASM_EXPORT unsigned sha256_bench(unsigned input_len, unsigned fill, unsigned rounds)
 {
-    unsigned char input[512];
+    unsigned char input[input_len];
     memset(input, (uint8_t)fill, sizeof(input));
 
     sha256_ctx ctx;
