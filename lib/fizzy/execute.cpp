@@ -565,11 +565,7 @@ std::unique_ptr<Instance> instantiate(Module module,
 
     // We need to create instance before filling table,
     // because table functions will capture the pointer to instance.
-    //
-    // TODO: clang-tidy warns about potential memory leak for moving memory (which is in fact
-    // safe), but also erroneously points this warning to std::move(table)
     auto instance = std::make_unique<Instance>(std::move(module), std::move(memory), memory_limits,
-        // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
         std::move(table), table_limits, std::move(globals), std::move(imported_functions),
         std::move(imported_globals));
 
