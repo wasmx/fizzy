@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
 
-## [0.1.0] — unreleased
+## [0.1.0] — 2020-05-14
 
 First release!
 
@@ -23,7 +23,7 @@ First release!
   - `fizzy-unittests` for running unit tests
 - It is missing a public API (the embedder API) and thus not ready yet for integration.
 
-[0.1.0]: https://github.com/wasmx/fizzy/compare/2366fff3...master
+[0.1.0]: https://github.com/wasmx/fizzy/releases/tag/v0.1.0
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Semantic Versioning]: https://semver.org
