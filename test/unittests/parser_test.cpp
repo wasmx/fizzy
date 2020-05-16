@@ -1213,7 +1213,8 @@ TEST(parser, code_section_without_function_section)
 
 TEST(parser, data_section_empty)
 {
-    const auto bin = bytes{wasm_prefix} + make_section(11, make_vec({}));
+    const auto bin = bytes{wasm_prefix} + make_section(5, make_vec({"0000"_bytes})) +
+                     make_section(11, make_vec({}));
     const auto module = parse(bin);
     EXPECT_EQ(module.datasec.size(), 0);
 }
@@ -1222,7 +1223,8 @@ TEST(parser, data_section)
 {
     const auto section_contents =
         make_vec({"0041010b02aaff"_bytes, "0041020b025555"_bytes, "0023000b022424"_bytes});
-    const auto bin = bytes{wasm_prefix} + make_section(11, section_contents);
+    const auto bin = bytes{wasm_prefix} + make_section(5, make_vec({"0000"_bytes})) +
+                     make_section(11, section_contents);
 
     const auto module = parse(bin);
     ASSERT_EQ(module.datasec.size(), 3);
