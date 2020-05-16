@@ -324,6 +324,21 @@ jobs:
           command: |
             git ls-files '*.sh' | xargs shellcheck
       - run:
+          name: "Install cmake-format"
+          command: pip3 install cmake-format
+      - run:
+          name: "Check cmake format"
+          command: |
+            export PATH=$PATH:~/.local/bin
+            # use `cmake-format --check` to avoid the need for diff
+            git ls-files 'CMakeLists.txt' '*/CMakeLists.txt' './cmake/Project*.cmake' | xargs cmake-format -i
+            git diff --color --exit-code
+      - run:
+          name: "Check cmake lint"
+          command: |
+            export PATH=$PATH:~/.local/bin
+            git ls-files 'CMakeLists.txt' '*/CMakeLists.txt' './cmake/Project*.cmake' | xargs cmake-lint
+      - run:
           name: "Check code format"
           command: |
             clang-format --version
