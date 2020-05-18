@@ -142,6 +142,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
 
         frame.stack_height += metrics.stack_height_change;
 
+        if (!frame.unreachable)
+            code.max_stack_height = std::max(code.max_stack_height, frame.stack_height);
+
         const auto instr = static_cast<Instr>(opcode);
         switch (instr)
         {
