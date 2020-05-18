@@ -200,6 +200,30 @@ TEST(parser_expr, instr_br_table_empty_vector)
     EXPECT_EQ(code.immediates.substr(br_table_imm_offset, expected_br_imm.size()), expected_br_imm);
 }
 
+TEST(parser_expr, instr_br_table_as_return)
+{
+    /*
+       i32.const 0
+       br_table 0
+    */
+
+    const auto code_bin = "41000e00000b"_bytes;
+
+    const auto [code, pos] = parse_expr(code_bin);
+
+    EXPECT_EQ(code.instructions, (std::vector{Instr::i32_const, Instr::br_table, Instr::end}));
+}
+
+TEST(parser_expr, instr_br_table_missing_arg)
+{
+    /*
+       br_table 0
+    */
+
+    const auto code_bin = "0e00000b"_bytes;
+    EXPECT_THROW_MESSAGE(parse_expr(code_bin), validation_error, "stack underflow");
+}
+
 TEST(parser_expr, unexpected_else)
 {
     // (else)
@@ -299,4 +323,30 @@ TEST(parser_expr, memory_grow_out_of_bounds)
         const auto code = i32_const(0) + uint8_t(instr);
         EXPECT_THROW_MESSAGE(parse_expr(code), parser_error, "Unexpected EOF");
     }
+}
+
+TEST(parser_expr, call_0args_1result)
+{
+    /* wat2wasm
+    (func (result i32) (i32.const 0))
+    (func (result i32) (call 0))
+    */
+    const auto wasm =
+        from_hex("0061736d010000000105016000017f03030200000a0b02040041000b040010000b");
+
+    const auto module = parse(wasm);
+    ASSERT_EQ(module.codesec.size(), 2);
+}
+
+TEST(parser_expr, call_1arg_1result)
+{
+    /* wat2wasm
+    (func (param i32) (result i32) (local.get 0))
+    (func (result i32) (call 0 (i32.const 0)))
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010a0260017f017f6000017f03030200010a0d02040020000b0600410010000b");
+
+    const auto module = parse(wasm);
+    ASSERT_EQ(module.codesec.size(), 2);
 }
