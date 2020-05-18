@@ -22,7 +22,12 @@ public:
         if (!wasm_runtime_init())
             abort();
     }
-    ~WAMREngine() { wasm_runtime_destroy(); }
+    ~WAMREngine()
+    {
+        if (m_instance != nullptr)
+            wasm_runtime_deinstantiate(m_instance);
+        wasm_runtime_destroy();
+    }
 
     bool parse(bytes_view input) const final;
     std::optional<FuncRef> find_function(std::string_view name) const final;
@@ -39,18 +44,23 @@ std::unique_ptr<WasmEngine> create_wamr_engine()
 
 bool WAMREngine::parse(bytes_view input) const
 {
-    auto module = wasm_runtime_load(input.data(), static_cast<uint32_t>(input.size()), nullptr, 0);
+    char errors[256];
+    auto module = wasm_runtime_load(
+        input.data(), static_cast<uint32_t>(input.size()), errors, sizeof(errors));
+    if (module == nullptr)
+        return false;
     wasm_runtime_unload(module);
-    return module != nullptr;
+    return true;
 }
 
 bool WAMREngine::instantiate(bytes_view wasm_binary)
 {
+    char errors[256];
     auto module = wasm_runtime_load(
-        wasm_binary.data(), static_cast<uint32_t>(wasm_binary.size()), nullptr, 0);
+        wasm_binary.data(), static_cast<uint32_t>(wasm_binary.size()), errors, sizeof(errors));
     if (module == nullptr)
         return false;
-    m_instance = wasm_runtime_instantiate(module, 0, 0, nullptr, 0);
+    m_instance = wasm_runtime_instantiate(module, 0, 0, errors, sizeof(errors));
     if (m_instance == nullptr)
     {
         wasm_runtime_unload(module);

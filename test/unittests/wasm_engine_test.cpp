@@ -12,7 +12,7 @@ using namespace fizzy;
 using namespace fizzy::test;
 
 static const decltype(&create_fizzy_engine) all_engines[]{
-    create_fizzy_engine, create_wabt_engine, create_wasm3_engine};
+    create_fizzy_engine, create_wabt_engine, create_wamr_engine, create_wasm3_engine};
 
 TEST(wasm_engine, validate_function_signature)
 {
@@ -62,7 +62,7 @@ TEST(wasm_engine, instantiate_error)
 
     // TODO: wasm3 doesn't care about imports, until execution
     // NOTE: wabt doesn't differentiate between parse/instantiate errors.
-    for (auto engine_create_fn : {create_fizzy_engine, create_wabt_engine})
+    for (auto engine_create_fn : {create_fizzy_engine, create_wabt_engine, create_wamr_engine})
     {
         auto engine = engine_create_fn();
         EXPECT_FALSE(engine->instantiate(wasm));
