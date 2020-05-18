@@ -36,6 +36,11 @@ struct ControlFrame
     /// The immediates offset for block instructions.
     const size_t immediates_offset{0};
 
+    /// The frame stack height of the parent frame.
+    /// TODO: Storing this is not strictly required, as the parent frame is available
+    ///       in the control_stack.
+    const int parent_stack_height{0};
+
     /// The frame stack height.
     int stack_height{0};
 
@@ -43,8 +48,12 @@ struct ControlFrame
     /// after branches).
     bool unreachable{false};
 
-    ControlFrame(Instr _instruction, size_t _immediates_offset = 0) noexcept
-      : instruction{_instruction}, immediates_offset{_immediates_offset}
+    ControlFrame(
+        Instr _instruction, int _parent_stack_height, size_t _immediates_offset = 0) noexcept
+      : instruction{_instruction},
+        immediates_offset{_immediates_offset},
+        parent_stack_height{_parent_stack_height},
+        stack_height{_parent_stack_height}
     {}
 };
 
@@ -91,7 +100,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
     // For a block/if/else instruction the value is the block/if/else's immediate offset.
     std::stack<ControlFrame> control_stack;
 
-    control_stack.push({Instr::block});  // The function's implicit block.
+    control_stack.push({Instr::block, 0});  // The function's implicit block.
 
     const auto metrics_table = get_instruction_metrics_table();
 
@@ -104,7 +113,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
         auto& frame = control_stack.top();
         const auto& metrics = metrics_table[opcode];
 
-        if (frame.stack_height < metrics.stack_height_required && !frame.unreachable)
+        if (!frame.unreachable &&
+            (frame.stack_height - frame.parent_stack_height) < metrics.stack_height_required)
             throw validation_error{"stack underflow"};
 
         frame.stack_height += metrics.stack_height_change;
@@ -272,11 +282,11 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
             std::tie(arity, pos) = parse_blocktype(pos, end);
             code.immediates.push_back(arity);
 
+            // Push label with immediates offset after arity.
+            control_stack.push({Instr::block, frame.stack_height, code.immediates.size()});
+
             // Parent frame gets additional items on stack after this block exit.
             frame.stack_height += arity;
-
-            // Push label with immediates offset after arity.
-            control_stack.push({Instr::block, code.immediates.size()});
 
             // Placeholders for immediate values, filled at the matching end instruction.
             push(code.immediates, uint32_t{0});  // Diff to the end instruction.
@@ -289,10 +299,10 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
             uint8_t arity;
             std::tie(arity, pos) = parse_blocktype(pos, end);
 
+            control_stack.push({Instr::loop, frame.stack_height});
+
             // Parent frame gets additional items on stack after this block exit.
             frame.stack_height += arity;
-
-            control_stack.push({Instr::loop});
             break;
         }
 
@@ -302,10 +312,10 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
             std::tie(arity, pos) = parse_blocktype(pos, end);
             code.immediates.push_back(arity);
 
+            control_stack.push({Instr::if_, frame.stack_height, code.immediates.size()});
+
             // Parent frame gets additional items on stack after this block exit.
             frame.stack_height += arity;
-
-            control_stack.push({Instr::if_, code.immediates.size()});
 
             // Placeholders for immediate values, filled at the matching end and else instructions.
             push(code.immediates, uint32_t{0});  // Diff to the end instruction.
@@ -323,7 +333,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
                 throw parser_error{"unexpected else instruction (if instruction missing)"};
 
             // Reset frame after if. The if result type validation not implemented yet.
-            frame.stack_height = 0;
+            frame.stack_height = frame.parent_stack_height;
             frame.unreachable = false;
 
             const auto target_pc = static_cast<uint32_t>(code.instructions.size() + 1);
