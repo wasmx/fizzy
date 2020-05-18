@@ -93,6 +93,23 @@ void update_caller_frame(ControlFrame& frame, const FuncType& func_type)
     frame.stack_height += stack_height_change;
 }
 
+void validate_result_count(const ControlFrame& frame)
+{
+    if (frame.unreachable)
+        return;
+
+    // This is checked by "stack underflow".
+    assert(frame.stack_height >= frame.parent_stack_height);
+
+    if (frame.stack_height < frame.parent_stack_height + frame.arity)
+        throw validation_error{"missing result"};
+
+    // TODO: Enable "too many results" check when having information about number of function
+    //       results.
+    // if (frame.stack_height > frame.parent_stack_height + frame.arity)
+    //     throw validation_error{"too many results"};
+}
+
 }  // namespace
 
 parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Module& module)
@@ -329,6 +346,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
             if (frame.instruction != Instr::if_)
                 throw parser_error{"unexpected else instruction (if instruction missing)"};
 
+            validate_result_count(frame);  // else is the end of if.
+
             // Reset frame after if. The if result type validation not implemented yet.
             frame.stack_height = frame.parent_stack_height;
             frame.unreachable = false;
@@ -348,6 +367,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
 
         case Instr::end:
         {
+            validate_result_count(frame);
+
             if (control_stack.size() > 1)
             {
                 if (frame.instruction != Instr::loop)  // If end of block/if/else instruction.
