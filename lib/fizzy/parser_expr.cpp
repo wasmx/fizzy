@@ -42,6 +42,10 @@ struct ControlFrame
     /// Whether the remainder of the block is unreachable (used to handle stack-polymorphic typing
     /// after branches).
     bool unreachable{false};
+
+    ControlFrame(Instr _instruction, size_t _immediates_offset = 0) noexcept
+      : instruction{_instruction}, immediates_offset{_immediates_offset}
+    {}
 };
 
 /// Parses blocktype.
