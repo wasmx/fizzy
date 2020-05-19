@@ -6,6 +6,7 @@
 #include <src/interp/binary-reader-interp.h>
 #include <src/interp/interp.h>
 
+#include <test/utils/adler32.hpp>
 #include <test/utils/wasm_engine.hpp>
 #include <cassert>
 
@@ -36,6 +37,17 @@ std::unique_ptr<WasmEngine> create_wabt_engine()
 bool WabtEngine::parse(bytes_view input) const
 {
     wabt::interp::Environment env;
+
+    wabt::interp::HostModule* hostModule = env.AppendHostModule("env");
+    assert(hostModule != nullptr);
+
+    hostModule->AppendFuncExport("adler32", {{wabt::Type::I32, wabt::Type::I32}, {wabt::Type::I32}},
+        [](const wabt::interp::HostFunc*, const wabt::interp::FuncSignature*,
+            const wabt::interp::TypedValues&, wabt::interp::TypedValues&) {
+            assert(false);
+            return wabt::interp::Result::Ok;
+        });
+
     wabt::interp::DefinedModule* module{nullptr};
     wabt::Errors errors;
     const wabt::Result result = wabt::ReadBinaryInterp(
@@ -45,6 +57,26 @@ bool WabtEngine::parse(bytes_view input) const
 
 bool WabtEngine::instantiate(bytes_view wasm_binary)
 {
+    wabt::interp::HostModule* hostModule = m_env.AppendHostModule("env");
+    assert(hostModule != nullptr);
+
+    hostModule->AppendFuncExport("adler32", {{wabt::Type::I32, wabt::Type::I32}, {wabt::Type::I32}},
+        [=](const wabt::interp::HostFunc*, const wabt::interp::FuncSignature*,
+            const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
+            const auto offset = args[0].value.i32;
+            const auto length = args[1].value.i32;
+            // TODO: move the memory lookup outside in order to reduce overhead
+            assert(m_env.GetMemoryCount() > 0);
+            auto memory = m_env.GetMemory(0);
+            assert(memory != nullptr);
+            auto memory_data = memory->data;
+            assert(memory_data.size() > (offset + length));
+            const auto ret =
+                fizzy::adler32({reinterpret_cast<uint8_t*>(&memory_data[offset]), length});
+            results[0].set_i32(ret);
+            return wabt::interp::Result::Ok;
+        });
+
     wabt::Errors errors;
     const wabt::Result result = wabt::ReadBinaryInterp(&m_env, wasm_binary.data(),
         wasm_binary.size(), wabt::ReadBinaryOptions{}, &errors, &m_module);
