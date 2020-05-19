@@ -33,6 +33,9 @@ struct ControlFrame
     /// The instruction that created the label.
     const Instr instruction{Instr::unreachable};
 
+    /// Number of results returned from the frame.
+    const uint8_t arity{0};
+
     /// The immediates offset for block instructions.
     const size_t immediates_offset{0};
 
@@ -48,9 +51,10 @@ struct ControlFrame
     /// after branches).
     bool unreachable{false};
 
-    ControlFrame(
-        Instr _instruction, int _parent_stack_height, size_t _immediates_offset = 0) noexcept
+    ControlFrame(Instr _instruction, uint8_t _arity, int _parent_stack_height,
+        size_t _immediates_offset = 0) noexcept
       : instruction{_instruction},
+        arity{_arity},
         immediates_offset{_immediates_offset},
         parent_stack_height{_parent_stack_height},
         stack_height{_parent_stack_height}
@@ -100,7 +104,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
     // For a block/if/else instruction the value is the block/if/else's immediate offset.
     std::stack<ControlFrame> control_stack;
 
-    control_stack.push({Instr::block, 0});  // The function's implicit block.
+    // TODO: Get function result arity from the function type in Module.
+    const uint8_t func_result_arity = 0;
+    control_stack.emplace(Instr::block, func_result_arity, 0);  // The function's implicit block.
 
     const auto metrics_table = get_instruction_metrics_table();
 
@@ -283,10 +289,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
             code.immediates.push_back(arity);
 
             // Push label with immediates offset after arity.
-            control_stack.push({Instr::block, frame.stack_height, code.immediates.size()});
-
-            // Parent frame gets additional items on stack after this block exit.
-            frame.stack_height += arity;
+            control_stack.emplace(Instr::block, arity, frame.stack_height, code.immediates.size());
 
             // Placeholders for immediate values, filled at the matching end instruction.
             push(code.immediates, uint32_t{0});  // Diff to the end instruction.
@@ -299,10 +302,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
             uint8_t arity;
             std::tie(arity, pos) = parse_blocktype(pos, end);
 
-            control_stack.push({Instr::loop, frame.stack_height});
-
-            // Parent frame gets additional items on stack after this block exit.
-            frame.stack_height += arity;
+            control_stack.emplace(Instr::loop, arity, frame.stack_height);
             break;
         }
 
@@ -312,10 +312,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
             std::tie(arity, pos) = parse_blocktype(pos, end);
             code.immediates.push_back(arity);
 
-            control_stack.push({Instr::if_, frame.stack_height, code.immediates.size()});
-
-            // Parent frame gets additional items on stack after this block exit.
-            frame.stack_height += arity;
+            control_stack.emplace(Instr::if_, arity, frame.stack_height, code.immediates.size());
 
             // Placeholders for immediate values, filled at the matching end and else instructions.
             push(code.immediates, uint32_t{0});  // Diff to the end instruction.
@@ -364,7 +361,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
                     block_imm += sizeof(target_pc);
                     store(block_imm, target_imm);
                 }
-                control_stack.pop();  // Pop the current frame.
+                const auto arity = frame.arity;
+                control_stack.pop();                        // Pop the current frame.
+                control_stack.top().stack_height += arity;  // The results of the popped frame.
             }
             else
                 continue_parsing = false;
