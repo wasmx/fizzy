@@ -5,6 +5,11 @@ Documentation of all notable changes to the **Fizzy** project.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
+## [0.2.0] — unreleased
+
+### Added
+
+- API for resolving imported function names into function types. [#318](https://github.com/wasmx/fizzy/pull/318)
 
 ## [0.1.0] — 2020-05-14
 
@@ -24,6 +29,7 @@ First release!
 - It is missing a public API (the embedder API) and thus not ready yet for integration.
 
 [0.1.0]: https://github.com/wasmx/fizzy/releases/tag/v0.1.0
+[0.2.0]: https://github.com/wasmx/fizzy/compare/v0.1.0...master
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Semantic Versioning]: https://semver.org
