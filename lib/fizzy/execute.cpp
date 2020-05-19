@@ -1550,6 +1550,34 @@ execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uin
     return execute(*instance, func_idx, std::move(args));
 }
 
+std::vector<ExternalFunction> resolve_imported_functions(
+    const Module& module, std::vector<ImportedFunction> imported_functions)
+{
+    std::vector<ExternalFunction> external_functions;
+    for (const auto& import : module.importsec)
+    {
+        if (import.kind != ExternalKind::Function)
+            continue;
+
+        const auto it = std::find_if(
+            imported_functions.begin(), imported_functions.end(), [&import](const auto& func) {
+                return import.module == func.module && import.name == func.name;
+            });
+
+        if (it == imported_functions.end())
+        {
+            throw instantiate_error(
+                "imported function " + import.module + "." + import.name + " is required");
+        }
+
+        assert(import.desc.function_type_index < module.typesec.size());
+        external_functions.emplace_back(ExternalFunction{
+            std::move(it->function), module.typesec[import.desc.function_type_index]});
+    }
+
+    return external_functions;
+}
+
 std::optional<FuncIdx> find_exported_function(const Module& module, std::string_view name)
 {
     return find_export(module, ExternalKind::Function, name);

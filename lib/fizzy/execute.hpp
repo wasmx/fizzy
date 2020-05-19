@@ -100,6 +100,20 @@ execution_result execute(
 // TODO: remove this helper
 execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uint64_t> args);
 
+// Function that should be used by instantiate as imports, identified by module and function name.
+struct ImportedFunction
+{
+    std::string module;
+    std::string name;
+    std::function<execution_result(Instance&, std::vector<uint64_t>, int depth)> function;
+};
+
+// Create vector of ExternalFunctions ready to be passed to instantiate.
+// imported_functions may be in any order,
+// but must contain functions for all of the imported function names defined in the module.
+std::vector<ExternalFunction> resolve_imported_functions(
+    const Module& module, std::vector<ImportedFunction> imported_functions);
+
 // Find exported function index by name.
 std::optional<FuncIdx> find_exported_function(const Module& module, std::string_view name);
 
