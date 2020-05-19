@@ -11,6 +11,105 @@
 
 using namespace fizzy;
 
+namespace
+{
+auto function_returning_value(uint64_t value) noexcept
+{
+    return [value](Instance&, std::vector<uint64_t>, int) {
+        return execution_result{false, {value}};
+    };
+}
+}  // namespace
+
+TEST(api, resolve_imported_functions)
+{
+    /* wat2wasm
+      (func (import "mod1" "foo1") (result i32))
+      (func (import "mod1" "foo2") (param i32) (result i32))
+      (func (import "mod2" "foo1") (param i32) (result i32))
+      (func (import "mod2" "foo2") (param i64) (result i64))
+      (global (import "mod1" "g") i32) ;; just to test combination with other import types
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010f036000017f60017f017f60017e017e023b05046d6f643104666f6f310000046d6f6431"
+        "04666f6f320001046d6f643204666f6f310001046d6f643204666f6f320002046d6f64310167037f00");
+    const auto module = parse(wasm);
+
+    std::vector<ImportedFunction> imported_functions = {
+        {"mod1", "foo1", function_returning_value(0)},
+        {"mod1", "foo2", function_returning_value(1)},
+        {"mod2", "foo1", function_returning_value(2)},
+        {"mod2", "foo2", function_returning_value(3)},
+    };
+
+    const auto external_functions =
+        resolve_imported_functions(module, std::move(imported_functions));
+
+    EXPECT_EQ(external_functions.size(), 4);
+
+    uint64_t global = 0;
+    const std::vector<ExternalGlobal> external_globals{{&global, false}};
+    auto instance = instantiate(
+        module, external_functions, {}, {}, std::vector<ExternalGlobal>(external_globals));
+
+    EXPECT_THAT(execute(*instance, 0, {}), Result(0));
+    EXPECT_THAT(execute(*instance, 1, {}), Result(1));
+    EXPECT_THAT(execute(*instance, 2, {}), Result(2));
+    EXPECT_THAT(execute(*instance, 3, {}), Result(3));
+
+
+    std::vector<ImportedFunction> imported_functions_reordered = {
+        {"mod2", "foo1", function_returning_value(2)},
+        {"mod1", "foo2", function_returning_value(1)},
+        {"mod1", "foo1", function_returning_value(0)},
+        {"mod2", "foo2", function_returning_value(3)},
+    };
+
+    const auto external_functions_reordered =
+        resolve_imported_functions(module, std::move(imported_functions_reordered));
+    EXPECT_EQ(external_functions_reordered.size(), 4);
+
+    auto instance_reordered = instantiate(module, external_functions_reordered, {}, {},
+        std::vector<ExternalGlobal>(external_globals));
+
+    EXPECT_THAT(execute(*instance_reordered, 0, {}), Result(0));
+    EXPECT_THAT(execute(*instance_reordered, 1, {}), Result(1));
+    EXPECT_THAT(execute(*instance_reordered, 2, {}), Result(2));
+    EXPECT_THAT(execute(*instance_reordered, 3, {}), Result(3));
+
+
+    std::vector<ImportedFunction> imported_functions_extra = {
+        {"mod1", "foo1", function_returning_value(0)},
+        {"mod1", "foo2", function_returning_value(1)},
+        {"mod2", "foo1", function_returning_value(2)},
+        {"mod2", "foo2", function_returning_value(3)},
+        {"mod3", "foo1", function_returning_value(4)},
+        {"mod3", "foo2", function_returning_value(5)},
+    };
+
+    const auto external_functions_extra =
+        resolve_imported_functions(module, std::move(imported_functions_extra));
+    EXPECT_EQ(external_functions_extra.size(), 4);
+
+    auto instance_extra = instantiate(
+        module, external_functions_extra, {}, {}, std::vector<ExternalGlobal>(external_globals));
+
+    EXPECT_THAT(execute(*instance_extra, 0, {}), Result(0));
+    EXPECT_THAT(execute(*instance_extra, 1, {}), Result(1));
+    EXPECT_THAT(execute(*instance_extra, 2, {}), Result(2));
+    EXPECT_THAT(execute(*instance_extra, 3, {}), Result(3));
+
+
+    std::vector<ImportedFunction> imported_functions_missing = {
+        {"mod1", "foo1", function_returning_value(0)},
+        {"mod1", "foo2", function_returning_value(1)},
+        {"mod2", "foo1", function_returning_value(2)},
+    };
+
+    EXPECT_THROW_MESSAGE(resolve_imported_functions(module, std::move(imported_functions_missing)),
+        instantiate_error, "imported function mod2.foo2 is required");
+}
+
 TEST(api, find_exported_function_index)
 {
     Module module;
