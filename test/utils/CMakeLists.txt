@@ -10,6 +10,7 @@ add_library(fizzy::test-utils ALIAS test-utils)
 
 target_sources(
     test-utils PRIVATE
+    adler32.hpp
     asserts.cpp
     asserts.hpp
     fizzy_engine.cpp
