@@ -262,28 +262,6 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
         case Instr::i64_extend_i32_u:
             break;
 
-        case Instr::end:
-        {
-            if (control_stack.size() > 1)
-            {
-                if (frame.instruction != Instr::loop)  // If end of block/if/else instruction.
-                {
-                    const auto target_pc = static_cast<uint32_t>(code.instructions.size() + 1);
-                    const auto target_imm = static_cast<uint32_t>(code.immediates.size());
-
-                    // Set the imm values for block instruction.
-                    auto* block_imm = code.immediates.data() + frame.immediates_offset;
-                    store(block_imm, target_pc);
-                    block_imm += sizeof(target_pc);
-                    store(block_imm, target_imm);
-                }
-                control_stack.pop();  // Pop the current frame.
-            }
-            else
-                continue_parsing = false;
-            break;
-        }
-
         case Instr::block:
         {
             uint8_t arity;
@@ -357,6 +335,28 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
             break;
         }
 
+        case Instr::end:
+        {
+            if (control_stack.size() > 1)
+            {
+                if (frame.instruction != Instr::loop)  // If end of block/if/else instruction.
+                {
+                    const auto target_pc = static_cast<uint32_t>(code.instructions.size() + 1);
+                    const auto target_imm = static_cast<uint32_t>(code.immediates.size());
+
+                    // Set the imm values for block instruction.
+                    auto* block_imm = code.immediates.data() + frame.immediates_offset;
+                    store(block_imm, target_pc);
+                    block_imm += sizeof(target_pc);
+                    store(block_imm, target_imm);
+                }
+                control_stack.pop();  // Pop the current frame.
+            }
+            else
+                continue_parsing = false;
+            break;
+        }
+
         case Instr::br:
         case Instr::br_if:
         {
@@ -371,27 +371,6 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
             if (instr == Instr::br)
                 frame.unreachable = true;
 
-            break;
-        }
-
-        case Instr::return_:
-        {
-            // return is identical to br MAX
-            assert(!control_stack.empty());
-            push(code.immediates, control_stack.size() - 1);
-            frame.unreachable = true;
-            break;
-        }
-
-        case Instr::local_get:
-        case Instr::local_set:
-        case Instr::local_tee:
-        case Instr::global_get:
-        case Instr::global_set:
-        {
-            uint32_t imm;
-            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, end);
-            push(code.immediates, imm);
             break;
         }
 
@@ -418,6 +397,15 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
 
             frame.unreachable = true;
 
+            break;
+        }
+
+        case Instr::return_:
+        {
+            // return is identical to br MAX
+            assert(!control_stack.empty());
+            push(code.immediates, control_stack.size() - 1);
+            frame.unreachable = true;
             break;
         }
 
@@ -458,6 +446,18 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
             const uint8_t tableidx{*pos++};
             if (tableidx != 0)
                 throw parser_error{"invalid tableidx encountered with call_indirect"};
+            break;
+        }
+
+        case Instr::local_get:
+        case Instr::local_set:
+        case Instr::local_tee:
+        case Instr::global_get:
+        case Instr::global_set:
+        {
+            uint32_t imm;
+            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, end);
+            push(code.immediates, imm);
             break;
         }
 
