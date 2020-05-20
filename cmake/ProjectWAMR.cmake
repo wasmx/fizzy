@@ -20,7 +20,6 @@ ExternalProject_Add(wamr
     BINARY_DIR ${binary_dir}
     URL https://github.com/bytecodealliance/wasm-micro-runtime/archive/WAMR-04-15-2020.tar.gz
     URL_HASH SHA256=46f74568caec7abf51e7192e1eb73619cf2bf44f987ea22d86a1b103c6184751
-    PATCH_COMMAND sh ${CMAKE_CURRENT_LIST_DIR}/patch_wamr.sh
     # different dir based on linux vs macos..
     SOURCE_SUBDIR product-mini/platforms/darwin
     CMAKE_ARGS
