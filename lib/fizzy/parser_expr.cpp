@@ -193,7 +193,6 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
         case Instr::f64_reinterpret_i64:
 
         case Instr::unreachable:
-        case Instr::return_:
             frame.unreachable = true;
             break;
 
@@ -372,6 +371,15 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
             if (instr == Instr::br)
                 frame.unreachable = true;
 
+            break;
+        }
+
+        case Instr::return_:
+        {
+            // return is identical to br MAX
+            assert(!control_stack.empty());
+            push(code.immediates, control_stack.size() - 1);
+            frame.unreachable = true;
             break;
         }
 
