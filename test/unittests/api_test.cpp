@@ -11,6 +11,146 @@
 
 using namespace fizzy;
 
+namespace
+{
+auto function_returning_value(uint64_t value) noexcept
+{
+    return [value](Instance&, std::vector<uint64_t>, int) {
+        return execution_result{false, {value}};
+    };
+}
+
+execution_result function_returning_void(Instance&, std::vector<uint64_t>, int) noexcept
+{
+    return {};
+}
+}  // namespace
+
+TEST(api, resolve_imported_functions)
+{
+    /* wat2wasm
+      (func (import "mod1" "foo1") (result i32))
+      (func (import "mod1" "foo2") (param i32) (result i32))
+      (func (import "mod2" "foo1") (param i32) (result i32))
+      (func (import "mod2" "foo2") (param i64) (param i32))
+      (global (import "mod1" "g") i32) ;; just to test combination with other import types
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010f036000017f60017f017f60027e7f00023b05046d6f643104666f6f310000046d6f6431"
+        "04666f6f320001046d6f643204666f6f310001046d6f643204666f6f320002046d6f64310167037f00");
+    const auto module = parse(wasm);
+
+    std::vector<ImportedFunction> imported_functions = {
+        {"mod1", "foo1", {}, ValType::i32, function_returning_value(0)},
+        {"mod1", "foo2", {ValType::i32}, ValType::i32, function_returning_value(1)},
+        {"mod2", "foo1", {ValType::i32}, ValType::i32, function_returning_value(2)},
+        {"mod2", "foo2", {ValType::i64, ValType::i32}, std::nullopt, function_returning_void},
+    };
+
+    const auto external_functions =
+        resolve_imported_functions(module, std::move(imported_functions));
+
+    EXPECT_EQ(external_functions.size(), 4);
+
+    uint64_t global = 0;
+    const std::vector<ExternalGlobal> external_globals{{&global, false}};
+    auto instance = instantiate(
+        module, external_functions, {}, {}, std::vector<ExternalGlobal>(external_globals));
+
+    EXPECT_THAT(execute(*instance, 0, {}), Result(0));
+    EXPECT_THAT(execute(*instance, 1, {0}), Result(1));
+    EXPECT_THAT(execute(*instance, 2, {0}), Result(2));
+    EXPECT_THAT(execute(*instance, 3, {0, 0}), Result());
+
+
+    std::vector<ImportedFunction> imported_functions_reordered = {
+        {"mod2", "foo1", {ValType::i32}, ValType::i32, function_returning_value(2)},
+        {"mod1", "foo2", {ValType::i32}, ValType::i32, function_returning_value(1)},
+        {"mod1", "foo1", {}, ValType::i32, function_returning_value(0)},
+        {"mod2", "foo2", {ValType::i64, ValType::i32}, std::nullopt, function_returning_void},
+    };
+
+    const auto external_functions_reordered =
+        resolve_imported_functions(module, std::move(imported_functions_reordered));
+    EXPECT_EQ(external_functions_reordered.size(), 4);
+
+    auto instance_reordered = instantiate(module, external_functions_reordered, {}, {},
+        std::vector<ExternalGlobal>(external_globals));
+
+    EXPECT_THAT(execute(*instance_reordered, 0, {}), Result(0));
+    EXPECT_THAT(execute(*instance_reordered, 1, {0}), Result(1));
+    EXPECT_THAT(execute(*instance_reordered, 2, {0}), Result(2));
+    EXPECT_THAT(execute(*instance_reordered, 3, {0, 0}), Result());
+
+
+    std::vector<ImportedFunction> imported_functions_extra = {
+        {"mod1", "foo1", {}, ValType::i32, function_returning_value(0)},
+        {"mod1", "foo2", {ValType::i32}, ValType::i32, function_returning_value(1)},
+        {"mod2", "foo1", {ValType::i32}, ValType::i32, function_returning_value(2)},
+        {"mod2", "foo2", {ValType::i64, ValType::i32}, std::nullopt, function_returning_void},
+        {"mod3", "foo1", {}, std::nullopt, function_returning_value(4)},
+        {"mod3", "foo2", {}, std::nullopt, function_returning_value(5)},
+    };
+
+    const auto external_functions_extra =
+        resolve_imported_functions(module, std::move(imported_functions_extra));
+    EXPECT_EQ(external_functions_extra.size(), 4);
+
+    auto instance_extra = instantiate(
+        module, external_functions_extra, {}, {}, std::vector<ExternalGlobal>(external_globals));
+
+    EXPECT_THAT(execute(*instance_extra, 0, {}), Result(0));
+    EXPECT_THAT(execute(*instance_extra, 1, {0}), Result(1));
+    EXPECT_THAT(execute(*instance_extra, 2, {0}), Result(2));
+    EXPECT_THAT(execute(*instance_extra, 3, {0, 0}), Result());
+
+
+    std::vector<ImportedFunction> imported_functions_missing = {
+        {"mod1", "foo1", {}, ValType::i32, function_returning_value(0)},
+        {"mod1", "foo2", {ValType::i32}, ValType::i32, function_returning_value(1)},
+        {"mod2", "foo1", {ValType::i32}, ValType::i32, function_returning_value(2)},
+    };
+
+    EXPECT_THROW_MESSAGE(resolve_imported_functions(module, std::move(imported_functions_missing)),
+        instantiate_error, "imported function mod2.foo2 is required");
+
+
+    std::vector<ImportedFunction> imported_functions_invalid_type1 = {
+        {"mod1", "foo1", {ValType::i32}, ValType::i32, function_returning_value(0)},
+        {"mod1", "foo2", {ValType::i32}, ValType::i32, function_returning_value(1)},
+        {"mod2", "foo1", {ValType::i32}, ValType::i32, function_returning_value(2)},
+        {"mod2", "foo2", {ValType::i64, ValType::i32}, std::nullopt, function_returning_void},
+    };
+
+    EXPECT_THROW_MESSAGE(
+        resolve_imported_functions(module, std::move(imported_functions_invalid_type1)),
+        instantiate_error,
+        "function mod1.foo1 input types don't match imported function in module");
+
+    std::vector<ImportedFunction> imported_functions_invalid_type2 = {
+        {"mod1", "foo1", {}, ValType::i32, function_returning_value(0)},
+        {"mod1", "foo2", {ValType::i32}, ValType::i32, function_returning_value(1)},
+        {"mod2", "foo1", {ValType::i32}, ValType::i32, function_returning_value(2)},
+        {"mod2", "foo2", {ValType::i64, ValType::i32}, ValType::i64, function_returning_value(3)},
+    };
+
+    EXPECT_THROW_MESSAGE(
+        resolve_imported_functions(module, std::move(imported_functions_invalid_type2)),
+        instantiate_error, "function mod2.foo2 has output but is defined void in module");
+
+    std::vector<ImportedFunction> imported_functions_invalid_type3 = {
+        {"mod1", "foo1", {}, ValType::i32, function_returning_value(0)},
+        {"mod1", "foo2", {ValType::i32}, ValType::i64, function_returning_value(1)},
+        {"mod2", "foo1", {ValType::i32}, ValType::i32, function_returning_value(2)},
+        {"mod2", "foo2", {ValType::i64, ValType::i32}, std::nullopt, function_returning_void},
+    };
+
+    EXPECT_THROW_MESSAGE(
+        resolve_imported_functions(module, std::move(imported_functions_invalid_type3)),
+        instantiate_error,
+        "function mod1.foo2 output type doesn't match imported function in module");
+}
+
 TEST(api, find_exported_function_index)
 {
     Module module;
