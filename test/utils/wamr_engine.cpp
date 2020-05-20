@@ -115,6 +115,10 @@ std::optional<WasmEngine::FuncRef> WAMREngine::find_function(std::string_view na
 WasmEngine::Result WAMREngine::execute(
     WasmEngine::FuncRef func_ref, const std::vector<uint64_t>& args)
 {
+    std::vector<uint32_t> argv;
+    
+        if (!wasm_runtime_call_wasm(exec_env, func, 4, argv) ) {
+
     (void)func_ref;
     (void)args;
     //    unsigned ret_valid;
