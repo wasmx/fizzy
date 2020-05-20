@@ -105,6 +105,8 @@ struct ImportedFunction
 {
     std::string module;
     std::string name;
+    std::vector<ValType> inputs;
+    std::optional<ValType> output;
     std::function<execution_result(Instance&, std::vector<uint64_t>, int depth)> function;
 };
 

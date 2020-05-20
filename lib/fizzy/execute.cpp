@@ -1571,8 +1571,27 @@ std::vector<ExternalFunction> resolve_imported_functions(
         }
 
         assert(import.desc.function_type_index < module.typesec.size());
-        external_functions.emplace_back(ExternalFunction{
-            std::move(it->function), module.typesec[import.desc.function_type_index]});
+        const auto& module_func_type = module.typesec[import.desc.function_type_index];
+
+        if (module_func_type.inputs != it->inputs)
+        {
+            throw instantiate_error("function " + import.module + "." + import.name +
+                                    " input types don't match imported function in module");
+        }
+        if (module_func_type.outputs.empty() && it->output.has_value())
+        {
+            throw instantiate_error("function " + import.module + "." + import.name +
+                                    " has output but is defined void in module");
+        }
+        if (!module_func_type.outputs.empty() &&
+            (!it->output.has_value() || module_func_type.outputs[0] != *it->output))
+        {
+            throw instantiate_error("function " + import.module + "." + import.name +
+                                    " output type doesn't match imported function in module");
+        }
+
+        external_functions.emplace_back(
+            ExternalFunction{std::move(it->function), module_func_type});
     }
 
     return external_functions;
