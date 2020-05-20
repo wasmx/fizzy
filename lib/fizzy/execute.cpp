@@ -1552,13 +1552,7 @@ execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uin
 
 std::optional<FuncIdx> find_exported_function(const Module& module, std::string_view name)
 {
-    for (const auto& export_ : module.exportsec)
-    {
-        if (export_.kind == ExternalKind::Function && name == export_.name)
-            return export_.index;
-    }
-
-    return {};
+    return find_export(module, ExternalKind::Function, name);
 }
 
 std::optional<ExternalFunction> find_exported_function(Instance& instance, std::string_view name)
