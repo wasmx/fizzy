@@ -43,9 +43,8 @@ bool Wasm3Engine::parse(bytes_view input) const
 {
     auto env = m3_NewEnvironment();
 
-    IM3Module module;
+    IM3Module module{nullptr};
     const auto err = m3_ParseModule(env, &module, input.data(), uint32_t(input.size()));
-
     m3_FreeModule(module);
     m3_FreeEnvironment(env);
     return err == m3Err_none;
@@ -62,10 +61,11 @@ bool Wasm3Engine::instantiate(bytes_view wasm_binary)
     if (m_runtime == nullptr)
         return false;
 
-    IM3Module module;
+    IM3Module module{nullptr};
     if (m3_ParseModule(m_env, &module, wasm_binary.data(), uint32_t(wasm_binary.size())) !=
         m3Err_none)
         return false;
+    assert(module != nullptr);
 
     // Transfers ownership to runtime.
     if (m3_LoadModule(m_runtime, module) != m3Err_none)
