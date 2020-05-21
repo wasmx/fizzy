@@ -33,8 +33,16 @@ struct ControlFrame
     /// The instruction that created the label.
     const Instr instruction{Instr::unreachable};
 
+    /// Number of results returned from the frame.
+    const uint8_t arity{0};
+
     /// The immediates offset for block instructions.
     const size_t immediates_offset{0};
+
+    /// The frame stack height of the parent frame.
+    /// TODO: Storing this is not strictly required, as the parent frame is available
+    ///       in the control_stack.
+    const int parent_stack_height{0};
 
     /// The frame stack height.
     int stack_height{0};
@@ -42,6 +50,15 @@ struct ControlFrame
     /// Whether the remainder of the block is unreachable (used to handle stack-polymorphic typing
     /// after branches).
     bool unreachable{false};
+
+    ControlFrame(Instr _instruction, uint8_t _arity, int _parent_stack_height,
+        size_t _immediates_offset = 0) noexcept
+      : instruction{_instruction},
+        arity{_arity},
+        immediates_offset{_immediates_offset},
+        parent_stack_height{_parent_stack_height},
+        stack_height{_parent_stack_height}
+    {}
 };
 
 /// Parses blocktype.
@@ -76,6 +93,23 @@ void update_caller_frame(ControlFrame& frame, const FuncType& func_type)
     frame.stack_height += stack_height_change;
 }
 
+void validate_result_count(const ControlFrame& frame)
+{
+    if (frame.unreachable)
+        return;
+
+    // This is checked by "stack underflow".
+    assert(frame.stack_height >= frame.parent_stack_height);
+
+    if (frame.stack_height < frame.parent_stack_height + frame.arity)
+        throw validation_error{"missing result"};
+
+    // TODO: Enable "too many results" check when having information about number of function
+    //       results.
+    // if (frame.stack_height > frame.parent_stack_height + frame.arity)
+    //     throw validation_error{"too many results"};
+}
+
 }  // namespace
 
 parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Module& module)
@@ -87,7 +121,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
     // For a block/if/else instruction the value is the block/if/else's immediate offset.
     std::stack<ControlFrame> control_stack;
 
-    control_stack.push({Instr::block});  // The function's implicit block.
+    // TODO: Get function result arity from the function type in Module.
+    const uint8_t func_result_arity = 0;
+    control_stack.emplace(Instr::block, func_result_arity, 0);  // The function's implicit block.
 
     const auto metrics_table = get_instruction_metrics_table();
 
@@ -100,7 +136,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
         auto& frame = control_stack.top();
         const auto& metrics = metrics_table[opcode];
 
-        if (frame.stack_height < metrics.stack_height_required && !frame.unreachable)
+        if (!frame.unreachable &&
+            (frame.stack_height - frame.parent_stack_height) < metrics.stack_height_required)
             throw validation_error{"stack underflow"};
 
         frame.stack_height += metrics.stack_height_change;
@@ -268,11 +305,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
             std::tie(arity, pos) = parse_blocktype(pos, end);
             code.immediates.push_back(arity);
 
-            // Parent frame gets additional items on stack after this block exit.
-            frame.stack_height += arity;
-
             // Push label with immediates offset after arity.
-            control_stack.push({Instr::block, code.immediates.size()});
+            control_stack.emplace(Instr::block, arity, frame.stack_height, code.immediates.size());
 
             // Placeholders for immediate values, filled at the matching end instruction.
             push(code.immediates, uint32_t{0});  // Diff to the end instruction.
@@ -285,10 +319,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
             uint8_t arity;
             std::tie(arity, pos) = parse_blocktype(pos, end);
 
-            // Parent frame gets additional items on stack after this block exit.
-            frame.stack_height += arity;
-
-            control_stack.push({Instr::loop});
+            control_stack.emplace(Instr::loop, arity, frame.stack_height);
             break;
         }
 
@@ -298,10 +329,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
             std::tie(arity, pos) = parse_blocktype(pos, end);
             code.immediates.push_back(arity);
 
-            // Parent frame gets additional items on stack after this block exit.
-            frame.stack_height += arity;
-
-            control_stack.push({Instr::if_, code.immediates.size()});
+            control_stack.emplace(Instr::if_, arity, frame.stack_height, code.immediates.size());
 
             // Placeholders for immediate values, filled at the matching end and else instructions.
             push(code.immediates, uint32_t{0});  // Diff to the end instruction.
@@ -318,8 +346,10 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
             if (frame.instruction != Instr::if_)
                 throw parser_error{"unexpected else instruction (if instruction missing)"};
 
+            validate_result_count(frame);  // else is the end of if.
+
             // Reset frame after if. The if result type validation not implemented yet.
-            frame.stack_height = 0;
+            frame.stack_height = frame.parent_stack_height;
             frame.unreachable = false;
 
             const auto target_pc = static_cast<uint32_t>(code.instructions.size() + 1);
@@ -337,6 +367,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
 
         case Instr::end:
         {
+            validate_result_count(frame);
+
             if (control_stack.size() > 1)
             {
                 if (frame.instruction != Instr::loop)  // If end of block/if/else instruction.
@@ -350,7 +382,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
                     block_imm += sizeof(target_pc);
                     store(block_imm, target_imm);
                 }
-                control_stack.pop();  // Pop the current frame.
+                const auto arity = frame.arity;
+                control_stack.pop();                        // Pop the current frame.
+                control_stack.top().stack_height += arity;  // The results of the popped frame.
             }
             else
                 continue_parsing = false;

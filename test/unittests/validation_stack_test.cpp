@@ -24,6 +24,16 @@ TEST(validation_stack, func_stack_underflow)
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "stack underflow");
 }
 
+TEST(validation_stack, DISABLED_func_missing_result)
+{
+    /* wat2wasm --no-check
+    (func (result i32)
+    )
+    */
+    const auto wasm = from_hex("0061736d010000000105016000017f030201000a040102000b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "missing result");
+}
+
 TEST(validation_stack, block_stack_underflow)
 {
     /* wat2wasm --no-check
@@ -51,6 +61,19 @@ TEST(validation_stack, block_with_result)
     const auto wasm = from_hex("0061736d01000000010401600000030201000a0a010800027f417f0b1a0b");
     parse(wasm);
     // TODO: Add max stack height check.
+}
+
+TEST(validation_stack, block_missing_result)
+{
+    /* wat2wasm --no-check
+    (func
+      (block (result i32)
+      )
+      drop
+    )
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a08010600027f0b1a0b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "missing result");
 }
 
 TEST(validation_stack, block_with_result_stack_underflow)
@@ -95,6 +118,19 @@ TEST(validation_stack, loop_with_result)
     const auto wasm = from_hex("0061736d01000000010401600000030201000a0a010800037f417f0b1a0b");
     parse(wasm);
     // TODO: Add max stack height check.
+}
+
+TEST(validation_stack, loop_missing_result)
+{
+    /* wat2wasm --no-check
+    (func
+      (loop (result i32)
+      )
+      drop
+    )
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a08010600037f0b1a0b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "missing result");
 }
 
 TEST(validation_stack, loop_with_result_stack_underflow)
@@ -298,6 +334,102 @@ TEST(validation_stack, if_stack_underflow)
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "stack underflow");
 }
 
+TEST(validation_stack, if_missing_result)
+{
+    /* wat2wasm --no-check
+    (func
+      i32.const 0
+      (if (result i32)
+        (then
+        )
+      )
+      drop
+    )
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a0a0108004100047f0b1a0b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "missing result");
+}
+
+TEST(validation_stack, if_missing_result_v2)
+{
+    /* NO wat2wasm (it always omits empty (else)).
+    (func
+      i32.const 0
+      (if (result i32)
+        (then
+        )
+        (else
+        )
+      )
+      drop
+    )
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a0c010a004100047f05010b1a0b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "missing result");
+}
+
+TEST(validation_stack, if_missing_result_v3)
+{
+    /* wat2wasm --no-check
+    (func
+      i32.const 0
+      (if (result i32)
+        (then
+        )
+        (else
+          i32.const 2
+        )
+      )
+      drop
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d01000000010401600000030201000a0d010b004100047f0541020b1a0b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "missing result");
+}
+
+TEST(validation_stack, else_missing_result)
+{
+    /* NO wat2wasm (it always omits empty (else)).
+    (func
+      i32.const 0
+      (if (result i32)
+        (then
+          i32.const 1
+        )
+        (else
+        )
+      )
+      drop
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d01000000010401600000030201000a0e010c004100047f410105010b1a0b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "missing result");
+}
+
+TEST(validation_stack, else_missing_result_v2)
+{
+    /* wat2wasm --no-check
+    (func
+      i32.const 0
+      (if (result i32)
+        (then
+          i32.const 1
+        )
+        (else
+          i32.const 2
+          drop
+        )
+      )
+      drop
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d01000000010401600000030201000a10010e004100047f41010541021a0b1a0b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "missing result");
+}
+
 TEST(validation_stack, else_stack_underflow)
 {
     /* wat2wasm --no-check
@@ -367,6 +499,30 @@ TEST(validation_stack, else_with_result_stack_underflow)
     const auto wasm = from_hex(
         "0061736d01000000010401600000030201000a16011401017e42014102047e427f052100427e0b1a1a0b");
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "stack underflow");
+}
+
+TEST(validation_stack, if_else_stack_height)
+{
+    /* wat2wasm
+    (func
+      i64.const 1
+      i32.const 2
+      (if (result i64)
+        (then
+          i64.const 1
+        )
+        (else
+          i64.const 3
+        )
+      )
+      drop
+      drop
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d01000000010401600000030201000a1201100042014102047e42010542030b1a1a0b");
+    const auto module = parse(wasm);
+    // TODO: Add max stack height check.
 }
 
 TEST(validation_stack, if_invalid_end_stack_height)

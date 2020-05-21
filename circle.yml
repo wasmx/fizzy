@@ -137,6 +137,7 @@ commands:
             set +e
             expected="  PASSED <<parameters.expected_passed>>, FAILED <<parameters.expected_failed>>, SKIPPED <<parameters.expected_skipped>>."
             result=$(bin/fizzy-spectests <<#parameters.skip_validation>>--skip-validation<</parameters.skip_validation>> wasm-spec/test/core/json | tail -1)
+            echo $result
             if [ "$expected" != "$result" ]; then exit 1; fi
 
 jobs:
@@ -262,8 +263,8 @@ jobs:
       - benchmark:
           min_time: "0.01"
       - spectest:
-          expected_passed: 4783
-          expected_failed: 649
+          expected_passed: 4807
+          expected_failed: 625
           expected_skipped: 6381
 
   benchmark:
@@ -358,8 +359,8 @@ jobs:
           expected_failed: 8
           expected_skipped: 7323
       - spectest:
-          expected_passed: 4783
-          expected_failed: 649
+          expected_passed: 4807
+          expected_failed: 625
           expected_skipped: 6381
 
 workflows:
