@@ -115,12 +115,17 @@ std::optional<WasmEngine::FuncRef> WAMREngine::find_function(std::string_view na
 WasmEngine::Result WAMREngine::execute(
     WasmEngine::FuncRef func_ref, const std::vector<uint64_t>& args)
 {
-    std::vector<uint32_t> argv;
-    
-        if (!wasm_runtime_call_wasm(exec_env, func, 4, argv) ) {
+    wasm_function_inst_t function = reinterpret_cast<wasm_function_inst_t>(func_ref);
 
-    (void)func_ref;
+    // FIXME: setup args
     (void)args;
+    std::vector<uint32_t> argv;
+    if (wasm_runtime_call_wasm(m_env, function, static_cast<uint32_t>(argv.size()), argv.data()) == true)
+      // FIXME copy results
+      return {false, std::nullopt};
+
+//    (void)func_ref;
+//    (void)args;
     //    unsigned ret_valid;
     //    uint64_t ret_value;
     //    IM3Function function = reinterpret_cast<IM3Function>(func_ref);
