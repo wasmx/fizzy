@@ -7,6 +7,9 @@
 #include <test/utils/wasm_engine.hpp>
 #include <cassert>
 #include <cstring>
+#include <iostream>
+#include <sstream>
+#include <ostream>
 
 namespace fizzy::test
 {
@@ -62,17 +65,21 @@ bool WAMREngine::instantiate(bytes_view wasm_binary)
     auto module = wasm_runtime_load(
         wasm_binary.data(), static_cast<uint32_t>(wasm_binary.size()), errors, sizeof(errors));
     if (module == nullptr)
+    {
+        std::cout << errors << std::endl;
         return false;
+    }
     // If these are set to 0, the defaults are used.
-    uint32_t stack_size = 8192;
-    uint32_t heap_size = 8192;
+    uint32_t stack_size = 8092;
+    uint32_t heap_size = 8092;
     m_instance = wasm_runtime_instantiate(module, stack_size, heap_size, errors, sizeof(errors));
     if (m_instance == nullptr)
     {
+        std::cout << errors << std::endl;
         wasm_runtime_unload(module);
         return false;
     }
-    m_env = wasm_runtime_create_exec_env(m_instance, stack_size);
+    m_env = wasm_runtime_create_exec_env(m_instance, 8092);
     if (m_env == nullptr)
     {
         wasm_runtime_deinstantiate(m_instance);
@@ -119,10 +126,11 @@ WasmEngine::Result WAMREngine::execute(
 
     // FIXME: setup args
     (void)args;
-    std::vector<uint32_t> argv;
-    if (wasm_runtime_call_wasm(m_env, function, static_cast<uint32_t>(argv.size()), argv.data()) == true)
+//    (func $test (export "test") (param $a i32) (param $b i32) (param $c i32) (result i32)
+    std::vector<uint32_t> argv{static_cast<uint32_t>(args[0]), static_cast<uint32_t>(args[1] >> 32), static_cast<uint32_t>(args[1]), static_cast<uint32_t>(args[2])};
+    if (wasm_runtime_call_wasm(m_env, function, 4, argv.data()) == true)
       // FIXME copy results
-      return {false, std::nullopt};
+      return {false, std::optional<uint64_t>{argv[0]}};
 
 //    (void)func_ref;
 //    (void)args;

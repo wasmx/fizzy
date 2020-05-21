@@ -88,7 +88,7 @@ TEST(wasm_engine, find_function)
     }
 }
 
-TEST(wasm_engine, trapped)
+TEST(wasm_engine, DISABLED_trapped)
 {
     /* wat2wasm
     (func $test (export "test")
