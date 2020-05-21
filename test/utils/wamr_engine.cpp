@@ -137,10 +137,14 @@ WasmEngine::Result WAMREngine::execute(
     // FIXME: setup args
     (void)args;
 //    (func $test (export "test") (param $a i32) (param $b i32) (param $c i32) (result i32)
-    std::vector<uint32_t> argv{static_cast<uint32_t>(args[0]), static_cast<uint32_t>(args[1] >> 32), static_cast<uint32_t>(args[1]), static_cast<uint32_t>(args[2])};
+    std::vector<uint32_t> argv{static_cast<uint32_t>(args[0]), static_cast<uint32_t>(args[1]), static_cast<uint32_t>(args[1] >> 32), static_cast<uint32_t>(args[2])};
     if (wasm_runtime_call_wasm(m_env, function, 4, argv.data()) == true)
+    {
       // FIXME copy results
-      return {false, std::optional<uint64_t>{argv[0]}};
+      return {false, std::optional<uint64_t>{argv[0] || (uint64_t(argv[1]) << 32)}};
+    }
+
+    std::cout << wasm_runtime_get_exception(wasm_runtime_get_module_inst(m_env)) << std::endl;
 
 //    (void)func_ref;
 //    (void)args;
