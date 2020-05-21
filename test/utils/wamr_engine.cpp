@@ -4,6 +4,7 @@
 
 #include "wasm_export.h"
 
+#include <test/utils/hex.hpp>
 #include <test/utils/wasm_engine.hpp>
 #include <cassert>
 #include <cstring>
@@ -48,20 +49,29 @@ std::unique_ptr<WasmEngine> create_wamr_engine()
     return std::make_unique<WAMREngine>();
 }
 
-bool WAMREngine::parse(bytes_view input) const
+bool WAMREngine::parse(bytes_view _input) const
 {
-    char errors[256];
+    char errors[256] = { 0 };
+    // NOTE: making an explicit copy here because in some cases wamr modifies the input...
+    bytes input{_input};
+//    std::cout << static_cast<int>(input[37]) << std::endl;
     auto module = wasm_runtime_load(
         input.data(), static_cast<uint32_t>(input.size()), errors, sizeof(errors));
-    if (module == nullptr)
+    if (module == nullptr) {
+        std::cout << errors << std::endl;
         return false;
+    }
     wasm_runtime_unload(module);
     return true;
 }
 
-bool WAMREngine::instantiate(bytes_view wasm_binary)
+bool WAMREngine::instantiate(bytes_view _wasm_binary)
 {
-    char errors[256];
+    char errors[256] = { 0 };
+    // NOTE: making an explicit copy here because in some cases wamr modifies the input...
+    bytes wasm_binary{_wasm_binary};
+//    std::cout << static_cast<int>(wasm_binary[37]) << std::endl;
+//    std::cout << hex(wasm_binary) << std::endl;
     auto module = wasm_runtime_load(
         wasm_binary.data(), static_cast<uint32_t>(wasm_binary.size()), errors, sizeof(errors));
     if (module == nullptr)
