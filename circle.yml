@@ -361,15 +361,30 @@ jobs:
           command: |
             mkdir -p corpus
             bin/fizzy-fuzz-parser corpus -jobs=8 -runs=1000000 -max_len=1024 -len_control=100000 -use_value_profile=1 -print_final_stats=1
+      - run:
+          name: "Clean up fuzzing corpus"
+          working_directory: ~/build
+          command: |
             mv corpus corpus-full
             mkdir corpus
-            echo '--- MERGE ---'
-            bin/fizzy-fuzz-parser -merge=1 corpus corpus-full
+            bin/fizzy-fuzz-parser -merge=1 corpus corpus-full -use_value_profile=1
       - save_cache:
           name: "Save fuzzing corpus"
           key: fuzzing-corpus-{{epoch}}
           paths:
             - ~/build/corpus
+      - run:
+          name: "Compress fuzzing corpus"
+          working_directory: ~/build
+          command: |
+            corpus_name="corpus-$(date +%Y%m%d%H%M)"
+            mv corpus $corpus_name
+            mkdir -p artifacts
+            tar cfz artifacts/fizzy-$corpus_name.tar.gz $corpus_name
+      - store_artifacts:
+          name: "Store fuzzing corpus"
+          path: ~/build/artifacts
+          destination: artifacts
 
   spectest:
     executor: linux-gcc-9
