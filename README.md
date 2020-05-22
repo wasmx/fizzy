@@ -45,6 +45,26 @@ $ cmake --build .
 This will build Fizzy as a library and since there is no public API
 (the so called *embedder API* in WebAssembly) yet, this is not very useful.
 
+## WASI
+
+Building with the `FIZZY_WASI` option will output a `fizzy-wasi` binary implementing
+the [WASI] API (a very limited subset of [wasi_snapshot_preview1], to be precise).
+It uses [uvwasi] under the hood. It can be used to execute WASI-compatible binaries on the command line.
+
+```sh
+$ mkdir build && cd build
+$ cmake -DFIZZY_WASI=ON ..
+$ cmake --build .
+```
+
+Try it with a Hello World example:
+```sh
+$ bin/fizzy-wasi ../test/smoketests/wasi/helloworld.wasm
+hello world
+```
+
+## Testing tools
+
 Building with the `FIZZY_TESTING` option will output a few useful utilities:
 
 ```sh
@@ -152,14 +172,18 @@ For a list of releases and changelog see the [CHANGELOG file](./CHANGELOG.md).
 
 Licensed under the [Apache License, Version 2.0].
 
-[webassembly]: https://webassembly.org/
+[webassembly]: https://webassembly.org
 [standard readme]: https://github.com/RichardLitt/standard-readme
 [circleci]: https://circleci.com/gh/wasmx/fizzy/tree/master
-[codecov]: https://codecov.io/gh/wasmx/fizzy/
+[codecov]: https://codecov.io/gh/wasmx/fizzy
 [Apache License, Version 2.0]: LICENSE
 [@axic]: https://github.com/axic
 [@chfast]: https://github.com/chfast
 [@gumb0]: https://github.com/gumb0
+
+[WASI]: https://github.com/WebAssembly/WASI
+[uvwasi]: https://github.com/cjihrig/uvwasi
+[wasi_snapshot_preview1]: https://github.com/WebAssembly/WASI/blob/master/phases/snapshot/witx/wasi_snapshot_preview1.witx
 
 [webassembly badge]: https://img.shields.io/badge/WebAssembly-Engine-informational.svg?logo=webassembly
 [readme style standard badge]: https://img.shields.io/badge/readme%20style-standard-brightgreen.svg
