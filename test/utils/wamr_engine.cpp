@@ -9,8 +9,8 @@
 #include <cassert>
 #include <cstring>
 #include <iostream>
-#include <sstream>
 #include <ostream>
+#include <sstream>
 
 namespace fizzy::test
 {
@@ -51,13 +51,14 @@ std::unique_ptr<WasmEngine> create_wamr_engine()
 
 bool WAMREngine::parse(bytes_view _input) const
 {
-    char errors[256] = { 0 };
+    char errors[256] = {0};
     // NOTE: making an explicit copy here because in some cases wamr modifies the input...
     bytes input{_input};
-//    std::cout << static_cast<int>(input[37]) << std::endl;
+    //    std::cout << static_cast<int>(input[37]) << std::endl;
     auto module = wasm_runtime_load(
         input.data(), static_cast<uint32_t>(input.size()), errors, sizeof(errors));
-    if (module == nullptr) {
+    if (module == nullptr)
+    {
         std::cout << errors << std::endl;
         return false;
     }
@@ -67,11 +68,11 @@ bool WAMREngine::parse(bytes_view _input) const
 
 bool WAMREngine::instantiate(bytes_view _wasm_binary)
 {
-    char errors[256] = { 0 };
+    char errors[256] = {0};
     // NOTE: making an explicit copy here because in some cases wamr modifies the input...
     bytes wasm_binary{_wasm_binary};
-//    std::cout << static_cast<int>(wasm_binary[37]) << std::endl;
-//    std::cout << hex(wasm_binary) << std::endl;
+    //    std::cout << static_cast<int>(wasm_binary[37]) << std::endl;
+    //    std::cout << hex(wasm_binary) << std::endl;
     auto module = wasm_runtime_load(
         wasm_binary.data(), static_cast<uint32_t>(wasm_binary.size()), errors, sizeof(errors));
     if (module == nullptr)
@@ -136,18 +137,19 @@ WasmEngine::Result WAMREngine::execute(
 
     // FIXME: setup args
     (void)args;
-//    (func $test (export "test") (param $a i32) (param $b i32) (param $c i32) (result i32)
-    std::vector<uint32_t> argv{static_cast<uint32_t>(args[0]), static_cast<uint32_t>(args[1]), static_cast<uint32_t>(args[1] >> 32), static_cast<uint32_t>(args[2])};
+    //    (func $test (export "test") (param $a i32) (param $b i32) (param $c i32) (result i32)
+    std::vector<uint32_t> argv{static_cast<uint32_t>(args[0]), static_cast<uint32_t>(args[1]),
+        static_cast<uint32_t>(args[1] >> 32), static_cast<uint32_t>(args[2])};
     if (wasm_runtime_call_wasm(m_env, function, 4, argv.data()) == true)
     {
-      // FIXME copy results
-      return {false, std::optional<uint64_t>{argv[0] || (uint64_t(argv[1]) << 32)}};
+        // FIXME copy results
+        return {false, std::optional<uint64_t>{argv[0] || (uint64_t(argv[1]) << 32)}};
     }
 
     std::cout << wasm_runtime_get_exception(wasm_runtime_get_module_inst(m_env)) << std::endl;
 
-//    (void)func_ref;
-//    (void)args;
+    //    (void)func_ref;
+    //    (void)args;
     //    unsigned ret_valid;
     //    uint64_t ret_value;
     //    IM3Function function = reinterpret_cast<IM3Function>(func_ref);
