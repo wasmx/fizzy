@@ -12,6 +12,8 @@ include(CableBuildType)
 include(CableCompilerSettings)
 include(CMakeDependentOption)
 
+option(FIZZY_WASI "Enable WASI support" OFF)
+
 option(FIZZY_TESTING "Enable Fizzy internal tests" OFF)
 cmake_dependent_option(HUNTER_ENABLED "Enable Hunter package manager" ON
     "FIZZY_TESTING" OFF)
@@ -102,6 +104,10 @@ add_subdirectory(lib)
 if(FIZZY_TESTING)
     enable_testing()  # Enable CTest. Must be done in main CMakeLists.txt.
     add_subdirectory(test)
+endif()
+
+if(FIZZY_WASI)
+    add_subdirectory(tools/wasi)
 endif()
 
 set(CMAKE_INSTALL_CMAKEPACKAGEDIR ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
