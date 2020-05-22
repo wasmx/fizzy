@@ -67,33 +67,89 @@ fizzy::execution_result env_adler32(fizzy::Instance& instance, std::vector<uint6
     const auto ret = fizzy::adler32(bytes_view{*instance.memory}.substr(args[0], args[1]));
     return {false, {ret}};
 }
-fizzy::execution_result bignum_int_add(fizzy::Instance&, std::vector<uint64_t>, int)
+
+const uint64_t mod[] = {0xb9feffffffffaaab, 0x1eabfffeb153ffff, 0x6730d2a0f6b0f624,
+    0x64774b84f38512bf, 0x4b1ba7b6434bacd7, 0x1a0111ea397fe69a};
+const uint64_t modinv = 0x89f3fffcfffcfffd;
+
+fizzy::execution_result bignum_int_add(fizzy::Instance& instance, std::vector<uint64_t> args, int)
 {
-    return {true, {}};
+    const uint32_t a_offset = static_cast<uint32_t>(args[0]);
+    const uint32_t b_offset = static_cast<uint32_t>(args[1]);
+    const uint32_t ret_offset = static_cast<uint32_t>(args[2]);
+    const uint64_t* a = reinterpret_cast<uint64_t*>(&(instance.memory->data()[a_offset]));
+    const uint64_t* b = reinterpret_cast<uint64_t*>(&(instance.memory->data()[b_offset]));
+    uint64_t* out = reinterpret_cast<uint64_t*>(&(instance.memory->data()[ret_offset]));
+    const auto ret = add384_64bitlimbs(out, a, b);
+    return {false, {ret}};
 }
-fizzy::execution_result bignum_int_sub(fizzy::Instance&, std::vector<uint64_t>, int)
+fizzy::execution_result bignum_int_sub(fizzy::Instance& instance, std::vector<uint64_t> args, int)
 {
-    return {true, {}};
+    const uint32_t a_offset = static_cast<uint32_t>(args[0]);
+    const uint32_t b_offset = static_cast<uint32_t>(args[1]);
+    const uint32_t ret_offset = static_cast<uint32_t>(args[2]);
+    const uint64_t* a = reinterpret_cast<uint64_t*>(&(instance.memory->data()[a_offset]));
+    const uint64_t* b = reinterpret_cast<uint64_t*>(&(instance.memory->data()[b_offset]));
+    uint64_t* out = reinterpret_cast<uint64_t*>(&(instance.memory->data()[ret_offset]));
+    const auto ret = sub384_64bitlimbs(out, a, b);
+    return {false, {ret}};
 }
-fizzy::execution_result bignum_int_mul(fizzy::Instance&, std::vector<uint64_t>, int)
+fizzy::execution_result bignum_int_mul(fizzy::Instance& instance, std::vector<uint64_t> args, int)
 {
-    return {true, {}};
+    const uint32_t a_offset = static_cast<uint32_t>(args[0]);
+    const uint32_t b_offset = static_cast<uint32_t>(args[1]);
+    const uint32_t ret_offset = static_cast<uint32_t>(args[2]);
+    const uint64_t* a = reinterpret_cast<uint64_t*>(&(instance.memory->data()[a_offset]));
+    const uint64_t* b = reinterpret_cast<uint64_t*>(&(instance.memory->data()[b_offset]));
+    uint64_t* out = reinterpret_cast<uint64_t*>(&(instance.memory->data()[ret_offset]));
+    mul384_64bitlimbs(out, a, b);
+    return {false, {}};
 }
-fizzy::execution_result bignum_int_div(fizzy::Instance&, std::vector<uint64_t>, int)
+fizzy::execution_result bignum_int_div(fizzy::Instance& instance, std::vector<uint64_t> args, int)
 {
-    return {true, {}};
+    const uint32_t a_offset = static_cast<uint32_t>(args[0]);
+    const uint32_t b_offset = static_cast<uint32_t>(args[1]);
+    const uint32_t q_offset = static_cast<uint32_t>(args[2]);
+    const uint32_t r_offset = static_cast<uint32_t>(args[3]);
+    const uint64_t* a = reinterpret_cast<uint64_t*>(&(instance.memory->data()[a_offset]));
+    const uint64_t* b = reinterpret_cast<uint64_t*>(&(instance.memory->data()[b_offset]));
+    uint64_t* q = reinterpret_cast<uint64_t*>(&(instance.memory->data()[q_offset]));
+    uint64_t* r = reinterpret_cast<uint64_t*>(&(instance.memory->data()[r_offset]));
+    div384_64bitlimbs(q, r, a, b);
+    return {false, {}};
 }
-fizzy::execution_result bignum_f1m_add(fizzy::Instance&, std::vector<uint64_t>, int)
+fizzy::execution_result bignum_f1m_add(fizzy::Instance& instance, std::vector<uint64_t> args, int)
 {
-    return {true, {}};
+    const uint32_t a_offset = static_cast<uint32_t>(args[0]);
+    const uint32_t b_offset = static_cast<uint32_t>(args[1]);
+    const uint32_t ret_offset = static_cast<uint32_t>(args[2]);
+    const uint64_t* a = reinterpret_cast<uint64_t*>(&(instance.memory->data()[a_offset]));
+    const uint64_t* b = reinterpret_cast<uint64_t*>(&(instance.memory->data()[b_offset]));
+    uint64_t* out = reinterpret_cast<uint64_t*>(&(instance.memory->data()[ret_offset]));
+    addmod384_64bitlimbs(out, a, b, mod);
+    return {false, {}};
 }
-fizzy::execution_result bignum_f1m_sub(fizzy::Instance&, std::vector<uint64_t>, int)
+fizzy::execution_result bignum_f1m_sub(fizzy::Instance& instance, std::vector<uint64_t> args, int)
 {
-    return {true, {}};
+    const uint32_t a_offset = static_cast<uint32_t>(args[0]);
+    const uint32_t b_offset = static_cast<uint32_t>(args[1]);
+    const uint32_t ret_offset = static_cast<uint32_t>(args[2]);
+    const uint64_t* a = reinterpret_cast<uint64_t*>(&(instance.memory->data()[a_offset]));
+    const uint64_t* b = reinterpret_cast<uint64_t*>(&(instance.memory->data()[b_offset]));
+    uint64_t* out = reinterpret_cast<uint64_t*>(&(instance.memory->data()[ret_offset]));
+    submod384_64bitlimbs(out, a, b, mod);
+    return {false, {}};
 }
-fizzy::execution_result bignum_f1m_mul(fizzy::Instance&, std::vector<uint64_t>, int)
+fizzy::execution_result bignum_f1m_mul(fizzy::Instance& instance, std::vector<uint64_t> args, int)
 {
-    return {true, {}};
+    const uint32_t a_offset = static_cast<uint32_t>(args[0]);
+    const uint32_t b_offset = static_cast<uint32_t>(args[1]);
+    const uint32_t ret_offset = static_cast<uint32_t>(args[2]);
+    const uint64_t* a = reinterpret_cast<uint64_t*>(&(instance.memory->data()[a_offset]));
+    const uint64_t* b = reinterpret_cast<uint64_t*>(&(instance.memory->data()[b_offset]));
+    uint64_t* out = reinterpret_cast<uint64_t*>(&(instance.memory->data()[ret_offset]));
+    mulmodmont384_64bitlimbs(out, a, b, mod, modinv);
+    return {false, {}};
 }
 }  // namespace
 
@@ -134,7 +190,8 @@ bool FizzyEngine::instantiate(bytes_view wasm_binary)
                             {fizzy::ValType::i32, fizzy::ValType::i32, fizzy::ValType::i32},
                             std::nullopt, bignum_int_mul},
                         {"env", "bignum_int_div",
-                            {fizzy::ValType::i32, fizzy::ValType::i32, fizzy::ValType::i32},
+                            {fizzy::ValType::i32, fizzy::ValType::i32, fizzy::ValType::i32,
+                                fizzy::ValType::i32},
                             std::nullopt, bignum_int_div},
                         {"env", "bignum_f1m_add",
                             {fizzy::ValType::i32, fizzy::ValType::i32, fizzy::ValType::i32},
