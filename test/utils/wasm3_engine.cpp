@@ -27,7 +27,8 @@ public:
     }
 
     bool parse(bytes_view input) const final;
-    std::optional<FuncRef> find_function(std::string_view name) const final;
+    std::optional<FuncRef> find_function(
+        std::string_view name, std::string_view signature) const final;
     bool instantiate(bytes_view wasm_binary) final;
     bool init_memory(fizzy::bytes_view memory) final;
     fizzy::bytes_view get_memory() const final;
@@ -96,7 +97,8 @@ fizzy::bytes_view Wasm3Engine::get_memory() const
     return {data, size};
 }
 
-std::optional<WasmEngine::FuncRef> Wasm3Engine::find_function(std::string_view name) const
+std::optional<WasmEngine::FuncRef> Wasm3Engine::find_function(
+    std::string_view name, std::string_view) const
 {
     IM3Function function;
     if (m3_FindFunction(&function, m_runtime, name.data()) == m3Err_none)

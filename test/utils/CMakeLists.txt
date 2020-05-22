@@ -20,6 +20,7 @@ target_sources(
     wabt_engine.cpp
     wasm3_engine.cpp
     wasm_binary.hpp
+    wasm_engine.cpp
     wasm_engine.hpp
 )
 

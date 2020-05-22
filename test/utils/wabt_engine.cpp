@@ -20,7 +20,8 @@ class WabtEngine : public WasmEngine
 
 public:
     bool parse(bytes_view input) const final;
-    std::optional<FuncRef> find_function(std::string_view name) const final;
+    std::optional<FuncRef> find_function(
+        std::string_view name, std::string_view signature) const final;
     bool instantiate(bytes_view wasm_binary) final;
     bool init_memory(fizzy::bytes_view memory) final;
     bytes_view get_memory() const final;
@@ -73,7 +74,8 @@ bytes_view WabtEngine::get_memory() const
     return {reinterpret_cast<uint8_t*>(memory->data.data()), memory->data.size()};
 }
 
-std::optional<WasmEngine::FuncRef> WabtEngine::find_function(std::string_view name) const
+std::optional<WasmEngine::FuncRef> WabtEngine::find_function(
+    std::string_view name, std::string_view) const
 {
     const wabt::interp::Export* e = m_module->GetExport({name.data(), name.size()});
     if (e != nullptr && e->kind == wabt::ExternalKind::Func)

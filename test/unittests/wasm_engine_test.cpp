@@ -4,6 +4,7 @@
 
 #include "limits.hpp"
 #include <gtest/gtest.h>
+#include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
 #include <test/utils/wasm_engine.hpp>
 
@@ -12,6 +13,27 @@ using namespace fizzy::test;
 
 static const decltype(&create_fizzy_engine) all_engines[]{
     create_fizzy_engine, create_wabt_engine, create_wasm3_engine};
+
+TEST(wasm_engine, validate_function_signature)
+{
+    EXPECT_NO_THROW(validate_function_signature(":"));
+    EXPECT_NO_THROW(validate_function_signature("i:"));
+    EXPECT_NO_THROW(validate_function_signature("iIiI:"));
+    EXPECT_NO_THROW(validate_function_signature(":i"));
+    EXPECT_NO_THROW(validate_function_signature(":iIiI"));
+    EXPECT_NO_THROW(validate_function_signature("i:i"));
+    EXPECT_NO_THROW(validate_function_signature("IiIi:IiIi"));
+    EXPECT_THROW_MESSAGE(
+        validate_function_signature(""), std::runtime_error, "Missing ':' delimiter");
+    EXPECT_THROW_MESSAGE(
+        validate_function_signature("i"), std::runtime_error, "Missing ':' delimiter");
+    EXPECT_THROW_MESSAGE(validate_function_signature("::"), std::runtime_error,
+        "Multiple occurrences of ':' found in signature");
+    EXPECT_THROW_MESSAGE(validate_function_signature("i:i:i:"), std::runtime_error,
+        "Multiple occurrences of ':' found in signature");
+    EXPECT_THROW_MESSAGE(
+        validate_function_signature("v:"), std::runtime_error, "Invalid type found in signature");
+}
 
 TEST(wasm_engine, parse_error)
 {
@@ -45,6 +67,26 @@ TEST(wasm_engine, instantiate_error)
     }
 }
 
+TEST(wasm_engine, find_function)
+{
+    /* wat2wasm
+    (func $test (export "test") (param $a i32) (param $b i64) (param $c i32) (result i32)
+      unreachable
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d0100000001080160037f7e7f017f03020100070801047465737400000a05010300000b");
+
+    // NOTE: only fizzy checks the signature
+    for (auto engine_create_fn : {create_fizzy_engine})
+    {
+        auto engine = engine_create_fn();
+        EXPECT_TRUE(engine->instantiate(wasm));
+        EXPECT_TRUE(engine->find_function("test", "iIi:i").has_value());
+        EXPECT_FALSE(engine->find_function("test", ":").has_value());
+    }
+}
+
 TEST(wasm_engine, trapped)
 {
     /* wat2wasm
@@ -60,7 +102,7 @@ TEST(wasm_engine, trapped)
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
         ASSERT_TRUE(engine->instantiate(wasm));
-        const auto func = engine->find_function("test");
+        const auto func = engine->find_function("test", ":");
         ASSERT_TRUE(func.has_value());
         const auto result = engine->execute(*func, {});
         ASSERT_TRUE(result.trapped);
@@ -88,8 +130,8 @@ TEST(wasm_engine, multi_i32_args_ret_i32)
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
         ASSERT_TRUE(engine->instantiate(wasm));
-        ASSERT_FALSE(engine->find_function("notfound").has_value());
-        const auto func = engine->find_function("test");
+        ASSERT_FALSE(engine->find_function("notfound", "i:").has_value());
+        const auto func = engine->find_function("test", "iii:i");
         ASSERT_TRUE(func.has_value());
         // (52 - 21) * 0x1fffffff => 0xdfffffe1
         const auto result = engine->execute(*func, {52, 0x1fffffff, 21});
@@ -121,8 +163,8 @@ TEST(wasm_engine, multi_mixed_args_ret_i32)
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
         ASSERT_TRUE(engine->instantiate(wasm));
-        ASSERT_FALSE(engine->find_function("notfound").has_value());
-        const auto func = engine->find_function("test");
+        ASSERT_FALSE(engine->find_function("notfound", "i:").has_value());
+        const auto func = engine->find_function("test", "iIi:i");
         ASSERT_TRUE(func.has_value());
         // (52 - 21) * 0x1fffffff => 0xdfffffe1
         const auto result = engine->execute(*func, {52, 0x1fffffff, 21});
@@ -153,8 +195,8 @@ TEST(wasm_engine, multi_mixed_args_ret_i64)
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
         ASSERT_TRUE(engine->instantiate(wasm));
-        ASSERT_FALSE(engine->find_function("notfound").has_value());
-        const auto func = engine->find_function("test");
+        ASSERT_FALSE(engine->find_function("notfound", "i:").has_value());
+        const auto func = engine->find_function("test", "iIi:I");
         ASSERT_TRUE(func.has_value());
         // (52 - 21) * 0x1fffffff => 0x3dfffffe1
         const auto result = engine->execute(*func, {52, 0x1fffffff, 21});
@@ -177,7 +219,7 @@ TEST(wasm_engine, no_memory)
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
         ASSERT_TRUE(engine->instantiate(wasm));
-        const auto func = engine->find_function("test");
+        const auto func = engine->find_function("test", ":");
         EXPECT_TRUE(func.has_value());
         const auto mem = engine->get_memory();
         EXPECT_TRUE(mem.empty());
@@ -205,7 +247,7 @@ TEST(wasm_engine, memory)
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
         ASSERT_TRUE(engine->instantiate(wasm));
-        const auto func = engine->find_function("test");
+        const auto func = engine->find_function("test", "ii:");
         ASSERT_TRUE(func.has_value());
         const auto mem_input = bytes{engine->get_memory()};
         ASSERT_FALSE(mem_input.empty());
