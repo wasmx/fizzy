@@ -10,6 +10,14 @@
 #include <cassert>
 #include <cstring>
 
+#define BIGINT_BITS 384
+#define LIMB_BITS 64
+#define LIMB_BITS_OVERFLOW 128
+#include <test/utils/bigint.h>
+#undef BIGINT_BITS
+#undef LIMB_BITS
+#undef LIMB_BITS_OVERFLOW
+
 namespace fizzy::test
 {
 class FizzyEngine : public WasmEngine
