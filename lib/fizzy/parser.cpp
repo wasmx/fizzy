@@ -175,7 +175,7 @@ inline parser_result<Global> parse(const uint8_t* pos, const uint8_t* end)
 inline parser_result<Limits> parse_limits(const uint8_t* pos, const uint8_t* end)
 {
     if (pos == end)
-        throw parser_error{"Unexpected EOF"};
+        throw parser_error{"unexpected EOF"};
 
     Limits result;
     const auto b = *pos++;
@@ -227,10 +227,10 @@ parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end)
     std::tie(size, pos) = leb128u_decode<uint32_t>(pos, end);
 
     if ((pos + size) > end)
-        throw parser_error{"Unexpected EOF"};
+        throw parser_error{"unexpected EOF"};
 
     if (!utf8_validate(pos, pos + size))
-        throw parser_error{"Invalid UTF-8"};
+        throw parser_error{"invalid UTF-8"};
 
     const auto str_end = pos + size;
     return {std::string{pos, str_end}, str_end};
@@ -333,7 +333,7 @@ inline parser_result<code_view> parse(const uint8_t* pos, const uint8_t* end)
     const auto [code_size, code_begin] = leb128u_decode<uint32_t>(pos, end);
     const auto code_end = code_begin + code_size;
     if (code_end > end)
-        throw parser_error{"Unexpected EOF"};
+        throw parser_error{"unexpected EOF"};
 
     // Only record the code reference in wasm binary.
     return {{code_begin, code_size}, code_end};
@@ -378,7 +378,7 @@ inline parser_result<Data> parse(const uint8_t* pos, const uint8_t* end)
     std::tie(size, pos) = leb128u_decode<uint32_t>(pos, end);
 
     if ((pos + size) > end)
-        throw parser_error{"Unexpected EOF"};
+        throw parser_error{"unexpected EOF"};
 
     auto init = bytes(pos, pos + size);
     pos += size;
@@ -402,7 +402,7 @@ Module parse(bytes_view input)
         if (id != SectionId::custom)
         {
             if (id <= last_id)
-                throw parser_error{"Unexpected out-of-order section type"};
+                throw parser_error{"unexpected out-of-order section type"};
             last_id = id;
         }
 
@@ -411,7 +411,7 @@ Module parse(bytes_view input)
 
         const auto expected_section_end = it + size;
         if (expected_section_end > input.end())
-            throw parser_error("Unexpected EOF");
+            throw parser_error("unexpected EOF");
 
         switch (id)
         {

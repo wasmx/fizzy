@@ -52,7 +52,7 @@ TEST(parser, vec_malformend_huge_size)
     // Malformed vec as size only without any elements:
     const auto vec_bin = test::leb128u_encode(std::numeric_limits<uint32_t>::max());
     const auto wasm_bin = bytes{wasm_prefix} + make_section(1, vec_bin);
-    EXPECT_THROW_MESSAGE(parse(wasm_bin), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm_bin), parser_error, "unexpected EOF");
 }
 
 TEST(parser, limits_min)
@@ -77,13 +77,13 @@ TEST(parser, limits_minmax)
 TEST(parser, limits_min_invalid_too_short)
 {
     const auto wasm = bytes{wasm_prefix} + make_section(5, make_vec({"00"_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected EOF");
 }
 
 TEST(parser, limits_minmax_invalid_too_short)
 {
     const auto wasm = bytes{wasm_prefix} + make_section(5, make_vec({"0120"_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected EOF");
 }
 
 TEST(parser, limits_invalid)
@@ -116,7 +116,7 @@ TEST(parser, section_vec_size_out_of_bounds)
     for (auto secid : {1, 2, 3, 4, 5, 6, 7, 9, 10, 11})
     {
         const auto wasm = bytes{wasm_prefix} + make_section(uint8_t(secid), malformed_vec_size);
-        EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+        EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected EOF");
     }
 }
 
@@ -164,32 +164,32 @@ TEST(parser, custom_section_nonempty)
 TEST(parser, custom_section_size_out_of_bounds)
 {
     const auto wasm = bytes{wasm_prefix} + "0080"_bytes;
-    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected EOF");
 }
 
 TEST(parser, custom_section_name_out_of_bounds)
 {
     const auto bin = bytes{wasm_prefix} + make_section(0, "01"_bytes);
-    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "unexpected EOF");
 }
 
 TEST(parser, custom_section_name_exceeds_section_size)
 {
     const auto bin = bytes{wasm_prefix} + make_invalid_size_section(0, 1, "01aa"_bytes) +
                      make_section(0, "00"_bytes);
-    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "unexpected EOF");
 }
 
 TEST(parser, custom_section_out_of_bounds)
 {
     const auto wasm = bytes{wasm_prefix} + make_invalid_size_section(0, 31, {});
-    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected EOF");
 }
 
 TEST(parser, custom_section_invalid_utf8)
 {
     const auto bin = bytes{wasm_prefix} + make_section(0, "027f80"_bytes);
-    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "Invalid UTF-8");
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "invalid UTF-8");
 }
 
 TEST(parser, type_section_empty)
@@ -291,7 +291,7 @@ TEST(parser, type_section_with_multiple_functypes)
 TEST(parser, type_section_functype_out_of_bounds)
 {
     const auto wasm = bytes{wasm_prefix} + make_section(1, make_vec({""_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected EOF");
 }
 
 TEST(parser, import_section_empty)
@@ -358,7 +358,7 @@ TEST(parser, import_invalid_kind)
 TEST(parser, import_kind_out_of_bounds)
 {
     const auto wasm = bytes{wasm_prefix} + make_section(2, make_vec({"0000"_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected EOF");
 }
 
 TEST(parser, import_invalid_utf8_in_module)
@@ -366,7 +366,7 @@ TEST(parser, import_invalid_utf8_in_module)
     const auto section_contents =
         bytes{0x01, 0x03, 'm', 0x80, 'd', 0x03, 'f', 'o', 'o', 0x00, 0x42};
     const auto wasm = bytes{wasm_prefix} + make_section(2, section_contents);
-    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Invalid UTF-8");
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "invalid UTF-8");
 }
 
 TEST(parser, import_invalid_utf8_in_name)
@@ -374,7 +374,7 @@ TEST(parser, import_invalid_utf8_in_name)
     const auto section_contents =
         bytes{0x01, 0x03, 'm', 'o', 'd', 0x03, 'f', 0x80, 'o', 0x00, 0x42};
     const auto wasm = bytes{wasm_prefix} + make_section(2, section_contents);
-    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Invalid UTF-8");
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "invalid UTF-8");
 }
 
 TEST(parser, function_section_empty)
@@ -431,7 +431,7 @@ TEST(parser, function_section_size_128)
 TEST(parser, function_section_end_out_of_bounds)
 {
     const auto wasm = bytes{wasm_prefix} + make_invalid_size_section(3, 2, {});
-    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected EOF");
 }
 
 TEST(parser, function_section_without_code)
@@ -505,7 +505,7 @@ TEST(parser, table_invalid_elemtype)
 TEST(parser, table_elemtype_out_of_bounds)
 {
     const auto wasm = bytes{wasm_prefix} + make_section(4, make_vec({""_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected EOF");
 }
 
 TEST(parser, memory_section_empty)
@@ -567,7 +567,7 @@ TEST(parser, memory_single_invalid_max_limit)
 TEST(parser, memory_limits_kind_out_of_bounds)
 {
     const auto wasm = bytes{wasm_prefix} + make_section(5, make_vec({""_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected EOF");
 }
 
 TEST(parser, global_section_empty)
@@ -648,40 +648,40 @@ TEST(parser, global_initializer_expression_invalid_instruction)
 TEST(parser, global_valtype_out_of_bounds)
 {
     const auto wasm = bytes{wasm_prefix} + make_section(6, make_vec({""_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected EOF");
 }
 
 TEST(parser, global_mutability_out_of_bounds)
 {
     const auto wasm = bytes{wasm_prefix} + make_section(6, make_vec({"7f"_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected EOF");
 }
 
 TEST(parser, global_constant_expression_out_of_bounds)
 {
     // i32, immutable, EOF.
     const auto wasm1 = bytes{wasm_prefix} + make_section(6, make_vec({"7f00"_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm1), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm1), parser_error, "unexpected EOF");
 
     // i32, immutable, i32_const, 0, EOF.
     const auto wasm2 = bytes{wasm_prefix} + make_section(6, make_vec({"7f004100"_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm2), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm2), parser_error, "unexpected EOF");
 
     // i32, immutable, i32_const, 0x81, EOF.
     const auto wasm3 = bytes{wasm_prefix} + make_section(6, make_vec({"7f004181"_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm3), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm3), parser_error, "unexpected EOF");
 
     // i32, immutable, i64_const, 0x808081, EOF.
     const auto wasm4 = bytes{wasm_prefix} + make_section(6, make_vec({"7f0042808081"_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm4), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm4), parser_error, "unexpected EOF");
 
     // i32, immutable, f32_const, 0xaabbcc, EOF.
     const auto wasm5 = bytes{wasm_prefix} + make_section(6, make_vec({"7f0043aabbcc"_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm5), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm5), parser_error, "unexpected EOF");
 
     // i32, immutable, f64_const, 0xaabbccddee, EOF.
     const auto wasm6 = bytes{wasm_prefix} + make_section(6, make_vec({"7f0044aabbccddee"_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm6), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm6), parser_error, "unexpected EOF");
 }
 
 TEST(parser, export_section_empty)
@@ -735,23 +735,23 @@ TEST(parser, export_invalid_kind)
 TEST(parser, export_kind_out_of_bounds)
 {
     const auto wasm = bytes{wasm_prefix} + make_section(7, make_vec({"00"_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected EOF");
 }
 
 TEST(parser, export_invalid_utf8)
 {
     const auto section_contents = make_vec({bytes{0x03, 'a', 0x80, 'c', 0x00, 0x42}});
     const auto wasm = bytes{wasm_prefix} + make_section(7, section_contents);
-    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Invalid UTF-8");
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "invalid UTF-8");
 }
 
 TEST(parser, export_name_out_of_bounds)
 {
     const auto wasm1 = bytes{wasm_prefix} + make_section(7, make_vec({"01"_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm1), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm1), parser_error, "unexpected EOF");
 
     const auto wasm2 = bytes{wasm_prefix} + make_section(7, make_vec({"7faabbccddeeff"_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm2), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm2), parser_error, "unexpected EOF");
 }
 
 TEST(parser, start)
@@ -825,7 +825,7 @@ TEST(parser, start_module_with_imports_invalid_index)
 TEST(parser, start_index_decode_out_of_bounds)
 {
     const auto wasm = bytes{wasm_prefix} + make_section(8, "ff"_bytes);
-    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm), parser_error, "unexpected EOF");
 }
 
 TEST(parser, element_section_empty)
@@ -1182,7 +1182,7 @@ TEST(parser, code_section_size_too_large)
     const auto section_contents = make_vec({code_bin});
     const auto bin = bytes{wasm_prefix} + make_section(10, section_contents);
 
-    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "unexpected EOF");
 }
 
 TEST(parser, code_section_with_unused_bytes)
@@ -1246,10 +1246,10 @@ TEST(parser, data_section_memidx_nonzero)
 TEST(parser, data_section_out_of_bounds)
 {
     const auto wasm1 = bytes{wasm_prefix} + make_section(11, make_vec({"0041000b01"_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm1), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm1), parser_error, "unexpected EOF");
     const auto wasm2 =
         bytes{wasm_prefix} + make_section(11, make_vec({"0041000b09d0d1d2d3d4d5d6d7"_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm2), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse(wasm2), parser_error, "unexpected EOF");
 }
 
 TEST(parser, unknown_section_empty)
@@ -1300,13 +1300,13 @@ TEST(parser, wrongly_ordered_sections)
             create_empty_section(0) + create_empty_section(0) +
             create_empty_section(uint8_t(id - 1)) + create_empty_section(0);
         EXPECT_THROW_MESSAGE(
-            parse(wrong_order_bin), parser_error, "Unexpected out-of-order section type");
+            parse(wrong_order_bin), parser_error, "unexpected out-of-order section type");
 
         const auto duplicated_bin = bytes{wasm_prefix} + create_empty_section(0) +
                                     create_empty_section(id) + create_empty_section(0) +
                                     create_empty_section(id) + create_empty_section(0);
         EXPECT_THROW_MESSAGE(
-            parse(duplicated_bin), parser_error, "Unexpected out-of-order section type");
+            parse(duplicated_bin), parser_error, "unexpected out-of-order section type");
     }
 }
 

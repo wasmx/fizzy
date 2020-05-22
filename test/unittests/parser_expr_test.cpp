@@ -52,7 +52,7 @@ TEST(parser_expr, instr_loop_input_buffer_overflow)
 {
     // The function end opcode 0b is missing causing reading out of input buffer.
     const auto loop_missing_end = "03400b"_bytes;
-    EXPECT_THROW_MESSAGE(parse_expr(loop_missing_end), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse_expr(loop_missing_end), parser_error, "unexpected EOF");
 }
 
 TEST(parser_expr, instr_block)
@@ -93,7 +93,7 @@ TEST(parser_expr, instr_block_input_buffer_overflow)
 {
     // The function end opcode 0b is missing causing reading out of input buffer.
     const auto block_missing_end = "02400b"_bytes;
-    EXPECT_THROW_MESSAGE(parse_expr(block_missing_end), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse_expr(block_missing_end), parser_error, "unexpected EOF");
 }
 
 TEST(parser_expr, block_br)
@@ -254,9 +254,9 @@ TEST(parser_expr, call_indirect_table_index)
 
 TEST(parser_expr, control_instr_out_of_bounds)
 {
-    EXPECT_THROW_MESSAGE(parse_expr("02"_bytes), parser_error, "Unexpected EOF");
-    EXPECT_THROW_MESSAGE(parse_expr("03"_bytes), parser_error, "Unexpected EOF");
-    EXPECT_THROW_MESSAGE(parse_expr(i32_const(0) + "04"_bytes), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse_expr("02"_bytes), parser_error, "unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse_expr("03"_bytes), parser_error, "unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse_expr(i32_const(0) + "04"_bytes), parser_error, "unexpected EOF");
 }
 
 TEST(parser_expr, immediate_leb128_out_of_bounds)
@@ -269,17 +269,17 @@ TEST(parser_expr, immediate_leb128_out_of_bounds)
              Instr::call_indirect, Instr::i32_const, Instr::i64_const})
     {
         const auto code = i32_const(0) + i32_const(0) + bytes{uint8_t(instr), 0x99};
-        EXPECT_THROW_MESSAGE(parse_expr(code, module), parser_error, "Unexpected EOF");
+        EXPECT_THROW_MESSAGE(parse_expr(code, module), parser_error, "unexpected EOF");
     }
 }
 
 TEST(parser_expr, immediate_float_out_of_bounds)
 {
     const auto expr_f32_const = bytes{uint8_t(Instr::f32_const), 0x01};
-    EXPECT_THROW_MESSAGE(parse_expr(expr_f32_const), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse_expr(expr_f32_const), parser_error, "unexpected EOF");
     const auto expr_f64_const =
         bytes{uint8_t(Instr::f64_const), 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
-    EXPECT_THROW_MESSAGE(parse_expr(expr_f64_const), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse_expr(expr_f64_const), parser_error, "unexpected EOF");
 }
 
 TEST(parser_expr, load_store_immediates_out_of_bounds)
@@ -291,19 +291,19 @@ TEST(parser_expr, load_store_immediates_out_of_bounds)
              Instr::i32_store16, Instr::i64_store8, Instr::i64_store16, Instr::i64_store32})
     {
         const auto code_imm1 = i32_const(0) + i32_const(0) + bytes{uint8_t(instr), 0xa0};
-        EXPECT_THROW_MESSAGE(parse_expr(code_imm1), parser_error, "Unexpected EOF");
+        EXPECT_THROW_MESSAGE(parse_expr(code_imm1), parser_error, "unexpected EOF");
         const auto code_imm2 = i32_const(0) + i32_const(0) + bytes{uint8_t(instr), 0x00, 0xb0};
-        EXPECT_THROW_MESSAGE(parse_expr(code_imm2), parser_error, "Unexpected EOF");
+        EXPECT_THROW_MESSAGE(parse_expr(code_imm2), parser_error, "unexpected EOF");
     }
 }
 
 TEST(parser_expr, br_table_out_of_bounds)
 {
-    EXPECT_THROW_MESSAGE(parse_expr(i32_const(0) + "0e008f"_bytes), parser_error, "Unexpected EOF");
-    EXPECT_THROW_MESSAGE(parse_expr(i32_const(0) + "0e018f"_bytes), parser_error, "Unexpected EOF");
-    EXPECT_THROW_MESSAGE(parse_expr(i32_const(0) + "0e0201"_bytes), parser_error, "Unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse_expr(i32_const(0) + "0e008f"_bytes), parser_error, "unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse_expr(i32_const(0) + "0e018f"_bytes), parser_error, "unexpected EOF");
+    EXPECT_THROW_MESSAGE(parse_expr(i32_const(0) + "0e0201"_bytes), parser_error, "unexpected EOF");
     EXPECT_THROW_MESSAGE(
-        parse_expr(i32_const(0) + "0e02018f"_bytes), parser_error, "Unexpected EOF");
+        parse_expr(i32_const(0) + "0e02018f"_bytes), parser_error, "unexpected EOF");
 }
 
 TEST(parser_expr, call_indirect_out_of_bounds)
@@ -313,7 +313,7 @@ TEST(parser_expr, call_indirect_out_of_bounds)
     module.tablesec.emplace_back(Table{{1, 1}});
 
     EXPECT_THROW_MESSAGE(
-        parse_expr(i32_const(0) + "1100"_bytes, module), parser_error, "Unexpected EOF");
+        parse_expr(i32_const(0) + "1100"_bytes, module), parser_error, "unexpected EOF");
 }
 
 TEST(parser_expr, memory_grow_out_of_bounds)
@@ -321,7 +321,7 @@ TEST(parser_expr, memory_grow_out_of_bounds)
     for (const auto instr : {Instr::memory_size, Instr::memory_grow})
     {
         const auto code = i32_const(0) + uint8_t(instr);
-        EXPECT_THROW_MESSAGE(parse_expr(code), parser_error, "Unexpected EOF");
+        EXPECT_THROW_MESSAGE(parse_expr(code), parser_error, "unexpected EOF");
     }
 }
 

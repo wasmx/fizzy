@@ -475,7 +475,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
             push(code.immediates, type_idx);
 
             if (pos == end)
-                throw parser_error{"Unexpected EOF"};
+                throw parser_error{"unexpected EOF"};
 
             const uint8_t tableidx{*pos++};
             if (tableidx != 0)
@@ -547,7 +547,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
         case Instr::memory_grow:
         {
             if (pos == end)
-                throw parser_error{"Unexpected EOF"};
+                throw parser_error{"unexpected EOF"};
 
             const uint8_t memory_idx{*pos++};
             if (memory_idx != 0)

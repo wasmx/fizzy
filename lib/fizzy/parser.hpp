@@ -23,14 +23,14 @@ inline const uint8_t* skip(size_t num_bytes, const uint8_t* input, const uint8_t
 {
     const uint8_t* ret = input + num_bytes;
     if (ret >= end)
-        throw parser_error{"Unexpected EOF"};
+        throw parser_error{"unexpected EOF"};
     return ret;
 }
 
 inline parser_result<uint8_t> parse_byte(const uint8_t* pos, const uint8_t* end)
 {
     if (pos == end)
-        throw parser_error{"Unexpected EOF"};
+        throw parser_error{"unexpected EOF"};
 
     return {*pos, pos + 1};
 }

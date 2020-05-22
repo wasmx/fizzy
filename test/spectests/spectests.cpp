@@ -359,7 +359,7 @@ public:
                 }
                 catch (const fizzy::instantiate_error& ex)
                 {
-                    if (ex.what() == std::string{"Start function failed to execute"})
+                    if (ex.what() == std::string{"start function failed to execute"})
                     {
                         if (type == "assert_uninstantiable")
                             pass();

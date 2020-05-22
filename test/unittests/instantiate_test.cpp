@@ -81,7 +81,7 @@ TEST(instantiate, imported_functions_not_enough)
     const auto module = parse(bin);
 
     EXPECT_THROW_MESSAGE(instantiate(module, {}), instantiate_error,
-        "Module requires 1 imported functions, 0 provided");
+        "module requires 1 imported functions, 0 provided");
 }
 
 TEST(instantiate, imported_function_wrong_type)
@@ -98,7 +98,7 @@ TEST(instantiate, imported_function_wrong_type)
     const auto host_foo_type = FuncType{{}, {}};
 
     EXPECT_THROW_MESSAGE(instantiate(module, {{host_foo, host_foo_type}}), instantiate_error,
-        "Function 0 type doesn't match module's imported function type");
+        "function 0 type doesn't match module's imported function type");
 }
 
 TEST(instantiate, imported_table)
@@ -145,7 +145,7 @@ TEST(instantiate, imported_table_invalid)
 
     // Providing more than 1 table
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table, {10, 30}}, {&table, {10, 10}}}),
-        instantiate_error, "Only 1 imported table is allowed.");
+        instantiate_error, "only 1 imported table is allowed");
 
     // Providing table when none expected
     /* wat2wasm
@@ -154,37 +154,37 @@ TEST(instantiate, imported_table_invalid)
     const auto bin_no_imported_table = from_hex("0061736d01000000");
     const auto module_no_imported_table = parse(bin_no_imported_table);
     EXPECT_THROW_MESSAGE(instantiate(module_no_imported_table, {}, {{&table, {10, 30}}}),
-        instantiate_error, "Trying to provide imported table to a module that doesn't define one.");
+        instantiate_error, "trying to provide imported table to a module that doesn't define one");
 
     // Not providing table when one is expected
     EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
-        "Module defines an imported table but none was provided.");
+        "module defines an imported table but none was provided");
 
     // Provided min too low
     table_elements table_empty;
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table_empty, {0, 3}}}), instantiate_error,
-        "Provided import's min is below import's min defined in module.");
+        "provided import's min is below import's min defined in module");
 
     // Provided max too high
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table, {10, 40}}}), instantiate_error,
-        "Provided import's max is above import's max defined in module.");
+        "provided import's max is above import's max defined in module");
 
     // Provided max is unlimited
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table, {10, std::nullopt}}}), instantiate_error,
-        "Provided import's max is above import's max defined in module.");
+        "provided import's max is above import's max defined in module");
 
     // Null pointer
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {{nullptr, {10, 30}}}), instantiate_error,
-        "Provided imported table has a null pointer to data.");
+        "provided imported table has a null pointer to data");
 
     // Allocated less than min
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table_empty, {10, 30}}}), instantiate_error,
-        "Provided imported table doesn't fit provided limits");
+        "provided imported table doesn't fit provided limits");
 
     // Allocated more than max
     table_elements table_big(40);
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table_big, {10, 30}}}), instantiate_error,
-        "Provided imported table doesn't fit provided limits");
+        "provided imported table doesn't fit provided limits");
 }
 
 TEST(instantiate, imported_memory)
@@ -255,7 +255,7 @@ TEST(instantiate, imported_memory_invalid)
 
     // Providing more than 1 memory
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {1, 3}}, {&memory, {1, 1}}}),
-        instantiate_error, "Only 1 imported memory is allowed.");
+        instantiate_error, "only 1 imported memory is allowed");
 
     // Providing memory when none expected
     /* wat2wasm
@@ -264,38 +264,37 @@ TEST(instantiate, imported_memory_invalid)
     const auto bin_no_imported_memory = from_hex("0061736d01000000");
     const auto module_no_imported_memory = parse(bin_no_imported_memory);
     EXPECT_THROW_MESSAGE(instantiate(module_no_imported_memory, {}, {}, {{&memory, {1, 3}}}),
-        instantiate_error,
-        "Trying to provide imported memory to a module that doesn't define one.");
+        instantiate_error, "trying to provide imported memory to a module that doesn't define one");
 
     // Not providing memory when one is expected
     EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
-        "Module defines an imported memory but none was provided.");
+        "module defines an imported memory but none was provided");
 
     // Provided min too low
     bytes memory_empty;
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory_empty, {0, 3}}}), instantiate_error,
-        "Provided import's min is below import's min defined in module.");
+        "provided import's min is below import's min defined in module");
 
     // Provided max too high
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {1, 4}}}), instantiate_error,
-        "Provided import's max is above import's max defined in module.");
+        "provided import's max is above import's max defined in module");
 
     // Provided max is unlimited
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {1, std::nullopt}}}),
-        instantiate_error, "Provided import's max is above import's max defined in module.");
+        instantiate_error, "provided import's max is above import's max defined in module");
 
     // Null pointer
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{nullptr, {1, 3}}}), instantiate_error,
-        "Provided imported memory has a null pointer to data.");
+        "provided imported memory has a null pointer to data");
 
     // Allocated less than min
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory_empty, {1, 3}}}), instantiate_error,
-        "Provided imported memory doesn't fit provided limits");
+        "provided imported memory doesn't fit provided limits");
 
     // Allocated more than max
     bytes memory_big(PageSize * 4, 0);
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory_big, {1, 3}}}), instantiate_error,
-        "Provided imported memory doesn't fit provided limits");
+        "provided imported memory doesn't fit provided limits");
 
     // Provided max exceeds the hard limit
     /* wat2wasm
@@ -306,7 +305,7 @@ TEST(instantiate, imported_memory_invalid)
     EXPECT_THROW_MESSAGE(
         instantiate(module_without_max, {}, {}, {{&memory, {1, MemoryPagesLimit + 1}}}),
         instantiate_error,
-        "Imported memory limits cannot exceed hard memory limit of 268435456 bytes.");
+        "imported memory limits cannot exceed hard memory limit of 268435456 bytes");
 }
 
 TEST(instantiate, imported_globals)
@@ -362,7 +361,7 @@ TEST(instantiate, imported_globals_mismatched_count)
     uint64_t global_value = 42;
     ExternalGlobal g{&global_value, true};
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {g}), instantiate_error,
-        "Module requires 2 imported globals, 1 provided");
+        "module requires 2 imported globals, 1 provided");
 }
 
 TEST(instantiate, imported_globals_mismatched_mutability)
@@ -379,7 +378,7 @@ TEST(instantiate, imported_globals_mismatched_mutability)
     uint64_t global_value2 = 42;
     ExternalGlobal g2{&global_value2, true};
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {g1, g2}), instantiate_error,
-        "Global 0 mutability doesn't match module's global mutability");
+        "global 0 mutability doesn't match module's global mutability");
 }
 
 TEST(instantiate, imported_globals_nullptr)
@@ -393,7 +392,7 @@ TEST(instantiate, imported_globals_nullptr)
 
     ExternalGlobal g{nullptr, false};
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {g, g}), instantiate_error,
-        "Global 0 has a null pointer to value");
+        "global 0 has a null pointer to value");
 }
 
 TEST(instantiate, memory_default)
@@ -436,7 +435,7 @@ TEST(instantiate, memory_single_large_minimum)
     module.memorysec.emplace_back(Memory{{(1024 * 1024 * 1024) / PageSize, std::nullopt}});
 
     EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
-        "Cannot exceed hard memory limit of 268435456 bytes.");
+        "cannot exceed hard memory limit of 268435456 bytes");
 }
 
 TEST(instantiate, memory_single_large_maximum)
@@ -445,7 +444,7 @@ TEST(instantiate, memory_single_large_maximum)
     module.memorysec.emplace_back(Memory{{1, (1024 * 1024 * 1024) / PageSize}});
 
     EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
-        "Cannot exceed hard memory limit of 268435456 bytes.");
+        "cannot exceed hard memory limit of 268435456 bytes");
 }
 
 TEST(instantiate, element_section)
@@ -533,7 +532,7 @@ TEST(instantiate, element_section_offset_from_mutable_global)
         Element{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
 
     EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
-        "Constant expression can use global_get only for const globals.");
+        "constant expression can use global_get only for const globals");
 }
 
 TEST(instantiate, element_section_offset_too_large)
@@ -546,7 +545,7 @@ TEST(instantiate, element_section_offset_too_large)
         Element{{ConstantExpression::Kind::Constant, {2}}, {0x55, 0x55}});
 
     EXPECT_THROW_MESSAGE(
-        instantiate(module), instantiate_error, "Element segment is out of table bounds");
+        instantiate(module), instantiate_error, "element segment is out of table bounds");
 }
 
 TEST(instantiate, element_section_fills_imported_table)
@@ -600,7 +599,7 @@ TEST(instantiate, element_section_out_of_bounds_doesnt_change_imported_table)
     table[0] = ExternalFunction{f0, FuncType{{}, {ValType::i32}}};
 
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table, {3, std::nullopt}}}), instantiate_error,
-        "Element segment is out of table bounds");
+        "element segment is out of table bounds");
 
     ASSERT_EQ(table.size(), 3);
     EXPECT_EQ(*table[0]->function.target<decltype(f0)>(), f0);
@@ -663,7 +662,7 @@ TEST(instantiate, data_section_offset_from_mutable_global)
     module.datasec.emplace_back(Data{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
 
     EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
-        "Constant expression can use global_get only for const globals.");
+        "constant expression can use global_get only for const globals");
 }
 
 TEST(instantiate, data_section_offset_too_large)
@@ -674,7 +673,7 @@ TEST(instantiate, data_section_offset_too_large)
     module.datasec.emplace_back(Data{{ConstantExpression::Kind::Constant, {1}}, {0xaa, 0xff}});
 
     EXPECT_THROW_MESSAGE(
-        instantiate(module), instantiate_error, "Data segment is out of memory bounds");
+        instantiate(module), instantiate_error, "data segment is out of memory bounds");
 }
 
 TEST(instantiate, data_section_fills_imported_memory)
@@ -709,7 +708,7 @@ TEST(instantiate, data_section_out_of_bounds_doesnt_change_imported_memory)
 
     bytes memory(PageSize, 0);
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {1, 1}}}), instantiate_error,
-        "Data segment is out of memory bounds");
+        "data segment is out of memory bounds");
 
     EXPECT_EQ(memory[0], 0);
 }
@@ -735,7 +734,7 @@ TEST(instantiate, data_elem_section_errors_dont_change_imports)
     bytes memory(PageSize, 0);
     EXPECT_THROW_MESSAGE(
         instantiate(module_data_error, {}, {{&table, {3, std::nullopt}}}, {{&memory, {1, 1}}}),
-        instantiate_error, "Data segment is out of memory bounds");
+        instantiate_error, "data segment is out of memory bounds");
 
     EXPECT_FALSE(table[0].has_value());
     EXPECT_FALSE(table[1].has_value());
@@ -758,7 +757,7 @@ TEST(instantiate, data_elem_section_errors_dont_change_imports)
 
     EXPECT_THROW_MESSAGE(
         instantiate(module_elem_error, {}, {{&table, {3, std::nullopt}}}, {{&memory, {1, 1}}}),
-        instantiate_error, "Element segment is out of table bounds");
+        instantiate_error, "element segment is out of table bounds");
 
     EXPECT_FALSE(table[0].has_value());
     EXPECT_FALSE(table[1].has_value());
@@ -843,7 +842,7 @@ TEST(instantiate, globals_initialized_from_imported)
     ExternalGlobal g_mutable{&global_value, true};
 
     EXPECT_THROW_MESSAGE(instantiate(module_invalid1, {}, {}, {}, {g_mutable}), instantiate_error,
-        "Constant expression can use global_get only for const globals.");
+        "constant expression can use global_get only for const globals");
 
     // initializing from non-imported global is not allowed
     /* wat2wasm --no-check
@@ -854,7 +853,7 @@ TEST(instantiate, globals_initialized_from_imported)
     const auto module_invalid2 = parse(bin_invalid2);
 
     EXPECT_THROW_MESSAGE(instantiate(module_invalid2, {}, {}), instantiate_error,
-        "Global can be initialized by another const global only if it's imported.");
+        "global can be initialized by another const global only if it's imported");
 }
 
 TEST(instantiate, start_unreachable)
@@ -866,5 +865,5 @@ TEST(instantiate, start_unreachable)
     const auto wasm = from_hex("0061736d01000000010401600000030201000801000a05010300000b");
 
     EXPECT_THROW_MESSAGE(
-        instantiate(parse(wasm)), instantiate_error, "Start function failed to execute");
+        instantiate(parse(wasm)), instantiate_error, "start function failed to execute");
 }
