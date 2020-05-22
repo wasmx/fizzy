@@ -17,7 +17,7 @@ executors:
       - image: ethereum/cpp-build-env:14-clang-10
   macos:
     macos:
-      xcode: 11.3.0
+      xcode: 11.5.0
 
 commands:
   description: "Install macOS system dependencies"
