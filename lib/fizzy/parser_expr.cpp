@@ -136,14 +136,18 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
         auto& frame = control_stack.top();
         const auto& metrics = metrics_table[opcode];
 
-        if (!frame.unreachable &&
-            (frame.stack_height - frame.parent_stack_height) < metrics.stack_height_required)
-            throw validation_error{"stack underflow"};
+        if (!frame.unreachable)
+        {
+            if ((frame.stack_height - frame.parent_stack_height) < metrics.stack_height_required)
+                throw validation_error{"stack underflow"};
+
+            // Update code's max_stack_height using frame.stack_height of the previous instruction.
+            // The frame.stack_height may have been updated by call instruction and it is fine
+            // to omit value for end instruction.
+            code.max_stack_height = std::max(code.max_stack_height, frame.stack_height);
+        }
 
         frame.stack_height += metrics.stack_height_change;
-
-        if (!frame.unreachable)
-            code.max_stack_height = std::max(code.max_stack_height, frame.stack_height);
 
         const auto instr = static_cast<Instr>(opcode);
         switch (instr)

@@ -564,3 +564,26 @@ TEST(execute_call, call_indirect_imported_table_infinite_recursion)
 
     EXPECT_THAT(execute(*instance1, 0, {}), Traps());
 }
+
+TEST(execute_call, drop_call_result)
+{
+    // Regression test for incorrect max_stack_height based on call.wast:287.
+    /* wat2wasm
+      (func $const-i32 (result i32) (i32.const 0x132))
+      (func (export "drop_call_result")
+        call $const-i32
+        drop
+      )
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000108026000017f60000003030200010714011064726f705f63616c6c5f726573756c740001"
+        "0a0d02050041b2020b050010001a0b");
+
+    const auto module = parse(wasm);
+    ASSERT_EQ(module.codesec.size(), 2);
+    EXPECT_EQ(module.codesec[0].max_stack_height, 1);
+    EXPECT_EQ(module.codesec[1].max_stack_height, 1);
+    const auto func_idx = find_exported_function(module, "drop_call_result");
+    auto instance = instantiate(module);
+    EXPECT_THAT(fizzy::execute(*instance, *func_idx, {}), Result());
+}

@@ -212,10 +212,9 @@ TEST(parser_expr, instr_br_table_as_return)
     */
 
     const auto code_bin = "41000e00000b"_bytes;
-
-    const auto [code, pos] = parse_expr(code_bin);
-
+    const auto [code, _] = parse_expr(code_bin);
     EXPECT_EQ(code.instructions, (std::vector{Instr::i32_const, Instr::br_table, Instr::end}));
+    EXPECT_EQ(code.max_stack_height, 1);
 }
 
 TEST(parser_expr, instr_br_table_missing_arg)
@@ -340,6 +339,8 @@ TEST(parser_expr, call_0args_1result)
 
     const auto module = parse(wasm);
     ASSERT_EQ(module.codesec.size(), 2);
+    EXPECT_EQ(module.codesec[0].max_stack_height, 1);
+    EXPECT_EQ(module.codesec[1].max_stack_height, 1);
 }
 
 TEST(parser_expr, call_1arg_1result)
@@ -353,4 +354,6 @@ TEST(parser_expr, call_1arg_1result)
 
     const auto module = parse(wasm);
     ASSERT_EQ(module.codesec.size(), 2);
+    EXPECT_EQ(module.codesec[0].max_stack_height, 1);
+    EXPECT_EQ(module.codesec[1].max_stack_height, 1);
 }
