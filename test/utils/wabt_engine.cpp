@@ -7,6 +7,7 @@
 #include <src/interp/interp.h>
 
 #include <test/utils/wasm_engine.hpp>
+#include <cassert>
 
 namespace fizzy::test
 {
@@ -37,7 +38,7 @@ bool WabtEngine::parse(bytes_view input) const
     wabt::interp::Environment env;
     wabt::interp::DefinedModule* module{nullptr};
     wabt::Errors errors;
-    wabt::Result result = wabt::ReadBinaryInterp(
+    const wabt::Result result = wabt::ReadBinaryInterp(
         &env, input.data(), input.size(), wabt::ReadBinaryOptions{}, &errors, &module);
     return (result == wabt::Result::Ok);
 }
@@ -45,9 +46,18 @@ bool WabtEngine::parse(bytes_view input) const
 bool WabtEngine::instantiate(bytes_view wasm_binary)
 {
     wabt::Errors errors;
-    wabt::Result result = wabt::ReadBinaryInterp(&m_env, wasm_binary.data(), wasm_binary.size(),
-        wabt::ReadBinaryOptions{}, &errors, &m_module);
-    return (result == wabt::Result::Ok);
+    const wabt::Result result = wabt::ReadBinaryInterp(&m_env, wasm_binary.data(),
+        wasm_binary.size(), wabt::ReadBinaryOptions{}, &errors, &m_module);
+    if (result != wabt::Result::Ok)
+        return false;
+    assert(m_module != nullptr);
+
+    // Run start function (this will return ok if no start function is present)
+    const wabt::interp::ExecResult r = m_executor.RunStartFunction(m_module);
+    if (r.result != wabt::interp::Result::Ok)
+        return false;
+
+    return true;
 }
 
 bool WabtEngine::init_memory(bytes_view memory)
