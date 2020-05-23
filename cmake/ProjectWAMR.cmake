@@ -33,7 +33,7 @@ ExternalProject_Add(wamr
     -DWAMR_BUILD_JIT=0
     -DWAMR_BUILD_LIBC_BUILTIN=0
     -DWAMR_BUILD_LIBC_WASI=0
-    INSTALL_COMMAND ""
+//    INSTALL_COMMAND ""
     BUILD_BYPRODUCTS ${wamr_library}
 )
 
