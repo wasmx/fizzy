@@ -68,6 +68,38 @@ TEST(wasm_engine, trapped)
     }
 }
 
+TEST(wasm_engine, start_func)
+{
+    /* wat2wasm
+    (global $g1 (mut i32) (i32.const 0))
+    (func $start
+      i32.const 13
+      global.set $g1
+    )
+    (start 0)
+    (func $test (export "test") (result i32)
+      global.get $g1
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000108026000006000017f03030200010606017f0141000b070801047465737400010801000a"
+        "0d020600410d24000b040023000b");
+
+    for (auto engine_create_fn : all_engines)
+    {
+        auto engine = engine_create_fn();
+        ASSERT_TRUE(engine->parse(wasm));
+        ASSERT_TRUE(engine->instantiate(wasm));
+        ASSERT_FALSE(engine->find_function("notfound").has_value());
+        const auto func = engine->find_function("test");
+        ASSERT_TRUE(func.has_value());
+        const auto result = engine->execute(*func, {});
+        ASSERT_FALSE(result.trapped);
+        ASSERT_TRUE(result.value.has_value());
+        ASSERT_EQ(*result.value, 13);
+    }
+}
+
 TEST(wasm_engine, multi_i32_args_ret_i32)
 {
     /* wat2wasm
