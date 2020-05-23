@@ -148,15 +148,6 @@ WasmEngine::Result WAMREngine::execute(
 
     std::cout << wasm_runtime_get_exception(wasm_runtime_get_module_inst(m_env)) << std::endl;
 
-    //    (void)func_ref;
-    //    (void)args;
-    //    unsigned ret_valid;
-    //    uint64_t ret_value;
-    //    IM3Function function = reinterpret_cast<IM3Function>(func_ref);
-    //    auto const result = m3_CallProper(
-    //        function, static_cast<uint32_t>(args.size()), args.data(), &ret_valid, &ret_value);
-    //    if (result == m3Err_none)
-    //        return {false, ret_valid ? ret_value : std::optional<uint64_t>{}};
     return {true, std::nullopt};
 }
 }  // namespace fizzy::test
