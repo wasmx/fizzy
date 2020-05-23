@@ -1,5 +1,5 @@
 // Fizzy: A fast WebAssembly interpreter
-// Copyright 2019-2020 The Fizzy Authors.
+// Copyright 2020 The Fizzy Authors.
 // SPDX-License-Identifier: Apache-2.0
 
 #include "wasm_export.h"
@@ -81,8 +81,8 @@ bool WAMREngine::instantiate(bytes_view _wasm_binary)
         return false;
     }
     // If these are set to 0, the defaults are used.
-    uint32_t stack_size = 8092;
-    uint32_t heap_size = 8092;
+    uint32_t stack_size = 8192;
+    uint32_t heap_size = 8192;
     m_instance = wasm_runtime_instantiate(module, stack_size, heap_size, errors, sizeof(errors));
     if (m_instance == nullptr)
     {
@@ -90,7 +90,7 @@ bool WAMREngine::instantiate(bytes_view _wasm_binary)
         wasm_runtime_unload(module);
         return false;
     }
-    m_env = wasm_runtime_create_exec_env(m_instance, 8092);
+    m_env = wasm_runtime_create_exec_env(m_instance, stack_size);
     if (m_env == nullptr)
     {
         wasm_runtime_deinstantiate(m_instance);
@@ -101,23 +101,32 @@ bool WAMREngine::instantiate(bytes_view _wasm_binary)
 
 bool WAMREngine::init_memory(fizzy::bytes_view memory)
 {
-    (void)memory;
-    //    uint32_t size;
-    //    const auto data = m3_GetMemory(m_runtime, &size, 0);
-    //    if (data == nullptr || size < memory.size())
-    //        return false;
-    //    std::memcpy(data, memory.data(), memory.size());
-    //    return true;
-    return false;
+    // NOTE: this will crash if there's no memory exported and no way to tell...
+
+    const auto size = static_cast<uint32_t>(memory.size());
+
+    if (!wasm_runtime_validate_app_addr(m_instance, 0, size))
+        return false;
+
+    void* ptr = wasm_runtime_addr_app_to_native(m_instance, 0);
+    assert(ptr != nullptr);
+    std::memcpy(reinterpret_cast<uint8_t*>(ptr), memory.data(), size);
+    return true;
 }
 
 fizzy::bytes_view WAMREngine::get_memory() const
 {
-    //    uint32_t size;
-    //    auto data = m3_GetMemory(m_runtime, &size, 0);
-    //    if (data == nullptr)
-    //        return {};
-    //    return {data, size};
+    // NOTE: this will crash if there's no memory exported and no way to tell...
+
+    int32_t start;
+    int32_t end;
+    if (!wasm_runtime_get_app_addr_range(m_instance, 0, &start, &end))
+        return {};
+    const auto size = static_cast<uint32_t>(end - start);
+
+    void* ptr = wasm_runtime_addr_app_to_native(m_instance, 0);
+    assert(ptr != nullptr);
+    return {reinterpret_cast<uint8_t*>(ptr), size};
     return {};
 }
 
