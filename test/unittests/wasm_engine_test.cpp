@@ -239,7 +239,7 @@ TEST(wasm_engine, multi_mixed_args_ret_i64)
     }
 }
 
-TEST(wasm_engine, no_memory)
+TEST(wasm_engine, DISABLED_no_memory)
 {
     /* wat2wasm
     (func $test (export "test"))
