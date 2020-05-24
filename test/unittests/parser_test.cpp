@@ -436,8 +436,10 @@ TEST(parser, function_section_end_out_of_bounds)
 
 TEST(parser, function_section_without_code)
 {
+    const auto type_section = make_vec({make_functype({}, {})});
     const auto function_section = "0100"_bytes;
-    const auto bin = bytes{wasm_prefix} + make_section(3, function_section);
+    const auto bin =
+        bytes{wasm_prefix} + make_section(1, type_section) + make_section(3, function_section);
     EXPECT_THROW_MESSAGE(parse(bin), parser_error,
         "malformed binary: number of function and code entries must match");
 }
