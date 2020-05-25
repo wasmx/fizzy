@@ -11,6 +11,15 @@ set(binary_dir ${prefix}/src/wamr-build)
 set(include_dir ${source_dir}/core/iwasm/include)
 set(wamr_library ${binary_dir}/${CMAKE_STATIC_LIBRARY_PREFIX}vmlib${CMAKE_STATIC_LIBRARY_SUFFIX})
 
+if(UNIX AND APPLE)
+    set(WAMR_PLATFORM "darwin")
+elseif(UNIX)
+    # Assume "linux" is generic
+    set(WAMR_PLATFORM "linux")
+else()
+    message(FATAL_ERROR "Unsupported target for WAMR.")
+endif()
+
 ExternalProject_Add(wamr
     EXCLUDE_FROM_ALL 1
     PREFIX ${prefix}
@@ -20,8 +29,7 @@ ExternalProject_Add(wamr
     BINARY_DIR ${binary_dir}
     URL https://github.com/bytecodealliance/wasm-micro-runtime/archive/WAMR-04-15-2020.tar.gz
     URL_HASH SHA256=46f74568caec7abf51e7192e1eb73619cf2bf44f987ea22d86a1b103c6184751
-    # different dir based on linux vs macos..
-    SOURCE_SUBDIR product-mini/platforms/darwin
+    SOURCE_SUBDIR product-mini/platforms/${WAMR_PLATFORM}
     CMAKE_ARGS
     -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
     -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
