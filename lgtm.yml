@@ -9,4 +9,4 @@ extraction:
     configure:
       command:
         - cd $LGTM_SRC/_lgtm_build_dir
-        - cmake -DFIZZY_TESTING=ON -DCMAKE_BUILD_TYPE=Release ..
+        - cmake -DFIZZY_TESTING=ON -DFIZZY_WASI=ON -DCMAKE_BUILD_TYPE=Release ..
