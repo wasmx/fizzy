@@ -16,13 +16,6 @@ inline std::string hex(uint8_t b) noexcept
     return {hex_chars[b >> 4], hex_chars[b & 0xf]};
 }
 
-/// Decodes hex encoded string to bytes.
-///
-/// Exceptions:
-/// - std::length_error when the input has invalid length (must be even).
-/// - std::out_of_range when invalid hex digit encountered.
-bytes from_hex(const std::string& hex);
-
 /// Encodes bytes as hex string.
 std::string hex(const uint8_t* data, size_t size);
 
@@ -31,6 +24,13 @@ inline std::string hex(bytes_view data)
 {
     return hex(data.data(), data.size());
 }
+
+/// Decodes hex encoded string to bytes.
+///
+/// Exceptions:
+/// - std::length_error when the input has invalid length (must be even).
+/// - std::out_of_range when invalid hex digit encountered.
+bytes from_hex(const std::string& hex);
 
 inline namespace literals
 {
