@@ -85,7 +85,8 @@ void update_caller_frame(ControlFrame& frame, const FuncType& func_type)
 {
     const auto stack_height_required = static_cast<int>(func_type.inputs.size());
 
-    if (frame.stack_height < stack_height_required && !frame.unreachable)
+    if (!frame.unreachable &&
+        (frame.stack_height - frame.parent_stack_height) < stack_height_required)
         throw validation_error{"call/call_indirect instruction stack underflow"};
 
     const auto stack_height_change =
