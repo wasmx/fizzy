@@ -360,7 +360,7 @@ jobs:
           working_directory: ~/build
           command: |
             mkdir -p corpus
-            bin/fizzy-fuzz-parser corpus -jobs=8 -runs=1000000 -max_len=1024 -len_control=100000 -use_value_profile=1 -verbosity=0 -print_final_stats=1
+            bin/fizzy-fuzz-parser corpus -jobs=7 -runs=1000000 -max_len=1024 -len_control=100000 -use_value_profile=1 -verbosity=0 -print_final_stats=1
       - run:
           name: "Clean up fuzzing corpus"
           working_directory: ~/build
