@@ -39,6 +39,8 @@ ExternalProject_Add(wamr
 
 add_library(wamr::wamr STATIC IMPORTED)
 
+file(MAKE_DIRECTORY ${include_dir})
+
 set_target_properties(
     wamr::wamr
     PROPERTIES
