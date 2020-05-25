@@ -164,6 +164,103 @@ TEST(validation_stack, call_stack_underflow)
         parse(wasm), validation_error, "call/call_indirect instruction stack underflow");
 }
 
+TEST(validation_stack, call_1arg_in_block)
+{
+    /* wat2wasm
+    (func $f (param i32))
+    (func
+      i32.const -1
+      (block
+        i32.const 0
+        call $f
+      )
+      drop
+    )
+    */
+    const auto wasm_valid = from_hex(
+        "0061736d0100000001080260017f0060000003030200010a110202000b0c00417f0240410010000b1a0b");
+    parse(wasm_valid);
+
+    /* wat2wasm --no-check
+    (func $f (param i32))
+    (func
+      i32.const -1
+      (block
+        call $f
+      )
+      drop
+    )
+    */
+    const auto wasm_invalid1 = from_hex(
+        "0061736d0100000001080260017f0060000003030200010a0f0202000b0a00417f024010000b1a0b");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm_invalid1), validation_error, "call/call_indirect instruction stack underflow");
+
+    /* wat2wasm --no-check
+    (func $f (param i32))
+    (func
+      i32.const -1
+      (block
+        call $f
+      )
+    )
+    */
+    const auto wasm_invalid2 =
+        from_hex("0061736d0100000001080260017f0060000003030200010a0e0202000b0900417f024010000b0b");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm_invalid2), validation_error, "call/call_indirect instruction stack underflow");
+}
+
+TEST(validation_stack, call_1arg_1result_in_block)
+{
+    /* wat2wasm
+    (func $f (param i32) (result i32) (local.get 0))
+    (func
+      i32.const -1
+      (block
+        i32.const 0
+        call $f
+        drop
+      )
+      drop
+    )
+    */
+    const auto wasm_valid = from_hex(
+        "0061736d0100000001090260017f017f60000003030200010a1402040020000b0d00417f0240410010001a0b1a"
+        "0b");
+    parse(wasm_valid);
+
+    /* wat2wasm --no-check
+    (func $f (param i32) (result i32) (local.get 0))
+    (func
+      i32.const -1
+      (block
+        call $f
+      )
+      drop
+    )
+    */
+    const auto wasm_invalid1 = from_hex(
+        "0061736d0100000001090260017f017f60000003030200010a1102040020000b0a00417f024010000b1a0b");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm_invalid1), validation_error, "call/call_indirect instruction stack underflow");
+
+    /* wat2wasm --no-check
+    (func $f (param i32) (result i32) (local.get 0))
+    (func
+      i32.const -1
+      (block
+        call $f
+        drop
+      )
+    )
+    */
+    const auto wasm_invalid2 = from_hex(
+        "0061736d0100000001090260017f017f60000003030200010a1102040020000b0a00417f024010001a0b0b");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm_invalid2), validation_error, "call/call_indirect instruction stack underflow");
+}
+
 TEST(validation_stack, call_stack_underflow_imported_function)
 {
     /* wat2wasm --no-check
@@ -195,6 +292,85 @@ TEST(validation_stack, call_indirect_stack_underflow)
         "20001100000b");
     EXPECT_THROW_MESSAGE(
         parse(wasm), validation_error, "call/call_indirect instruction stack underflow");
+}
+
+TEST(validation_stack, call_indirect_1arg_in_loop)
+{
+    /* wat2wasm
+      (type (func (param i32)))
+      (table anyfunc (elem 0))
+      (func
+        i64.const -1
+        (loop
+          i32.const 0
+          i32.const 0
+          (call_indirect (type 0))
+        )
+        drop
+      )
+    */
+    const auto wasm_valid = from_hex(
+        "0061736d0100000001080260017f0060000003020101040501700101010907010041000b01000a11010f00427f"
+        "0340410041001100000b1a0b");
+    parse(wasm_valid);
+
+    /* wat2wasm --no-check
+      (type (func (param i32)))
+      (table anyfunc (elem 0))
+      (func
+        i64.const -1
+        (loop
+          i32.const 0
+          (call_indirect (type 0))
+        )
+        drop
+      )
+    */
+    const auto wasm_invalid = from_hex(
+        "0061736d0100000001080260017f0060000003020101040501700101010907010041000b01000a0f010d00427f"
+        "034041001100000b1a0b");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm_invalid), validation_error, "call/call_indirect instruction stack underflow");
+}
+
+TEST(validation_stack, call_indirect_1arg_1result_in_loop)
+{
+    /* wat2wasm
+      (type (func (param i32) (result i32)))
+      (table anyfunc (elem 0))
+      (func
+        i64.const -1
+        (loop
+          i32.const 0
+          i32.const 0
+          (call_indirect (type 0))
+          drop
+        )
+        drop
+      )
+    */
+    const auto wasm_valid = from_hex(
+        "0061736d0100000001090260017f017f60000003020101040501700101010907010041000b01000a1201100042"
+        "7f0340410041001100001a0b1a0b");
+    parse(wasm_valid);
+
+    /* wat2wasm --no-check
+      (type (func (param i32) (result i32)))
+      (table anyfunc (elem 0))
+      (func
+        i64.const -1
+        (loop
+          i32.const 0
+          (call_indirect (type 0))
+        )
+        drop
+      )
+    */
+    const auto wasm_invalid = from_hex(
+        "0061736d0100000001090260017f017f60000003020101040501700101010907010041000b01000a0f010d0042"
+        "7f034041001100000b1a0b");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm_invalid), validation_error, "call/call_indirect instruction stack underflow");
 }
 
 TEST(validation_stack, unreachable)
