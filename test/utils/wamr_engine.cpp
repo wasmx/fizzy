@@ -18,6 +18,7 @@ static_assert(sizeof(wasm_function_inst_t) <= sizeof(WasmEngine::FuncRef));
 
 class WAMREngine : public WasmEngine
 {
+    wasm_module_t m_module{nullptr};
     wasm_module_inst_t m_instance{nullptr};
     wasm_exec_env_t m_env{nullptr};
 
@@ -33,6 +34,8 @@ public:
             wasm_runtime_destroy_exec_env(m_env);
         if (m_instance != nullptr)
             wasm_runtime_deinstantiate(m_instance);
+        if (m_module != nullptr)
+            wasm_runtime_unload(m_module);
         wasm_runtime_destroy();
     }
 
@@ -73,9 +76,9 @@ bool WAMREngine::instantiate(bytes_view _wasm_binary)
     bytes wasm_binary{_wasm_binary};
     //    std::cout << static_cast<int>(wasm_binary[37]) << std::endl;
     //    std::cout << hex(wasm_binary) << std::endl;
-    auto module = wasm_runtime_load(
+    m_module = wasm_runtime_load(
         wasm_binary.data(), static_cast<uint32_t>(wasm_binary.size()), errors, sizeof(errors));
-    if (module == nullptr)
+    if (m_module == nullptr)
     {
         std::cout << errors << std::endl;
         return false;
@@ -83,17 +86,21 @@ bool WAMREngine::instantiate(bytes_view _wasm_binary)
     // If these are set to 0, the defaults are used.
     uint32_t stack_size = 8192;
     uint32_t heap_size = 8192;
-    m_instance = wasm_runtime_instantiate(module, stack_size, heap_size, errors, sizeof(errors));
+    m_instance = wasm_runtime_instantiate(m_module, stack_size, heap_size, errors, sizeof(errors));
     if (m_instance == nullptr)
     {
         std::cout << errors << std::endl;
-        wasm_runtime_unload(module);
+        wasm_runtime_unload(m_module);
+        m_module = nullptr;
         return false;
     }
     m_env = wasm_runtime_create_exec_env(m_instance, stack_size);
     if (m_env == nullptr)
     {
+        wasm_runtime_unload(m_module);
+        m_module = nullptr;
         wasm_runtime_deinstantiate(m_instance);
+        m_instance = nullptr;
         return false;
     }
     return true;
