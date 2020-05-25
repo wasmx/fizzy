@@ -4,6 +4,7 @@
 
 #include "source/wasm3.h"
 
+#include <test/utils/adler32.hpp>
 #include <test/utils/wasm_engine.hpp>
 #include <cassert>
 #include <cstring>
@@ -33,6 +34,18 @@ public:
     fizzy::bytes_view get_memory() const final;
     Result execute(FuncRef func_ref, const std::vector<uint64_t>& args) final;
 };
+
+namespace
+{
+const void* env_adler32(IM3Runtime /*runtime*/, uint64_t* stack, void* mem)
+{
+    uint64_t* ret = stack;
+    const uint32_t offset = *(uint32_t*)(stack++);
+    const uint32_t length = *(uint32_t*)(stack++);
+    *ret = fizzy::adler32({reinterpret_cast<uint8_t*>(mem) + offset, length});
+    return m3Err_none;
+}
+}  // namespace
 
 std::unique_ptr<WasmEngine> create_wasm3_engine()
 {
@@ -71,6 +84,13 @@ bool Wasm3Engine::instantiate(bytes_view wasm_binary)
     if (m3_LoadModule(m_runtime, module) != m3Err_none)
     {
         m3_FreeModule(module);
+        return false;
+    }
+
+    auto ret = m3_LinkRawFunction(module, "env", "adler32", "i(ii)", env_adler32);
+    if (ret != m3Err_none && ret != m3Err_functionLookupFailed)
+    {
+        m3_FreeRuntime(m_runtime);
         return false;
     }
 

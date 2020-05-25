@@ -5,6 +5,7 @@
 #include "execute.hpp"
 #include "parser.hpp"
 
+#include <test/utils/adler32.hpp>
 #include <test/utils/wasm_engine.hpp>
 #include <cassert>
 #include <cstring>
@@ -23,6 +24,16 @@ public:
     bytes_view get_memory() const final;
     Result execute(FuncRef func_ref, const std::vector<uint64_t>& args) final;
 };
+
+namespace
+{
+fizzy::execution_result env_adler32(fizzy::Instance& instance, std::vector<uint64_t> args, int)
+{
+    assert(instance.memory != nullptr);
+    const auto ret = fizzy::adler32(bytes_view{*instance.memory}.substr(args[0], args[1]));
+    return {false, {ret}};
+}
+}  // namespace
 
 std::unique_ptr<WasmEngine> create_fizzy_engine()
 {
@@ -46,12 +57,19 @@ bool FizzyEngine::instantiate(bytes_view wasm_binary)
 {
     try
     {
-        m_instance = fizzy::instantiate(fizzy::parse(wasm_binary));
+        const auto module = fizzy::parse(wasm_binary);
+        auto imports = fizzy::resolve_imported_functions(
+            module, {
+                        {"env", "adler32", {fizzy::ValType::i32, fizzy::ValType::i32},
+                            fizzy::ValType::i32, env_adler32},
+                    });
+        m_instance = fizzy::instantiate(module, imports);
     }
     catch (...)
     {
         return false;
     }
+    assert(m_instance != nullptr);
     return true;
 }
 
