@@ -21,6 +21,8 @@ TEST(wasm_engine, parse_error)
     {
         auto engine = engine_create_fn();
         ASSERT_FALSE(engine->parse(wasm));
+        // Instantiate also performs parsing first.
+        ASSERT_FALSE(engine->instantiate(wasm));
     }
 }
 
