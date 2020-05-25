@@ -350,3 +350,15 @@ TEST(parser_expr, call_1arg_1result)
     const auto module = parse(wasm);
     ASSERT_EQ(module.codesec.size(), 2);
 }
+
+TEST(parser_expr, call_nonexisting_typeidx)
+{
+    // This creates a wasm module where code[0] has a call instruction calling function[1] which
+    // has invalid type_idx 1.
+    // wat2wasm cannot be used as there is no way to have invalid type_idx in WAT form.
+    const auto wasm = bytes{wasm_prefix} + make_section(1, make_vec({"600000"_bytes})) +
+                      make_section(3, make_vec({"00"_bytes, "01"_bytes})) +
+                      make_section(10, make_vec({"040010010b"_bytes, "02000b"_bytes}));
+
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "invalid function type index");
+}

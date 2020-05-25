@@ -493,6 +493,12 @@ Module parse(bytes_view input)
         }
     }
 
+    for (const auto type_idx : module.funcsec)
+    {
+        if (type_idx >= module.typesec.size())
+            throw validation_error{"invalid function type index"};
+    }
+
     if (module.tablesec.size() > 1)
         throw validation_error{"too many table sections (at most one is allowed)"};
 
@@ -533,9 +539,7 @@ Module parse(bytes_view input)
     module.codesec.reserve(code_binaries.size());
     for (size_t i = 0; i < code_binaries.size(); ++i)
     {
-        const auto type_idx = module.funcsec[i];
-        if (type_idx >= module.typesec.size())
-            throw validation_error{"invalid function type index"};
+        assert(module.funcsec[i] < module.typesec.size());
         module.codesec.emplace_back(parse_code(code_binaries[i], module));
     }
 
