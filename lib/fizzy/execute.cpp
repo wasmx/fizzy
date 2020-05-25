@@ -268,12 +268,12 @@ void branch(uint32_t label_idx, LabelStack& labels, Stack<uint64_t>& stack, cons
     if (label.arity != 0)
     {
         assert(label.arity == 1);
-        const auto result = stack.peek();
-        stack.resize(label.stack_height);
+        const auto result = stack.top();
+        stack.shrink(label.stack_height);
         stack.push(result);
     }
     else
-        stack.resize(label.stack_height);
+        stack.shrink(label.stack_height);
 }
 
 template <class F>
@@ -283,7 +283,7 @@ bool invoke_function(
     const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
     std::vector<uint64_t> call_args(stack.end() - static_cast<ptrdiff_t>(num_args), stack.end());
-    stack.resize(stack.size() - num_args);
+    stack.shrink(stack.size() - num_args);
 
     const auto ret = func(instance, std::move(call_args), depth + 1);
     // Bubble up traps
@@ -860,7 +860,7 @@ execution_result execute(
         {
             const auto idx = read<uint32_t>(immediates);
             assert(idx <= locals.size());
-            locals[idx] = stack.peek();
+            locals[idx] = stack.top();
             break;
         }
         case Instr::global_get:
@@ -1235,8 +1235,8 @@ execution_result execute(
         }
         case Instr::i32_div_s:
         {
-            auto const rhs = static_cast<int32_t>(stack.peek(0));
-            auto const lhs = static_cast<int32_t>(stack.peek(1));
+            auto const rhs = static_cast<int32_t>(stack[0]);
+            auto const lhs = static_cast<int32_t>(stack[1]);
             if (rhs == 0 || (lhs == std::numeric_limits<int32_t>::min() && rhs == -1))
             {
                 trap = true;
@@ -1247,7 +1247,7 @@ execution_result execute(
         }
         case Instr::i32_div_u:
         {
-            auto const rhs = static_cast<uint32_t>(stack.peek());
+            auto const rhs = static_cast<uint32_t>(stack.top());
             if (rhs == 0)
             {
                 trap = true;
@@ -1258,17 +1258,17 @@ execution_result execute(
         }
         case Instr::i32_rem_s:
         {
-            auto const rhs = static_cast<int32_t>(stack.peek());
+            auto const rhs = static_cast<int32_t>(stack.top());
             if (rhs == 0)
             {
                 trap = true;
                 goto end;
             }
-            auto const lhs = static_cast<int32_t>(stack.peek(1));
+            auto const lhs = static_cast<int32_t>(stack[1]);
             if (lhs == std::numeric_limits<int32_t>::min() && rhs == -1)
             {
-                stack.drop(2);
-                stack.push(0);
+                stack.pop();
+                stack.top() = 0;
             }
             else
                 binary_op(stack, std::modulus<int32_t>());
@@ -1276,7 +1276,7 @@ execution_result execute(
         }
         case Instr::i32_rem_u:
         {
-            auto const rhs = static_cast<uint32_t>(stack.peek());
+            auto const rhs = static_cast<uint32_t>(stack.top());
             if (rhs == 0)
             {
                 trap = true;
@@ -1357,8 +1357,8 @@ execution_result execute(
         }
         case Instr::i64_div_s:
         {
-            auto const rhs = static_cast<int64_t>(stack.peek(0));
-            auto const lhs = static_cast<int64_t>(stack.peek(1));
+            auto const rhs = static_cast<int64_t>(stack[0]);
+            auto const lhs = static_cast<int64_t>(stack[1]);
             if (rhs == 0 || (lhs == std::numeric_limits<int64_t>::min() && rhs == -1))
             {
                 trap = true;
@@ -1369,7 +1369,7 @@ execution_result execute(
         }
         case Instr::i64_div_u:
         {
-            auto const rhs = static_cast<uint64_t>(stack.peek());
+            auto const rhs = static_cast<uint64_t>(stack.top());
             if (rhs == 0)
             {
                 trap = true;
@@ -1380,17 +1380,17 @@ execution_result execute(
         }
         case Instr::i64_rem_s:
         {
-            auto const rhs = static_cast<int64_t>(stack.peek());
+            auto const rhs = static_cast<int64_t>(stack.top());
             if (rhs == 0)
             {
                 trap = true;
                 goto end;
             }
-            auto const lhs = static_cast<int64_t>(stack.peek(1));
+            auto const lhs = static_cast<int64_t>(stack[1]);
             if (lhs == std::numeric_limits<int64_t>::min() && rhs == -1)
             {
-                stack.drop(2);
-                stack.push(0);
+                stack.pop();
+                stack.top() = 0;
             }
             else
                 binary_op(stack, std::modulus<int64_t>());
@@ -1398,7 +1398,7 @@ execution_result execute(
         }
         case Instr::i64_rem_u:
         {
-            auto const rhs = static_cast<uint64_t>(stack.peek());
+            auto const rhs = static_cast<uint64_t>(stack.top());
             if (rhs == 0)
             {
                 trap = true;
