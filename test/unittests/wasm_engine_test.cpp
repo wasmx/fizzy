@@ -111,7 +111,7 @@ TEST(wasm_engine, DISABLED_trapped)
     }
 }
 
-TEST(wasm_engine, start_func)
+TEST(wasm_engine, DISABLED_start_func)
 {
     /* wat2wasm
     (global $g1 (mut i32) (i32.const 0))
@@ -306,7 +306,7 @@ TEST(wasm_engine, memory)
     }
 }
 
-TEST(wasm_engine, host_function)
+TEST(wasm_engine, DISABLED_host_function)
 {
     /* wat2wasm
     (func $adler32 (import "env" "adler32") (param i32 i32) (result i32))
