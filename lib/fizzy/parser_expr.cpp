@@ -113,7 +113,8 @@ void validate_result_count(const ControlFrame& frame)
 
 }  // namespace
 
-parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Module& module)
+parser_result<Code> parse_expr(
+    const uint8_t* pos, const uint8_t* end, FuncIdx func_idx, const Module& module)
 {
     Code code;
 
@@ -122,9 +123,11 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
     // For a block/if/else instruction the value is the block/if/else's immediate offset.
     std::stack<ControlFrame> control_stack;
 
-    // TODO: Get function result arity from the function type in Module.
-    const uint8_t func_result_arity = 0;
-    control_stack.emplace(Instr::block, func_result_arity, 0);  // The function's implicit block.
+    const auto func_type_idx = module.funcsec[func_idx];
+    assert(func_type_idx < module.typesec.size());
+    const auto function_arity = static_cast<uint8_t>(module.typesec[func_type_idx].outputs.size());
+    // The function's implicit block.
+    control_stack.emplace(Instr::block, function_arity, 0);
 
     const auto metrics_table = get_instruction_metrics_table();
 
@@ -456,16 +459,16 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
 
         case Instr::call:
         {
-            FuncIdx func_idx;
-            std::tie(func_idx, pos) = leb128u_decode<uint32_t>(pos, end);
+            FuncIdx callee_func_idx;
+            std::tie(callee_func_idx, pos) = leb128u_decode<uint32_t>(pos, end);
 
-            if (func_idx >= module.imported_function_types.size() + module.funcsec.size())
+            if (callee_func_idx >= module.imported_function_types.size() + module.funcsec.size())
                 throw validation_error{"invalid funcidx encountered with call"};
 
-            const auto& func_type = module.get_function_type(func_idx);
+            const auto& func_type = module.get_function_type(callee_func_idx);
             update_caller_frame(frame, func_type);
 
-            push(code.immediates, func_idx);
+            push(code.immediates, callee_func_idx);
             break;
         }
 
@@ -474,7 +477,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
             if (!module.has_table())
                 throw validation_error{"call_indirect without defined table"};
 
-            FuncIdx type_idx;
+            TypeIdx type_idx;
             std::tie(type_idx, pos) = leb128u_decode<uint32_t>(pos, end);
 
             if (type_idx >= module.typesec.size())
