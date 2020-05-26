@@ -489,6 +489,12 @@ std::optional<uint32_t> find_export(const Module& module, ExternalKind kind, std
     return (it != module.exportsec.end() ? std::make_optional(it->index) : std::nullopt);
 }
 
+inline uint64_t& get_local(std::vector<uint64_t>& locals, uint32_t idx) noexcept
+{
+    assert(idx <= locals.size());
+    return locals[idx];
+}
+
 }  // namespace
 
 std::unique_ptr<Instance> instantiate(Module module,
@@ -842,23 +848,17 @@ execution_result execute(
         }
         case Instr::local_get:
         {
-            const auto idx = read<uint32_t>(immediates);
-            assert(idx <= locals.size());
-            stack.push(locals[idx]);
+            stack.push(get_local(locals, read<uint32_t>(immediates)));
             break;
         }
         case Instr::local_set:
         {
-            const auto idx = read<uint32_t>(immediates);
-            assert(idx <= locals.size());
-            locals[idx] = stack.pop();
+            get_local(locals, read<uint32_t>(immediates)) = stack.pop();
             break;
         }
         case Instr::local_tee:
         {
-            const auto idx = read<uint32_t>(immediates);
-            assert(idx <= locals.size());
-            locals[idx] = stack.top();
+            get_local(locals, read<uint32_t>(immediates)) = stack.top();
             break;
         }
         case Instr::global_get:
