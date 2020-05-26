@@ -44,6 +44,7 @@ commands:
             $CC --version
             $CXX --version
             cmake --version
+            printf "\nninja $(ninja --version) $((ninja --help 2>&1 || true) | grep -- -j)"
 
             # Create the toolchain.info file for cache key.
             echo $TOOLCHAIN >> toolchain.info
@@ -64,7 +65,7 @@ commands:
             - ~/.hunter/_Base/Cache
       - run:
           name: "Build"
-          command: cmake --build ~/build --target <<parameters.target>>
+          command: cmake --build ~/build --target <<parameters.target>> -- -j16
 
   test:
     description: "Test"
