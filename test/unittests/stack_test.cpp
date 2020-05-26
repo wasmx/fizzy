@@ -29,6 +29,27 @@ TEST(stack, push_and_pop)
     EXPECT_TRUE(stack.empty());
 }
 
+TEST(stack, emplace)
+{
+    Stack<char> stack;
+
+    EXPECT_EQ(stack.size(), 0);
+    EXPECT_TRUE(stack.empty());
+
+    stack.emplace('a');
+    stack.emplace('b');
+    stack.emplace('c');
+
+    EXPECT_EQ(stack.size(), 3);
+
+    EXPECT_EQ(stack.pop(), 'c');
+    EXPECT_EQ(stack.pop(), 'b');
+    EXPECT_EQ(stack.pop(), 'a');
+
+    EXPECT_EQ(stack.size(), 0);
+    EXPECT_TRUE(stack.empty());
+}
+
 TEST(stack, drop_and_peek)
 {
     Stack<char> stack;
@@ -261,4 +282,47 @@ TEST(operand_stack, to_vector)
     stack.push(3);
 
     EXPECT_THAT(std::vector(stack.rbegin(), stack.rend()), ElementsAre(1, 2, 3));
+}
+
+TEST(stack, struct_item)
+{
+    struct StackItem
+    {
+        char a, b, c;
+        StackItem() = default;  // required for drop() (which calls resize())
+        StackItem(char _a, char _b, char _c) : a(_a), b(_b), c(_c) {}
+    };
+
+    Stack<StackItem> stack;
+
+    stack.emplace('a', 'b', 'c');
+    stack.emplace('d', 'e', 'f');
+    stack.emplace('g', 'h', 'i');
+
+    EXPECT_EQ(stack.size(), 3);
+
+    EXPECT_EQ(stack.top().a, 'g');
+    EXPECT_EQ(stack.top().b, 'h');
+    EXPECT_EQ(stack.top().c, 'i');
+    EXPECT_EQ(stack[1].a, 'd');
+    EXPECT_EQ(stack[1].b, 'e');
+    EXPECT_EQ(stack[1].c, 'f');
+    EXPECT_EQ(stack[2].a, 'a');
+    EXPECT_EQ(stack[2].b, 'b');
+    EXPECT_EQ(stack[2].c, 'c');
+
+    EXPECT_EQ(stack.pop().a, 'g');
+
+    EXPECT_EQ(stack.top().a, 'd');
+    EXPECT_EQ(stack.top().b, 'e');
+    EXPECT_EQ(stack.top().c, 'f');
+    EXPECT_EQ(stack[1].a, 'a');
+    EXPECT_EQ(stack[1].b, 'b');
+    EXPECT_EQ(stack[1].c, 'c');
+
+    stack.drop();
+
+    EXPECT_EQ(stack.top().a, 'a');
+    EXPECT_EQ(stack.top().b, 'b');
+    EXPECT_EQ(stack.top().c, 'c');
 }

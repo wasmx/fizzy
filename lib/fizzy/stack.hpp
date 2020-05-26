@@ -29,6 +29,12 @@ public:
 
     void push(T val) { emplace_back(val); }
 
+    template <typename... Args>
+    void emplace(Args&&... args)
+    {
+        std::vector<T>::emplace_back(std::forward<Args>(args)...);
+    }
+
     T pop()
     {
         const auto res = back();
