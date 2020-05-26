@@ -303,8 +303,8 @@ void FUNCNAME(square)(UINT* const out, const UINT* const x)
     for (int i = 0; i < NUM_LIMBS; i++)
     {
         UINT2 uv = (UINT2)(x[i]) * x[i] + w[2 * i];
-        UINT u = uv >> LIMB_BITS;  // / base
-        UINT v = (UINT)uv;         // % base
+        UINT u = (UINT)(uv >> LIMB_BITS);  // / base
+        UINT v = (UINT)uv;                 // % base
         w[2 * i] = v;
         UINT c = u;
         for (int j = i + 1; j < NUM_LIMBS; j++)
@@ -312,8 +312,8 @@ void FUNCNAME(square)(UINT* const out, const UINT* const x)
             UINT2 xixj = (UINT2)(x[i]) * x[j];
             UINT2 partial_sum = xixj + c + w[i + j];
             uv = xixj + partial_sum;
-            u = uv >> LIMB_BITS;  // / base
-            v = (UINT)uv;         // % base
+            u = (UINT)(uv >> LIMB_BITS);  // / base
+            v = (UINT)uv;                 // % base
             w[i + j] = v;
             c = u;
             // may have more overflow, so keep carrying
@@ -391,16 +391,16 @@ void FUNCNAME(montreduce)(UINT* const out, const UINT* const T, const UINT* cons
         for (j = 0; j < NUM_LIMBS; j++)
         {
             UINT2 sum = (UINT2)ui * m[j] + A[i + j] + carry;
-            A[i + j] = (UINT)sum;      // % b;
-            carry = sum >> LIMB_BITS;  // / b
+            A[i + j] = (UINT)sum;              // % b;
+            carry = (UINT)(sum >> LIMB_BITS);  // / b
         }
         // carry may be nonzero, so keep carrying
         int k = 0;
         while (carry && i + j + k < 2 * NUM_LIMBS + 1)
         {
             UINT2 sum = (UINT2)(A[i + j + k]) + carry;
-            A[i + j + k] = (UINT)sum;  // % b
-            carry = sum >> LIMB_BITS;  // / b
+            A[i + j + k] = (UINT)sum;          // % b
+            carry = (UINT)(sum >> LIMB_BITS);  // / b
             k += 1;
         }
     }
@@ -456,13 +456,13 @@ void FUNCNAME(mulmodmontHAC)(
             UINT2 partial_sum = xiyj + carry;
             UINT2 sum = uimj + A[i + j] + partial_sum;
             A[i + j] = (UINT)sum;
-            carry = sum >> LIMB_BITS;
+            carry = (UINT)(sum >> LIMB_BITS);
             // if there was overflow in the sum beyond the carry:
             if (sum < partial_sum)
             {
                 int k = 2;
                 while (i + j + k < NUM_LIMBS * 2 && A[i + j + k] == (UINT)0 - 1)
-                {   // note 0-1 is 0xffffffff
+                {  // note 0-1 is 0xffffffff
                     // this is rare, need limb to be all 1's
                     A[i + j + k] = 0;
                     k++;
@@ -501,37 +501,37 @@ void FUNCNAME(mulmodmontFIOS)(UINT* const out, const UINT* const a, const UINT* 
         UINT carry = 0;
         UINT2 sum = 0;
         sum = (UINT2)(t[0]) + (UINT2)(a[0]) * b[i];
-        carry = sum >> LIMB_BITS;
+        carry = (UINT)(sum >> LIMB_BITS);
         int k = 1;
         while (carry && k <= NUM_LIMBS + 1)
         {
             UINT2 temp = (UINT2)t[k] + carry;
             t[k] = (UINT)temp;
-            carry = temp >> LIMB_BITS;
+            carry = (UINT)(temp >> LIMB_BITS);
             k++;
         }
         UINT m = ((UINT)sum) * inv;
         sum = (UINT)sum + (UINT2)m * mod[0];  // lower limb of sum should be zero
-        carry = sum >> LIMB_BITS;
+        carry = (UINT)(sum >> LIMB_BITS);
 #pragma unroll
         for (int j = 1; j < NUM_LIMBS; j++)
         {
             sum = (UINT2)t[j] + (UINT2)a[j] * b[i] + carry;
-            carry = sum >> LIMB_BITS;
+            carry = (UINT)(sum >> LIMB_BITS);
             k = j + 1;
             while (carry && k <= NUM_LIMBS + 1)
             {
                 UINT2 temp = (UINT2)t[k] + carry;
                 t[k] = (UINT)temp;
-                carry = temp >> LIMB_BITS;
+                carry = (UINT)(temp >> LIMB_BITS);
                 k++;
             }
             sum = (UINT)sum + (UINT2)m * mod[j];
-            carry = sum >> LIMB_BITS;
+            carry = (UINT)(sum >> LIMB_BITS);
             t[j - 1] = (UINT)sum;
         }
         sum = (UINT2)t[NUM_LIMBS] + carry;
-        carry = sum >> LIMB_BITS;
+        carry = (UINT)(sum >> LIMB_BITS);
         t[NUM_LIMBS - 1] = (UINT)sum;
         t[NUM_LIMBS] = t[NUM_LIMBS + 1] + carry;
         t[NUM_LIMBS + 1] = 0;
@@ -562,25 +562,25 @@ void FUNCNAME(mulmodmont)(
         for (int j = 0; j < NUM_LIMBS; j++)
         {
             sum = (UINT2)A[j] + (UINT2)x[i] * y[j] + carry;
-            carry = sum >> LIMB_BITS;
+            carry = (UINT)(sum >> LIMB_BITS);
             A[j] = (UINT)sum;
         }
         sum = (UINT2)(A[NUM_LIMBS]) + carry;
-        carry = sum >> LIMB_BITS;
+        carry = (UINT)(sum >> LIMB_BITS);
         A[NUM_LIMBS] = (UINT)sum;
         A[NUM_LIMBS + 1] = carry;
         UINT A0inv = A[0] * inv;
         sum = (UINT2)(A[0]) + (UINT2)A0inv * m[0];
-        carry = sum >> LIMB_BITS;
+        carry = (UINT)(sum >> LIMB_BITS);
 #pragma unroll
         for (int j = 1; j < NUM_LIMBS; j++)
         {
             sum = (UINT2)(A[j]) + (UINT2)A0inv * m[j] + carry;
-            carry = sum >> LIMB_BITS;
+            carry = (UINT)(sum >> LIMB_BITS);
             A[j - 1] = (UINT)sum;
         }
         sum = (UINT2)(A[NUM_LIMBS]) + carry;
-        carry = sum >> LIMB_BITS;
+        carry = (UINT)(sum >> LIMB_BITS);
         A[NUM_LIMBS - 1] = (UINT)sum;
         A[NUM_LIMBS] = A[NUM_LIMBS + 1] + carry;
     }
