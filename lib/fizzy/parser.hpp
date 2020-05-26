@@ -40,8 +40,10 @@ inline parser_result<uint8_t> parse_byte(const uint8_t* pos, const uint8_t* end)
 ///
 /// @param input    The beginning of the expr binary input.
 /// @param end      The end of the binary input.
+/// @param func_idx Index of the function being parsed.
 /// @param module   Module that this code is part of.
-parser_result<Code> parse_expr(const uint8_t* input, const uint8_t* end, const Module& module);
+parser_result<Code> parse_expr(
+    const uint8_t* input, const uint8_t* end, FuncIdx func_idx, const Module& module);
 
 parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end);
 

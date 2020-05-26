@@ -339,13 +339,13 @@ inline parser_result<code_view> parse(const uint8_t* pos, const uint8_t* end)
     return {{code_begin, code_size}, code_end};
 }
 
-inline Code parse_code(code_view code_binary, const Module& module)
+inline Code parse_code(code_view code_binary, FuncIdx func_idx, const Module& module)
 {
     const auto begin = code_binary.begin();
     const auto end = code_binary.end();
     const auto [locals_vec, pos1] = parse_vec<Locals>(begin, end);
 
-    auto [code, pos2] = parse_expr(pos1, end, module);
+    auto [code, pos2] = parse_expr(pos1, end, func_idx, module);
 
     // Size is the total bytes of locals and expressions.
     if (pos2 != end)
@@ -538,10 +538,7 @@ Module parse(bytes_view input)
     // Process code. TODO: This can be done lazily.
     module.codesec.reserve(code_binaries.size());
     for (size_t i = 0; i < code_binaries.size(); ++i)
-    {
-        assert(module.funcsec[i] < module.typesec.size());
-        module.codesec.emplace_back(parse_code(code_binaries[i], module));
-    }
+        module.codesec.emplace_back(parse_code(code_binaries[i], static_cast<FuncIdx>(i), module));
 
     return module;
 }
