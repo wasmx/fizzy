@@ -5,8 +5,8 @@
 #include "instructions.hpp"
 #include "module.hpp"
 #include "parser.hpp"
+#include "stack.hpp"
 #include <cassert>
-#include <stack>
 
 namespace fizzy
 {
@@ -121,7 +121,7 @@ parser_result<Code> parse_expr(
     // The stack of control frames allowing to distinguish between block/if/else and label
     // instructions as defined in Wasm Validation Algorithm.
     // For a block/if/else instruction the value is the block/if/else's immediate offset.
-    std::stack<ControlFrame> control_stack;
+    Stack<ControlFrame> control_stack;
 
     const auto func_type_idx = module.funcsec[func_idx];
     assert(func_type_idx < module.typesec.size());
