@@ -65,7 +65,7 @@ commands:
             - ~/.hunter/_Base/Cache
       - run:
           name: "Build"
-          command: cmake --build ~/build --target <<parameters.target>>
+          command: cmake --build ~/build --target <<parameters.target>> -- -j16
 
   test:
     description: "Test"
