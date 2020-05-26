@@ -137,9 +137,19 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, const Mod
         auto& frame = control_stack.top();
         const auto& metrics = metrics_table[opcode];
 
-        if (!frame.unreachable &&
-            (frame.stack_height - frame.parent_stack_height) < metrics.stack_height_required)
-            throw validation_error{"stack underflow"};
+        if (!frame.unreachable)
+        {
+            if ((frame.stack_height - frame.parent_stack_height) < metrics.stack_height_required)
+                throw validation_error{"stack underflow"};
+
+            // Update code's max_stack_height using frame.stack_height of the previous instruction.
+            // At this point frame.stack_height includes additional changes to the stack height
+            // if the previous instruction is a call/call_indirect.
+            // This way the update is skipped for end/else instructions (because their frame is
+            // already popped/reset), but it does not matter, as these instructions do not modify
+            // stack height anyway.
+            code.max_stack_height = std::max(code.max_stack_height, frame.stack_height);
+        }
 
         frame.stack_height += metrics.stack_height_change;
 

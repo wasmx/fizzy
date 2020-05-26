@@ -18,7 +18,7 @@ execution_result execute_unary_operation(Instr instr, uint64_t arg)
     // type is currently needed only to get arity of function, so exact value types don't matter
     module.typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
     module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(Code{0, {Instr::local_get, instr, Instr::end}, {0, 0, 0, 0}});
+    module.codesec.emplace_back(Code{1, 0, {Instr::local_get, instr, Instr::end}, {0, 0, 0, 0}});
 
     return execute(module, 0, {arg});
 }
@@ -29,8 +29,8 @@ execution_result execute_binary_operation(Instr instr, uint64_t lhs, uint64_t rh
     // type is currently needed only to get arity of function, so exact value types don't matter
     module.typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
     module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(
-        Code{0, {Instr::local_get, Instr::local_get, instr, Instr::end}, {0, 0, 0, 0, 1, 0, 0, 0}});
+    module.codesec.emplace_back(Code{
+        2, 0, {Instr::local_get, Instr::local_get, instr, Instr::end}, {0, 0, 0, 0, 1, 0, 0, 0}});
 
     return execute(module, 0, {lhs, rhs});
 }

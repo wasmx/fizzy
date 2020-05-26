@@ -332,6 +332,8 @@ struct Element
 /// https://webassembly.github.io/spec/core/binary/modules.html#code-section
 struct Code
 {
+    int max_stack_height = 0;
+
     uint32_t local_count = 0;
 
     // The instructions bytecode without immediate values.

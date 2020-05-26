@@ -25,27 +25,28 @@ TEST(parser_expr, instr_loop)
     const auto [code1, pos1] = parse_expr(loop_void);
     EXPECT_EQ(code1.instructions, (std::vector{Instr::loop, Instr::end, Instr::end}));
     EXPECT_EQ(code1.immediates.size(), 0);
-
-    // EXPECT_EQ(code1.max_stack_height, 0);
+    EXPECT_EQ(code1.max_stack_height, 0);
 
     const auto loop_i32 = "037f41000b0b"_bytes;
     const auto [code2, pos2] = parse_expr(loop_i32);
     EXPECT_EQ(
         code2.instructions, (std::vector{Instr::loop, Instr::i32_const, Instr::end, Instr::end}));
     EXPECT_EQ(code2.immediates.size(), 4);
-    // EXPECT_EQ(code2.max_stack_height, 1);
+    EXPECT_EQ(code2.max_stack_height, 1);
 
     const auto loop_f32 = "037d43000000000b0b"_bytes;
     const auto [code3, pos3] = parse_expr(loop_f32);
     EXPECT_EQ(
         code3.instructions, (std::vector{Instr::loop, Instr::f32_const, Instr::end, Instr::end}));
     EXPECT_EQ(code3.immediates.size(), 0);
+    EXPECT_EQ(code3.max_stack_height, 1);
 
     const auto loop_f64 = "037d4400000000000000000b0b"_bytes;
     const auto [code4, pos4] = parse_expr(loop_f64);
     EXPECT_EQ(
         code4.instructions, (std::vector{Instr::loop, Instr::f64_const, Instr::end, Instr::end}));
     EXPECT_EQ(code4.immediates.size(), 0);
+    EXPECT_EQ(code4.max_stack_height, 1);
 }
 
 TEST(parser_expr, instr_loop_input_buffer_overflow)
@@ -124,6 +125,7 @@ TEST(parser_expr, block_br)
         "0b000000"
         "01000000"
         "01000000"_bytes);
+    EXPECT_EQ(code.max_stack_height, 1);
 }
 
 TEST(parser_expr, instr_br_table)
@@ -172,6 +174,7 @@ TEST(parser_expr, instr_br_table)
         "00000000"
         "04000000"_bytes;
     EXPECT_EQ(code.immediates.substr(br_table_imm_offset, expected_br_imm.size()), expected_br_imm);
+    EXPECT_EQ(code.max_stack_height, 1);
 }
 
 TEST(parser_expr, instr_br_table_empty_vector)
@@ -198,6 +201,7 @@ TEST(parser_expr, instr_br_table_empty_vector)
         "00000000"
         "00000000"_bytes;
     EXPECT_EQ(code.immediates.substr(br_table_imm_offset, expected_br_imm.size()), expected_br_imm);
+    EXPECT_EQ(code.max_stack_height, 1);
 }
 
 TEST(parser_expr, instr_br_table_as_return)
@@ -208,10 +212,9 @@ TEST(parser_expr, instr_br_table_as_return)
     */
 
     const auto code_bin = "41000e00000b"_bytes;
-
-    const auto [code, pos] = parse_expr(code_bin);
-
+    const auto [code, _] = parse_expr(code_bin);
     EXPECT_EQ(code.instructions, (std::vector{Instr::i32_const, Instr::br_table, Instr::end}));
+    EXPECT_EQ(code.max_stack_height, 1);
 }
 
 TEST(parser_expr, instr_br_table_missing_arg)
@@ -336,6 +339,8 @@ TEST(parser_expr, call_0args_1result)
 
     const auto module = parse(wasm);
     ASSERT_EQ(module.codesec.size(), 2);
+    EXPECT_EQ(module.codesec[0].max_stack_height, 1);
+    EXPECT_EQ(module.codesec[1].max_stack_height, 1);
 }
 
 TEST(parser_expr, call_1arg_1result)
@@ -349,8 +354,9 @@ TEST(parser_expr, call_1arg_1result)
 
     const auto module = parse(wasm);
     ASSERT_EQ(module.codesec.size(), 2);
+    EXPECT_EQ(module.codesec[0].max_stack_height, 1);
+    EXPECT_EQ(module.codesec[1].max_stack_height, 1);
 }
-
 TEST(parser_expr, call_nonexisting_typeidx)
 {
     // This creates a wasm module where code[0] has a call instruction calling function[1] which
