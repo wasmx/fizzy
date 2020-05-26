@@ -489,10 +489,13 @@ std::optional<uint32_t> find_export(const Module& module, ExternalKind kind, std
     return (it != module.exportsec.end() ? std::make_optional(it->index) : std::nullopt);
 }
 
-inline uint64_t& get_local(std::vector<uint64_t>& locals, uint32_t idx) noexcept
+inline uint64_t& get_local(
+    std::vector<uint64_t>& args, std::vector<uint64_t>& locals, uint32_t idx) noexcept
 {
-    assert(idx <= locals.size());
-    return locals[idx];
+    if (idx < args.size())
+        return args[idx];
+    assert((idx - args.size()) <= locals.size());
+    return locals[idx - args.size()];
 }
 
 }  // namespace
@@ -647,8 +650,7 @@ execution_result execute(
     const auto& code = instance.module.codesec[code_idx];
     auto* const memory = instance.memory.get();
 
-    std::vector<uint64_t> locals = std::move(args);
-    locals.resize(locals.size() + code.local_count);
+    std::vector<uint64_t> locals(code.local_count, 0);
 
     OperandStack stack(static_cast<size_t>(code.max_stack_height));
 
@@ -848,17 +850,17 @@ execution_result execute(
         }
         case Instr::local_get:
         {
-            stack.push(get_local(locals, read<uint32_t>(immediates)));
+            stack.push(get_local(args, locals, read<uint32_t>(immediates)));
             break;
         }
         case Instr::local_set:
         {
-            get_local(locals, read<uint32_t>(immediates)) = stack.pop();
+            get_local(args, locals, read<uint32_t>(immediates)) = stack.pop();
             break;
         }
         case Instr::local_tee:
         {
-            get_local(locals, read<uint32_t>(immediates)) = stack.top();
+            get_local(args, locals, read<uint32_t>(immediates)) = stack.top();
             break;
         }
         case Instr::global_get:
