@@ -514,6 +514,9 @@ Module parse(bytes_view input)
             "both module memory and imported memory are defined (at most one of them is allowed)"};
     }
 
+    if (!module.datasec.empty() && module.memorysec.empty() && module.imported_memory_types.empty())
+        throw validation_error("data section encountered without a memory section");
+
     if (module.imported_table_types.size() > 1)
         throw validation_error{"too many imported tables (at most one is allowed)"};
 
