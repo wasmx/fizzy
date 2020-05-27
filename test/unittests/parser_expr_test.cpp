@@ -91,6 +91,84 @@ TEST(parser_expr, instr_block_input_buffer_overflow)
     EXPECT_THROW_MESSAGE(parse_expr(block_missing_end), parser_error, "unexpected EOF");
 }
 
+TEST(parser_expr, loop_br)
+{
+    /* wat2wasm
+    (func (loop (br 0)))
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a0901070003400c000b0b");
+    const auto module = parse(wasm);
+
+    EXPECT_EQ(module.codesec[0].instructions,
+        (std::vector{Instr::loop, Instr::br, Instr::end, Instr::end}));
+    EXPECT_EQ(module.codesec[0].immediates,
+        "00000000"    // code_offset
+        "00000000"    // imm_offset
+        "00000000"    // stack_height
+        "00"_bytes);  // arity
+
+    /* wat2wasm
+    (func
+        (i32.const 0)
+        (loop (br 0))
+        drop
+    )
+    */
+    const auto wasm_parent_stack =
+        from_hex("0061736d01000000010401600000030201000a0c010a00410003400c000b1a0b");
+    const auto module_parent_stack = parse(wasm_parent_stack);
+
+    EXPECT_EQ(module_parent_stack.codesec[0].instructions,
+        (std::vector{
+            Instr::i32_const, Instr::loop, Instr::br, Instr::end, Instr::drop, Instr::end}));
+    EXPECT_EQ(module_parent_stack.codesec[0].immediates,
+        "00000000"    // i32.const
+        "01000000"    // code_offset
+        "04000000"    // imm_offset
+        "01000000"    // stack_height
+        "00"_bytes);  // arity
+
+    /* wat2wasm
+    (func
+        (loop (result i32)
+            (i32.const 0)
+            (br 0)
+        )
+        drop
+    )
+    */
+    const auto wasm_arity =
+        from_hex("0061736d01000000010401600000030201000a0c010a00037f41000c000b1a0b");
+    const auto module_arity = parse(wasm_arity);
+
+    EXPECT_EQ(
+        module_arity.codesec[0].instructions, (std::vector{Instr::loop, Instr::i32_const, Instr::br,
+                                                  Instr::end, Instr::drop, Instr::end}));
+    EXPECT_EQ(module_arity.codesec[0].immediates,
+        "00000000"    // i32.const
+        "00000000"    // code_offset
+        "00000000"    // imm_offset
+        "00000000"    // stack_height
+        "00"_bytes);  // arity - always 0 for loop
+}
+
+TEST(parser_expr, loop_return)
+{
+    /* wat2wasm
+    (func (loop (return)))
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a0801060003400f0b0b");
+    const auto module = parse(wasm);
+
+    EXPECT_EQ(module.codesec[0].instructions,
+        (std::vector{Instr::loop, Instr::return_, Instr::end, Instr::end}));
+    EXPECT_EQ(module.codesec[0].immediates,
+        "03000000"    // code_offset
+        "0d000000"    // imm_offset
+        "00000000"    // stack_height
+        "00"_bytes);  // arity
+}
+
 TEST(parser_expr, block_br)
 {
     // nop
