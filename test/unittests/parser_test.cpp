@@ -640,11 +640,12 @@ TEST(parser, global_invalid_mutability)
         "unexpected byte value 2, expected 0x00 or 0x01 for global mutability");
 }
 
-TEST(parser, global_initializer_expression_invalid_instruction)
+TEST(parser, global_invalid_initializer)
 {
-    const auto wasm = bytes{wasm_prefix} + make_section(6, make_vec({"7f0000"_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm), validation_error,
-        "unexpected instruction in the global initializer expression: 0");
+    // valtype=i32 mutability=0 expression=<memory_size>
+    const auto wasm = bytes{wasm_prefix} + make_section(6, make_vec({"7f003f"_bytes}));
+    EXPECT_THROW_MESSAGE(
+        parse(wasm), validation_error, "unexpected instruction in the constant expression: 63");
 }
 
 TEST(parser, global_valtype_out_of_bounds)
