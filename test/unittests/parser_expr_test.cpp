@@ -200,6 +200,67 @@ TEST(parser_expr, block_br)
         "01000000"
         "01000000"_bytes);
     EXPECT_EQ(code.max_stack_height, 1);
+
+    /* wat2wasm
+    (func
+        (i32.const 0)
+        (block (br 0))
+        drop
+    )
+    */
+    const auto wasm_parent_stack =
+        from_hex("0061736d01000000010401600000030201000a0c010a00410002400c000b1a0b");
+    const auto module_parent_stack = parse(wasm_parent_stack);
+
+    EXPECT_EQ(module_parent_stack.codesec[0].instructions,
+        (std::vector{
+            Instr::i32_const, Instr::block, Instr::br, Instr::end, Instr::drop, Instr::end}));
+    EXPECT_EQ(module_parent_stack.codesec[0].immediates,
+        "00000000"    // i32.const
+        "04000000"    // code_offset
+        "11000000"    // imm_offset
+        "01000000"    // stack_height
+        "00"_bytes);  // arity
+
+    /* wat2wasm
+    (func
+        (block (result i32)
+            (i32.const 0)
+            (br 0)
+        )
+        drop
+    )
+    */
+    const auto wasm_arity =
+        from_hex("0061736d01000000010401600000030201000a0c010a00027f41000c000b1a0b");
+    const auto module_arity = parse(wasm_arity);
+
+    EXPECT_EQ(
+        module_arity.codesec[0].instructions, (std::vector{Instr::block, Instr::i32_const,
+                                                  Instr::br, Instr::end, Instr::drop, Instr::end}));
+    EXPECT_EQ(module_arity.codesec[0].immediates,
+        "00000000"  // i32.const
+        "04000000"  // code_offset
+        "11000000"  // imm_offset
+        "00000000"  // stack_height
+        "01"_bytes);
+}
+
+TEST(parser_expr, block_return)
+{
+    /* wat2wasm
+    (func (block (return)))
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a0801060002400f0b0b");
+    const auto module = parse(wasm);
+
+    EXPECT_EQ(module.codesec[0].instructions,
+        (std::vector{Instr::block, Instr::return_, Instr::end, Instr::end}));
+    EXPECT_EQ(module.codesec[0].immediates,
+        "03000000"    // code_offset
+        "0d000000"    // imm_offset
+        "00000000"    // stack_height
+        "00"_bytes);  // arity
 }
 
 TEST(parser_expr, instr_br_table)
