@@ -16,8 +16,8 @@ namespace fizzy
 {
 namespace
 {
-// code_offset + imm_offset + stack_height + arity
-constexpr auto BranchImmediateSize = 3 * sizeof(uint32_t) + sizeof(uint8_t);
+// code_offset + imm_offset + stack_height
+constexpr auto BranchImmediateSize = 3 * sizeof(uint32_t);
 
 void match_imported_functions(const std::vector<FuncType>& module_imported_types,
     const std::vector<ExternalFunction>& imported_functions)
@@ -240,10 +240,9 @@ inline T read(const uint8_t*& input) noexcept
     return ret;
 }
 
-void branch(
-    const Code& code, OperandStack& stack, const Instr*& pc, const uint8_t*& immediates) noexcept
+void branch(const Code& code, OperandStack& stack, const Instr*& pc, const uint8_t*& immediates,
+    uint8_t arity) noexcept
 {
-    const auto arity = read<uint8_t>(immediates);
     const auto code_offset = read<uint32_t>(immediates);
     const auto imm_offset = read<uint32_t>(immediates);
     const auto stack_drop = read<uint32_t>(immediates);
@@ -670,6 +669,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const uint64_
         case Instr::br_if:
         case Instr::return_:
         {
+            const auto arity = read<uint8_t>(immediates);
+
             // Check condition for br_if.
             if (instruction == Instr::br_if && static_cast<uint32_t>(stack.pop()) == 0)
             {
@@ -677,12 +678,14 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const uint64_
                 break;
             }
 
-            branch(code, stack, pc, immediates);
+            branch(code, stack, pc, immediates, arity);
             break;
         }
         case Instr::br_table:
         {
             const auto br_table_size = read<uint32_t>(immediates);
+            const auto arity = read<uint8_t>(immediates);
+
             const auto br_table_idx = stack.pop();
 
             const auto label_idx_offset = br_table_idx < br_table_size ?
@@ -690,7 +693,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const uint64_
                                               br_table_size * BranchImmediateSize;
             immediates += label_idx_offset;
 
-            branch(code, stack, pc, immediates);
+            branch(code, stack, pc, immediates, arity);
             break;
         }
         case Instr::call:
