@@ -794,7 +794,7 @@ TEST(parser, start_invalid_index)
                      make_section(3, func_section) + make_section(8, start_section) +
                      make_section(10, code_section);
 
-    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "invalid start function index");
+    EXPECT_THROW_MESSAGE(parse(bin), validation_error, "invalid start function index");
 }
 
 TEST(parser, start_missing_funcsec)
@@ -802,7 +802,7 @@ TEST(parser, start_missing_funcsec)
     const auto start_section = "01"_bytes;
     const auto bin = bytes{wasm_prefix} + make_section(8, start_section);
 
-    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "invalid start function index");
+    EXPECT_THROW_MESSAGE(parse(bin), validation_error, "invalid start function index");
 }
 
 TEST(parser, start_module_with_imports)
@@ -834,7 +834,7 @@ TEST(parser, start_module_with_imports_invalid_index)
                      make_section(2, import_section) + make_section(3, func_section) +
                      make_section(8, start_section) + make_section(10, code_section);
 
-    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "invalid start function index");
+    EXPECT_THROW_MESSAGE(parse(bin), validation_error, "invalid start function index");
 }
 
 TEST(parser, start_index_decode_out_of_bounds)

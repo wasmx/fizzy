@@ -566,7 +566,7 @@ Module parse(bytes_view input)
     }
 
     if (module.startfunc && *module.startfunc >= total_func_count)
-        throw parser_error{"invalid start function index"};
+        throw validation_error{"invalid start function index"};
 
     // Process code. TODO: This can be done lazily.
     module.codesec.reserve(code_binaries.size());
