@@ -114,9 +114,8 @@ TEST(parser_expr, block_br)
     EXPECT_EQ(code.immediates,
         "0a000000"
         "01000000"
-        "00000000"  // label_idx
         "08000000"  // code_offset
-        "21000000"  // imm_offset
+        "1d000000"  // imm_offset
         "00000000"  // stack_height
         "00"        // arity
         "0b000000"
@@ -165,42 +164,37 @@ TEST(parser_expr, instr_br_table)
 
     // 1 local_get before br_table
     const auto br_table_imm_offset = 4;
-    // br_imm_size = 17
-    // br_0_offset = br_table_imm_offset + br_imm_size * 5 + 4 + br_imm_size = 114 = 0x72
-    // br_1_offset = br_0_offset + 21 = 0x87
-    // br_2_offset = br_1_offset + 21 = 0x9c
-    // br_3_offset = br_2_offset + 21 = 0xb1
-    // br_4_offset = br_3_offset + 21 = 0xc6
+    // br_imm_size = 13
+    // br_0_offset = br_table_imm_offset + 4 + br_imm_size * 5 + 4 + br_imm_size = 86 = 0x5a
+    // br_1_offset = br_0_offset + 4 + br_imm_size = 0x6b
+    // br_2_offset = br_1_offset + 4 + br_imm_size = 0x7c
+    // br_3_offset = br_2_offset + 4 + br_imm_size = 0x8d
+    // br_4_offset = br_3_offset + 4 + br_imm_size = 0x9e
     const auto expected_br_imm =
         "04000000"  // label_count
 
-        "03000000"  // label_idx
         "13000000"  // code_offset
-        "b1000000"  // imm_offset
+        "8d000000"  // imm_offset
         "00000000"  // stack_height
         "00"        // arity
 
-        "02000000"  // label_idx
         "10000000"  // code_offset
-        "9c000000"  // imm_offset
+        "7c000000"  // imm_offset
         "00000000"  // stack_height
         "00"        // arity
 
-        "01000000"  // label_idx
         "0d000000"  // code_offset
-        "87000000"  // imm_offset
+        "6b000000"  // imm_offset
         "00000000"  // stack_height
         "00"        // arity
 
-        "00000000"  // label_idx
         "0a000000"  // code_offset
-        "72000000"  // imm_offset
+        "5a000000"  // imm_offset
         "00000000"  // stack_height
         "00"        // arity
 
-        "04000000"   // label_idx
         "16000000"   // code_offset
-        "c6000000"   // imm_offset
+        "9e000000"   // imm_offset
         "00000000"   // stack_height
         "00"_bytes;  // arity
 
@@ -234,9 +228,8 @@ TEST(parser_expr, instr_br_table_empty_vector)
     const auto br_table_imm_offset = 4;
     const auto expected_br_imm =
         "00000000"   // label_count
-        "00000000"   // label_idx
         "06000000"   // code_offset
-        "2e000000"   // imm_offset
+        "26000000"   // imm_offset
         "00000000"   // stack_height
         "00"_bytes;  // arity
     EXPECT_EQ(code.immediates.substr(br_table_imm_offset, expected_br_imm.size()), expected_br_imm);

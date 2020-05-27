@@ -16,8 +16,8 @@ namespace fizzy
 {
 namespace
 {
-// label_idx + code_offset + imm_offset + stack_height + arity
-constexpr auto BranchImmediateSize = 4 * sizeof(uint32_t) + sizeof(uint8_t);
+// code_offset + imm_offset + stack_height + arity
+constexpr auto BranchImmediateSize = 3 * sizeof(uint32_t) + sizeof(uint8_t);
 
 inline bool operator==(const FuncType& lhs, const FuncType& rhs)
 {
@@ -256,9 +256,6 @@ inline T read(const uint8_t*& input) noexcept
 void branch(
     const Code& code, OperandStack& stack, const Instr*& pc, const uint8_t*& immediates) noexcept
 {
-    // skip label_idx
-    immediates += sizeof(uint32_t);
-
     const auto code_offset = read<uint32_t>(immediates);
     const auto imm_offset = read<uint32_t>(immediates);
     const auto stack_height = static_cast<size_t>(read<int>(immediates));
