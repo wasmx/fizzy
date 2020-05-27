@@ -655,38 +655,20 @@ execution_result execute(
             trap = true;
             goto end;
         case Instr::nop:
-            break;
         case Instr::block:
-        {
-            immediates += sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint32_t);
-            break;
-        }
         case Instr::loop:
             break;
         case Instr::if_:
         {
-            const auto arity = read<uint8_t>(immediates);
-            const auto target_pc = read<uint32_t>(immediates);
-            const auto target_imm = read<uint32_t>(immediates);
-
             if (static_cast<uint32_t>(stack.pop()) != 0)
                 immediates += 2 * sizeof(uint32_t);  // Skip the immediates for else instruction.
             else
             {
-                const auto target_else_pc = read<uint32_t>(immediates);
-                const auto target_else_imm = read<uint32_t>(immediates);
+                const auto target_pc = read<uint32_t>(immediates);
+                const auto target_imm = read<uint32_t>(immediates);
 
-                if (target_else_pc != 0)  // If else block defined.
-                {
-                    pc = code.instructions.data() + target_else_pc;
-                    immediates = code.immediates.data() + target_else_imm;
-                }
-                else  // If else block not defined go to end of if.
-                {
-                    assert(arity == 0);  // if without else cannot have type signature.
-                    pc = code.instructions.data() + target_pc;
-                    immediates = code.immediates.data() + target_imm;
-                }
+                pc = code.instructions.data() + target_pc;
+                immediates = code.immediates.data() + target_imm;
             }
             break;
         }
