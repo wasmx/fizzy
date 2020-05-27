@@ -528,7 +528,7 @@ Module parse(bytes_view input)
 
     if (!module.elementsec.empty() && module.tablesec.empty() &&
         module.imported_table_types.empty())
-        throw parser_error("element section encountered without a table section");
+        throw validation_error("element section encountered without a table section");
 
     if (module.funcsec.size() != code_binaries.size())
         throw parser_error("malformed binary: number of function and code entries must match");
