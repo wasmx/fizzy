@@ -31,24 +31,24 @@ TEST(parser_expr, instr_loop)
     EXPECT_EQ(code1.immediates.size(), 0);
     EXPECT_EQ(code1.max_stack_height, 0);
 
-    const auto loop_i32 = "037f41000b0b"_bytes;
+    const auto loop_i32 = "037f41000b1a0b"_bytes;
     const auto [code2, pos2] = parse_expr(loop_i32);
-    EXPECT_EQ(
-        code2.instructions, (std::vector{Instr::loop, Instr::i32_const, Instr::end, Instr::end}));
+    EXPECT_EQ(code2.instructions,
+        (std::vector{Instr::loop, Instr::i32_const, Instr::end, Instr::drop, Instr::end}));
     EXPECT_EQ(code2.immediates.size(), 4);
     EXPECT_EQ(code2.max_stack_height, 1);
 
-    const auto loop_f32 = "037d43000000000b0b"_bytes;
+    const auto loop_f32 = "037d43000000000b1a0b"_bytes;
     const auto [code3, pos3] = parse_expr(loop_f32);
-    EXPECT_EQ(
-        code3.instructions, (std::vector{Instr::loop, Instr::f32_const, Instr::end, Instr::end}));
+    EXPECT_EQ(code3.instructions,
+        (std::vector{Instr::loop, Instr::f32_const, Instr::end, Instr::drop, Instr::end}));
     EXPECT_EQ(code3.immediates.size(), 0);
     EXPECT_EQ(code3.max_stack_height, 1);
 
-    const auto loop_f64 = "037d4400000000000000000b0b"_bytes;
+    const auto loop_f64 = "037d4400000000000000000b1a0b"_bytes;
     const auto [code4, pos4] = parse_expr(loop_f64);
-    EXPECT_EQ(
-        code4.instructions, (std::vector{Instr::loop, Instr::f64_const, Instr::end, Instr::end}));
+    EXPECT_EQ(code4.instructions,
+        (std::vector{Instr::loop, Instr::f64_const, Instr::end, Instr::drop, Instr::end}));
     EXPECT_EQ(code4.immediates.size(), 0);
     EXPECT_EQ(code4.max_stack_height, 1);
 }
@@ -74,20 +74,20 @@ TEST(parser_expr, instr_block)
         "04000000"
         "09000000"_bytes);
 
-    const auto block_i64 = "027e42000b0b"_bytes;
+    const auto block_i64 = "027e42000b1a0b"_bytes;
     const auto [code2, pos2] = parse_expr(block_i64);
-    EXPECT_EQ(
-        code2.instructions, (std::vector{Instr::block, Instr::i64_const, Instr::end, Instr::end}));
+    EXPECT_EQ(code2.instructions,
+        (std::vector{Instr::block, Instr::i64_const, Instr::end, Instr::drop, Instr::end}));
     EXPECT_EQ(code2.immediates,
         "01"
         "03000000"
         "11000000"
         "0000000000000000"_bytes);
 
-    const auto block_f64 = "027c4400000000000000000b0b"_bytes;
+    const auto block_f64 = "027c4400000000000000000b1a0b"_bytes;
     const auto [code3, pos3] = parse_expr(block_f64);
-    EXPECT_EQ(
-        code3.instructions, (std::vector{Instr::block, Instr::f64_const, Instr::end, Instr::end}));
+    EXPECT_EQ(code3.instructions,
+        (std::vector{Instr::block, Instr::f64_const, Instr::end, Instr::drop, Instr::end}));
     EXPECT_EQ(code3.immediates,
         "01"
         "03000000"
@@ -112,13 +112,15 @@ TEST(parser_expr, block_br)
     //   local.set 1
     // end
     // local.get 1
+    // drop
     // end
 
-    const auto code_bin = "010240410a21010c00410b21010b20010b"_bytes;
+    const auto code_bin = "010240410a21010c00410b21010b20011a0b"_bytes;
     const auto [code, pos] = parse_expr(code_bin);
-    EXPECT_EQ(code.instructions,
-        (std::vector{Instr::nop, Instr::block, Instr::i32_const, Instr::local_set, Instr::br,
-            Instr::i32_const, Instr::local_set, Instr::end, Instr::local_get, Instr::end}));
+    EXPECT_EQ(
+        code.instructions, (std::vector{Instr::nop, Instr::block, Instr::i32_const,
+                               Instr::local_set, Instr::br, Instr::i32_const, Instr::local_set,
+                               Instr::end, Instr::local_get, Instr::drop, Instr::end}));
     EXPECT_EQ(code.immediates,
         "00"
         "08000000"
