@@ -490,12 +490,12 @@ std::optional<uint32_t> find_export(const Module& module, ExternalKind kind, std
 }
 
 inline uint64_t& get_local(
-    std::vector<uint64_t>& args, std::vector<uint64_t>& locals, uint32_t idx) noexcept
+    uint64_t* args, size_t num_args, std::vector<uint64_t>& locals, uint32_t idx) noexcept
 {
-    if (idx < args.size())
+    if (idx < num_args)
         return args[idx];
-    assert((idx - args.size()) <= locals.size());
-    return locals[idx - args.size()];
+    assert((idx - num_args) <= locals.size());
+    return locals[idx - num_args];
 }
 
 }  // namespace
@@ -635,14 +635,15 @@ std::unique_ptr<Instance> instantiate(Module module,
 }
 
 execution_result execute(
-    Instance& instance, FuncIdx func_idx, std::vector<uint64_t> args, int depth)
+    Instance& instance, FuncIdx func_idx, uint64_t* args, size_t num_args, int depth)
 {
     assert(depth >= 0);
     if (depth > CallStackLimit)
         return {true, {}};
 
     if (func_idx < instance.imported_functions.size())
-        return instance.imported_functions[func_idx].function(instance, std::move(args), depth);
+        return instance.imported_functions[func_idx].function(
+            instance, std::vector(args, args + num_args), depth);
 
     const auto code_idx = func_idx - instance.imported_functions.size();
     assert(code_idx < instance.module.codesec.size());
@@ -850,17 +851,17 @@ execution_result execute(
         }
         case Instr::local_get:
         {
-            stack.push(get_local(args, locals, read<uint32_t>(immediates)));
+            stack.push(get_local(args, num_args, locals, read<uint32_t>(immediates)));
             break;
         }
         case Instr::local_set:
         {
-            get_local(args, locals, read<uint32_t>(immediates)) = stack.pop();
+            get_local(args, num_args, locals, read<uint32_t>(immediates)) = stack.pop();
             break;
         }
         case Instr::local_tee:
         {
-            get_local(args, locals, read<uint32_t>(immediates)) = stack.top();
+            get_local(args, num_args, locals, read<uint32_t>(immediates)) = stack.top();
             break;
         }
         case Instr::global_get:

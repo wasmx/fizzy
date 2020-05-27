@@ -95,7 +95,14 @@ std::unique_ptr<Instance> instantiate(Module module,
 
 // Execute a function on an instance.
 execution_result execute(
-    Instance& instance, FuncIdx func_idx, std::vector<uint64_t> args, int depth = 0);
+    Instance& instance, FuncIdx func_idx, uint64_t* args, size_t num_args, int depth);
+
+inline execution_result execute(
+    Instance& instance, FuncIdx func_idx, std::vector<uint64_t> args, int depth = 0)
+{
+    return execute(instance, func_idx, args.data(), args.size(), depth);
+}
+
 
 // TODO: remove this helper
 execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uint64_t> args);
