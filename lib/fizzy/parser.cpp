@@ -114,8 +114,8 @@ inline parser_result<ConstantExpression> parse_constant_expression(
         switch (instr)
         {
         default:
-            throw parser_error{"unexpected instruction in the global initializer expression: " +
-                               std::to_string(*(pos - 1))};
+            throw validation_error{"unexpected instruction in the global initializer expression: " +
+                                   std::to_string(*(pos - 1))};
 
         case Instr::end:
             break;

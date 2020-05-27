@@ -643,7 +643,7 @@ TEST(parser, global_invalid_mutability)
 TEST(parser, global_initializer_expression_invalid_instruction)
 {
     const auto wasm = bytes{wasm_prefix} + make_section(6, make_vec({"7f0000"_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm), parser_error,
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error,
         "unexpected instruction in the global initializer expression: 0");
 }
 
