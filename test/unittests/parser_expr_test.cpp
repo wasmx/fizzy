@@ -136,32 +136,34 @@ TEST(parser_expr, block_br)
 
 TEST(parser_expr, instr_br_table)
 {
-    /*
-     (block
-       (block
-         (block
-           (block
-             (block
-               (br_table 3 2 1 0 4 (get_local 0))
-               (return (i32.const 99))
-             )
-             (return (i32.const 100))
-           )
-           (return (i32.const 101))
-         )
-         (return (i32.const 102))
-       )
-       (return (i32.const 103))
-     )
-     (i32.const 104)
+    /* wat2wasm
+    (func (param i32) (result i32)
+      (block
+        (block
+          (block
+            (block
+              (block
+                (br_table 3 2 1 0 4 (get_local 0))
+                (return (i32.const 99))
+              )
+              (return (i32.const 100))
+            )
+            (return (i32.const 101))
+          )
+          (return (i32.const 102))
+        )
+        (return (i32.const 103))
+      )
+      (i32.const 104)
+    )
     */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017f030201000a330131000240024002400240024020000e04030201000441"
+        "e3000f0b41e4000f0b41e5000f0b41e6000f0b41e7000f0b41e8000b");
 
-    const auto code_bin =
-        "0240024002400240024020000e04030201000441e3"
-        "000f0b41e4000f0b41e5000f0b41e6000f0b41e7000f0b41e8000b000c04"
-        "6e616d6502050100010000"_bytes;
-
-    const auto [code, pos] = parse_expr(code_bin);
+    const auto module = parse(wasm);
+    ASSERT_EQ(module.codesec.size(), 1);
+    const auto& code = module.codesec[0];
 
     EXPECT_EQ(code.instructions,
         (std::vector{Instr::block, Instr::block, Instr::block, Instr::block, Instr::block,
@@ -185,17 +187,21 @@ TEST(parser_expr, instr_br_table)
 
 TEST(parser_expr, instr_br_table_empty_vector)
 {
-    /*
+    /* wat2wasm
+    (func (param i32) (result i32)
       (block
         (br_table 0 (get_local 0))
         (return (i32.const 99))
       )
       (i32.const 100)
+    )
     */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017f030201000a13011100024020000e000041e3000f0b41e4000b");
 
-    const auto code_bin = "024020000e000041e3000f0b41e4000b000c046e616d6502050100010000"_bytes;
-
-    const auto [code, pos] = parse_expr(code_bin);
+    const auto module = parse(wasm);
+    ASSERT_EQ(module.codesec.size(), 1);
+    const auto& code = module.codesec[0];
 
     EXPECT_EQ(code.instructions,
         (std::vector{Instr::block, Instr::local_get, Instr::br_table, Instr::i32_const,
