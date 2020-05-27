@@ -250,11 +250,14 @@ jobs:
           path: ~/build/coverage
           destination: coverage
       - run:
+          name: "Upgrade codecov"
+          command: sudo pip3 install --upgrade --quiet --no-cache-dir codecov
+      - run:
           name: "Upload to Codecov"
           command: |
             # Convert to relative paths
             sed -i 's|$(pwd)/||' ~/build/fizzy.lcov
-            codecov --file ~/build/fizzy.lcov -X gcov
+            codecov --required --file ~/build/fizzy.lcov -X gcov
 
   sanitizers:
     executor: linux-clang-latest
