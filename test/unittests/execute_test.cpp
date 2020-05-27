@@ -10,6 +10,7 @@
 #include <test/utils/hex.hpp>
 
 using namespace fizzy;
+using namespace testing;
 
 TEST(execute, end)
 {
@@ -976,4 +977,34 @@ TEST(execute, fp_instructions)
 
     // Second function with floating point parameters.
     EXPECT_THAT(execute(*instance, 1, {}), Traps());
+}
+
+TEST(execute, reuse_args)
+{
+    /* wat2wasm
+    (func $f (param i64 i64) (result i64)
+      local.get 0
+      local.get 1
+      i64.div_u
+      local.set 1
+      local.get 0
+      local.get 1
+      i64.rem_u
+    )
+    (func (result i64)
+      i64.const 23
+      i64.const 5
+      call $f
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010b0260027e7e017e6000017e03030200010a19020e002000200180210120002001820b08"
+        "004217420510000b");
+
+    const std::vector<uint64_t> args{20, 3};
+    const auto expected = args[0] % (args[0] / args[1]);
+    EXPECT_THAT(execute(parse(wasm), 0, args), Result(expected));
+    EXPECT_THAT(args, ElementsAre(20, 3));
+
+    EXPECT_THAT(execute(parse(wasm), 1, {}), Result(23 % (23 / 5)));
 }
