@@ -32,8 +32,8 @@ TEST(execute_control, nop)
 
 TEST(execute_control, block_br)
 {
-    /* wat2wasm --no-check
-    (func
+    /* wat2wasm
+    (func (result i32)
         (local i32 i32)
         (block
           i32.const 0xa
@@ -46,55 +46,65 @@ TEST(execute_control, block_br)
     )
     */
     const auto wasm = from_hex(
-        "0061736d01000000010401600000030201000a15011301027f0240410a21010c00410b21010b20010b");
+        "0061736d010000000105016000017f030201000a15011301027f0240410a21010c00410b21010b20010b");
 
     EXPECT_THAT(execute(parse(wasm), 0, {}), Result(0xa));
 }
 
-TEST(execute_control, loop_void_empty)
+TEST(execute_control, loop_void)
 {
-    /* wat2wasm --no-check
-    (func
+    /* wat2wasm
+    (func (param i64 i64) (result i64)
       (loop
-        get_local 0  ;; Leaves an item on the stack what makes the loop invalid.
+        local.get 0
+        local.set 1
       )
+      local.get 1
     )
     */
-    const auto wasm = from_hex("0061736d01000000010401600000030201000a09010700034020000b0b");
-    const auto result = execute(parse(wasm), 0, {1});
+    const auto wasm =
+        from_hex("0061736d0100000001070160027e7e017e030201000a0d010b000340200021010b20010b");
+    const auto result = execute(parse(wasm), 0, {1, 0});
     EXPECT_THAT(result, Result(1));
 }
 
-TEST(execute_control, block_void_empty)
+TEST(execute_control, block_void)
 {
-    /* wat2wasm --no-check
-    (func
+    /* wat2wasm
+    (func (param i32 i32) (result i32)
       (block
-        get_local 0  ;; Leaves an item on the stack what makes the block invalid.
+        local.get 0
+        local.set 1
       )
+      local.get 1
     )
     */
-    const auto wasm = from_hex("0061736d01000000010401600000030201000a09010700024020000b0b");
-    const auto result = execute(parse(wasm), 0, {100});
+    const auto wasm =
+        from_hex("0061736d0100000001070160027f7f017f030201000a0d010b000240200021010b20010b");
+    const auto result = execute(parse(wasm), 0, {100, 99});
     EXPECT_THAT(result, Result(100));
 }
 
 TEST(execute_control, loop_void_br_if_16)
 {
-    /* wat2wasm --no-check
-    (func (param i32)
+    /* wat2wasm
+    (func (param i32) (result i32)
+      (local i32)
       (loop
         local.get 0  ;; This is the input argument.
         i32.const 1
         i32.sub
         local.tee 0
         br_if 0
-        local.get 0  ;; Leaves an item on the stack what makes the loop invalid.
+        local.get 0
+        local.set 1
       )
+      local.get 1
     )
     */
-    const auto wasm =
-        from_hex("0061736d0100000001050160017f00030201000a120110000340200041016b22000d0020000b0b");
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017f030201000a18011601017f0340200041016b22000d00200021010b2001"
+        "0b");
     EXPECT_THAT(execute(parse(wasm), 0, {16}), Result(0));
 }
 

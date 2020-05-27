@@ -90,6 +90,19 @@ TEST(validation_stack, block_with_result_stack_underflow)
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "stack underflow");
 }
 
+TEST(validation_stack, DISABLED_block_too_many_results)
+{
+    /* wat2wasm --no-check
+    (func
+      (block
+        get_local 0  ;; Leaves an item on the stack what makes the block invalid.
+      )
+    )
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a09010700024020000b0b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "too many results");
+}
+
 TEST(validation_stack, loop_stack_underflow)
 {
     /* wat2wasm --no-check
@@ -145,6 +158,35 @@ TEST(validation_stack, loop_with_result_stack_underflow)
     */
     const auto wasm = from_hex("0061736d010000000105016000017f030201000a0a010800037f417f0b6a0b");
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "stack underflow");
+}
+
+TEST(validation_stack, DISABLED_loop_too_many_results)
+{
+    /* wat2wasm --no-check
+    (func
+      (loop
+        get_local 0  ;; Leaves an item on the stack what makes the loop invalid.
+      )
+    )
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a09010700034020000b0b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "too many results");
+
+    /* wat2wasm --no-check
+    (func (param i32)
+      (loop
+        local.get 0  ;; This is the input argument.
+        i32.const 1
+        i32.sub
+        local.tee 0
+        br_if 0
+        local.get 0  ;; Leaves an item on the stack what makes the loop invalid.
+      )
+    )
+    */
+    const auto wasm2 =
+        from_hex("0061736d0100000001050160017f00030201000a120110000340200041016b22000d0020000b0b");
+    EXPECT_THROW_MESSAGE(parse(wasm2), validation_error, "too many results");
 }
 
 TEST(validation_stack, call_stack_underflow)
