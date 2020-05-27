@@ -125,9 +125,9 @@ public:
     }
 
     /// Returns iterator to the bottom of the stack.
-    [[nodiscard]] const uint64_t* rbegin() const noexcept { return m_storage.get(); }
+    [[nodiscard]] uint64_t* rbegin() const noexcept { return m_storage.get(); }
 
     /// Returns end iterator counting from the bottom of the stack.
-    [[nodiscard]] const uint64_t* rend() const noexcept { return m_top + 1; }
+    [[nodiscard]] uint64_t* rend() const noexcept { return m_top + 1; }
 };
 }  // namespace fizzy

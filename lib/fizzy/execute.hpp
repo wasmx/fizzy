@@ -27,7 +27,7 @@ struct Instance;
 
 struct ExternalFunction
 {
-    std::function<execution_result(Instance&, std::vector<uint64_t>, int depth)> function;
+    std::function<execution_result(Instance&, uint64_t* args, size_t num_args, int depth)> function;
     FuncType type;
 };
 
@@ -114,7 +114,7 @@ struct ImportedFunction
     std::string name;
     std::vector<ValType> inputs;
     std::optional<ValType> output;
-    std::function<execution_result(Instance&, std::vector<uint64_t>, int depth)> function;
+    std::function<execution_result(Instance&, uint64_t* args, size_t num_args, int depth)> function;
 };
 
 // Create vector of ExternalFunctions ready to be passed to instantiate.

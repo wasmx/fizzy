@@ -27,9 +27,11 @@ public:
 
 namespace
 {
-fizzy::execution_result env_adler32(fizzy::Instance& instance, std::vector<uint64_t> args, int)
+fizzy::execution_result env_adler32(
+    fizzy::Instance& instance, uint64_t* args, [[maybe_unused]] size_t num_args, int)
 {
     assert(instance.memory != nullptr);
+    assert(num_args == 2);
     const auto ret = fizzy::adler32(bytes_view{*instance.memory}.substr(args[0], args[1]));
     return {false, {ret}};
 }

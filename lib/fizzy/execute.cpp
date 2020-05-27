@@ -282,13 +282,14 @@ bool invoke_function(
 {
     const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
-    std::vector<uint64_t> call_args{stack.rend() - num_args, stack.rend()};
-    stack.shrink(stack.size() - num_args);
+    const auto call_args = stack.rend() - num_args;
 
-    const auto ret = func(instance, std::move(call_args), depth + 1);
+    const auto ret = func(instance, call_args, num_args, depth + 1);
     // Bubble up traps
     if (ret.trapped)
         return false;
+
+    stack.shrink(stack.size() - num_args);
 
     const auto num_outputs = func_type.outputs.size();
     // NOTE: we can assume these two from validation
@@ -304,8 +305,8 @@ bool invoke_function(
 inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
     OperandStack& stack, int depth)
 {
-    const auto func = [func_idx](Instance& _instance, std::vector<uint64_t> args, int _depth) {
-        return execute(_instance, func_idx, std::move(args), _depth);
+    const auto func = [func_idx](Instance& _instance, uint64_t* args, size_t num_args, int _depth) {
+        return execute(_instance, func_idx, args, num_args, _depth);
     };
     return invoke_function(func_type, func, instance, stack, depth);
 }
@@ -585,8 +586,8 @@ std::unique_ptr<Instance> instantiate(Module module,
         for (const auto idx : instance->module.elementsec[i].init)
         {
             auto func = [idx, &instance_ref = *instance](
-                            fizzy::Instance&, std::vector<uint64_t> args, int depth) {
-                return execute(instance_ref, idx, std::move(args), depth);
+                            fizzy::Instance&, uint64_t* args, size_t num_args, int depth) {
+                return execute(instance_ref, idx, args, num_args, depth);
             };
 
             *it_table++ =
@@ -619,9 +620,9 @@ std::unique_ptr<Instance> instantiate(Module module,
                         // Wrap the function with the lambda capturing shared instance
                         auto& table_function = (*it_table)->function;
                         table_function = [shared_instance, func = std::move(table_function)](
-                                             fizzy::Instance& _instance, std::vector<uint64_t> args,
-                                             int depth) {
-                            return func(_instance, std::move(args), depth);
+                                             fizzy::Instance& _instance, uint64_t* args,
+                                             size_t num_args, int depth) {
+                            return func(_instance, args, num_args, depth);
                         };
                         ++it_table;
                     }
@@ -642,8 +643,7 @@ execution_result execute(
         return {true, {}};
 
     if (func_idx < instance.imported_functions.size())
-        return instance.imported_functions[func_idx].function(
-            instance, std::vector(args, args + num_args), depth);
+        return instance.imported_functions[func_idx].function(instance, args, num_args, depth);
 
     const auto code_idx = func_idx - instance.imported_functions.size();
     assert(code_idx < instance.module.codesec.size());
@@ -1609,8 +1609,8 @@ std::optional<ExternalFunction> find_exported_function(Instance& instance, std::
         return std::nullopt;
 
     const auto idx = *opt_index;
-    auto func = [idx, &instance](fizzy::Instance&, std::vector<uint64_t> args, int depth) {
-        return execute(instance, idx, std::move(args), depth);
+    auto func = [idx, &instance](fizzy::Instance&, uint64_t* args, size_t num_args, int depth) {
+        return execute(instance, idx, args, num_args, depth);
     };
 
     return ExternalFunction{std::move(func), instance.module.get_function_type(idx)};
