@@ -1052,7 +1052,7 @@ TEST(parser, code_section_with_memory_size)
         "3f000b"_bytes;
     const auto code_bin = add_size_prefix(func_bin);
     const auto section_contents = make_vec({code_bin});
-    const auto bin = bytes{wasm_prefix} + make_section(1, make_vec({make_functype({}, {})})) +
+    const auto bin = bytes{wasm_prefix} + make_section(1, make_vec({make_functype({}, {0x7f})})) +
                      make_section(3, "0100"_bytes) + make_section(5, make_vec({"0000"_bytes})) +
                      make_section(10, section_contents);
     const auto module = parse(bin);
