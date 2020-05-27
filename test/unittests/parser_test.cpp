@@ -640,11 +640,12 @@ TEST(parser, global_invalid_mutability)
         "unexpected byte value 2, expected 0x00 or 0x01 for global mutability");
 }
 
-TEST(parser, global_initializer_expression_invalid_instruction)
+TEST(parser, global_invalid_initializer)
 {
-    const auto wasm = bytes{wasm_prefix} + make_section(6, make_vec({"7f0000"_bytes}));
-    EXPECT_THROW_MESSAGE(parse(wasm), parser_error,
-        "unexpected instruction in the global initializer expression: 0");
+    // valtype=i32 mutability=0 expression=<memory_size>
+    const auto wasm = bytes{wasm_prefix} + make_section(6, make_vec({"7f003f"_bytes}));
+    EXPECT_THROW_MESSAGE(
+        parse(wasm), validation_error, "unexpected instruction in the constant expression: 63");
 }
 
 TEST(parser, global_valtype_out_of_bounds)
@@ -871,6 +872,14 @@ TEST(parser, element_section_tableidx_nonzero)
     const auto bin = bytes{wasm_prefix} + make_section(9, section_contents);
 
     EXPECT_THROW_MESSAGE(parse(bin), parser_error, "unexpected tableidx value 1");
+}
+
+TEST(parser, element_section_invalid_initializer)
+{
+    // tableidx=0 expression=<memory_size> items=0
+    const auto wasm = bytes{wasm_prefix} + make_section(9, make_vec({"003f00"_bytes}));
+    EXPECT_THROW_MESSAGE(
+        parse(wasm), validation_error, "unexpected instruction in the constant expression: 63");
 }
 
 TEST(parser, element_section_no_table_section)
@@ -1244,6 +1253,14 @@ TEST(parser, data_section_memidx_nonzero)
     const auto section_contents = make_vec({"0141010b0100"_bytes});
     const auto bin = bytes{wasm_prefix} + make_section(11, section_contents);
     EXPECT_THROW_MESSAGE(parse(bin), parser_error, "unexpected memidx value 1");
+}
+
+TEST(parser, data_section_invalid_initializer)
+{
+    // memidx=0 expression=<memory_size> items=0
+    const auto wasm = bytes{wasm_prefix} + make_section(9, make_vec({"003f00"_bytes}));
+    EXPECT_THROW_MESSAGE(
+        parse(wasm), validation_error, "unexpected instruction in the constant expression: 63");
 }
 
 TEST(parser, data_section_empty_vector_without_memory)
