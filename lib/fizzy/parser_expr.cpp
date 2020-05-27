@@ -40,7 +40,8 @@ struct ControlFrame
     const size_t code_offset{0};
 
     /// The immediates offset for block instructions.
-    const size_t immediates_offset{0};
+    /// Non-const because else block changes it (to resolve jumping over else block).
+    size_t immediates_offset{0};
 
     /// The frame stack height of the parent frame.
     /// TODO: Storing this is not strictly required, as the parent frame is available
@@ -392,16 +393,23 @@ parser_result<Code> parse_expr(
             // Reset frame after if. The if result type validation not implemented yet.
             frame.stack_height = frame.parent_stack_height;
             frame.unreachable = false;
+            const auto if_imm_offset = frame.immediates_offset;
+            frame.immediates_offset = code.immediates.size();
 
+            // Placeholders for immediate values, filled at the matching end instructions.
+            push(code.immediates, uint32_t{0});  // Diff to the end instruction.
+            push(code.immediates, uint32_t{0});  // Diff for the immediates
+
+            // Fill in if's immediates with offsets of first instruction in else block.
             const auto target_pc = static_cast<uint32_t>(code.instructions.size() + 1);
             const auto target_imm = static_cast<uint32_t>(code.immediates.size());
 
             // Set the imm values for else instruction.
-            auto* block_imm = code.immediates.data() + frame.immediates_offset + sizeof(target_pc) +
-                              sizeof(target_imm);
-            store(block_imm, target_pc);
-            block_imm += sizeof(target_pc);
-            store(block_imm, target_imm);
+            auto* if_imm =
+                code.immediates.data() + if_imm_offset + sizeof(target_pc) + sizeof(target_imm);
+            store(if_imm, target_pc);
+            if_imm += sizeof(target_pc);
+            store(if_imm, target_imm);
 
             break;
         }
@@ -422,8 +430,9 @@ parser_result<Code> parse_expr(
 
                 if (frame.instruction == Instr::if_)
                 {
-                    // We're at the end instruction of the if block without else.
-                    // Fill in if's immediates with offsets right after if block.
+                    // We're at the end instruction of the if block without else or at the end of
+                    // else block. Fill in if/else's immediates with offsets of first instruction
+                    // after if/else block.
                     auto* if_imm = code.immediates.data() + frame.immediates_offset;
                     store(if_imm, target_pc);
                     if_imm += sizeof(target_pc);

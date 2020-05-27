@@ -738,11 +738,15 @@ execution_result execute(
         {
             // We reach else only at the end of if block.
             assert(!labels.empty());
-            const auto label = labels.top();
             labels.pop();
 
-            pc = label.pc;
-            immediates = label.immediate;
+            // We reach else only after executing if block ("then" part),
+            // so we need to skip else block now.
+            const auto target_pc = read<uint32_t>(immediates);
+            const auto target_imm = read<uint32_t>(immediates);
+
+            pc = code.instructions.data() + target_pc;
+            immediates = code.immediates.data() + target_imm;
 
             break;
         }
