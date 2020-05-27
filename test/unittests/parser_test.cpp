@@ -878,7 +878,7 @@ TEST(parser, element_section_no_table_section)
     const auto wasm =
         bytes{wasm_prefix} + make_section(9, make_vec({"000b"_bytes + make_vec({"00"_bytes})}));
     EXPECT_THROW_MESSAGE(
-        parse(wasm), parser_error, "element section encountered without a table section");
+        parse(wasm), validation_error, "element section encountered without a table section");
 }
 
 TEST(parser, code_section_empty)
