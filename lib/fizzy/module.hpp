@@ -58,6 +58,16 @@ struct Module
         return typesec[type_idx];
     }
 
+    size_t get_function_count() const noexcept
+    {
+        return imported_function_types.size() + funcsec.size();
+    }
+
+    size_t get_global_count() const noexcept
+    {
+        return imported_globals_mutability.size() + globalsec.size();
+    }
+
     bool has_table() const noexcept { return !tablesec.empty() || !imported_table_types.empty(); }
 
     bool has_memory() const noexcept

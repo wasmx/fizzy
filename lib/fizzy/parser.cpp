@@ -534,9 +534,8 @@ Module parse(bytes_view input)
     if (module.funcsec.size() != code_binaries.size())
         throw parser_error("malformed binary: number of function and code entries must match");
 
-    const auto total_func_count = module.imported_function_types.size() + module.funcsec.size();
-    const auto total_global_count =
-        module.imported_globals_mutability.size() + module.globalsec.size();
+    const auto total_func_count = module.get_function_count();
+    const auto total_global_count = module.get_global_count();
 
     // Validate exports.
     std::unordered_set<std::string_view> export_names;
