@@ -2,6 +2,7 @@
 // Copyright 2019-2020 The Fizzy Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#include "instructions.hpp"
 #include "parser.hpp"
 #include <gtest/gtest.h>
 #include <test/utils/asserts.hpp>
@@ -1052,7 +1053,7 @@ TEST(parser, code_section_with_memory_size)
         "3f000b"_bytes;
     const auto code_bin = add_size_prefix(func_bin);
     const auto section_contents = make_vec({code_bin});
-    const auto bin = bytes{wasm_prefix} + make_section(1, make_vec({make_functype({}, {})})) +
+    const auto bin = bytes{wasm_prefix} + make_section(1, make_vec({make_functype({}, {0x7f})})) +
                      make_section(3, "0100"_bytes) + make_section(5, make_vec({"0000"_bytes})) +
                      make_section(10, section_contents);
     const auto module = parse(bin);
@@ -1114,10 +1115,16 @@ TEST(parser, code_section_fp_instructions)
         0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa8, 0xa9, 0xaa, 0xab, 0xae, 0xaf, 0xb0, 0xb1, 0xb2,
         0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf};
 
+    const auto metrics_table = fizzy::get_instruction_metrics_table();
+
     for (const auto instr : fp_instructions)
     {
-        auto func_bin = "00"_bytes  // vec(locals)
-                        + i32_const(0) + i32_const(0) + bytes{instr};
+        const auto metrics = metrics_table[instr];
+        auto func_bin = "00"_bytes;  // vec(locals)
+        for (int i = 0; i < metrics.stack_height_required; ++i)
+            func_bin += i32_const(0);
+        func_bin += bytes{instr};
+
         switch (instr)
         {
         case 0x2a:  // f32.load
@@ -1133,7 +1140,11 @@ TEST(parser, code_section_fp_instructions)
             func_bin += bytes(8, 0);
             break;
         }
-        func_bin += bytes{0xb};  // end
+
+        if (metrics.stack_height_required + metrics.stack_height_change == 1)
+            func_bin += bytes{0x1a};  // drop
+        func_bin += bytes{0xb};       // end
+
         const auto code_bin = add_size_prefix(func_bin);
         const auto code_section = make_vec({code_bin});
         const auto function_section = make_vec({"00"_bytes});
