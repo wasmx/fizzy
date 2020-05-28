@@ -184,6 +184,12 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
     // The function's implicit block.
     control_stack.emplace(Instr::block, function_arity, 0);
 
+    // TODO: Clarify in spec what happens if count of locals and arguments exceed uint32_t::max()
+    //       Leave this assert here for the time being.
+    assert(
+        (uint64_t{local_count} + func_type.inputs.size()) <= std::numeric_limits<uint32_t>::max());
+    const uint32_t max_local_index = local_count + static_cast<uint32_t>(func_type.inputs.size());
+
     const auto metrics_table = get_instruction_metrics_table();
 
     bool continue_parsing = true;
@@ -622,6 +628,10 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
         {
             uint32_t local_idx;
             std::tie(local_idx, pos) = leb128u_decode<uint32_t>(pos, end);
+
+            if (local_idx >= max_local_index)
+                throw validation_error{"invalid local index"};
+
             push(code.immediates, local_idx);
             break;
         }
