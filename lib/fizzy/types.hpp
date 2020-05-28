@@ -32,6 +32,16 @@ struct FuncType
     std::vector<ValType> outputs;
 };
 
+inline bool operator==(const FuncType& lhs, const FuncType& rhs) noexcept
+{
+    return lhs.inputs == rhs.inputs && lhs.outputs == rhs.outputs;
+}
+
+inline bool operator!=(const FuncType& lhs, const FuncType& rhs) noexcept
+{
+    return !(lhs == rhs);
+}
+
 // https://webassembly.github.io/spec/core/binary/types.html#binary-limits
 struct Limits
 {

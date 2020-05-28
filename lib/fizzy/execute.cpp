@@ -19,16 +19,6 @@ namespace
 // code_offset + imm_offset + stack_height + arity
 constexpr auto BranchImmediateSize = 3 * sizeof(uint32_t) + sizeof(uint8_t);
 
-inline bool operator==(const FuncType& lhs, const FuncType& rhs)
-{
-    return lhs.inputs == rhs.inputs && lhs.outputs == rhs.outputs;
-}
-
-inline bool operator!=(const FuncType& lhs, const FuncType& rhs)
-{
-    return !(lhs == rhs);
-}
-
 void match_imported_functions(const std::vector<FuncType>& module_imported_types,
     const std::vector<ExternalFunction>& imported_functions)
 {
