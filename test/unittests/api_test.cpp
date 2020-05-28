@@ -15,12 +15,12 @@ namespace
 {
 auto function_returning_value(uint64_t value) noexcept
 {
-    return [value](Instance&, std::vector<uint64_t>, int) {
+    return [value](Instance&, span<const uint64_t>, int) {
         return execution_result{false, {value}};
     };
 }
 
-execution_result function_returning_void(Instance&, std::vector<uint64_t>, int) noexcept
+execution_result function_returning_void(Instance&, span<const uint64_t>, int) noexcept
 {
     return {};
 }
@@ -221,7 +221,7 @@ TEST(api, find_exported_function)
         "0061736d010000000105016000017f021001087370656374657374036261720000040401700000050401010102"
         "0606017f0041000b07170403666f6f000001670300037461620100036d656d0200");
 
-    auto bar = [](Instance&, std::vector<uint64_t>, int) { return execution_result{false, {42}}; };
+    auto bar = [](Instance&, span<const uint64_t>, int) { return execution_result{false, {42}}; };
     const auto bar_type = FuncType{{}, {ValType::i32}};
 
     auto instance_reexported_function =

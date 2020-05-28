@@ -6,6 +6,7 @@
 
 #include "exceptions.hpp"
 #include "module.hpp"
+#include "span.hpp"
 #include "types.hpp"
 #include <cstdint>
 #include <functional>
@@ -27,7 +28,7 @@ struct Instance;
 
 struct ExternalFunction
 {
-    std::function<execution_result(Instance&, std::vector<uint64_t>, int depth)> function;
+    std::function<execution_result(Instance&, span<const uint64_t>, int depth)> function;
     FuncType type;
 };
 
@@ -107,7 +108,7 @@ struct ImportedFunction
     std::string name;
     std::vector<ValType> inputs;
     std::optional<ValType> output;
-    std::function<execution_result(Instance&, std::vector<uint64_t>, int depth)> function;
+    std::function<execution_result(Instance&, span<const uint64_t>, int depth)> function;
 };
 
 // Create vector of ExternalFunctions ready to be passed to instantiate.
