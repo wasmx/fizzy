@@ -18,6 +18,7 @@ target_sources(
     parser.cpp
     parser.hpp
     parser_expr.cpp
+    span.hpp
     stack.hpp
     types.hpp
     utf8.cpp
