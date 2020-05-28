@@ -58,12 +58,18 @@ public:
 
 class OperandStack
 {
-    /// The pointer to the top item, or below the stack bottom if stack is empty.
+    /// The pointer to the stack top item, or below the stack bottom if stack is empty.
     ///
     /// This pointer always alias m_storage, but it is kept as the first field
     /// because it is accessed the most. Therefore, it must be initialized
     /// in the constructor after the m_storage.
     uint64_t* m_top;
+
+    /// The pointer to the stack bottom.
+    ///
+    /// TODO: This value is const, but because of the initialization order it must be assigned
+    ///       after m_storage initialization.
+    uint64_t* m_bottom;
 
     /// The storage for items.
     std::unique_ptr<uint64_t[]> m_storage;
@@ -73,17 +79,15 @@ public:
     explicit OperandStack(size_t max_stack_height)
       : m_storage{std::make_unique<uint64_t[]>(max_stack_height)}
     {
-        m_top = m_storage.get() - 1;
+        m_bottom = m_storage.get();
+        m_top = m_bottom - 1;
     }
 
     OperandStack(const OperandStack&) = delete;
     OperandStack& operator=(const OperandStack&) = delete;
 
     /// The current number of items on the stack (aka stack height).
-    [[nodiscard]] size_t size() const noexcept
-    {
-        return static_cast<size_t>(m_top + 1 - m_storage.get());
-    }
+    [[nodiscard]] size_t size() const noexcept { return static_cast<size_t>(m_top + 1 - m_bottom); }
 
     /// Returns the reference to the top item.
     /// Requires non-empty stack.
@@ -121,11 +125,11 @@ public:
     {
         assert(new_size <= size());
         // For new_size == 0, the m_top will point below the storage.
-        m_top = m_storage.get() + new_size - 1;
+        m_top = m_bottom + new_size - 1;
     }
 
     /// Returns iterator to the bottom of the stack.
-    [[nodiscard]] const uint64_t* rbegin() const noexcept { return m_storage.get(); }
+    [[nodiscard]] const uint64_t* rbegin() const noexcept { return m_bottom; }
 
     /// Returns end iterator counting from the bottom of the stack.
     [[nodiscard]] const uint64_t* rend() const noexcept { return m_top + 1; }
