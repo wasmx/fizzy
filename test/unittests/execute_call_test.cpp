@@ -335,10 +335,8 @@ TEST(execute_call, imported_function_from_another_module)
     const auto func_idx = fizzy::find_exported_function(module1, "sub");
     ASSERT_TRUE(func_idx.has_value());
 
-    auto sub = [&instance1, func_idx](
-                   Instance&, span<const uint64_t> args, int) -> execution_result {
-        return fizzy::execute(*instance1, *func_idx, std::vector(args.begin(), args.end()));
-    };
+    auto sub = [&instance1, func_idx](Instance&, span<const uint64_t> args,
+                   int) -> execution_result { return fizzy::execute(*instance1, *func_idx, args); };
 
     auto instance2 = instantiate(module2, {{sub, module1.typesec[0]}});
 
