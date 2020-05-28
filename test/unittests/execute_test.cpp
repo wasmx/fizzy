@@ -1003,9 +1003,11 @@ TEST(execute, reuse_args)
         "0061736d01000000010b0260027e7e017e6000017e03030200010a19020e002000200180210120002001820b08"
         "004217420510000b");
 
+    auto instance = instantiate(parse(wasm));
+
     const std::vector<uint64_t> args{20, 3};
     const auto expected = args[0] % (args[0] / args[1]);
-    EXPECT_THAT(execute(parse(wasm), 0, args), Result(expected));
+    EXPECT_THAT(execute(*instance, 0, args), Result(expected));
     EXPECT_THAT(args, ElementsAre(20, 3));
 
     EXPECT_THAT(execute(parse(wasm), 1, {}), Result(23 % (23 / 5)));

@@ -5,12 +5,14 @@
 #pragma once
 
 #include "execute.hpp"
+#include <initializer_list>
 
 namespace fizzy::test
 {
-inline execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uint64_t> args)
+inline execution_result execute(
+    const Module& module, FuncIdx func_idx, std::initializer_list<uint64_t> args)
 {
     auto instance = instantiate(module);
-    return execute(*instance, func_idx, std::move(args));
+    return execute(*instance, func_idx, args);
 }
 }  // namespace fizzy::test
