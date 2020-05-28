@@ -170,7 +170,7 @@ TEST(stack, clear_on_empty)
 
 TEST(operand_stack, construct)
 {
-    OperandStack stack(0);
+    OperandStack stack({}, 0, 0);
     EXPECT_EQ(stack.size(), 0);
     stack.shrink(0);
     EXPECT_EQ(stack.size(), 0);
@@ -178,7 +178,7 @@ TEST(operand_stack, construct)
 
 TEST(operand_stack, top)
 {
-    OperandStack stack(1);
+    OperandStack stack({}, 0, 1);
     EXPECT_EQ(stack.size(), 0);
 
     stack.push(1);
@@ -202,7 +202,7 @@ TEST(operand_stack, top)
 
 TEST(operand_stack, small)
 {
-    OperandStack stack(3);
+    OperandStack stack({}, 0, 3);
     EXPECT_EQ(stack.size(), 0);
 
     stack.push(1);
@@ -231,7 +231,7 @@ TEST(operand_stack, small)
 TEST(operand_stack, large)
 {
     constexpr auto max_height = 33;
-    OperandStack stack(max_height);
+    OperandStack stack({}, 0, max_height);
 
     for (unsigned i = 0; i < max_height; ++i)
         stack.push(i);
@@ -245,7 +245,7 @@ TEST(operand_stack, large)
 TEST(operand_stack, shrink)
 {
     constexpr auto max_height = 60;
-    OperandStack stack(max_height);
+    OperandStack stack({}, 0, max_height);
 
     for (unsigned i = 0; i < max_height; ++i)
         stack.push(i);
@@ -261,7 +261,7 @@ TEST(operand_stack, shrink)
 
 TEST(operand_stack, rbegin_rend)
 {
-    OperandStack stack(3);
+    OperandStack stack({}, 0, 3);
     EXPECT_EQ(stack.rbegin(), stack.rend());
 
     stack.push(1);
@@ -274,7 +274,7 @@ TEST(operand_stack, rbegin_rend)
 
 TEST(operand_stack, to_vector)
 {
-    OperandStack stack(3);
+    OperandStack stack({}, 0, 3);
     EXPECT_THAT(std::vector(stack.rbegin(), stack.rend()), IsEmpty());
 
     stack.push(1);

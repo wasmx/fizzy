@@ -75,11 +75,15 @@ class OperandStack
     std::unique_ptr<uint64_t[]> m_storage;
 
 public:
-    /// Default constructor. Sets the top item pointer to below the stack bottom.
-    explicit OperandStack(size_t max_stack_height)
-      : m_storage{std::make_unique<uint64_t[]>(max_stack_height)}
+    /// Constructor.
+    OperandStack(const std::vector<uint64_t>& args, size_t num_locals, size_t max_stack_height)
     {
-        m_bottom = m_storage.get();
+        const auto locals_size = args.size() + num_locals;
+        const auto storage_size = locals_size + max_stack_height;
+        m_storage = std::make_unique<uint64_t[]>(storage_size);
+        std::copy(std::begin(args), std::end(args), m_storage.get());
+        std::fill_n(m_storage.get() + args.size(), num_locals, 0);
+        m_bottom = m_storage.get() + locals_size;
         m_top = m_bottom - 1;
     }
 
@@ -133,5 +137,12 @@ public:
 
     /// Returns end iterator counting from the bottom of the stack.
     [[nodiscard]] const uint64_t* rend() const noexcept { return m_top + 1; }
+
+    /// Access the local of the given index.
+    uint64_t& local(size_t index) noexcept
+    {
+        assert(index < static_cast<size_t>(m_bottom - m_storage.get()));
+        return m_storage[index];
+    }
 };
 }  // namespace fizzy
