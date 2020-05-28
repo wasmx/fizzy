@@ -96,10 +96,10 @@ std::unique_ptr<Instance> instantiate(Module module,
 
 // Execute a function on an instance.
 execution_result execute(
-    Instance& instance, FuncIdx func_idx, std::vector<uint64_t> args, int depth = 0);
+    Instance& instance, FuncIdx func_idx, span<const uint64_t> args, int depth = 0);
 
 // TODO: remove this helper
-execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uint64_t> args);
+execution_result execute(const Module& module, FuncIdx func_idx, span<const uint64_t> args);
 
 // Function that should be used by instantiate as imports, identified by module and function name.
 struct ImportedFunction
