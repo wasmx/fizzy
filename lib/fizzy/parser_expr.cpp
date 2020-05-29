@@ -36,8 +36,12 @@ struct ControlFrame
     /// Number of results returned from the frame.
     const uint8_t arity{0};
 
+    /// The target instruction code offset.
+    const size_t code_offset{0};
+
     /// The immediates offset for block instructions.
-    const size_t immediates_offset{0};
+    /// Non-const because else block changes it (to resolve jumping over else block).
+    size_t immediates_offset{0};
 
     /// The frame stack height of the parent frame.
     /// TODO: Storing this is not strictly required, as the parent frame is available
@@ -51,10 +55,14 @@ struct ControlFrame
     /// after branches).
     bool unreachable{false};
 
+    /// Offsets of br/br_if/br_table instruction immediates, to be filled at the end of the block
+    std::vector<size_t> br_immediate_offsets{};
+
     ControlFrame(Instr _instruction, uint8_t _arity, int _parent_stack_height,
-        size_t _immediates_offset = 0) noexcept
+        size_t _code_offset = 0, size_t _immediates_offset = 0) noexcept
       : instruction{_instruction},
         arity{_arity},
+        code_offset{_code_offset},
         immediates_offset{_immediates_offset},
         parent_stack_height{_parent_stack_height},
         stack_height{_parent_stack_height}
@@ -111,6 +119,18 @@ void validate_result_count(const ControlFrame& frame)
     //     throw validation_error{"too many results"};
 }
 
+void push_branch_immediates(const ControlFrame& frame, bytes& immediates)
+{
+    // Push frame start location as br immediates - these are final if frame is loop,
+    // but for block/if/else these are just placeholders, to be filled at end instruction.
+    push(immediates, static_cast<uint32_t>(frame.code_offset));
+    push(immediates, static_cast<uint32_t>(frame.immediates_offset));
+    push(immediates, static_cast<uint32_t>(frame.parent_stack_height));
+    // Always pushing 0 as loop's arity, because br executed in loop jumps to the top,
+    // resetting frame stack to 0, so it should not keep top stack value even if loop has a result.
+    push(immediates, frame.instruction == Instr::loop ? uint8_t{0} : frame.arity);
+}
+
 }  // namespace
 
 parser_result<Code> parse_expr(
@@ -120,7 +140,6 @@ parser_result<Code> parse_expr(
 
     // The stack of control frames allowing to distinguish between block/if/else and label
     // instructions as defined in Wasm Validation Algorithm.
-    // For a block/if/else instruction the value is the block/if/else's immediate offset.
     Stack<ControlFrame> control_stack;
 
     const auto func_type_idx = module.funcsec[func_idx];
@@ -317,14 +336,10 @@ parser_result<Code> parse_expr(
         {
             uint8_t arity;
             std::tie(arity, pos) = parse_blocktype(pos, end);
-            code.immediates.push_back(arity);
 
             // Push label with immediates offset after arity.
-            control_stack.emplace(Instr::block, arity, frame.stack_height, code.immediates.size());
-
-            // Placeholders for immediate values, filled at the matching end instruction.
-            push(code.immediates, uint32_t{0});  // Diff to the end instruction.
-            push(code.immediates, uint32_t{0});  // Diff for the immediates.
+            control_stack.emplace(Instr::block, arity, frame.stack_height, code.instructions.size(),
+                code.immediates.size());
             break;
         }
 
@@ -333,7 +348,9 @@ parser_result<Code> parse_expr(
             uint8_t arity;
             std::tie(arity, pos) = parse_blocktype(pos, end);
 
-            control_stack.emplace(Instr::loop, arity, frame.stack_height);
+            control_stack.emplace(Instr::loop, arity, frame.stack_height, code.instructions.size(),
+                code.immediates.size());
+
             break;
         }
 
@@ -341,14 +358,11 @@ parser_result<Code> parse_expr(
         {
             uint8_t arity;
             std::tie(arity, pos) = parse_blocktype(pos, end);
-            code.immediates.push_back(arity);
 
-            control_stack.emplace(Instr::if_, arity, frame.stack_height, code.immediates.size());
+            control_stack.emplace(Instr::if_, arity, frame.stack_height, code.instructions.size(),
+                code.immediates.size());
 
-            // Placeholders for immediate values, filled at the matching end and else instructions.
-            push(code.immediates, uint32_t{0});  // Diff to the end instruction.
-            push(code.immediates, uint32_t{0});  // Diff for the immediates
-
+            // Placeholders for immediate values, filled at the matching end or else instructions.
             push(code.immediates, uint32_t{0});  // Diff to the else instruction
             push(code.immediates, uint32_t{0});  // Diff for the immediates.
 
@@ -365,16 +379,22 @@ parser_result<Code> parse_expr(
             // Reset frame after if. The if result type validation not implemented yet.
             frame.stack_height = frame.parent_stack_height;
             frame.unreachable = false;
+            const auto if_imm_offset = frame.immediates_offset;
+            frame.immediates_offset = code.immediates.size();
 
+            // Placeholders for immediate values, filled at the matching end instructions.
+            push(code.immediates, uint32_t{0});  // Diff to the end instruction.
+            push(code.immediates, uint32_t{0});  // Diff for the immediates
+
+            // Fill in if's immediates with offsets of first instruction in else block.
             const auto target_pc = static_cast<uint32_t>(code.instructions.size() + 1);
             const auto target_imm = static_cast<uint32_t>(code.immediates.size());
 
             // Set the imm values for else instruction.
-            auto* block_imm = code.immediates.data() + frame.immediates_offset + sizeof(target_pc) +
-                              sizeof(target_imm);
-            store(block_imm, target_pc);
-            block_imm += sizeof(target_pc);
-            store(block_imm, target_imm);
+            auto* if_imm = code.immediates.data() + if_imm_offset;
+            store(if_imm, target_pc);
+            if_imm += sizeof(target_pc);
+            store(if_imm, target_imm);
 
             break;
         }
@@ -383,25 +403,44 @@ parser_result<Code> parse_expr(
         {
             validate_result_count(frame);
 
-            if (control_stack.size() > 1)
+            if (frame.instruction != Instr::loop)  // If end of block/if/else instruction.
             {
-                if (frame.instruction != Instr::loop)  // If end of block/if/else instruction.
-                {
-                    const auto target_pc = static_cast<uint32_t>(code.instructions.size() + 1);
-                    const auto target_imm = static_cast<uint32_t>(code.immediates.size());
+                // In case it's an outermost implicit function block,
+                // we want br to jump to the final end of the function.
+                // Otherwise jump to the next instruction after block's end.
+                const auto target_pc = control_stack.size() == 1 ?
+                                           static_cast<uint32_t>(code.instructions.size()) :
+                                           static_cast<uint32_t>(code.instructions.size() + 1);
+                const auto target_imm = static_cast<uint32_t>(code.immediates.size());
 
-                    // Set the imm values for block instruction.
-                    auto* block_imm = code.immediates.data() + frame.immediates_offset;
-                    store(block_imm, target_pc);
-                    block_imm += sizeof(target_pc);
-                    store(block_imm, target_imm);
+                if (frame.instruction == Instr::if_)
+                {
+                    // We're at the end instruction of the if block without else or at the end of
+                    // else block. Fill in if/else's immediates with offsets of first instruction
+                    // after if/else block.
+                    auto* if_imm = code.immediates.data() + frame.immediates_offset;
+                    store(if_imm, target_pc);
+                    if_imm += sizeof(target_pc);
+                    store(if_imm, target_imm);
                 }
-                const auto arity = frame.arity;
-                control_stack.pop();                        // Pop the current frame.
-                control_stack.top().stack_height += arity;  // The results of the popped frame.
+
+                // Fill in immediates all br/br_table instructions jumping out of this block.
+                for (const auto br_imm_offset : frame.br_immediate_offsets)
+                {
+                    auto* br_imm = code.immediates.data() + br_imm_offset;
+                    store(br_imm, static_cast<uint32_t>(target_pc));
+                    br_imm += sizeof(uint32_t);
+                    store(br_imm, static_cast<uint32_t>(target_imm));
+                    // parent stack height and arity were already stored in br handler
+                }
             }
-            else
+            const auto arity = frame.arity;
+            control_stack.pop();  // Pop the current frame.
+
+            if (control_stack.empty())
                 continue_parsing = false;
+            else
+                control_stack.top().stack_height += arity;  // The results of the popped frame.
             break;
         }
 
@@ -414,7 +453,11 @@ parser_result<Code> parse_expr(
             if (label_idx >= control_stack.size())
                 throw validation_error{"invalid label index"};
 
-            push(code.immediates, label_idx);
+            // Remember this br immediates offset to fill it at end instruction.
+            auto& branch_frame = control_stack[label_idx];
+            branch_frame.br_immediate_offsets.push_back(code.immediates.size());
+
+            push_branch_immediates(branch_frame, code.immediates);
 
             if (instr == Instr::br)
                 frame.unreachable = true;
@@ -438,10 +481,20 @@ parser_result<Code> parse_expr(
             if (default_label_idx >= control_stack.size())
                 throw validation_error{"invalid label index"};
 
+            // Remember immediates offset for all br items to fill them at end instruction.
             push(code.immediates, static_cast<uint32_t>(label_indices.size()));
             for (const auto idx : label_indices)
-                push(code.immediates, idx);
-            push(code.immediates, default_label_idx);
+            {
+                auto& branch_frame = control_stack[idx];
+                branch_frame.br_immediate_offsets.push_back(code.immediates.size());
+
+                push_branch_immediates(branch_frame, code.immediates);
+            }
+
+            auto& default_branch_frame = control_stack[default_label_idx];
+            default_branch_frame.br_immediate_offsets.push_back(code.immediates.size());
+
+            push_branch_immediates(default_branch_frame, code.immediates);
 
             frame.unreachable = true;
 
@@ -452,7 +505,13 @@ parser_result<Code> parse_expr(
         {
             // return is identical to br MAX
             assert(!control_stack.empty());
-            push(code.immediates, control_stack.size() - 1);
+            const uint32_t label_idx = static_cast<uint32_t>(control_stack.size() - 1);
+
+            auto& branch_frame = control_stack[label_idx];
+            branch_frame.br_immediate_offsets.push_back(code.immediates.size());
+
+            push_branch_immediates(control_stack[label_idx], code.immediates);
+
             frame.unreachable = true;
             break;
         }
@@ -574,7 +633,7 @@ parser_result<Code> parse_expr(
         }
         code.instructions.emplace_back(instr);
     }
-    assert(control_stack.size() == 1);
+    assert(control_stack.empty());
     return {code, pos};
 }
 }  // namespace fizzy

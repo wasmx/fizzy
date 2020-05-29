@@ -69,29 +69,19 @@ TEST(parser_expr, instr_block)
     const auto [code1, pos1] = parse_expr(empty);
     EXPECT_EQ(code1.instructions,
         (std::vector{Instr::nop, Instr::nop, Instr::block, Instr::end, Instr::end}));
-    EXPECT_EQ(code1.immediates,
-        "00"
-        "04000000"
-        "09000000"_bytes);
+    EXPECT_TRUE(code1.immediates.empty());
 
     const auto block_i64 = "027e42000b1a0b"_bytes;
     const auto [code2, pos2] = parse_expr(block_i64);
     EXPECT_EQ(code2.instructions,
         (std::vector{Instr::block, Instr::i64_const, Instr::end, Instr::drop, Instr::end}));
-    EXPECT_EQ(code2.immediates,
-        "01"
-        "03000000"
-        "11000000"
-        "0000000000000000"_bytes);
+    EXPECT_EQ(code2.immediates, "0000000000000000"_bytes);
 
     const auto block_f64 = "027c4400000000000000000b1a0b"_bytes;
     const auto [code3, pos3] = parse_expr(block_f64);
     EXPECT_EQ(code3.instructions,
         (std::vector{Instr::block, Instr::f64_const, Instr::end, Instr::drop, Instr::end}));
-    EXPECT_EQ(code3.immediates,
-        "01"
-        "03000000"
-        "09000000"_bytes);
+    EXPECT_TRUE(code3.immediates.empty());
 }
 
 TEST(parser_expr, instr_block_input_buffer_overflow)
@@ -99,6 +89,84 @@ TEST(parser_expr, instr_block_input_buffer_overflow)
     // The function end opcode 0b is missing causing reading out of input buffer.
     const auto block_missing_end = "02400b"_bytes;
     EXPECT_THROW_MESSAGE(parse_expr(block_missing_end), parser_error, "unexpected EOF");
+}
+
+TEST(parser_expr, loop_br)
+{
+    /* wat2wasm
+    (func (loop (br 0)))
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a0901070003400c000b0b");
+    const auto module = parse(wasm);
+
+    EXPECT_EQ(module.codesec[0].instructions,
+        (std::vector{Instr::loop, Instr::br, Instr::end, Instr::end}));
+    EXPECT_EQ(module.codesec[0].immediates,
+        "00000000"    // code_offset
+        "00000000"    // imm_offset
+        "00000000"    // stack_height
+        "00"_bytes);  // arity
+
+    /* wat2wasm
+    (func
+        (i32.const 0)
+        (loop (br 0))
+        drop
+    )
+    */
+    const auto wasm_parent_stack =
+        from_hex("0061736d01000000010401600000030201000a0c010a00410003400c000b1a0b");
+    const auto module_parent_stack = parse(wasm_parent_stack);
+
+    EXPECT_EQ(module_parent_stack.codesec[0].instructions,
+        (std::vector{
+            Instr::i32_const, Instr::loop, Instr::br, Instr::end, Instr::drop, Instr::end}));
+    EXPECT_EQ(module_parent_stack.codesec[0].immediates,
+        "00000000"    // i32.const
+        "01000000"    // code_offset
+        "04000000"    // imm_offset
+        "01000000"    // stack_height
+        "00"_bytes);  // arity
+
+    /* wat2wasm
+    (func
+        (loop (result i32)
+            (i32.const 0)
+            (br 0)
+        )
+        drop
+    )
+    */
+    const auto wasm_arity =
+        from_hex("0061736d01000000010401600000030201000a0c010a00037f41000c000b1a0b");
+    const auto module_arity = parse(wasm_arity);
+
+    EXPECT_EQ(
+        module_arity.codesec[0].instructions, (std::vector{Instr::loop, Instr::i32_const, Instr::br,
+                                                  Instr::end, Instr::drop, Instr::end}));
+    EXPECT_EQ(module_arity.codesec[0].immediates,
+        "00000000"    // i32.const
+        "00000000"    // code_offset
+        "00000000"    // imm_offset
+        "00000000"    // stack_height
+        "00"_bytes);  // arity - always 0 for loop
+}
+
+TEST(parser_expr, loop_return)
+{
+    /* wat2wasm
+    (func (loop (return)))
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a0801060003400f0b0b");
+    const auto module = parse(wasm);
+
+    EXPECT_EQ(module.codesec[0].instructions,
+        (std::vector{Instr::loop, Instr::return_, Instr::end, Instr::end}));
+    EXPECT_EQ(module.codesec[0].immediates,
+        "03000000"    // code_offset
+        "0d000000"    // imm_offset
+        "00000000"    // stack_height
+        "00"_bytes);  // arity
 }
 
 TEST(parser_expr, block_br)
@@ -122,16 +190,125 @@ TEST(parser_expr, block_br)
                                Instr::local_set, Instr::br, Instr::i32_const, Instr::local_set,
                                Instr::end, Instr::local_get, Instr::drop, Instr::end}));
     EXPECT_EQ(code.immediates,
-        "00"
-        "08000000"
-        "1d000000"
         "0a000000"
         "01000000"
-        "00000000"
+        "08000000"  // code_offset
+        "1d000000"  // imm_offset
+        "00000000"  // stack_height
+        "00"        // arity
         "0b000000"
         "01000000"
         "01000000"_bytes);
     EXPECT_EQ(code.max_stack_height, 1);
+
+    /* wat2wasm
+    (func
+        (i32.const 0)
+        (block (br 0))
+        drop
+    )
+    */
+    const auto wasm_parent_stack =
+        from_hex("0061736d01000000010401600000030201000a0c010a00410002400c000b1a0b");
+    const auto module_parent_stack = parse(wasm_parent_stack);
+
+    EXPECT_EQ(module_parent_stack.codesec[0].instructions,
+        (std::vector{
+            Instr::i32_const, Instr::block, Instr::br, Instr::end, Instr::drop, Instr::end}));
+    EXPECT_EQ(module_parent_stack.codesec[0].immediates,
+        "00000000"    // i32.const
+        "04000000"    // code_offset
+        "11000000"    // imm_offset
+        "01000000"    // stack_height
+        "00"_bytes);  // arity
+
+    /* wat2wasm
+    (func
+        (block (result i32)
+            (i32.const 0)
+            (br 0)
+        )
+        drop
+    )
+    */
+    const auto wasm_arity =
+        from_hex("0061736d01000000010401600000030201000a0c010a00027f41000c000b1a0b");
+    const auto module_arity = parse(wasm_arity);
+
+    EXPECT_EQ(
+        module_arity.codesec[0].instructions, (std::vector{Instr::block, Instr::i32_const,
+                                                  Instr::br, Instr::end, Instr::drop, Instr::end}));
+    EXPECT_EQ(module_arity.codesec[0].immediates,
+        "00000000"  // i32.const
+        "04000000"  // code_offset
+        "11000000"  // imm_offset
+        "00000000"  // stack_height
+        "01"_bytes);
+}
+
+TEST(parser_expr, block_return)
+{
+    /* wat2wasm
+    (func (block (return)))
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a0801060002400f0b0b");
+    const auto module = parse(wasm);
+
+    EXPECT_EQ(module.codesec[0].instructions,
+        (std::vector{Instr::block, Instr::return_, Instr::end, Instr::end}));
+    EXPECT_EQ(module.codesec[0].immediates,
+        "03000000"    // code_offset
+        "0d000000"    // imm_offset
+        "00000000"    // stack_height
+        "00"_bytes);  // arity
+}
+
+TEST(parser_expr, if_br)
+{
+    /* wat2wasm
+    (func
+        (i32.const 0)
+        (if (then (br 0)))
+    )
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a0b010900410004400c000b0b");
+    const auto module = parse(wasm);
+
+    EXPECT_EQ(module.codesec[0].instructions,
+        (std::vector{Instr::i32_const, Instr::if_, Instr::br, Instr::end, Instr::end}));
+    EXPECT_EQ(module.codesec[0].immediates,
+        "00000000"    // i32.const
+        "04000000"    // else code offset
+        "19000000"    // else imm offset
+        "04000000"    // code_offset
+        "19000000"    // imm_offset
+        "00000000"    // stack_height
+        "00"_bytes);  // arity
+
+    /* wat2wasm
+    (func
+        (i32.const 0)
+        (i32.const 0)
+        (if (then (br 0)))
+        drop
+    )
+    */
+    const auto wasm_parent_stack =
+        from_hex("0061736d01000000010401600000030201000a0e010c004100410004400c000b1a0b");
+    const auto module_parent_stack = parse(wasm_parent_stack);
+
+    EXPECT_EQ(module_parent_stack.codesec[0].instructions,
+        (std::vector{Instr::i32_const, Instr::i32_const, Instr::if_, Instr::br, Instr::end,
+            Instr::drop, Instr::end}));
+    EXPECT_EQ(module_parent_stack.codesec[0].immediates,
+        "00000000"    // i32.const
+        "00000000"    // i32.const
+        "05000000"    // else code offset
+        "1d000000"    // else imm offset
+        "05000000"    // code_offset
+        "1d000000"    // imm_offset
+        "01000000"    // stack_height
+        "00"_bytes);  // arity
 }
 
 TEST(parser_expr, instr_br_table)
@@ -172,15 +349,42 @@ TEST(parser_expr, instr_br_table)
             Instr::end, Instr::i32_const, Instr::return_, Instr::end, Instr::i32_const,
             Instr::return_, Instr::end, Instr::i32_const, Instr::end}));
 
-    // 5 blocks + 1 local_get before br_table
-    const auto br_table_imm_offset = 5 * (1 + 2 * 4) + 4;
+    // 1 local_get before br_table
+    const auto br_table_imm_offset = 4;
+    // br_imm_size = 13
+    // br_0_offset = br_table_imm_offset + 4 + br_imm_size * 5 + 4 + br_imm_size = 86 = 0x5a
+    // br_1_offset = br_0_offset + 4 + br_imm_size = 0x6b
+    // br_2_offset = br_1_offset + 4 + br_imm_size = 0x7c
+    // br_3_offset = br_2_offset + 4 + br_imm_size = 0x8d
+    // br_4_offset = br_3_offset + 4 + br_imm_size = 0x9e
     const auto expected_br_imm =
-        "04000000"
-        "03000000"
-        "02000000"
-        "01000000"
-        "00000000"
-        "04000000"_bytes;
+        "04000000"  // label_count
+
+        "13000000"  // code_offset
+        "8d000000"  // imm_offset
+        "00000000"  // stack_height
+        "00"        // arity
+
+        "10000000"  // code_offset
+        "7c000000"  // imm_offset
+        "00000000"  // stack_height
+        "00"        // arity
+
+        "0d000000"  // code_offset
+        "6b000000"  // imm_offset
+        "00000000"  // stack_height
+        "00"        // arity
+
+        "0a000000"  // code_offset
+        "5a000000"  // imm_offset
+        "00000000"  // stack_height
+        "00"        // arity
+
+        "16000000"   // code_offset
+        "9e000000"   // imm_offset
+        "00000000"   // stack_height
+        "00"_bytes;  // arity
+
     EXPECT_EQ(code.immediates.substr(br_table_imm_offset, expected_br_imm.size()), expected_br_imm);
     EXPECT_EQ(code.max_stack_height, 1);
 }
@@ -207,11 +411,14 @@ TEST(parser_expr, instr_br_table_empty_vector)
         (std::vector{Instr::block, Instr::local_get, Instr::br_table, Instr::i32_const,
             Instr::return_, Instr::end, Instr::i32_const, Instr::end}));
 
-    // blocks + local_get before br_table
-    const auto br_table_imm_offset = 1 + 2 * 4 + 4;
+    // local_get before br_table
+    const auto br_table_imm_offset = 4;
     const auto expected_br_imm =
-        "00000000"
-        "00000000"_bytes;
+        "00000000"   // label_count
+        "06000000"   // code_offset
+        "26000000"   // imm_offset
+        "00000000"   // stack_height
+        "00"_bytes;  // arity
     EXPECT_EQ(code.immediates.substr(br_table_imm_offset, expected_br_imm.size()), expected_br_imm);
     EXPECT_EQ(code.max_stack_height, 1);
 }

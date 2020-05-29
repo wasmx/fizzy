@@ -648,6 +648,25 @@ TEST(execute_control, br_1_out_of_function_and_imported_function)
     EXPECT_THAT(execute(*instance, 1, {}), Result(1));
 }
 
+TEST(execute_control, br_inner_nonempty_stack)
+{
+    /* wat2wasm
+      (func (result i32)
+        (i32.const 0x1)
+        (block (result i32)
+          (block (br 0))
+          (i32.const 0x2)
+        )
+        i32.add
+      )
+     */
+    const auto bin =
+        from_hex("0061736d010000000105016000017f030201000a11010f004101027f02400c000b41020b6a0b");
+
+    auto instance = instantiate(parse(bin));
+    EXPECT_THAT(execute(*instance, 0, {}), Result(0x3));
+}
+
 TEST(execute_control, br_table)
 {
     /* wat2wasm
