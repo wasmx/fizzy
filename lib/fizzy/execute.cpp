@@ -16,6 +16,9 @@ namespace fizzy
 {
 namespace
 {
+// label_idx + code_offset + imm_offset + stack_height + arity
+constexpr auto BranchImmediateSize = 4 * sizeof(uint32_t) + sizeof(uint8_t);
+
 struct LabelContext
 {
     const Instr* pc = nullptr;           ///< The jump target instruction.
@@ -251,21 +254,50 @@ uint64_t eval_constant_expression(ConstantExpression expr,
         return globals[global_idx - imported_globals.size()];
 }
 
-void branch(uint32_t label_idx, LabelStack& labels, OperandStack& stack, const Instr*& pc,
+template <typename T>
+inline T read(const uint8_t*& input) noexcept
+{
+    T ret;
+    __builtin_memcpy(&ret, input, sizeof(ret));
+    input += sizeof(ret);
+    return ret;
+}
+
+void branch(const Code& code, LabelStack& labels, OperandStack& stack, const Instr*& pc,
     const uint8_t*& immediates) noexcept
 {
+    auto label_idx = read<uint32_t>(immediates);
+
     assert(labels.size() > label_idx);
     while (label_idx-- > 0)
         labels.pop();  // Drop skipped labels (does nothing for labelidx == 0).
     const auto label = labels.top();
     labels.pop();
 
-    pc = label.pc;
-    immediates = label.immediate;
+    const auto code_offset = read<uint32_t>(immediates);
+    const auto imm_offset = read<uint32_t>(immediates);
+    // TODO: these will be const when blocks other than loop use them
+    size_t stack_height = static_cast<uint32_t>(read<int>(immediates));
+    auto arity = read<uint8_t>(immediates);
+
+    if (label.pc == nullptr)
+    {
+        // Labels refers to loop, use jump destination resolved in parser
+        pc = code.instructions.data() + code_offset;
+        immediates = code.immediates.data() + imm_offset;
+    }
+    else
+    {
+        // Label refers to block other than loop, use jump destination saved in label
+        pc = label.pc;
+        immediates = label.immediate;
+        stack_height = label.stack_height;
+        arity = static_cast<uint8_t>(label.arity);
+    }
 
     // When branch is taken, additional stack items must be dropped.
-    assert(stack.size() >= label.stack_height + label.arity);
-    if (label.arity != 0)
+    assert(stack.size() >= stack_height + arity);
+    if (arity != 0)
     {
         assert(label.arity == 1);
         const auto result = stack.top();
@@ -321,15 +353,6 @@ inline T load(bytes_view input, size_t offset) noexcept
 {
     T ret;
     __builtin_memcpy(&ret, input.data() + offset, sizeof(ret));
-    return ret;
-}
-
-template <typename T>
-inline T read(const uint8_t*& input) noexcept
-{
-    T ret;
-    __builtin_memcpy(&ret, input, sizeof(ret));
-    input += sizeof(ret);
     return ret;
 }
 
@@ -684,8 +707,9 @@ execution_result execute(
         }
         case Instr::loop:
         {
-            LabelContext label{pc - 1, immediates, 0, stack.size()};  // Target this instruction.
-            labels.push(label);
+            // Push empty LabelContext to make branch instruction use destination resolved in parser
+            // TODO: this will be not needed when branches in other blocks are resolved in parser
+            labels.push({});
             break;
         }
         case Instr::if_:
@@ -749,29 +773,27 @@ execution_result execute(
         case Instr::br_if:
         case Instr::return_:
         {
-            const auto label_idx = read<uint32_t>(immediates);
-
             // Check condition for br_if.
             if (instruction == Instr::br_if && static_cast<uint32_t>(stack.pop()) == 0)
+            {
+                immediates += BranchImmediateSize;
                 break;
+            }
 
-            branch(label_idx, labels, stack, pc, immediates);
+            branch(code, labels, stack, pc, immediates);
             break;
         }
         case Instr::br_table:
         {
-            // immediates are: size of label vector, labels, default label
             const auto br_table_size = read<uint32_t>(immediates);
             const auto br_table_idx = stack.pop();
 
             const auto label_idx_offset = br_table_idx < br_table_size ?
-                                              br_table_idx * sizeof(uint32_t) :
-                                              br_table_size * sizeof(uint32_t);
+                                              br_table_idx * BranchImmediateSize :
+                                              br_table_size * BranchImmediateSize;
             immediates += label_idx_offset;
 
-            const auto label_idx = read<uint32_t>(immediates);
-
-            branch(label_idx, labels, stack, pc, immediates);
+            branch(code, labels, stack, pc, immediates);
             break;
         }
         case Instr::call:

@@ -36,6 +36,9 @@ struct ControlFrame
     /// Number of results returned from the frame.
     const uint8_t arity{0};
 
+    /// The target instruction code offset.
+    const size_t code_offset{0};
+
     /// The immediates offset for block instructions.
     const size_t immediates_offset{0};
 
@@ -52,9 +55,10 @@ struct ControlFrame
     bool unreachable{false};
 
     ControlFrame(Instr _instruction, uint8_t _arity, int _parent_stack_height,
-        size_t _immediates_offset = 0) noexcept
+        size_t _code_offset = 0, size_t _immediates_offset = 0) noexcept
       : instruction{_instruction},
         arity{_arity},
+        code_offset{_code_offset},
         immediates_offset{_immediates_offset},
         parent_stack_height{_parent_stack_height},
         stack_height{_parent_stack_height}
@@ -111,6 +115,21 @@ void validate_result_count(const ControlFrame& frame)
     //     throw validation_error{"too many results"};
 }
 
+void push_branch_immediates(uint32_t label_idx, const ControlFrame& frame, bytes& immediates)
+{
+    // TODO: This will be not needed when br out of blocks is resolved in parser
+    push(immediates, label_idx);
+
+    // NOTE: These are currently used only for br out of loops, for blocks these are just
+    // placeholders, ignored in execution
+    push(immediates, static_cast<uint32_t>(frame.code_offset));
+    push(immediates, static_cast<uint32_t>(frame.immediates_offset));
+    push(immediates, static_cast<uint32_t>(frame.parent_stack_height));
+    // Always pushing 0 as loop's arity, because br executed in loop jumps to the top,
+    // resetting frame stack to 0, so it should not keep top stack value even if loop has a result.
+    push(immediates, frame.instruction == Instr::loop ? uint8_t{0} : frame.arity);
+}
+
 }  // namespace
 
 parser_result<Code> parse_expr(
@@ -120,7 +139,6 @@ parser_result<Code> parse_expr(
 
     // The stack of control frames allowing to distinguish between block/if/else and label
     // instructions as defined in Wasm Validation Algorithm.
-    // For a block/if/else instruction the value is the block/if/else's immediate offset.
     Stack<ControlFrame> control_stack;
 
     const auto func_type_idx = module.funcsec[func_idx];
@@ -320,8 +338,10 @@ parser_result<Code> parse_expr(
             code.immediates.push_back(arity);
 
             // Push label with immediates offset after arity.
-            control_stack.emplace(Instr::block, arity, frame.stack_height, code.immediates.size());
+            control_stack.emplace(Instr::block, arity, frame.stack_height, code.instructions.size(),
+                code.immediates.size());
 
+            // TODO: these will not be needed when br out of block is resolved in parser
             // Placeholders for immediate values, filled at the matching end instruction.
             push(code.immediates, uint32_t{0});  // Diff to the end instruction.
             push(code.immediates, uint32_t{0});  // Diff for the immediates.
@@ -333,7 +353,9 @@ parser_result<Code> parse_expr(
             uint8_t arity;
             std::tie(arity, pos) = parse_blocktype(pos, end);
 
-            control_stack.emplace(Instr::loop, arity, frame.stack_height);
+            control_stack.emplace(Instr::loop, arity, frame.stack_height, code.instructions.size(),
+                code.immediates.size());
+
             break;
         }
 
@@ -343,8 +365,10 @@ parser_result<Code> parse_expr(
             std::tie(arity, pos) = parse_blocktype(pos, end);
             code.immediates.push_back(arity);
 
-            control_stack.emplace(Instr::if_, arity, frame.stack_height, code.immediates.size());
+            control_stack.emplace(Instr::if_, arity, frame.stack_height, code.instructions.size(),
+                code.immediates.size());
 
+            // TODO: these will not be needed when br out of if is resolved in parser
             // Placeholders for immediate values, filled at the matching end and else instructions.
             push(code.immediates, uint32_t{0});  // Diff to the end instruction.
             push(code.immediates, uint32_t{0});  // Diff for the immediates
@@ -414,7 +438,7 @@ parser_result<Code> parse_expr(
             if (label_idx >= control_stack.size())
                 throw validation_error{"invalid label index"};
 
-            push(code.immediates, label_idx);
+            push_branch_immediates(label_idx, control_stack[label_idx], code.immediates);
 
             if (instr == Instr::br)
                 frame.unreachable = true;
@@ -440,8 +464,10 @@ parser_result<Code> parse_expr(
 
             push(code.immediates, static_cast<uint32_t>(label_indices.size()));
             for (const auto idx : label_indices)
-                push(code.immediates, idx);
-            push(code.immediates, default_label_idx);
+                push_branch_immediates(idx, control_stack[idx], code.immediates);
+
+            push_branch_immediates(
+                default_label_idx, control_stack[default_label_idx], code.immediates);
 
             frame.unreachable = true;
 
@@ -452,7 +478,10 @@ parser_result<Code> parse_expr(
         {
             // return is identical to br MAX
             assert(!control_stack.empty());
-            push(code.immediates, control_stack.size() - 1);
+            const uint32_t label_idx = static_cast<uint32_t>(control_stack.size() - 1);
+
+            push_branch_immediates(label_idx, control_stack[label_idx], code.immediates);
+
             frame.unreachable = true;
             break;
         }
