@@ -19,16 +19,6 @@ namespace
 // label_idx + code_offset + imm_offset + stack_height + arity
 constexpr auto BranchImmediateSize = 4 * sizeof(uint32_t) + sizeof(uint8_t);
 
-struct LabelContext
-{
-    const Instr* pc = nullptr;           ///< The jump target instruction.
-    const uint8_t* immediate = nullptr;  ///< The jump target immediate pointer.
-    size_t arity = 0;                    ///< The type arity of the label instruction.
-    size_t stack_height = 0;             ///< The stack height at the label instruction.
-};
-
-using LabelStack = std::stack<LabelContext, std::vector<LabelContext>>;
-
 inline bool operator==(const FuncType& lhs, const FuncType& rhs)
 {
     return lhs.inputs == rhs.inputs && lhs.outputs == rhs.outputs;
@@ -263,15 +253,11 @@ inline T read(const uint8_t*& input) noexcept
     return ret;
 }
 
-void branch(const Code& code, LabelStack& labels, OperandStack& stack, const Instr*& pc,
-    const uint8_t*& immediates) noexcept
+void branch(
+    const Code& code, OperandStack& stack, const Instr*& pc, const uint8_t*& immediates) noexcept
 {
-    auto label_idx = read<uint32_t>(immediates);
-
-    assert(labels.size() > label_idx);
-    while (label_idx-- > 0)
-        labels.pop();  // Drop skipped labels (does nothing for labelidx == 0).
-    labels.pop();
+    // skip label_idx
+    immediates += sizeof(uint32_t);
 
     const auto code_offset = read<uint32_t>(immediates);
     const auto imm_offset = read<uint32_t>(immediates);
@@ -655,17 +641,6 @@ execution_result execute(
 
     OperandStack stack(static_cast<size_t>(code.max_stack_height));
 
-    LabelStack labels;
-    // The function's implicit block.
-    const auto func_arity = instance.module.get_function_type(func_idx).outputs.size();
-    LabelContext func_block{
-        &code.instructions.back(),  // jump target is final end instruction
-        nullptr,                    // end doesn't have immediates
-        func_arity,                 // block's arity is function arity
-        0                           // stack height on entering the function
-    };
-    labels.push(func_block);
-
     bool trap = false;
 
     const Instr* pc = code.instructions.data();
@@ -683,21 +658,11 @@ execution_result execute(
             break;
         case Instr::block:
         {
-            const auto arity = read<uint8_t>(immediates);
-            const auto target_pc = read<uint32_t>(immediates);
-            const auto target_imm = read<uint32_t>(immediates);
-            LabelContext label{code.instructions.data() + target_pc,
-                code.immediates.data() + target_imm, arity, stack.size()};
-            labels.push(label);
+            immediates += sizeof(uint8_t) + sizeof(uint32_t) + sizeof(uint32_t);
             break;
         }
         case Instr::loop:
-        {
-            // Push empty LabelContext to make branch instruction use destination resolved in parser
-            // TODO: this will be not needed when branches in other blocks are resolved in parser
-            labels.push({});
             break;
-        }
         case Instr::if_:
         {
             const auto arity = read<uint8_t>(immediates);
@@ -705,13 +670,7 @@ execution_result execute(
             const auto target_imm = read<uint32_t>(immediates);
 
             if (static_cast<uint32_t>(stack.pop()) != 0)
-            {
                 immediates += 2 * sizeof(uint32_t);  // Skip the immediates for else instruction.
-
-                LabelContext label{code.instructions.data() + target_pc,
-                    code.immediates.data() + target_imm, arity, stack.size()};
-                labels.push(label);
-            }
             else
             {
                 const auto target_else_pc = read<uint32_t>(immediates);
@@ -719,9 +678,6 @@ execution_result execute(
 
                 if (target_else_pc != 0)  // If else block defined.
                 {
-                    LabelContext label{code.instructions.data() + target_pc,
-                        code.immediates.data() + target_imm, arity, stack.size()};
-                    labels.push(label);
                     pc = code.instructions.data() + target_else_pc;
                     immediates = code.immediates.data() + target_else_imm;
                 }
@@ -736,10 +692,6 @@ execution_result execute(
         }
         case Instr::else_:
         {
-            // We reach else only at the end of if block.
-            assert(!labels.empty());
-            labels.pop();
-
             // We reach else only after executing if block ("then" part),
             // so we need to skip else block now.
             const auto target_pc = read<uint32_t>(immediates);
@@ -752,10 +704,8 @@ execution_result execute(
         }
         case Instr::end:
         {
-            // Labels can be already empty when we reach final `end`  via `return` or `br MAX`.
-            if (!labels.empty())
-                labels.pop();
-            if (labels.empty())
+            // End execution if it's a final end instruction.
+            if (pc == &code.instructions[code.instructions.size()])
                 goto end;
             break;
         }
@@ -770,7 +720,7 @@ execution_result execute(
                 break;
             }
 
-            branch(code, labels, stack, pc, immediates);
+            branch(code, stack, pc, immediates);
             break;
         }
         case Instr::br_table:
@@ -783,7 +733,7 @@ execution_result execute(
                                               br_table_size * BranchImmediateSize;
             immediates += label_idx_offset;
 
-            branch(code, labels, stack, pc, immediates);
+            branch(code, stack, pc, immediates);
             break;
         }
         case Instr::call:
@@ -1549,7 +1499,7 @@ execution_result execute(
     }
 
 end:
-    assert(labels.empty() || trap);
+    assert(pc == &code.instructions[code.instructions.size()] || trap);
     return {trap, {stack.rbegin(), stack.rend()}};
 }
 
