@@ -515,7 +515,7 @@ Module parse(bytes_view input)
             "both module memory and imported memory are defined (at most one of them is allowed)"};
     }
 
-    if (!module.datasec.empty() && module.memorysec.empty() && module.imported_memory_types.empty())
+    if (!module.datasec.empty() && !module.has_memory())
         throw validation_error("data section encountered without a memory section");
 
     if (module.imported_table_types.size() > 1)
@@ -527,16 +527,14 @@ Module parse(bytes_view input)
             "both module table and imported table are defined (at most one of them is allowed)"};
     }
 
-    if (!module.elementsec.empty() && module.tablesec.empty() &&
-        module.imported_table_types.empty())
+    if (!module.elementsec.empty() && !module.has_table())
         throw validation_error("element section encountered without a table section");
 
     if (module.funcsec.size() != code_binaries.size())
         throw parser_error("malformed binary: number of function and code entries must match");
 
-    const auto total_func_count = module.imported_function_types.size() + module.funcsec.size();
-    const auto total_global_count =
-        module.imported_globals_mutability.size() + module.globalsec.size();
+    const auto total_func_count = module.get_function_count();
+    const auto total_global_count = module.get_global_count();
 
     // Validate exports.
     std::unordered_set<std::string_view> export_names;
