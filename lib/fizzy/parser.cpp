@@ -346,12 +346,6 @@ inline Code parse_code(code_view code_binary, FuncIdx func_idx, const Module& mo
     const auto end = code_binary.end();
     const auto [locals_vec, pos1] = parse_vec<Locals>(begin, end);
 
-    auto [code, pos2] = parse_expr(pos1, end, func_idx, module);
-
-    // Size is the total bytes of locals and expressions.
-    if (pos2 != end)
-        throw parser_error{"malformed size field for function"};
-
     uint64_t local_count = 0;
     for (const auto& l : locals_vec)
     {
@@ -359,6 +353,13 @@ inline Code parse_code(code_view code_binary, FuncIdx func_idx, const Module& mo
         if (local_count > std::numeric_limits<uint32_t>::max())
             throw parser_error{"too many local variables"};
     }
+
+    auto [code, pos2] = parse_expr(pos1, end, func_idx, module);
+
+    // Size is the total bytes of locals and expressions.
+    if (pos2 != end)
+        throw parser_error{"malformed size field for function"};
+
     code.local_count = static_cast<uint32_t>(local_count);
     return code;
 }
