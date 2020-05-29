@@ -8,6 +8,7 @@
 #include "types.hpp"
 #include "utf8.hpp"
 #include <cassert>
+#include <unordered_set>
 
 namespace fizzy
 {
@@ -534,6 +535,37 @@ Module parse(bytes_view input)
         throw parser_error("malformed binary: number of function and code entries must match");
 
     const auto total_func_count = module.imported_function_types.size() + module.funcsec.size();
+    const auto total_global_count =
+        module.imported_globals_mutability.size() + module.globalsec.size();
+
+    // Validate exports.
+    std::unordered_set<std::string_view> export_names;
+    for (const auto& export_ : module.exportsec)
+    {
+        switch (export_.kind)
+        {
+        case ExternalKind::Function:
+            if (export_.index >= total_func_count)
+                throw validation_error{"invalid index of an exported function"};
+            break;
+        case ExternalKind::Table:
+            if (export_.index != 0 || !module.has_table())
+                throw validation_error{"invalid index of an exported table"};
+            break;
+        case ExternalKind::Memory:
+            if (export_.index != 0 || !module.has_memory())
+                throw validation_error{"invalid index of an exported memory"};
+            break;
+        case ExternalKind::Global:
+            if (export_.index >= total_global_count)
+                throw validation_error{"invalid index of an exported global"};
+            break;
+        default:
+            assert(false);
+        }
+        if (!export_names.emplace(export_.name).second)
+            throw validation_error("duplicate export name " + export_.name);
+    }
 
     if (module.startfunc && *module.startfunc >= total_func_count)
         throw parser_error{"invalid start function index"};
