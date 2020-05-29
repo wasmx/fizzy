@@ -697,37 +697,48 @@ TEST(parser, export_section_empty)
 
 TEST(parser, export_single_function)
 {
-    const auto section_contents = make_vec({bytes{0x03, 'a', 'b', 'c', 0x00, 0x42}});
-    const auto bin = bytes{wasm_prefix} + make_section(7, section_contents);
+    const auto type_section = make_vec({make_functype({}, {})});
+    const auto func_section = make_vec({"00"_bytes, "00"_bytes});
+    const auto code_section = make_vec({"02000b"_bytes, "02000b"_bytes});
+
+    const auto section_contents = make_vec({bytes{0x03, 'a', 'b', 'c', 0, 0}});
+    const auto bin = bytes{wasm_prefix} + make_section(1, type_section) +
+                     make_section(3, func_section) + make_section(7, section_contents) +
+                     make_section(10, code_section);
 
     const auto module = parse(bin);
     ASSERT_EQ(module.exportsec.size(), 1);
     EXPECT_EQ(module.exportsec[0].name, "abc");
     EXPECT_EQ(module.exportsec[0].kind, ExternalKind::Function);
-    EXPECT_EQ(module.exportsec[0].index, 0x42);
+    EXPECT_EQ(module.exportsec[0].index, 0);
 }
 
 TEST(parser, export_multiple)
 {
-    const auto section_contents =
-        make_vec({bytes{0x03, 'a', 'b', 'c', 0x00, 0x42}, bytes{0x03, 'f', 'o', 'o', 0x01, 0x43},
-            bytes{0x03, 'b', 'a', 'r', 0x02, 0x44}, bytes{0x03, 'x', 'y', 'z', 0x03, 0x45}});
-    const auto bin = bytes{wasm_prefix} + make_section(7, section_contents);
+    /* wat2wasm
+      (func (export "abc") nop)
+      (table (export "foo") 1 funcref)
+      (memory (export "bar") 1)
+      (global (export "xyz") i32 (i32.const 0))
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000104016000000302010004040170000105030100010606017f0041000b0719040361626300"
+        "0003666f6f01000362617202000378797a03000a05010300010b");
 
-    const auto module = parse(bin);
+    const auto module = parse(wasm);
     ASSERT_EQ(module.exportsec.size(), 4);
     EXPECT_EQ(module.exportsec[0].name, "abc");
     EXPECT_EQ(module.exportsec[0].kind, ExternalKind::Function);
-    EXPECT_EQ(module.exportsec[0].index, 0x42);
+    EXPECT_EQ(module.exportsec[0].index, 0);
     EXPECT_EQ(module.exportsec[1].name, "foo");
     EXPECT_EQ(module.exportsec[1].kind, ExternalKind::Table);
-    EXPECT_EQ(module.exportsec[1].index, 0x43);
+    EXPECT_EQ(module.exportsec[1].index, 0);
     EXPECT_EQ(module.exportsec[2].name, "bar");
     EXPECT_EQ(module.exportsec[2].kind, ExternalKind::Memory);
-    EXPECT_EQ(module.exportsec[2].index, 0x44);
+    EXPECT_EQ(module.exportsec[2].index, 0);
     EXPECT_EQ(module.exportsec[3].name, "xyz");
     EXPECT_EQ(module.exportsec[3].kind, ExternalKind::Global);
-    EXPECT_EQ(module.exportsec[3].index, 0x45);
+    EXPECT_EQ(module.exportsec[3].index, 0);
 }
 
 TEST(parser, export_invalid_kind)

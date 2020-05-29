@@ -231,3 +231,68 @@ TEST(validation, call_indirect_no_table)
     const auto wasm = from_hex("0061736d0100000001050160017f00030201000a0901070020001101000b");
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "call_indirect without defined table");
 }
+
+TEST(validation, export_invalid_index)
+{
+    /* wat2wasm --no-check
+    (export "foo" (func 0))
+    */
+    const auto wasm_func = from_hex("0061736d0100000007070103666f6f0000");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm_func), validation_error, "invalid index of an exported function");
+
+    /* wat2wasm --no-check
+    (export "g" (global 0))
+    */
+    const auto wasm_glob = from_hex("0061736d0100000007050101670300");
+    EXPECT_THROW_MESSAGE(parse(wasm_glob), validation_error, "invalid index of an exported global");
+
+    /* wat2wasm --no-check
+    (export "t" (table 0))
+    */
+    const auto wasm_no_table = from_hex("0061736d0100000007050101740100");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm_no_table), validation_error, "invalid index of an exported table");
+
+    /* wat2wasm --no-check
+    (table 1 funcref)
+    (export "t" (table 1))
+    */
+    const auto wasm_table = from_hex("0061736d0100000004040170000107050101740101");
+    EXPECT_THROW_MESSAGE(parse(wasm_table), validation_error, "invalid index of an exported table");
+
+    /* wat2wasm --no-check
+    (export "m" (memory 0))
+    */
+    const auto wasm_no_mem = from_hex("0061736d01000000070501016d0200");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm_no_mem), validation_error, "invalid index of an exported memory");
+
+    /* wat2wasm --no-check
+    (memory 1)
+    (export "m" (memory 1))
+    */
+    const auto wasm_mem = from_hex("0061736d010000000503010001070501016d0201");
+    EXPECT_THROW_MESSAGE(parse(wasm_mem), validation_error, "invalid index of an exported memory");
+}
+
+TEST(validation, export_duplicate_name)
+{
+    /* wat2wasm --no-check
+    (func (export "foo") (nop))
+    (func (export "foo") (nop))
+    */
+    const auto wasm_func = from_hex(
+        "0061736d010000000104016000000303020000070d0203666f6f000003666f6f00010a09020300010b0300010"
+        "b");
+    EXPECT_THROW_MESSAGE(parse(wasm_func), validation_error, "duplicate export name foo");
+
+    /* wat2wasm --no-check
+    (func (export "foo") (nop))
+    (global (export "foo") i32 (i32.const 0))
+    */
+    const auto wasm_func_glob = from_hex(
+        "0061736d01000000010401600000030201000606017f0041000b070d0203666f6f000003666f6f03000a050103"
+        "00010b");
+    EXPECT_THROW_MESSAGE(parse(wasm_func_glob), validation_error, "duplicate export name foo");
+}
