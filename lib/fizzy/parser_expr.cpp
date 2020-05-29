@@ -165,10 +165,12 @@ inline void mark_frame_unreachable(ControlFrame& frame) noexcept
 
 }  // namespace
 
-parser_result<Code> parse_expr(
-    const uint8_t* pos, const uint8_t* end, FuncIdx func_idx, const Module& module)
+parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t local_count,
+    FuncIdx func_idx, const Module& module)
 {
+    // TODO: consider adding a constructor
     Code code;
+    code.local_count = local_count;
 
     // The stack of control frames allowing to distinguish between block/if/else and label
     // instructions as defined in Wasm Validation Algorithm.

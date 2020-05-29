@@ -354,13 +354,13 @@ inline Code parse_code(code_view code_binary, FuncIdx func_idx, const Module& mo
             throw parser_error{"too many local variables"};
     }
 
-    auto [code, pos2] = parse_expr(pos1, end, func_idx, module);
+    const auto [code, pos2] =
+        parse_expr(pos1, end, static_cast<uint32_t>(local_count), func_idx, module);
 
     // Size is the total bytes of locals and expressions.
     if (pos2 != end)
         throw parser_error{"malformed size field for function"};
 
-    code.local_count = static_cast<uint32_t>(local_count);
     return code;
 }
 
