@@ -9,6 +9,17 @@
 #include <cassert>
 #include <cstring>
 
+namespace wasm3_bigint
+{
+#define BIGINT_BITS 384
+#define LIMB_BITS 64
+#define LIMB_BITS_OVERFLOW 128
+#include <test/utils/bigint.h>
+#undef BIGINT_BITS
+#undef LIMB_BITS
+#undef LIMB_BITS_OVERFLOW
+}  // namespace wasm3_bigint
+
 namespace fizzy::test
 {
 static_assert(sizeof(IM3Function) <= sizeof(WasmEngine::FuncRef));
@@ -44,6 +55,92 @@ const void* env_adler32(IM3Runtime /*runtime*/, uint64_t* stack, void* mem)
     const uint32_t offset = *(uint32_t*)(stack++);
     const uint32_t length = *(uint32_t*)(stack++);
     *ret = fizzy::adler32({reinterpret_cast<uint8_t*>(mem) + offset, length});
+    return m3Err_none;
+}
+
+const uint64_t mod[] = {0xb9feffffffffaaab, 0x1eabfffeb153ffff, 0x6730d2a0f6b0f624,
+    0x64774b84f38512bf, 0x4b1ba7b6434bacd7, 0x1a0111ea397fe69a};
+const uint64_t modinv = 0x89f3fffcfffcfffd;
+
+const void* bignum_int_add(IM3Runtime /*runtime*/, uint64_t* stack, void* mem)
+{
+    uint64_t* ret = stack;
+    const uint32_t a_offset = *(uint32_t*)(stack++);
+    const uint32_t b_offset = *(uint32_t*)(stack++);
+    const uint32_t ret_offset = *(uint32_t*)(stack++);
+    const uint64_t* a = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + a_offset);
+    const uint64_t* b = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + b_offset);
+    uint64_t* out = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + ret_offset);
+    *ret = wasm3_bigint::add384_64bitlimbs(out, a, b);
+    return m3Err_none;
+}
+const void* bignum_int_sub(IM3Runtime /*runtime*/, uint64_t* stack, void* mem)
+{
+    uint64_t* ret = stack;
+    const uint32_t a_offset = *(uint32_t*)(stack++);
+    const uint32_t b_offset = *(uint32_t*)(stack++);
+    const uint32_t ret_offset = *(uint32_t*)(stack++);
+    const uint64_t* a = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + a_offset);
+    const uint64_t* b = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + b_offset);
+    uint64_t* out = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + ret_offset);
+    *ret = wasm3_bigint::sub384_64bitlimbs(out, a, b);
+    return m3Err_none;
+}
+const void* bignum_int_mul(IM3Runtime /*runtime*/, uint64_t* stack, void* mem)
+{
+    const uint32_t a_offset = *(uint32_t*)(stack++);
+    const uint32_t b_offset = *(uint32_t*)(stack++);
+    const uint32_t ret_offset = *(uint32_t*)(stack++);
+    const uint64_t* a = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + a_offset);
+    const uint64_t* b = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + b_offset);
+    uint64_t* out = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + ret_offset);
+    wasm3_bigint::mul384_64bitlimbs(out, a, b);
+    return m3Err_none;
+}
+const void* bignum_int_div(IM3Runtime /*runtime*/, uint64_t* stack, void* mem)
+{
+    const uint32_t a_offset = *(uint32_t*)(stack++);
+    const uint32_t b_offset = *(uint32_t*)(stack++);
+    const uint32_t q_offset = *(uint32_t*)(stack++);
+    const uint32_t r_offset = *(uint32_t*)(stack++);
+    const uint64_t* a = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + a_offset);
+    const uint64_t* b = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + b_offset);
+    uint64_t* q = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + q_offset);
+    uint64_t* r = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + r_offset);
+    wasm3_bigint::div384_64bitlimbs(q, r, a, b);
+    return m3Err_none;
+}
+const void* bignum_f1m_add(IM3Runtime /*runtime*/, uint64_t* stack, void* mem)
+{
+    const uint32_t a_offset = *(uint32_t*)(stack++);
+    const uint32_t b_offset = *(uint32_t*)(stack++);
+    const uint32_t ret_offset = *(uint32_t*)(stack++);
+    const uint64_t* a = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + a_offset);
+    const uint64_t* b = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + b_offset);
+    uint64_t* out = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + ret_offset);
+    wasm3_bigint::addmod384_64bitlimbs(out, a, b, mod);
+    return m3Err_none;
+}
+const void* bignum_f1m_sub(IM3Runtime /*runtime*/, uint64_t* stack, void* mem)
+{
+    const uint32_t a_offset = *(uint32_t*)(stack++);
+    const uint32_t b_offset = *(uint32_t*)(stack++);
+    const uint32_t ret_offset = *(uint32_t*)(stack++);
+    const uint64_t* a = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + a_offset);
+    const uint64_t* b = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + b_offset);
+    uint64_t* out = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + ret_offset);
+    wasm3_bigint::submod384_64bitlimbs(out, a, b, mod);
+    return m3Err_none;
+}
+const void* bignum_f1m_mul(IM3Runtime /*runtime*/, uint64_t* stack, void* mem)
+{
+    const uint32_t a_offset = *(uint32_t*)(stack++);
+    const uint32_t b_offset = *(uint32_t*)(stack++);
+    const uint32_t ret_offset = *(uint32_t*)(stack++);
+    const uint64_t* a = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + a_offset);
+    const uint64_t* b = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + b_offset);
+    uint64_t* out = reinterpret_cast<uint64_t*>(reinterpret_cast<uint8_t*>(mem) + ret_offset);
+    wasm3_bigint::mulmodmont384_64bitlimbs(out, a, b, mod, modinv);
     return m3Err_none;
 }
 }  // namespace
@@ -89,6 +186,48 @@ bool Wasm3Engine::instantiate(bytes_view wasm_binary)
     }
 
     auto ret = m3_LinkRawFunction(module, "env", "adler32", "i(ii)", env_adler32);
+    if (ret != m3Err_none && ret != m3Err_functionLookupFailed)
+    {
+        m3_FreeRuntime(m_runtime);
+        return false;
+    }
+    m3_LinkRawFunction(module, "env", "bignum_int_add", "i(iii)", bignum_int_add);
+    if (ret != m3Err_none && ret != m3Err_functionLookupFailed)
+    {
+        m3_FreeRuntime(m_runtime);
+        return false;
+    }
+    m3_LinkRawFunction(module, "env", "bignum_int_sub", "i(iii)", bignum_int_sub);
+    if (ret != m3Err_none && ret != m3Err_functionLookupFailed)
+    {
+        m3_FreeRuntime(m_runtime);
+        return false;
+    }
+    m3_LinkRawFunction(module, "env", "bignum_int_mul", "v(iii)", bignum_int_mul);
+    if (ret != m3Err_none && ret != m3Err_functionLookupFailed)
+    {
+        m3_FreeRuntime(m_runtime);
+        return false;
+    }
+    m3_LinkRawFunction(module, "env", "bignum_int_div", "v(iiii)", bignum_int_div);
+    if (ret != m3Err_none && ret != m3Err_functionLookupFailed)
+    {
+        m3_FreeRuntime(m_runtime);
+        return false;
+    }
+    m3_LinkRawFunction(module, "env", "bignum_f1m_add", "v(iii)", bignum_f1m_add);
+    if (ret != m3Err_none && ret != m3Err_functionLookupFailed)
+    {
+        m3_FreeRuntime(m_runtime);
+        return false;
+    }
+    m3_LinkRawFunction(module, "env", "bignum_f1m_sub", "v(iii)", bignum_f1m_sub);
+    if (ret != m3Err_none && ret != m3Err_functionLookupFailed)
+    {
+        m3_FreeRuntime(m_runtime);
+        return false;
+    }
+    m3_LinkRawFunction(module, "env", "bignum_f1m_mul", "v(iii)", bignum_f1m_mul);
     if (ret != m3Err_none && ret != m3Err_functionLookupFailed)
     {
         m3_FreeRuntime(m_runtime);
