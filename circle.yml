@@ -79,19 +79,19 @@ commands:
         working_directory: ~/build
         environment:
           LLVM_PROFILE_FILE: spectests-validation.profraw
-        command: bin/fizzy-spectests ~/project/test/spectests/smoketest --skip-validation
+        command: bin/fizzy-spectests ~/project/test/smoketests/spectests/default --skip-validation
     - run:
         name: "Run smoketest with fizzy-spectests"
         working_directory: ~/build
         environment:
           LLVM_PROFILE_FILE: spectests-skipvalidation.profraw
-        command: bin/fizzy-spectests ~/project/test/spectests/smoketest
+        command: bin/fizzy-spectests ~/project/test/smoketests/spectests/default
     - run:
         name: "Run smoketest failures with fizzy-spectests"
         working_directory: ~/build
         environment:
           LLVM_PROFILE_FILE: spectests-failures.profraw
-        command: bin/fizzy-spectests ~/project/test/spectests/smoketest-failures || true
+        command: bin/fizzy-spectests ~/project/test/smoketests/spectests/failures || true
 
   benchmark:
     description: "Run benchmarks"
