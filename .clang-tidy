@@ -11,6 +11,13 @@ Checks: >
   -performance-inefficient-string-concatenation,
   -performance-unnecessary-value-param,
   portability-*,
+  readability-*,
+  -readability-braces-around-statements,
+  -readability-else-after-return,
+  -readability-implicit-bool-conversion,
+  -readability-magic-numbers,
+  -readability-named-parameter,
+  -readability-qualified-auto,
 
 WarningsAsErrors:  '*'
 FormatStyle:       file
