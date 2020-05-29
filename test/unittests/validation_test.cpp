@@ -296,3 +296,31 @@ TEST(validation, export_duplicate_name)
         "00010b");
     EXPECT_THROW_MESSAGE(parse(wasm_func_glob), validation_error, "duplicate export name foo");
 }
+
+TEST(validation, start_function_type)
+{
+    /* wat2wasm --no-check
+    (func $start (param i32))
+    (start $start)
+    */
+    const auto wasm_func_param =
+        from_hex("0061736d0100000001050160017f00030201000801000a040102000b");
+    EXPECT_THROW_MESSAGE(parse(wasm_func_param), validation_error, "invalid start function type");
+
+    /* wat2wasm --no-check
+    (func $start (param i32) (result i32) (return (i32.const 0)))
+    (start $start)
+    */
+    const auto wasm_func_param_result =
+        from_hex("0061736d0100000001060160017f017f030201000801000a0701050041000f0b");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm_func_param_result), validation_error, "invalid start function type");
+
+    /* wat2wasm --no-check
+    (func $start (result i32) (return (i32.const 0)))
+    (start $start)
+    */
+    const auto wasm_func_result =
+        from_hex("0061736d010000000105016000017f030201000801000a0701050041000f0b");
+    EXPECT_THROW_MESSAGE(parse(wasm_func_result), validation_error, "invalid start function type");
+}
