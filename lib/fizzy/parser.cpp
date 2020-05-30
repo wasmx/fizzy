@@ -565,8 +565,15 @@ Module parse(bytes_view input)
             throw validation_error("duplicate export name " + export_.name);
     }
 
-    if (module.startfunc && *module.startfunc >= total_func_count)
-        throw parser_error{"invalid start function index"};
+    if (module.startfunc)
+    {
+        if (*module.startfunc >= total_func_count)
+            throw validation_error{"invalid start function index"};
+
+        const auto& func_type = module.get_function_type(*module.startfunc);
+        if (!func_type.inputs.empty() || !func_type.outputs.empty())
+            throw validation_error{"invalid start function type"};
+    }
 
     // Process code. TODO: This can be done lazily.
     module.codesec.reserve(code_binaries.size());
