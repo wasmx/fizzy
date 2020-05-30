@@ -559,12 +559,26 @@ parser_result<Code> parse_expr(
         case Instr::local_get:
         case Instr::local_set:
         case Instr::local_tee:
-        case Instr::global_get:
-        case Instr::global_set:
         {
             uint32_t imm;
             std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, end);
             push(code.immediates, imm);
+            break;
+        }
+
+        case Instr::global_get:
+        case Instr::global_set:
+        {
+            uint32_t idx;
+            std::tie(idx, pos) = leb128u_decode<uint32_t>(pos, end);
+
+            if (idx >= module.get_global_count())
+                throw validation_error{"accessing global with invalid index"};
+
+            if (instr == Instr::global_set && !module.is_global_mutable(idx))
+                throw validation_error{"trying to mutate immutable global"};
+
+            push(code.immediates, idx);
             break;
         }
 

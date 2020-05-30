@@ -297,6 +297,128 @@ TEST(validation, export_duplicate_name)
     EXPECT_THROW_MESSAGE(parse(wasm_func_glob), validation_error, "duplicate export name foo");
 }
 
+TEST(validation, global_get_invalid_index)
+{
+    /* wat2wasm --no-check
+    (func (param i32)
+      (get_global 0)
+    )
+    */
+    const auto wasm = from_hex("0061736d0100000001050160017f00030201000a0601040023000b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "accessing global with invalid index");
+
+    /* wat2wasm --no-check
+    (global i32 (i32.const 0))
+    (func (param i32)
+      (get_global 1)
+    )
+    */
+    const auto wasm_global =
+        from_hex("0061736d0100000001050160017f00030201000606017f0041000b0a0601040023010b");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm_global), validation_error, "accessing global with invalid index");
+
+    /* wat2wasm --no-check
+    (global (import "mod" "g") i32)
+    (func (param i32)
+      (get_global 1)
+    )
+    */
+    const auto wasm_imp_global =
+        from_hex("0061736d0100000001050160017f00020a01036d6f640167037f00030201000a0601040023010b");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm_imp_global), validation_error, "accessing global with invalid index");
+
+    /* wat2wasm --no-check
+    (global (import "mod" "g") i32)
+    (global i32 (i32.const 0))
+    (func (param i32)
+      (get_global 2)
+    )
+    */
+    const auto wasm_two_globals = from_hex(
+        "0061736d0100000001050160017f00020a01036d6f640167037f00030201000606017f0041000b0a0601040023"
+        "020b");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm_two_globals), validation_error, "accessing global with invalid index");
+}
+
+TEST(validation, global_set_invalid_index)
+{
+    /* wat2wasm --no-check
+    (func (param i32)
+      (i32.const 0)
+      (set_global 0)
+    )
+    */
+    const auto wasm = from_hex("0061736d0100000001050160017f00030201000a08010600410024000b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "accessing global with invalid index");
+
+    /* wat2wasm --no-check
+    (global i32 (i32.const 0))
+    (func (param i32)
+      (i32.const 0)
+      (set_global 1)
+    )
+    */
+    const auto wasm_global =
+        from_hex("0061736d0100000001050160017f00030201000606017f0041000b0a08010600410024010b");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm_global), validation_error, "accessing global with invalid index");
+
+    /* wat2wasm --no-check
+    (global (import "mod" "g") i32)
+    (func (param i32)
+      (i32.const 0)
+      (set_global 1)
+    )
+    */
+    const auto wasm_imp_global = from_hex(
+        "0061736d0100000001050160017f00020a01036d6f640167037f00030201000a08010600410024010b");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm_imp_global), validation_error, "accessing global with invalid index");
+
+    /* wat2wasm --no-check
+    (global (import "mod" "g") i32)
+    (global i32 (i32.const 0))
+    (func (param i32)
+      (i32.const 0)
+      (set_global 2)
+    )
+    */
+    const auto wasm_two_globals = from_hex(
+        "0061736d0100000001050160017f00020a01036d6f640167037f00030201000606017f0041000b0a0801060041"
+        "0024020b");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm_two_globals), validation_error, "accessing global with invalid index");
+}
+
+TEST(validation, global_set_immutable)
+{
+    /* wat2wasm --no-check
+    (global i32 (i32.const 0))
+    (func (param i32)
+      (i32.const 0)
+      (set_global 0)
+    )
+    */
+    const auto wasm_global =
+        from_hex("0061736d0100000001050160017f00030201000606017f0041000b0a08010600410024000b");
+    EXPECT_THROW_MESSAGE(parse(wasm_global), validation_error, "trying to mutate immutable global");
+
+    /* wat2wasm --no-check
+    (global (import "mod" "g") i32)
+    (func (param i32)
+      (i32.const 0)
+      (set_global 0)
+    )
+    */
+    const auto wasm_imp_global = from_hex(
+        "0061736d0100000001050160017f00020a01036d6f640167037f00030201000a08010600410024000b");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm_imp_global), validation_error, "trying to mutate immutable global");
+}
+
 TEST(validation, start_function_type)
 {
     /* wat2wasm --no-check

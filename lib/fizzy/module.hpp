@@ -74,5 +74,13 @@ struct Module
     {
         return !memorysec.empty() || !imported_memory_types.empty();
     }
+
+    bool is_global_mutable(GlobalIdx idx) const noexcept
+    {
+        assert(idx < get_global_count());
+        return idx < imported_globals_mutability.size() ?
+                   imported_globals_mutability[idx] :
+                   globalsec[idx - imported_globals_mutability.size()].is_mutable;
+    }
 };
 }  // namespace fizzy
