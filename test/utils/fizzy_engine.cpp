@@ -135,7 +135,6 @@ WasmEngine::Result FizzyEngine::execute(
 {
     const auto [trapped, result_stack] =
         fizzy::execute(*m_instance, static_cast<uint32_t>(func_ref), args);
-    assert(result_stack.size() <= 1);
     return {trapped, !result_stack.empty() ? result_stack.back() : std::optional<uint64_t>{}};
 }
 }  // namespace fizzy::test
