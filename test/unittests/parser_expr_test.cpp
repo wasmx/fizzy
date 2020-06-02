@@ -185,7 +185,7 @@ TEST(parser_expr, block_br)
     // end
 
     const auto code_bin = "010240410a21010c00410b21010b20011a0b"_bytes;
-    const auto [code, pos] = parse_expr(code_bin);
+    const auto [code, pos] = parse_expr(code_bin, 2);
     EXPECT_EQ(
         code.instructions, (std::vector{Instr::nop, Instr::block, Instr::i32_const,
                                Instr::local_set, Instr::br, Instr::i32_const, Instr::local_set,

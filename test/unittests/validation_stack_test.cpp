@@ -115,12 +115,13 @@ TEST(validation_stack, block_too_many_results)
 {
     /* wat2wasm --no-check
     (func
+      (local i32)
       (block
         get_local 0  ;; Leaves an item on the stack what makes the block invalid.
       )
     )
     */
-    const auto wasm = from_hex("0061736d01000000010401600000030201000a09010700024020000b0b");
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a0b010901017f024020000b0b");
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "too many results");
 }
 
@@ -185,12 +186,13 @@ TEST(validation_stack, loop_too_many_results)
 {
     /* wat2wasm --no-check
     (func
+      (local i32)
       (loop
         get_local 0  ;; Leaves an item on the stack what makes the loop invalid.
       )
     )
     */
-    const auto wasm = from_hex("0061736d01000000010401600000030201000a09010700034020000b0b");
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a0b010901017f034020000b0b");
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "too many results");
 
     /* wat2wasm --no-check
