@@ -9,6 +9,7 @@
 #include <cassert>
 #include <cstring>
 #include <iostream>
+#include <map>
 #include <ostream>
 #include <sstream>
 
@@ -21,6 +22,8 @@ class WAMREngine : public WasmEngine
     wasm_module_t m_module{nullptr};
     wasm_module_inst_t m_instance{nullptr};
     wasm_exec_env_t m_env{nullptr};
+    // TODO: preprocess the signature into a struct
+    std::map<wasm_function_inst_t, std::string> m_signatures;
 
 public:
     WAMREngine()
@@ -144,7 +147,11 @@ std::optional<WasmEngine::FuncRef> WAMREngine::find_function(
     // Last parameter is function signature -- ignored according to documentation.
     wasm_function_inst_t function = wasm_runtime_lookup_function(m_instance, name.data(), nullptr);
     if (function != nullptr)
+    {
+        (void)signature;
+        // m_signatures[function] = signature;
         return reinterpret_cast<WasmEngine::FuncRef>(function);
+    }
     return std::nullopt;
 }
 
