@@ -73,7 +73,7 @@ bool WabtEngine::instantiate(bytes_view wasm_binary)
             auto memory_data = memory->data;
             assert(memory_data.size() > (offset + length));
             const auto ret =
-                fizzy::adler32({reinterpret_cast<uint8_t*>(&memory_data[offset]), length});
+                fizzy::test::adler32({reinterpret_cast<uint8_t*>(&memory_data[offset]), length});
             results[0].set_i32(ret);
             return wabt::interp::Result::Ok;
         });

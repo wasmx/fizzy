@@ -277,7 +277,7 @@ void load_benchmark(const fs::path& path, const std::string& name_prefix)
             }
 
             case InputsReadingState::Memory:
-                benchmark_case->memory = fizzy::from_hex(strip_space(l));
+                benchmark_case->memory = fizzy::test::from_hex(strip_space(l));
                 st = InputsReadingState::ExpectedResult;
                 break;
 
@@ -288,7 +288,7 @@ void load_benchmark(const fs::path& path, const std::string& name_prefix)
                 break;
 
             case InputsReadingState::ExpectedMemory:
-                benchmark_case->expected_memory = fizzy::from_hex(strip_space(l));
+                benchmark_case->expected_memory = fizzy::test::from_hex(strip_space(l));
 
                 for (const auto& entry : engine_registry)
                 {

@@ -6,7 +6,6 @@
 
 #include "leb128_encode.hpp"
 
-
 namespace fizzy::test
 {
 inline bytes add_size_prefix(const bytes& content)

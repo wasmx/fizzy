@@ -10,6 +10,7 @@
 #include <test/utils/hex.hpp>
 
 using namespace fizzy;
+using namespace fizzy::test;
 using namespace testing;
 
 TEST(execute, end)

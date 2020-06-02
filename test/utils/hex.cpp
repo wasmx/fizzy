@@ -5,7 +5,7 @@
 #include <test/utils/hex.hpp>
 #include <stdexcept>
 
-namespace fizzy
+namespace fizzy::test
 {
 bytes from_hex(const std::string& hex)
 {
@@ -44,4 +44,4 @@ std::string hex(const uint8_t* data, size_t size)
         str += hex(*data);
     return str;
 }
-}  // namespace fizzy
+}  // namespace fizzy::test
