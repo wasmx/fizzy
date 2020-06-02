@@ -12,7 +12,7 @@ using namespace fizzy;
 using namespace fizzy::test;
 
 static const decltype(&create_fizzy_engine) all_engines[]{
-    create_fizzy_engine, create_wabt_engine, create_wasm3_engine};
+    create_fizzy_engine, create_wabt_engine, create_wamr_engine, create_wasm3_engine};
 
 TEST(wasm_engine, validate_function_signature)
 {
@@ -60,8 +60,7 @@ TEST(wasm_engine, instantiate_error)
         "0061736d0100000001090260017f017f600000020f0103656e760765787466756e630000030201010708010474"
         "65737400010a05010300000b");
 
-    // TODO: wasm3 doesn't care about imports, until execution
-    // NOTE: wabt doesn't differentiate between parse/instantiate errors.
+    // TODO: wasm3 and wamr doesn't care about imports, until execution
     for (auto engine_create_fn : {create_fizzy_engine, create_wabt_engine})
     {
         auto engine = engine_create_fn();
@@ -89,7 +88,7 @@ TEST(wasm_engine, find_function)
     }
 }
 
-TEST(wasm_engine, trapped)
+TEST(wasm_engine, DISABLED_trapped)
 {
     /* wat2wasm
     (func $test (export "test")
@@ -112,7 +111,7 @@ TEST(wasm_engine, trapped)
     }
 }
 
-TEST(wasm_engine, start_func)
+TEST(wasm_engine, DISABLED_start_func)
 {
     /* wat2wasm
     (global $g1 (mut i32) (i32.const 0))
@@ -240,7 +239,7 @@ TEST(wasm_engine, multi_mixed_args_ret_i64)
     }
 }
 
-TEST(wasm_engine, no_memory)
+TEST(wasm_engine, DISABLED_no_memory)
 {
     /* wat2wasm
     (func $test (export "test"))
@@ -307,7 +306,7 @@ TEST(wasm_engine, memory)
     }
 }
 
-TEST(wasm_engine, host_function)
+TEST(wasm_engine, DISABLED_host_function)
 {
     /* wat2wasm
     (func $adler32 (import "env" "adler32") (param i32 i32) (result i32))

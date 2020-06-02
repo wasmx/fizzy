@@ -63,4 +63,5 @@ void validate_function_signature(std::string_view signature);
 std::unique_ptr<WasmEngine> create_fizzy_engine();
 std::unique_ptr<WasmEngine> create_wabt_engine();
 std::unique_ptr<WasmEngine> create_wasm3_engine();
+std::unique_ptr<WasmEngine> create_wamr_engine();
 }  // namespace fizzy::test
