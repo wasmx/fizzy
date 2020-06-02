@@ -4,3 +4,6 @@
 
 add_subdirectory(benchmarks)
 add_subdirectory(spectests)
+if(FIZZY_WASI)
+    add_subdirectory(wasi)
+endif()
