@@ -19,6 +19,7 @@ target_sources(
     leb128_test.cpp
     parser_expr_test.cpp
     parser_test.cpp
+    span_test.cpp
     stack_test.cpp
     test_utils_test.cpp
     types_test.cpp
