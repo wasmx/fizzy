@@ -328,7 +328,8 @@ inline DstT extend(SrcT in) noexcept
 }
 
 template <typename DstT, typename SrcT = DstT>
-inline bool load_from_memory(bytes_view memory, OperandStack& stack, const uint8_t*& immediates)
+inline bool load_from_memory(
+    bytes_view memory, OperandStack& stack, const uint8_t*& immediates) noexcept
 {
     const auto address = static_cast<uint32_t>(stack.pop());
     // NOTE: alignment is dropped by the parser
@@ -343,7 +344,8 @@ inline bool load_from_memory(bytes_view memory, OperandStack& stack, const uint8
 }
 
 template <typename DstT>
-inline bool store_into_memory(bytes& memory, OperandStack& stack, const uint8_t*& immediates)
+inline bool store_into_memory(
+    bytes& memory, OperandStack& stack, const uint8_t*& immediates) noexcept
 {
     const auto value = static_cast<DstT>(stack.pop());
     const auto address = static_cast<uint32_t>(stack.pop());
