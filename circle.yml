@@ -71,27 +71,18 @@ commands:
     description: "Test"
     steps:
     - run:
-        name: "Test"
+        name: "Run unit tests"
         working_directory: ~/build
-        command: ctest -R ${TESTS_FILTER:-'.*'} -j4 --schedule-random --output-on-failure
+        command: ctest -R unittests -j4 --schedule-random --output-on-failure
     - run:
-        name: "Run smoketest with fizzy-spectests --skip-validation"
+        name: "Run smoke tests"
         working_directory: ~/build
-        environment:
-          LLVM_PROFILE_FILE: spectests-validation.profraw
-        command: bin/fizzy-spectests ~/project/test/spectests/smoketest --skip-validation
+        command: ctest -R smoketests -j4 --schedule-random --output-on-failure
     - run:
-        name: "Run smoketest with fizzy-spectests"
+        name: "Run other tests"
         working_directory: ~/build
-        environment:
-          LLVM_PROFILE_FILE: spectests-skipvalidation.profraw
-        command: bin/fizzy-spectests ~/project/test/spectests/smoketest
-    - run:
-        name: "Run smoketest failures with fizzy-spectests"
-        working_directory: ~/build
-        environment:
-          LLVM_PROFILE_FILE: spectests-failures.profraw
-        command: bin/fizzy-spectests ~/project/test/spectests/smoketest-failures || true
+        command: ctest -E 'unittests|smoketests' -j4 --schedule-random --output-on-failure
+
 
   benchmark:
     description: "Run benchmarks"
