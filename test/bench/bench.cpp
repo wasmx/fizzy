@@ -49,7 +49,7 @@ void benchmark_parse(
 
     // Pre-run for validation
     if (!engine->parse(wasm_binary))
-        return state.SkipWithError("Parsing failed");
+        state.SkipWithError("Parsing failed");
 
     const auto input_size = wasm_binary.size();
     auto num_bytes_parsed = uint64_t{0};
@@ -88,29 +88,35 @@ struct ExecutionBenchmarkCase
 
 /// Performs test run of the benchmark case and checks results produces by the engine
 /// against the expected values.
-void validate_benchmark_case(benchmark::State& state, fizzy::test::WasmEngine& engine,
+bool validate_benchmark_case(benchmark::State& state, fizzy::test::WasmEngine& engine,
     const ExecutionBenchmarkCase& benchmark_case)
 {
     if (!engine.instantiate(*benchmark_case.wasm_binary))
-        return state.SkipWithError("Instantiation failed");
+    {
+        state.SkipWithError("Instantiation failed");
+        return false;
+    }
 
     const auto func_ref = engine.find_function(benchmark_case.func_name, benchmark_case.func_sig);
     if (!func_ref)
     {
-        return state.SkipWithError(
-            ("Function \"" + benchmark_case.func_name + "\" not found").c_str());
+        state.SkipWithError(("Function \"" + benchmark_case.func_name + "\" not found").c_str());
+        return false;
     }
 
-    if (!benchmark_case.memory.empty())
+    if (!benchmark_case.memory.empty() && !engine.init_memory(benchmark_case.memory))
     {
-        if (!engine.init_memory(benchmark_case.memory))
-            return state.SkipWithError("Memory initialization failed");
+        state.SkipWithError("Memory initialization failed");
+        return false;
     }
 
     // Execute once and check results against expectations.
     const auto result = engine.execute(*func_ref, benchmark_case.func_args);
     if (result.trapped)
-        return state.SkipWithError("Trapped");
+    {
+        state.SkipWithError("Trapped");
+        return false;
+    }
 
     if (benchmark_case.expected_result)
     {
@@ -118,43 +124,59 @@ void validate_benchmark_case(benchmark::State& state, fizzy::test::WasmEngine& e
         {
             const auto error_msg = "Missing result value, expected: " +
                                    std::to_string(*benchmark_case.expected_result);
-            return state.SkipWithError(error_msg.c_str());
+            state.SkipWithError(error_msg.c_str());
+            return false;
         }
         else if (*result.value != *benchmark_case.expected_result)
         {
             const auto error_msg = "Incorrect result value, expected: " +
                                    std::to_string(*benchmark_case.expected_result) +
                                    ", got: " + std::to_string(*result.value);
-            return state.SkipWithError(error_msg.c_str());
+            state.SkipWithError(error_msg.c_str());
+            return false;
         }
     }
     else if (result.value)
     {
-        return state.SkipWithError(
-            ("Unexpected result value: " + std::to_string(*result.value)).c_str());
+        state.SkipWithError(("Unexpected result value: " + std::to_string(*result.value)).c_str());
+        return false;
     }
     const auto memory = engine.get_memory();
     if (memory.size() < benchmark_case.expected_memory.size())
-        return state.SkipWithError("Result memory is shorter than expected");
+    {
+        state.SkipWithError("Result memory is shorter than expected");
+        return false;
+    }
 
     // Compare _beginning_ segment of the memory with expected.
     // Specifying expected full memory pages is impractical.
     if (!std::equal(std::begin(benchmark_case.expected_memory),
             std::end(benchmark_case.expected_memory), std::begin(memory)))
-        return state.SkipWithError("Incorrect result memory");
+    {
+        state.SkipWithError("Incorrect result memory");
+        return false;
+    }
+
+    return true;
 }
 
 void benchmark_execute(
     benchmark::State& state, EngineCreateFn create_fn, const ExecutionBenchmarkCase& benchmark_case)
 {
-    const auto engine = create_fn();
-
-    validate_benchmark_case(state, *engine, benchmark_case);
-
     const auto has_memory = !benchmark_case.memory.empty();
-    engine->instantiate(*benchmark_case.wasm_binary);
-    const auto func_ref = engine->find_function(benchmark_case.func_name, benchmark_case.func_sig);
 
+    const auto engine = create_fn();
+    const bool ok = validate_benchmark_case(state, *engine, benchmark_case);
+
+    std::optional<fizzy::test::WasmEngine::FuncRef> func_ref;
+    if (ok)
+    {
+        engine->instantiate(*benchmark_case.wasm_binary);
+        func_ref = engine->find_function(benchmark_case.func_name, benchmark_case.func_sig);
+    }
+
+    // The loop body will not be executed if validation error reported with state.SkipWithError().
+    // However, due to a bug in libbenchmark, the loop must be always reached.
     for ([[maybe_unused]] auto _ : state)
     {
         state.PauseTiming();
