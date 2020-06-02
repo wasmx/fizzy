@@ -40,7 +40,8 @@ public:
     }
 
     bool parse(bytes_view input) const final;
-    std::optional<FuncRef> find_function(std::string_view name) const final;
+    std::optional<FuncRef> find_function(
+        std::string_view name, std::string_view signature) const final;
     bool instantiate(bytes_view wasm_binary) final;
     bool init_memory(fizzy::bytes_view memory) final;
     fizzy::bytes_view get_memory() const final;
@@ -137,7 +138,8 @@ fizzy::bytes_view WAMREngine::get_memory() const
     return {};
 }
 
-std::optional<WasmEngine::FuncRef> WAMREngine::find_function(std::string_view name) const
+std::optional<WasmEngine::FuncRef> WAMREngine::find_function(
+    std::string_view name, std::string_view signature) const
 {
     // Last parameter is function signature -- ignored according to documentation.
     wasm_function_inst_t function = wasm_runtime_lookup_function(m_instance, name.data(), nullptr);
