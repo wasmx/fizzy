@@ -15,24 +15,25 @@ namespace fizzy
 /// This is minimal implementation of C++20's std::span:
 /// https://en.cppreference.com/w/cpp/container/span
 /// Only `const T` is supported.
-template <typename T, typename = typename std::enable_if<std::is_const_v<T>>::type>
-struct span
+template <typename T, typename = typename std::enable_if_t<std::is_const_v<T>>>
+class span
 {
-private:
     const T* const m_begin = nullptr;
     const std::size_t m_size = 0;
 
 public:
+    using value_type = std::remove_cv_t<T>;
+
     constexpr span() noexcept = default;
     constexpr span(const span&) = default;
 
     constexpr span(const T* begin, std::size_t size) noexcept : m_begin{begin}, m_size{size} {}
 
-    constexpr span(std::initializer_list<typename std::remove_const_t<T>> init) noexcept
+    constexpr span(std::initializer_list<value_type> init) noexcept
       : m_begin{std::data(init)}, m_size{std::size(init)}
     {}
 
-    constexpr span(const std::vector<typename std::remove_const_t<T>>& container) noexcept
+    constexpr span(const std::vector<value_type>& container) noexcept
       : m_begin{std::data(container)}, m_size{std::size(container)}
     {}
 
