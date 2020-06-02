@@ -18,7 +18,8 @@ class FizzyEngine : public WasmEngine
 
 public:
     bool parse(bytes_view input) const final;
-    std::optional<FuncRef> find_function(std::string_view name) const final;
+    std::optional<FuncRef> find_function(
+        std::string_view name, std::string_view signature) const final;
     bool instantiate(bytes_view wasm_binary) final;
     bool init_memory(bytes_view memory) final;
     bytes_view get_memory() const final;
@@ -27,6 +28,31 @@ public:
 
 namespace
 {
+ValType translate_valtype(char input)
+{
+    if (input == 'i')
+        return fizzy::ValType::i32;
+    else if (input == 'I')
+        return fizzy::ValType::i64;
+    else
+        throw std::runtime_error{"invalid type"};
+}
+
+FuncType translate_signature(std::string_view signature)
+{
+    const auto delimiter_pos = signature.find(":");
+    assert(delimiter_pos != std::string_view::npos);
+    const auto inputs = signature.substr(0, delimiter_pos);
+    const auto outputs = signature.substr(delimiter_pos + 1);
+
+    FuncType func_type;
+    std::transform(std::begin(inputs), std::end(inputs), std::back_inserter(func_type.inputs),
+        translate_valtype);
+    std::transform(std::begin(outputs), std::end(outputs), std::back_inserter(func_type.outputs),
+        translate_valtype);
+    return func_type;
+}
+
 fizzy::execution_result env_adler32(fizzy::Instance& instance, std::vector<uint64_t> args, int)
 {
     assert(instance.memory != nullptr);
@@ -90,9 +116,18 @@ bytes_view FizzyEngine::get_memory() const
     return {m_instance->memory->data(), m_instance->memory->size()};
 }
 
-std::optional<WasmEngine::FuncRef> FizzyEngine::find_function(std::string_view name) const
+std::optional<WasmEngine::FuncRef> FizzyEngine::find_function(
+    std::string_view name, std::string_view signature) const
 {
-    return fizzy::find_exported_function(m_instance->module, name);
+    const auto func_idx = fizzy::find_exported_function(m_instance->module, name);
+    if (func_idx.has_value())
+    {
+        const auto func_type = m_instance->module.get_function_type(*func_idx);
+        const auto sig_type = translate_signature(signature);
+        if (sig_type != func_type)
+            return std::nullopt;
+    }
+    return func_idx;
 }
 
 WasmEngine::Result FizzyEngine::execute(

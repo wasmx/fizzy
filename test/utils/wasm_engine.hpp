@@ -37,7 +37,8 @@ public:
 
     /// Finds an exported function in the internal instance.
     /// Requires instantiate().
-    virtual std::optional<FuncRef> find_function(std::string_view name) const = 0;
+    virtual std::optional<FuncRef> find_function(
+        std::string_view name, std::string_view signature) const = 0;
 
     /// Initializes the beginning of the instance's memory.
     /// The `memory` must not be empty.
@@ -56,6 +57,8 @@ public:
     /// Requires instantiate().
     virtual Result execute(FuncRef func_ref, const std::vector<uint64_t>& args) = 0;
 };
+
+void validate_function_signature(std::string_view signature);
 
 std::unique_ptr<WasmEngine> create_fizzy_engine();
 std::unique_ptr<WasmEngine> create_wabt_engine();

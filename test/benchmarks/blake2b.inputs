@@ -1,11 +1,13 @@
 512_bytes_rounds_1
 blake2b_bench
+iii:i
 512 85 1
 
 885469211
 
 512_bytes_rounds_16
 blake2b_bench
+iii:i
 512 85 16
 
 144115026

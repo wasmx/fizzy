@@ -79,6 +79,7 @@ struct ExecutionBenchmarkCase
 {
     std::shared_ptr<const fizzy::bytes> wasm_binary;
     std::string func_name;
+    std::string func_sig;
     std::vector<uint64_t> func_args;
     fizzy::bytes memory;
     std::optional<uint64_t> expected_result;
@@ -93,7 +94,7 @@ void validate_benchmark_case(benchmark::State& state, fizzy::test::WasmEngine& e
     if (!engine.instantiate(*benchmark_case.wasm_binary))
         return state.SkipWithError("Instantiation failed");
 
-    const auto func_ref = engine.find_function(benchmark_case.func_name);
+    const auto func_ref = engine.find_function(benchmark_case.func_name, benchmark_case.func_sig);
     if (!func_ref)
     {
         return state.SkipWithError(
@@ -152,7 +153,7 @@ void benchmark_execute(
 
     const auto has_memory = !benchmark_case.memory.empty();
     engine->instantiate(*benchmark_case.wasm_binary);
-    const auto func_ref = engine->find_function(benchmark_case.func_name);
+    const auto func_ref = engine->find_function(benchmark_case.func_name, benchmark_case.func_sig);
 
     for ([[maybe_unused]] auto _ : state)
     {
@@ -206,6 +207,7 @@ void load_benchmark(const fs::path& path, const std::string& name_prefix)
     {
         Name,
         FuncName,
+        FuncSignature,
         FuncArguments,
         Memory,
         ExpectedResult,
@@ -234,6 +236,12 @@ void load_benchmark(const fs::path& path, const std::string& name_prefix)
 
             case InputsReadingState::FuncName:
                 benchmark_case->func_name = std::move(l);
+                st = InputsReadingState::FuncSignature;
+                break;
+
+            case InputsReadingState::FuncSignature:
+                fizzy::test::validate_function_signature(l);
+                benchmark_case->func_sig = std::move(l);
                 st = InputsReadingState::FuncArguments;
                 break;
 
