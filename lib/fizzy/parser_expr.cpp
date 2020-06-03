@@ -560,41 +560,41 @@ parser_result<Code> parse_expr(
         case Instr::local_set:
         case Instr::local_tee:
         {
-            uint32_t imm;
-            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, end);
-            push(code.immediates, imm);
+            uint32_t local_idx;
+            std::tie(local_idx, pos) = leb128u_decode<uint32_t>(pos, end);
+            push(code.immediates, local_idx);
             break;
         }
 
         case Instr::global_get:
         case Instr::global_set:
         {
-            uint32_t idx;
-            std::tie(idx, pos) = leb128u_decode<uint32_t>(pos, end);
+            uint32_t global_idx;
+            std::tie(global_idx, pos) = leb128u_decode<uint32_t>(pos, end);
 
-            if (idx >= module.get_global_count())
+            if (global_idx >= module.get_global_count())
                 throw validation_error{"accessing global with invalid index"};
 
-            if (instr == Instr::global_set && !module.is_global_mutable(idx))
+            if (instr == Instr::global_set && !module.is_global_mutable(global_idx))
                 throw validation_error{"trying to mutate immutable global"};
 
-            push(code.immediates, idx);
+            push(code.immediates, global_idx);
             break;
         }
 
         case Instr::i32_const:
         {
-            int32_t imm;
-            std::tie(imm, pos) = leb128s_decode<int32_t>(pos, end);
-            push(code.immediates, static_cast<uint32_t>(imm));
+            int32_t value;
+            std::tie(value, pos) = leb128s_decode<int32_t>(pos, end);
+            push(code.immediates, static_cast<uint32_t>(value));
             break;
         }
 
         case Instr::i64_const:
         {
-            int64_t imm;
-            std::tie(imm, pos) = leb128s_decode<int64_t>(pos, end);
-            push(code.immediates, static_cast<uint64_t>(imm));
+            int64_t value;
+            std::tie(value, pos) = leb128s_decode<int64_t>(pos, end);
+            push(code.immediates, static_cast<uint64_t>(value));
             break;
         }
 
@@ -621,10 +621,9 @@ parser_result<Code> parse_expr(
             // alignment
             std::tie(std::ignore, pos) = leb128u_decode<uint32_t>(pos, end);
 
-            // offset
-            uint32_t imm;
-            std::tie(imm, pos) = leb128u_decode<uint32_t>(pos, end);
-            push(code.immediates, imm);
+            uint32_t offset;
+            std::tie(offset, pos) = leb128u_decode<uint32_t>(pos, end);
+            push(code.immediates, offset);
 
             if (!module.has_memory())
                 throw validation_error{"memory instructions require imported or defined memory"};
