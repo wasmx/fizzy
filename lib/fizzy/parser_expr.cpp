@@ -119,6 +119,13 @@ void validate_result_count(const ControlFrame& frame)
     //     throw validation_error{"too many results"};
 }
 
+inline uint8_t get_branch_arity(const ControlFrame& frame) noexcept
+{
+    // For loops arity is considered always 0, because br executed in loop jumps to the top,
+    // resetting frame stack to 0, so it should not keep top stack value even if loop has a result.
+    return frame.instruction == Instr::loop ? 0 : frame.arity;
+}
+
 void push_branch_immediates(const ControlFrame& frame, bytes& immediates)
 {
     // Push frame start location as br immediates - these are final if frame is loop,
@@ -126,9 +133,7 @@ void push_branch_immediates(const ControlFrame& frame, bytes& immediates)
     push(immediates, static_cast<uint32_t>(frame.code_offset));
     push(immediates, static_cast<uint32_t>(frame.immediates_offset));
     push(immediates, static_cast<uint32_t>(frame.parent_stack_height));
-    // Always pushing 0 as loop's arity, because br executed in loop jumps to the top,
-    // resetting frame stack to 0, so it should not keep top stack value even if loop has a result.
-    push(immediates, frame.instruction == Instr::loop ? uint8_t{0} : frame.arity);
+    push(immediates, get_branch_arity(frame));
 }
 
 }  // namespace
@@ -481,19 +486,23 @@ parser_result<Code> parse_expr(
             if (default_label_idx >= control_stack.size())
                 throw validation_error{"invalid label index"};
 
+            auto& default_branch_frame = control_stack[default_label_idx];
+            const auto default_branch_arity = get_branch_arity(default_branch_frame);
+
             // Remember immediates offset for all br items to fill them at end instruction.
             push(code.immediates, static_cast<uint32_t>(label_indices.size()));
             for (const auto idx : label_indices)
             {
                 auto& branch_frame = control_stack[idx];
-                branch_frame.br_immediate_offsets.push_back(code.immediates.size());
 
+                if (get_branch_arity(branch_frame) != default_branch_arity)
+                    throw validation_error{"br_table labels have inconsistent types"};
+
+                branch_frame.br_immediate_offsets.push_back(code.immediates.size());
                 push_branch_immediates(branch_frame, code.immediates);
             }
 
-            auto& default_branch_frame = control_stack[default_label_idx];
             default_branch_frame.br_immediate_offsets.push_back(code.immediates.size());
-
             push_branch_immediates(default_branch_frame, code.immediates);
 
             frame.unreachable = true;
