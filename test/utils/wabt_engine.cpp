@@ -10,6 +10,17 @@
 #include <test/utils/wasm_engine.hpp>
 #include <cassert>
 
+namespace wabt_bigint
+{
+#define BIGINT_BITS 384
+#define LIMB_BITS 64
+#define LIMB_BITS_OVERFLOW 128
+#include <test/utils/bigint.h>
+#undef BIGINT_BITS
+#undef LIMB_BITS
+#undef LIMB_BITS_OVERFLOW
+}  // namespace wabt_bigint
+
 namespace fizzy::test
 {
 class WabtEngine : public WasmEngine
@@ -48,6 +59,55 @@ bool WabtEngine::parse(bytes_view input) const
             assert(false);
             return wabt::interp::Result::Ok;
         });
+    hostModule->AppendFuncExport("bignum_int_add",
+        {{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32}, {wabt::Type::I32}},
+        [=](const wabt::interp::HostFunc*, const wabt::interp::FuncSignature*,
+            const wabt::interp::TypedValues&, wabt::interp::TypedValues&) {
+            assert(false);
+            return wabt::interp::Result::Ok;
+        });
+    hostModule->AppendFuncExport("bignum_int_sub",
+        {{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32}, {wabt::Type::I32}},
+        [=](const wabt::interp::HostFunc*, const wabt::interp::FuncSignature*,
+            const wabt::interp::TypedValues&, wabt::interp::TypedValues&) {
+            assert(false);
+            return wabt::interp::Result::Ok;
+        });
+    hostModule->AppendFuncExport("bignum_int_mul",
+        {{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32}, {}},
+        [=](const wabt::interp::HostFunc*, const wabt::interp::FuncSignature*,
+            const wabt::interp::TypedValues&, wabt::interp::TypedValues&) {
+            assert(false);
+            return wabt::interp::Result::Ok;
+        });
+    hostModule->AppendFuncExport("bignum_int_div",
+        {{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32, wabt::Type::I32}, {}},
+        [=](const wabt::interp::HostFunc*, const wabt::interp::FuncSignature*,
+            const wabt::interp::TypedValues&, wabt::interp::TypedValues&) {
+            assert(false);
+            return wabt::interp::Result::Ok;
+        });
+    hostModule->AppendFuncExport("bignum_f1m_add",
+        {{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32}, {}},
+        [=](const wabt::interp::HostFunc*, const wabt::interp::FuncSignature*,
+            const wabt::interp::TypedValues&, wabt::interp::TypedValues&) {
+            assert(false);
+            return wabt::interp::Result::Ok;
+        });
+    hostModule->AppendFuncExport("bignum_f1m_sub",
+        {{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32}, {}},
+        [=](const wabt::interp::HostFunc*, const wabt::interp::FuncSignature*,
+            const wabt::interp::TypedValues&, wabt::interp::TypedValues&) {
+            assert(false);
+            return wabt::interp::Result::Ok;
+        });
+    hostModule->AppendFuncExport("bignum_f1m_mul",
+        {{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32}, {}},
+        [=](const wabt::interp::HostFunc*, const wabt::interp::FuncSignature*,
+            const wabt::interp::TypedValues&, wabt::interp::TypedValues&) {
+            assert(false);
+            return wabt::interp::Result::Ok;
+        });
 
     wabt::interp::DefinedModule* module{nullptr};
     wabt::Errors errors;
@@ -75,6 +135,120 @@ bool WabtEngine::instantiate(bytes_view wasm_binary)
             const auto ret =
                 fizzy::adler32({reinterpret_cast<uint8_t*>(&memory_data[offset]), length});
             results[0].set_i32(ret);
+            return wabt::interp::Result::Ok;
+        });
+
+    const uint64_t mod[] = {0xb9feffffffffaaab, 0x1eabfffeb153ffff, 0x6730d2a0f6b0f624,
+        0x64774b84f38512bf, 0x4b1ba7b6434bacd7, 0x1a0111ea397fe69a};
+    const uint64_t modinv = 0x89f3fffcfffcfffd;
+
+    hostModule->AppendFuncExport("bignum_int_add",
+        {{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32}, {wabt::Type::I32}},
+        [=](const wabt::interp::HostFunc*, const wabt::interp::FuncSignature*,
+            const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
+            auto memory = m_env.GetMemory(0);
+            auto memory_data = memory->data;
+            const auto a_offset = args[0].value.i32;
+            const auto b_offset = args[1].value.i32;
+            const auto ret_offset = args[2].value.i32;
+            const uint64_t* a = reinterpret_cast<uint64_t*>(&memory_data[a_offset]);
+            const uint64_t* b = reinterpret_cast<uint64_t*>(&memory_data[b_offset]);
+            uint64_t* out = reinterpret_cast<uint64_t*>(&memory_data[ret_offset]);
+            const auto ret = wabt_bigint::add384_64bitlimbs(out, a, b);
+            results[0].set_i32(static_cast<uint32_t>(ret));
+            return wabt::interp::Result::Ok;
+        });
+    hostModule->AppendFuncExport("bignum_int_sub",
+        {{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32}, {wabt::Type::I32}},
+        [=](const wabt::interp::HostFunc*, const wabt::interp::FuncSignature*,
+            const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
+            auto memory = m_env.GetMemory(0);
+            auto memory_data = memory->data;
+            const auto a_offset = args[0].value.i32;
+            const auto b_offset = args[1].value.i32;
+            const auto ret_offset = args[2].value.i32;
+            const uint64_t* a = reinterpret_cast<uint64_t*>(&memory_data[a_offset]);
+            const uint64_t* b = reinterpret_cast<uint64_t*>(&memory_data[b_offset]);
+            uint64_t* out = reinterpret_cast<uint64_t*>(&memory_data[ret_offset]);
+            const auto ret = wabt_bigint::sub384_64bitlimbs(out, a, b);
+            results[0].set_i32(static_cast<uint32_t>(ret));
+            return wabt::interp::Result::Ok;
+        });
+    hostModule->AppendFuncExport("bignum_int_mul",
+        {{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32}, {}},
+        [=](const wabt::interp::HostFunc*, const wabt::interp::FuncSignature*,
+            const wabt::interp::TypedValues& args, wabt::interp::TypedValues&) {
+            auto memory = m_env.GetMemory(0);
+            auto memory_data = memory->data;
+            const auto a_offset = args[0].value.i32;
+            const auto b_offset = args[1].value.i32;
+            const auto ret_offset = args[2].value.i32;
+            const uint64_t* a = reinterpret_cast<uint64_t*>(&memory_data[a_offset]);
+            const uint64_t* b = reinterpret_cast<uint64_t*>(&memory_data[b_offset]);
+            uint64_t* out = reinterpret_cast<uint64_t*>(&memory_data[ret_offset]);
+            wabt_bigint::mul384_64bitlimbs(out, a, b);
+            return wabt::interp::Result::Ok;
+        });
+    hostModule->AppendFuncExport("bignum_int_div",
+        {{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32, wabt::Type::I32}, {}},
+        [=](const wabt::interp::HostFunc*, const wabt::interp::FuncSignature*,
+            const wabt::interp::TypedValues& args, wabt::interp::TypedValues&) {
+            auto memory = m_env.GetMemory(0);
+            auto memory_data = memory->data;
+            const auto a_offset = args[0].value.i32;
+            const auto b_offset = args[1].value.i32;
+            const auto q_offset = args[2].value.i32;
+            const auto r_offset = args[3].value.i32;
+            const uint64_t* a = reinterpret_cast<uint64_t*>(&memory_data[a_offset]);
+            const uint64_t* b = reinterpret_cast<uint64_t*>(&memory_data[b_offset]);
+            uint64_t* q = reinterpret_cast<uint64_t*>(&memory_data[q_offset]);
+            uint64_t* r = reinterpret_cast<uint64_t*>(&memory_data[r_offset]);
+            wabt_bigint::div384_64bitlimbs(q, r, a, b);
+            return wabt::interp::Result::Ok;
+        });
+    hostModule->AppendFuncExport("bignum_f1m_add",
+        {{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32}, {}},
+        [=](const wabt::interp::HostFunc*, const wabt::interp::FuncSignature*,
+            const wabt::interp::TypedValues& args, wabt::interp::TypedValues&) {
+            auto memory = m_env.GetMemory(0);
+            auto memory_data = memory->data;
+            const auto a_offset = args[0].value.i32;
+            const auto b_offset = args[1].value.i32;
+            const auto ret_offset = args[2].value.i32;
+            const uint64_t* a = reinterpret_cast<uint64_t*>(&memory_data[a_offset]);
+            const uint64_t* b = reinterpret_cast<uint64_t*>(&memory_data[b_offset]);
+            uint64_t* out = reinterpret_cast<uint64_t*>(&memory_data[ret_offset]);
+            wabt_bigint::addmod384_64bitlimbs(out, a, b, mod);
+            return wabt::interp::Result::Ok;
+        });
+    hostModule->AppendFuncExport("bignum_f1m_sub",
+        {{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32}, {}},
+        [=](const wabt::interp::HostFunc*, const wabt::interp::FuncSignature*,
+            const wabt::interp::TypedValues& args, wabt::interp::TypedValues&) {
+            auto memory = m_env.GetMemory(0);
+            auto memory_data = memory->data;
+            const auto a_offset = args[0].value.i32;
+            const auto b_offset = args[1].value.i32;
+            const auto ret_offset = args[2].value.i32;
+            const uint64_t* a = reinterpret_cast<uint64_t*>(&memory_data[a_offset]);
+            const uint64_t* b = reinterpret_cast<uint64_t*>(&memory_data[b_offset]);
+            uint64_t* out = reinterpret_cast<uint64_t*>(&memory_data[ret_offset]);
+            wabt_bigint::submod384_64bitlimbs(out, a, b, mod);
+            return wabt::interp::Result::Ok;
+        });
+    hostModule->AppendFuncExport("bignum_f1m_mul",
+        {{wabt::Type::I32, wabt::Type::I32, wabt::Type::I32}, {}},
+        [=](const wabt::interp::HostFunc*, const wabt::interp::FuncSignature*,
+            const wabt::interp::TypedValues& args, wabt::interp::TypedValues&) {
+            auto memory = m_env.GetMemory(0);
+            auto memory_data = memory->data;
+            const auto a_offset = args[0].value.i32;
+            const auto b_offset = args[1].value.i32;
+            const auto ret_offset = args[2].value.i32;
+            const uint64_t* a = reinterpret_cast<uint64_t*>(&memory_data[a_offset]);
+            const uint64_t* b = reinterpret_cast<uint64_t*>(&memory_data[b_offset]);
+            uint64_t* out = reinterpret_cast<uint64_t*>(&memory_data[ret_offset]);
+            wabt_bigint::mulmodmont384_64bitlimbs(out, a, b, mod, modinv);
             return wabt::interp::Result::Ok;
         });
 
