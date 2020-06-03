@@ -1008,3 +1008,49 @@ TEST(execute, reuse_args)
 
     EXPECT_THAT(execute(parse(wasm), 1, {}), Result(23 % (23 / 5)));
 }
+
+TEST(execute, stack_abuse)
+{
+    /* wat2wasm
+    (func (param i32) (result i32)
+      local.get 0
+      i32.const 1
+      i32.const 2
+      i32.const 3
+      i32.const 4
+      i32.const 5
+      i32.const 6
+      i32.const 7
+      i32.const 8
+      i32.const 9
+      i32.const 10
+      i32.const 11
+      i32.const 12
+      i32.const 13
+      i32.const 14
+      i32.const 15
+      i32.const 16
+      i32.add
+      i32.add
+      i32.add
+      i32.add
+      i32.add
+      i32.add
+      i32.add
+      i32.add
+      i32.add
+      i32.add
+      i32.add
+      i32.add
+      i32.add
+      i32.add
+      i32.add
+      i32.add
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017f030201000a360134002000410141024103410441054106410741084109"
+        "410a410b410c410d410e410f41106a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a0b");
+
+    EXPECT_THAT(execute(parse(wasm), 0, {1000}), Result(1136));
+}
