@@ -934,3 +934,68 @@ TEST(execute_control, if_br_from_branch)
         EXPECT_THAT(execute(module, 0, {param}), Result(expected_results[param]));
     }
 }
+
+TEST(execute_control, br_table_arity)
+{
+    /* wat2wasm
+    (func  (param $x i32) (result i32)
+      (block $a (result i32)
+        (block $b (result i32)
+          i32.const 1
+          local.get $x
+          br_table $a $b
+        )
+        drop
+        i32.const 2
+      )
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017f030201000a15011300027f027f410120000e0101000b1a41020b0b");
+
+    auto instance = parse(wasm);
+    EXPECT_THAT(execute(instance, 0, {0}), Result(1));
+    EXPECT_THAT(execute(instance, 0, {1}), Result(2));
+
+    /* wat2wasm
+    (func  (param $x i32) (result i32)
+      (block $a
+        (loop $b (result i32)
+          local.get $x
+          i32.const 1
+          i32.sub
+          local.tee $x
+          br_table $a $b
+        )
+        drop
+      )
+      i32.const 2
+    )
+    */
+    const auto wasm2 = from_hex(
+        "0061736d0100000001060160017f017f030201000a180116000240037f200041016b22000e0101000b1a0b4102"
+        "0b");
+
+    EXPECT_THAT(execute(parse(wasm2), 0, {2}), Result(2));
+
+    /* wat2wasm
+    (func  (param $x i32) (result i32)
+      (loop $a (result i32)
+        (block $b
+          local.get $x
+          i32.const 1
+          i32.add
+          local.tee $x
+          br_table $a $b
+        )
+        i32.const 2
+        return
+      )
+    )
+    */
+    const auto wasm3 = from_hex(
+        "0061736d0100000001060160017f017f030201000a18011600037f0240200041016a22000e0101000b41020f0b"
+        "0b");
+
+    EXPECT_THAT(execute(parse(wasm3), 0, {uint32_t(-1)}), Result(2));
+}
