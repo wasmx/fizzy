@@ -6,6 +6,7 @@ add_executable(fizzy-bench-internal)
 
 target_sources(fizzy-bench-internal PRIVATE
     bench_internal.cpp
+    execute_benchmarks.cpp
     experimental.cpp
     parser_benchmarks.cpp
     parser_noinline.cpp
