@@ -58,6 +58,9 @@ public:
 
 class OperandStack
 {
+    /// The size of the pre-allocated internal storage: 128 bytes.
+    static constexpr auto small_storage_size = 128 / sizeof(uint64_t);
+
     /// The pointer to the top item, or below the stack bottom if stack is empty.
     ///
     /// This pointer always alias m_storage, but it is kept as the first field
@@ -65,25 +68,44 @@ class OperandStack
     /// in the constructor after the m_storage.
     uint64_t* m_top;
 
-    /// The storage for items.
-    std::unique_ptr<uint64_t[]> m_storage;
+    /// The bottom of the stack. Set in the constructor and never modified.
+    ///
+    /// TODO: This pointer is rarely used and may be removed.
+    ///       The value can be recomputed as (m_large_storage ? m_large_storage : m_small_storage).
+    ///       Moreover, methods using it may be replaced by ones not needing bottom of the stack.
+    uint64_t* m_bottom;
+
+    /// The pre-allocated internal storage.
+    uint64_t m_small_storage[small_storage_size];
+
+    /// The unbounded storage for items.
+    std::unique_ptr<uint64_t[]> m_large_storage;
 
 public:
-    /// Default constructor. Sets the top item pointer to below the stack bottom.
+    /// Default constructor.
+    ///
+    /// Based on @p max_stack_height decides if to use small pre-allocated storage or allocate
+    /// large storage.
+    /// Sets the top item pointer to below the stack bottom.
     explicit OperandStack(size_t max_stack_height)
-      : m_storage{std::make_unique<uint64_t[]>(max_stack_height)}
     {
-        m_top = m_storage.get() - 1;
+        if (max_stack_height <= small_storage_size)
+        {
+            m_bottom = &m_small_storage[0];
+        }
+        else
+        {
+            m_large_storage = std::make_unique<uint64_t[]>(max_stack_height);
+            m_bottom = &m_large_storage[0];
+        }
+        m_top = m_bottom - 1;
     }
 
     OperandStack(const OperandStack&) = delete;
     OperandStack& operator=(const OperandStack&) = delete;
 
     /// The current number of items on the stack (aka stack height).
-    [[nodiscard]] size_t size() const noexcept
-    {
-        return static_cast<size_t>(m_top + 1 - m_storage.get());
-    }
+    [[nodiscard]] size_t size() noexcept { return static_cast<size_t>(m_top + 1 - m_bottom); }
 
     /// Returns the reference to the top item.
     /// Requires non-empty stack.
@@ -121,11 +143,11 @@ public:
     {
         assert(new_size <= size());
         // For new_size == 0, the m_top will point below the storage.
-        m_top = m_storage.get() + new_size - 1;
+        m_top = m_bottom + new_size - 1;
     }
 
     /// Returns iterator to the bottom of the stack.
-    [[nodiscard]] const uint64_t* rbegin() const noexcept { return m_storage.get(); }
+    [[nodiscard]] const uint64_t* rbegin() const noexcept { return m_bottom; }
 
     /// Returns end iterator counting from the bottom of the stack.
     [[nodiscard]] const uint64_t* rend() const noexcept { return m_top + 1; }
