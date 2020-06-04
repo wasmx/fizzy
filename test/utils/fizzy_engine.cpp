@@ -73,7 +73,8 @@ const uint64_t mod[] = {0xb9feffffffffaaab, 0x1eabfffeb153ffff, 0x6730d2a0f6b0f6
     0x64774b84f38512bf, 0x4b1ba7b6434bacd7, 0x1a0111ea397fe69a};
 const uint64_t modinv = 0x89f3fffcfffcfffd;
 
-fizzy::execution_result bignum_int_add(fizzy::Instance& instance, std::vector<uint64_t> args, int)
+fizzy::execution_result bignum_int_add(
+    fizzy::Instance& instance, fizzy::span<const uint64_t> args, int)
 {
     const uint32_t a_offset = static_cast<uint32_t>(args[0]);
     const uint32_t b_offset = static_cast<uint32_t>(args[1]);
@@ -84,7 +85,8 @@ fizzy::execution_result bignum_int_add(fizzy::Instance& instance, std::vector<ui
     const auto ret = add384_64bitlimbs(out, a, b);
     return {false, {ret}};
 }
-fizzy::execution_result bignum_int_sub(fizzy::Instance& instance, std::vector<uint64_t> args, int)
+fizzy::execution_result bignum_int_sub(
+    fizzy::Instance& instance, fizzy::span<const uint64_t> args, int)
 {
     const uint32_t a_offset = static_cast<uint32_t>(args[0]);
     const uint32_t b_offset = static_cast<uint32_t>(args[1]);
@@ -95,7 +97,8 @@ fizzy::execution_result bignum_int_sub(fizzy::Instance& instance, std::vector<ui
     const auto ret = sub384_64bitlimbs(out, a, b);
     return {false, {ret}};
 }
-fizzy::execution_result bignum_int_mul(fizzy::Instance& instance, std::vector<uint64_t> args, int)
+fizzy::execution_result bignum_int_mul(
+    fizzy::Instance& instance, fizzy::span<const uint64_t> args, int)
 {
     const uint32_t a_offset = static_cast<uint32_t>(args[0]);
     const uint32_t b_offset = static_cast<uint32_t>(args[1]);
@@ -106,7 +109,8 @@ fizzy::execution_result bignum_int_mul(fizzy::Instance& instance, std::vector<ui
     mul384_64bitlimbs(out, a, b);
     return {false, {}};
 }
-fizzy::execution_result bignum_int_div(fizzy::Instance& instance, std::vector<uint64_t> args, int)
+fizzy::execution_result bignum_int_div(
+    fizzy::Instance& instance, fizzy::span<const uint64_t> args, int)
 {
     const uint32_t a_offset = static_cast<uint32_t>(args[0]);
     const uint32_t b_offset = static_cast<uint32_t>(args[1]);
@@ -119,7 +123,8 @@ fizzy::execution_result bignum_int_div(fizzy::Instance& instance, std::vector<ui
     div384_64bitlimbs(q, r, a, b);
     return {false, {}};
 }
-fizzy::execution_result bignum_f1m_add(fizzy::Instance& instance, std::vector<uint64_t> args, int)
+fizzy::execution_result bignum_f1m_add(
+    fizzy::Instance& instance, fizzy::span<const uint64_t> args, int)
 {
     const uint32_t a_offset = static_cast<uint32_t>(args[0]);
     const uint32_t b_offset = static_cast<uint32_t>(args[1]);
@@ -130,7 +135,8 @@ fizzy::execution_result bignum_f1m_add(fizzy::Instance& instance, std::vector<ui
     addmod384_64bitlimbs(out, a, b, mod);
     return {false, {}};
 }
-fizzy::execution_result bignum_f1m_sub(fizzy::Instance& instance, std::vector<uint64_t> args, int)
+fizzy::execution_result bignum_f1m_sub(
+    fizzy::Instance& instance, fizzy::span<const uint64_t> args, int)
 {
     const uint32_t a_offset = static_cast<uint32_t>(args[0]);
     const uint32_t b_offset = static_cast<uint32_t>(args[1]);
@@ -141,7 +147,8 @@ fizzy::execution_result bignum_f1m_sub(fizzy::Instance& instance, std::vector<ui
     submod384_64bitlimbs(out, a, b, mod);
     return {false, {}};
 }
-fizzy::execution_result bignum_f1m_mul(fizzy::Instance& instance, std::vector<uint64_t> args, int)
+fizzy::execution_result bignum_f1m_mul(
+    fizzy::Instance& instance, fizzy::span<const uint64_t> args, int)
 {
     const uint32_t a_offset = static_cast<uint32_t>(args[0]);
     const uint32_t b_offset = static_cast<uint32_t>(args[1]);
