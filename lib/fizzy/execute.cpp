@@ -248,7 +248,7 @@ void branch(
 {
     const auto code_offset = read<uint32_t>(immediates);
     const auto imm_offset = read<uint32_t>(immediates);
-    const auto stack_height = static_cast<size_t>(read<int>(immediates));
+    const auto stack_height = static_cast<size_t>(read<uint32_t>(immediates));
     const auto arity = read<uint8_t>(immediates);
 
     pc = code.instructions.data() + code_offset;
