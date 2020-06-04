@@ -145,11 +145,11 @@ TEST(execute_call, call_indirect_imported_table)
 
     const Module module = parse(bin);
 
-    auto f1 = [](Instance&, std::vector<uint64_t>, int) { return execution_result{false, {1}}; };
-    auto f2 = [](Instance&, std::vector<uint64_t>, int) { return execution_result{false, {2}}; };
-    auto f3 = [](Instance&, std::vector<uint64_t>, int) { return execution_result{false, {3}}; };
-    auto f4 = [](Instance&, std::vector<uint64_t>, int) { return execution_result{false, {4}}; };
-    auto f5 = [](Instance&, std::vector<uint64_t>, int) { return execution_result{true, {}}; };
+    auto f1 = [](Instance&, span<const uint64_t>, int) { return execution_result{false, {1}}; };
+    auto f2 = [](Instance&, span<const uint64_t>, int) { return execution_result{false, {2}}; };
+    auto f3 = [](Instance&, span<const uint64_t>, int) { return execution_result{false, {3}}; };
+    auto f4 = [](Instance&, span<const uint64_t>, int) { return execution_result{false, {4}}; };
+    auto f5 = [](Instance&, span<const uint64_t>, int) { return execution_result{true, {}}; };
 
     auto out_i32 = FuncType{{}, {ValType::i32}};
     auto out_i64 = FuncType{{}, {ValType::i64}};
@@ -216,7 +216,7 @@ TEST(execute_call, imported_function_call)
 
     const auto module = parse(wasm);
 
-    constexpr auto host_foo = [](Instance&, std::vector<uint64_t>, int) -> execution_result {
+    constexpr auto host_foo = [](Instance&, span<const uint64_t>, int) -> execution_result {
         return {false, {42}};
     };
     const auto host_foo_type = module.typesec[0];
@@ -243,7 +243,7 @@ TEST(execute_call, imported_function_call_with_arguments)
 
     const auto module = parse(wasm);
 
-    auto host_foo = [](Instance&, std::vector<uint64_t> args, int) -> execution_result {
+    auto host_foo = [](Instance&, span<const uint64_t> args, int) -> execution_result {
         return {false, {args[0] * 2}};
     };
     const auto host_foo_type = module.typesec[0];
@@ -287,10 +287,10 @@ TEST(execute_call, imported_functions_call_indirect)
     ASSERT_EQ(module.importsec.size(), 2);
     ASSERT_EQ(module.codesec.size(), 2);
 
-    constexpr auto sqr = [](Instance&, std::vector<uint64_t> args, int) -> execution_result {
+    constexpr auto sqr = [](Instance&, span<const uint64_t> args, int) -> execution_result {
         return {false, {args[0] * args[0]}};
     };
-    constexpr auto isqrt = [](Instance&, std::vector<uint64_t> args, int) -> execution_result {
+    constexpr auto isqrt = [](Instance&, span<const uint64_t> args, int) -> execution_result {
         return {false, {(11 + args[0] / 11) / 2}};
     };
 
@@ -335,10 +335,8 @@ TEST(execute_call, imported_function_from_another_module)
     const auto func_idx = fizzy::find_exported_function(module1, "sub");
     ASSERT_TRUE(func_idx.has_value());
 
-    auto sub = [&instance1, func_idx](
-                   Instance&, std::vector<uint64_t> args, int) -> execution_result {
-        return fizzy::execute(*instance1, *func_idx, std::move(args));
-    };
+    auto sub = [&instance1, func_idx](Instance&, span<const uint64_t> args,
+                   int) -> execution_result { return fizzy::execute(*instance1, *func_idx, args); };
 
     auto instance2 = instantiate(module2, {{sub, module1.typesec[0]}});
 
@@ -514,7 +512,7 @@ TEST(execute_call, call_imported_infinite_recursion)
         "0061736d010000000105016000017f020b01036d6f6403666f6f0000030201000a0601040010000b");
 
     const auto module = parse(wasm);
-    auto host_foo = [](Instance& instance, std::vector<uint64_t>, int depth) -> execution_result {
+    auto host_foo = [](Instance& instance, span<const uint64_t>, int depth) -> execution_result {
         return execute(instance, 0, {}, depth + 1);
     };
     const auto host_foo_type = module.typesec[0];
