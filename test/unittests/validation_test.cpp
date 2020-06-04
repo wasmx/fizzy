@@ -196,6 +196,74 @@ TEST(validation, br_table_default_invalid_label_index)
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "invalid label index");
 }
 
+TEST(validation, br_table_invalid_arity)
+{
+    /* wat2wasm --no-check
+    (func  (param $x i32) (result i32)
+      (block $a (result i32)
+        (block $b
+          local.get $x
+          br_table $a $b
+        )
+        i32.const 2
+      )
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017f030201000a12011000027f024020000e0101000b41020b0b");
+
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "br_table labels have inconsistent types");
+
+    /* wat2wasm --no-check
+    (func  (param $x i32)
+      (block $a
+        (block $b (result i32)
+          i32.const 1
+          local.get $x
+          br_table $b $a
+        )
+        drop
+      )
+    )
+    */
+    const auto wasm2 = from_hex(
+        "0061736d0100000001050160017f00030201000a130111000240027f410120000e0100010b1a0b0b");
+
+    EXPECT_THROW_MESSAGE(parse(wasm2), validation_error, "br_table labels have inconsistent types");
+
+    /* wat2wasm --no-check
+    (func (param $x i32) (result i32)
+      (loop $a (result i32)
+        (block $b (result i32)
+          i32.const 1
+          local.get $x
+          br_table $b $a
+        )
+      )
+    )
+    */
+    const auto wasm3 = from_hex(
+        "0061736d0100000001060160017f017f030201000a12011000037f027f410120000e0100010b0b0b");
+
+    EXPECT_THROW_MESSAGE(parse(wasm3), validation_error, "br_table labels have inconsistent types");
+
+    /* wat2wasm --no-check
+    (func (param $x i32) (result i32)
+      (block $a (result i32)
+        (loop $b (result i32)
+          i32.const 1
+          local.get $x
+          br_table $b $a
+        )
+      )
+    )
+    */
+    const auto wasm4 = from_hex(
+        "0061736d0100000001060160017f017f030201000a12011000027f037f410120000e0100010b0b0b");
+
+    EXPECT_THROW_MESSAGE(parse(wasm4), validation_error, "br_table labels have inconsistent types");
+}
+
 TEST(validation, call_unknown_function)
 {
     /* wat2wasm --no-check
