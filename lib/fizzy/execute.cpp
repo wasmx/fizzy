@@ -17,7 +17,7 @@ namespace fizzy
 namespace
 {
 // code_offset + imm_offset + stack_height + arity
-constexpr auto BranchImmediateSize = 3 * sizeof(uint32_t) + sizeof(uint8_t);
+constexpr auto BranchImmediateSize = 4 * sizeof(uint32_t);
 
 void match_imported_functions(const std::vector<FuncType>& module_imported_types,
     const std::vector<ExternalFunction>& imported_functions)
@@ -249,7 +249,7 @@ void branch(
     const auto code_offset = read<uint32_t>(immediates);
     const auto imm_offset = read<uint32_t>(immediates);
     const auto stack_height = static_cast<size_t>(read<uint32_t>(immediates));
-    const auto arity = read<uint8_t>(immediates);
+    const auto arity = read<uint32_t>(immediates);
 
     pc = code.instructions.data() + code_offset;
     immediates = code.immediates.data() + imm_offset;

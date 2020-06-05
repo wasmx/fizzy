@@ -133,7 +133,7 @@ void push_branch_immediates(const ControlFrame& frame, bytes& immediates)
     push(immediates, static_cast<uint32_t>(frame.code_offset));
     push(immediates, static_cast<uint32_t>(frame.immediates_offset));
     push(immediates, static_cast<uint32_t>(frame.parent_stack_height));
-    push(immediates, get_branch_arity(frame));
+    push(immediates, uint32_t{get_branch_arity(frame)});
 }
 
 }  // namespace
