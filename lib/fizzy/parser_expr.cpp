@@ -176,7 +176,9 @@ parser_result<Code> parse_expr(
 
     const auto func_type_idx = module.funcsec[func_idx];
     assert(func_type_idx < module.typesec.size());
-    const auto function_arity = static_cast<uint8_t>(module.typesec[func_type_idx].outputs.size());
+    const auto& func_type = module.typesec[func_type_idx];
+
+    const auto function_arity = static_cast<uint8_t>(func_type.outputs.size());
     // The function's implicit block.
     control_stack.emplace(Instr::block, function_arity, 0);
 
@@ -580,8 +582,8 @@ parser_result<Code> parse_expr(
             if (callee_func_idx >= module.imported_function_types.size() + module.funcsec.size())
                 throw validation_error{"invalid funcidx encountered with call"};
 
-            const auto& func_type = module.get_function_type(callee_func_idx);
-            update_caller_frame(frame, func_type);
+            const auto& callee_func_type = module.get_function_type(callee_func_idx);
+            update_caller_frame(frame, callee_func_type);
 
             push(code.immediates, callee_func_idx);
             break;
@@ -592,16 +594,16 @@ parser_result<Code> parse_expr(
             if (!module.has_table())
                 throw validation_error{"call_indirect without defined table"};
 
-            TypeIdx type_idx;
-            std::tie(type_idx, pos) = leb128u_decode<uint32_t>(pos, end);
+            TypeIdx callee_type_idx;
+            std::tie(callee_type_idx, pos) = leb128u_decode<uint32_t>(pos, end);
 
-            if (type_idx >= module.typesec.size())
+            if (callee_type_idx >= module.typesec.size())
                 throw validation_error{"invalid type index with call_indirect"};
 
-            const auto& func_type = module.typesec[type_idx];
-            update_caller_frame(frame, func_type);
+            const auto& callee_func_type = module.typesec[callee_type_idx];
+            update_caller_frame(frame, callee_func_type);
 
-            push(code.immediates, type_idx);
+            push(code.immediates, callee_type_idx);
 
             if (pos == end)
                 throw parser_error{"unexpected EOF"};
