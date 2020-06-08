@@ -264,11 +264,11 @@ void branch(
     {
         assert(arity == 1);
         const auto result = stack.top();
-        stack.shrink(stack.size() - stack_drop);
+        stack.drop(stack_drop);
         stack.top() = result;
     }
     else
-        stack.shrink(stack.size() - stack_drop);
+        stack.drop(stack_drop);
 }
 
 template <class F>
@@ -278,7 +278,7 @@ bool invoke_function(
     const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
     std::vector<uint64_t> call_args{stack.rend() - num_args, stack.rend()};
-    stack.shrink(stack.size() - num_args);
+    stack.drop(num_args);
 
     const auto ret = func(instance, std::move(call_args), depth + 1);
     // Bubble up traps
