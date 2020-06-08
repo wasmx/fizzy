@@ -25,7 +25,7 @@ TEST(validation_stack, func_stack_underflow)
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "stack underflow");
 }
 
-TEST(validation_stack, DISABLED_func_missing_result)
+TEST(validation_stack, func_missing_result)
 {
     /* wat2wasm --no-check
     (func (result i32)
@@ -33,6 +33,26 @@ TEST(validation_stack, DISABLED_func_missing_result)
     */
     const auto wasm = from_hex("0061736d010000000105016000017f030201000a040102000b");
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "missing result");
+}
+
+TEST(validation_stack, func_too_many_results)
+{
+    /* wat2wasm --no-check
+    (func
+      i64.const 0
+    )
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a0601040042000b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "too many results");
+
+    /* wat2wasm --no-check
+    (func (param i64) (result i64)
+      local.get 0
+      local.get 0
+    )
+    */
+    const auto wasm2 = from_hex("0061736d0100000001060160017e017e030201000a08010600200020000b");
+    EXPECT_THROW_MESSAGE(parse(wasm2), validation_error, "too many results");
 }
 
 TEST(validation_stack, block_stack_underflow)
@@ -91,7 +111,7 @@ TEST(validation_stack, block_with_result_stack_underflow)
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "stack underflow");
 }
 
-TEST(validation_stack, DISABLED_block_too_many_results)
+TEST(validation_stack, block_too_many_results)
 {
     /* wat2wasm --no-check
     (func
@@ -161,7 +181,7 @@ TEST(validation_stack, loop_with_result_stack_underflow)
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "stack underflow");
 }
 
-TEST(validation_stack, DISABLED_loop_too_many_results)
+TEST(validation_stack, loop_too_many_results)
 {
     /* wat2wasm --no-check
     (func
@@ -482,6 +502,33 @@ TEST(validation_stack, unreachable_call_indirect)
     parse(wasm);
 }
 
+TEST(validation_stack, DISABLED_unreachable_too_many_results)
+{
+    // TODO: These are actually examples of invalid wasm.
+    //       It is not allowed to have additional items in polymorphic stack (after unreachable).
+
+    /* wat2wasm --no-check
+    (func
+      unreachable
+      i32.const 1
+    )
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a070105000041010b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "");
+
+    /* wat2wasm --no-check
+    (func (param i32) (result i32)
+      local.get 0
+      br 0
+      i32.const 1
+      i32.const 2
+    )
+    */
+    const auto wasm2 =
+        from_hex("0061736d0100000001060160017f017f030201000a0c010a0020000c00410141020b");
+    EXPECT_THROW_MESSAGE(parse(wasm2), validation_error, "");
+}
+
 TEST(validation_stack, br)
 {
     /* wat2wasm
@@ -767,8 +814,7 @@ TEST(validation_stack, if_invalid_end_stack_height)
     */
     const auto wasm = from_hex(
         "0061736d01000000010401600000030201000a1701150042014102047e4201420205420342041a0b1a1a0b");
-    const auto module = parse(wasm);
-    EXPECT_EQ(module.codesec[0].max_stack_height, 3);
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "too many results");
 }
 
 TEST(validation_stack, if_with_unreachable)

@@ -113,10 +113,8 @@ void validate_result_count(const ControlFrame& frame)
     if (frame.stack_height < frame.parent_stack_height + frame.arity)
         throw validation_error{"missing result"};
 
-    // TODO: Enable "too many results" check when having information about number of function
-    //       results.
-    // if (frame.stack_height > frame.parent_stack_height + frame.arity)
-    //     throw validation_error{"too many results"};
+    if (frame.stack_height > frame.parent_stack_height + frame.arity)
+        throw validation_error{"too many results"};
 }
 
 inline uint8_t get_branch_arity(const ControlFrame& frame) noexcept
