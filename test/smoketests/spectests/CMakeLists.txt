@@ -32,12 +32,34 @@ set_tests_properties(
     PASS_REGULAR_EXPRESSION "PASSED 4, FAILED 18, SKIPPED 2"
 )
 
+add_test(
+    NAME fizzy/smoketests/spectests/cli-missing-dir-arg
+    COMMAND fizzy-spectests
+)
+set_tests_properties(
+    fizzy/smoketests/spectests/cli-missing-dir-arg
+    PROPERTIES
+    PASS_REGULAR_EXPRESSION "Missing DIR argument"
+)
+
+add_test(
+    NAME fizzy/smoketests/spectests/cli-invalid-arg
+    COMMAND fizzy-spectests ${CMAKE_CURRENT_LIST_DIR}/default --nonexisting_argument
+)
+set_tests_properties(
+    fizzy/smoketests/spectests/cli-invalid-arg
+    PROPERTIES
+    PASS_REGULAR_EXPRESSION "Unknown argument: --nonexisting_argument"
+)
+
 
 # Dump coverage data to distinct files (otherwise file will be overwritten).
 set_tests_properties(
     fizzy/smoketests/spectests/default
     fizzy/smoketests/spectests/skipvalidation
     fizzy/smoketests/spectests/failures
+    fizzy/smoketests/spectests/cli-missing-dir-arg
+    fizzy/smoketests/spectests/cli-invalid-arg
     PROPERTIES
     ENVIRONMENT LLVM_PROFILE_FILE=${CMAKE_BINARY_DIR}/spectests-%p.profraw
 )
