@@ -8,7 +8,7 @@
 #include <gmock/gmock.h>
 #include <iosfwd>
 
-MATCHER(Traps, "")
+MATCHER(Traps, "")  // NOLINT(readability-redundant-string-init)
 {
     return arg.trapped;
 }
@@ -18,7 +18,7 @@ MATCHER(Result, "empty result")
     return !arg.trapped && arg.stack.size() == 0;
 }
 
-MATCHER_P(Result, value, "")
+MATCHER_P(Result, value, "")  // NOLINT(readability-redundant-string-init)
 {
     return !arg.trapped && arg.stack.size() == 1 && arg.stack[0] == uint64_t(value);
 }

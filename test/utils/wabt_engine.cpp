@@ -87,10 +87,7 @@ bool WabtEngine::instantiate(bytes_view wasm_binary)
 
     // Run start function (this will return ok if no start function is present)
     const wabt::interp::ExecResult r = m_executor.RunStartFunction(m_module);
-    if (r.result != wabt::interp::Result::Ok)
-        return false;
-
-    return true;
+    return r.result == wabt::interp::Result::Ok;
 }
 
 bool WabtEngine::init_memory(bytes_view memory)

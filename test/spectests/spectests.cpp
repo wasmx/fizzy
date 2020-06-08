@@ -559,9 +559,9 @@ private:
         std::cout << "SKIPPED " << message << "\n";
     }
 
-    void log(std::string_view message) const { std::cout << message << "\n"; }
+    static void log(std::string_view message) { std::cout << message << "\n"; }
 
-    void log_no_newline(std::string_view message) const { std::cout << message << std::flush; }
+    static void log_no_newline(std::string_view message) { std::cout << message << std::flush; }
 
     test_settings m_settings;
     std::unordered_map<std::string, std::unique_ptr<fizzy::Instance>> m_instances;
