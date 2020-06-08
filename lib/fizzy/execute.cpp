@@ -251,23 +251,24 @@ void branch(
 {
     const auto code_offset = read<uint32_t>(immediates);
     const auto imm_offset = read<uint32_t>(immediates);
-    const auto stack_height = static_cast<size_t>(read<uint32_t>(immediates));
+    const auto stack_drop = read<uint32_t>(immediates);
     const auto arity = read<uint8_t>(immediates);
 
     pc = code.instructions.data() + code_offset;
     immediates = code.immediates.data() + imm_offset;
 
     // When branch is taken, additional stack items must be dropped.
-    assert(stack.size() >= stack_height + arity);
+    assert(static_cast<int>(stack_drop) >= 0);
+    assert(stack.size() >= stack_drop + arity);
     if (arity != 0)
     {
         assert(arity == 1);
         const auto result = stack.top();
-        stack.shrink(stack_height);
-        stack.push(result);
+        stack.shrink(stack.size() - stack_drop);
+        stack.top() = result;
     }
     else
-        stack.shrink(stack_height);
+        stack.shrink(stack.size() - stack_drop);
 }
 
 template <class F>

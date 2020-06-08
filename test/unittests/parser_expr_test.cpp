@@ -105,7 +105,7 @@ TEST(parser_expr, loop_br)
     EXPECT_EQ(module.codesec[0].immediates,
         "00000000"    // code_offset
         "00000000"    // imm_offset
-        "00000000"    // stack_height
+        "00000000"    // stack_drop
         "00"_bytes);  // arity
 
     /* wat2wasm
@@ -126,7 +126,7 @@ TEST(parser_expr, loop_br)
         "00000000"    // i32.const
         "01000000"    // code_offset
         "04000000"    // imm_offset
-        "01000000"    // stack_height
+        "00000000"    // stack_drop
         "00"_bytes);  // arity
 
     /* wat2wasm
@@ -149,7 +149,7 @@ TEST(parser_expr, loop_br)
         "00000000"    // i32.const
         "00000000"    // code_offset
         "00000000"    // imm_offset
-        "00000000"    // stack_height
+        "01000000"    // stack_drop
         "00"_bytes);  // arity - always 0 for loop
 }
 
@@ -166,7 +166,7 @@ TEST(parser_expr, loop_return)
     EXPECT_EQ(module.codesec[0].immediates,
         "03000000"    // code_offset
         "0d000000"    // imm_offset
-        "00000000"    // stack_height
+        "00000000"    // stack_drop
         "00"_bytes);  // arity
 }
 
@@ -195,7 +195,7 @@ TEST(parser_expr, block_br)
         "01000000"
         "08000000"  // code_offset
         "1d000000"  // imm_offset
-        "00000000"  // stack_height
+        "00000000"  // stack_drop
         "00"        // arity
         "0b000000"
         "01000000"
@@ -220,7 +220,7 @@ TEST(parser_expr, block_br)
         "00000000"    // i32.const
         "04000000"    // code_offset
         "11000000"    // imm_offset
-        "01000000"    // stack_height
+        "00000000"    // stack_drop
         "00"_bytes);  // arity
 
     /* wat2wasm
@@ -243,7 +243,7 @@ TEST(parser_expr, block_br)
         "00000000"  // i32.const
         "04000000"  // code_offset
         "11000000"  // imm_offset
-        "00000000"  // stack_height
+        "00000000"  // stack_drop
         "01"_bytes);
 }
 
@@ -260,7 +260,7 @@ TEST(parser_expr, block_return)
     EXPECT_EQ(module.codesec[0].immediates,
         "03000000"    // code_offset
         "0d000000"    // imm_offset
-        "00000000"    // stack_height
+        "00000000"    // stack_drop
         "00"_bytes);  // arity
 }
 
@@ -283,7 +283,7 @@ TEST(parser_expr, if_br)
         "19000000"    // else imm offset
         "04000000"    // code_offset
         "19000000"    // imm_offset
-        "00000000"    // stack_height
+        "00000000"    // stack_drop
         "00"_bytes);  // arity
 
     /* wat2wasm
@@ -308,7 +308,7 @@ TEST(parser_expr, if_br)
         "1d000000"    // else imm offset
         "05000000"    // code_offset
         "1d000000"    // imm_offset
-        "01000000"    // stack_height
+        "00000000"    // stack_drop
         "00"_bytes);  // arity
 }
 
@@ -363,27 +363,27 @@ TEST(parser_expr, instr_br_table)
 
         "13000000"  // code_offset
         "8d000000"  // imm_offset
-        "00000000"  // stack_height
+        "00000000"  // stack_drop
         "00"        // arity
 
         "10000000"  // code_offset
         "7c000000"  // imm_offset
-        "00000000"  // stack_height
+        "00000000"  // stack_drop
         "00"        // arity
 
         "0d000000"  // code_offset
         "6b000000"  // imm_offset
-        "00000000"  // stack_height
+        "00000000"  // stack_drop
         "00"        // arity
 
         "0a000000"  // code_offset
         "5a000000"  // imm_offset
-        "00000000"  // stack_height
+        "00000000"  // stack_drop
         "00"        // arity
 
         "16000000"   // code_offset
         "9e000000"   // imm_offset
-        "00000000"   // stack_height
+        "00000000"   // stack_drop
         "00"_bytes;  // arity
 
     EXPECT_EQ(code.immediates.substr(br_table_imm_offset, expected_br_imm.size()), expected_br_imm);
@@ -418,7 +418,7 @@ TEST(parser_expr, instr_br_table_empty_vector)
         "00000000"   // label_count
         "06000000"   // code_offset
         "26000000"   // imm_offset
-        "00000000"   // stack_height
+        "00000000"   // stack_drop
         "00"_bytes;  // arity
     EXPECT_EQ(code.immediates.substr(br_table_imm_offset, expected_br_imm.size()), expected_br_imm);
     EXPECT_EQ(code.max_stack_height, 1);
