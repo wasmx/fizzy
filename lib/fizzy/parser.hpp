@@ -19,9 +19,9 @@ using parser_result = std::tuple<T, const uint8_t*>;
 
 Module parse(bytes_view input);
 
-inline const uint8_t* skip(size_t num_bytes, const uint8_t* input, const uint8_t* end)
+inline const uint8_t* skip(size_t num_bytes, const uint8_t* pos, const uint8_t* end)
 {
-    const uint8_t* ret = input + num_bytes;
+    const uint8_t* ret = pos + num_bytes;
     if (ret >= end)
         throw parser_error{"unexpected EOF"};
     return ret;
@@ -38,12 +38,12 @@ inline parser_result<uint8_t> parse_byte(const uint8_t* pos, const uint8_t* end)
 /// Parse `expr`, i.e. a function's instructions residing in the code section.
 /// https://webassembly.github.io/spec/core/binary/instructions.html#binary-expr
 ///
-/// @param input    The beginning of the expr binary input.
+/// @param pos      The beginning of the expr binary input.
 /// @param end      The end of the binary input.
 /// @param func_idx Index of the function being parsed.
 /// @param module   Module that this code is part of.
 parser_result<Code> parse_expr(
-    const uint8_t* input, const uint8_t* end, FuncIdx func_idx, const Module& module);
+    const uint8_t* pos, const uint8_t* end, FuncIdx func_idx, const Module& module);
 
 parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end);
 

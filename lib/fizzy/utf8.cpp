@@ -34,6 +34,8 @@
  * +--------------------+------------+-------------+------------+-------------+
  */
 
+namespace
+{
 // Ranges for 2nd byte
 enum class Rule
 {
@@ -43,6 +45,7 @@ enum class Rule
     Range90BF,  // 90..BF
     Range808F,  // 80..8F
 };
+}  // namespace
 
 namespace fizzy
 {

@@ -15,25 +15,25 @@ static_assert((int8_t{-1} >> 1) == int8_t{-1},
 namespace fizzy
 {
 template <typename T>
-inline std::pair<T, const uint8_t*> leb128u_decode(const uint8_t* input, const uint8_t* end)
+inline std::pair<T, const uint8_t*> leb128u_decode(const uint8_t* pos, const uint8_t* end)
 {
     static_assert(!std::numeric_limits<T>::is_signed);
 
     T result = 0;
     int result_shift = 0;
 
-    for (; result_shift < std::numeric_limits<T>::digits; ++input, result_shift += 7)
+    for (; result_shift < std::numeric_limits<T>::digits; ++pos, result_shift += 7)
     {
-        if (input == end)
+        if (pos == end)
             throw parser_error("unexpected EOF");
 
-        result |= static_cast<T>((static_cast<T>(*input) & 0x7F) << result_shift);
-        if ((*input & 0x80) == 0)
+        result |= static_cast<T>((static_cast<T>(*pos) & 0x7F) << result_shift);
+        if ((*pos & 0x80) == 0)
         {
-            if (*input != (result >> result_shift))
+            if (*pos != (result >> result_shift))
                 throw parser_error("invalid LEB128 encoding: unused bits set");
 
-            return {result, input + 1};
+            return {result, pos + 1};
         }
     }
 
@@ -41,7 +41,7 @@ inline std::pair<T, const uint8_t*> leb128u_decode(const uint8_t* input, const u
 }
 
 template <typename T>
-inline std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* input, const uint8_t* end)
+inline std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* pos, const uint8_t* end)
 {
     static_assert(std::numeric_limits<T>::is_signed);
 
@@ -49,18 +49,18 @@ inline std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* input, const u
     T_unsigned result = 0;
     size_t result_shift = 0;
 
-    for (; result_shift < std::numeric_limits<T_unsigned>::digits; ++input, result_shift += 7)
+    for (; result_shift < std::numeric_limits<T_unsigned>::digits; ++pos, result_shift += 7)
     {
-        if (input == end)
+        if (pos == end)
             throw parser_error("unexpected EOF");
 
-        result |= static_cast<T_unsigned>((static_cast<T_unsigned>(*input) & 0x7F) << result_shift);
-        if ((*input & 0x80) == 0)
+        result |= static_cast<T_unsigned>((static_cast<T_unsigned>(*pos) & 0x7F) << result_shift);
+        if ((*pos & 0x80) == 0)
         {
             if (result_shift + 7 < sizeof(T_unsigned) * 8)
             {
                 // non-terminal byte of the encoding, extend the sign bit, if needed
-                if ((*input & 0x40) != 0)
+                if ((*pos & 0x40) != 0)
                 {
                     constexpr auto all_ones = std::numeric_limits<T_unsigned>::max();
                     const auto mask = static_cast<T_unsigned>(all_ones << (result_shift + 7));
@@ -73,14 +73,14 @@ inline std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* input, const u
                 const auto expected =
                     (static_cast<uint8_t>(static_cast<T>(result) >> result_shift) & 0x7F);
 
-                if (*input != expected)
+                if (*pos != expected)
                 {
                     throw parser_error(
                         "invalid LEB128 encoding: unused bits not equal to sign bit");
                 }
             }
 
-            return {static_cast<T>(result), input + 1};
+            return {static_cast<T>(result), pos + 1};
         }
     }
 
