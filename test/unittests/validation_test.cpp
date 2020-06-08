@@ -514,3 +514,128 @@ TEST(validation, start_function_type)
         from_hex("0061736d010000000105016000017f030201000801000a0701050041000f0b");
     EXPECT_THROW_MESSAGE(parse(wasm_func_result), validation_error, "invalid start function type");
 }
+
+TEST(validation, get_local_out_of_bounds)
+{
+    /* wat2wasm --no-check
+    (func (result i32)
+      local.get 0
+    )
+    */
+    const auto wasm1 = from_hex("0061736d010000000105016000017f030201000a0601040020000b");
+    EXPECT_THROW_MESSAGE(parse(wasm1), validation_error, "invalid local index");
+
+    /* wat2wasm --no-check
+    (func (param i32) (result i32)
+      local.get 1
+    )
+    */
+    const auto wasm2 = from_hex("0061736d0100000001060160017f017f030201000a0601040020010b");
+    EXPECT_THROW_MESSAGE(parse(wasm2), validation_error, "invalid local index");
+
+    /* wat2wasm --no-check
+    (func (result i32)
+      (local i64)
+      local.get 1
+    )
+    */
+    const auto wasm3 = from_hex("0061736d010000000105016000017f030201000a08010601017e20010b");
+    EXPECT_THROW_MESSAGE(parse(wasm3), validation_error, "invalid local index");
+
+    /* wat2wasm --no-check
+    (func (param i32) (param i64) (result i32)
+      (local i64)
+      (local i32)
+      local.get 4
+    )
+    */
+    const auto wasm4 =
+        from_hex("0061736d0100000001070160027f7e017f030201000a0a010802017e017f20040b");
+    EXPECT_THROW_MESSAGE(parse(wasm4), validation_error, "invalid local index");
+}
+
+TEST(validation, set_local_out_of_bounds)
+{
+    /* wat2wasm --no-check
+    (func
+      i32.const 0
+      local.set 0
+    )
+    */
+    const auto wasm1 = from_hex("0061736d01000000010401600000030201000a08010600410021000b");
+    EXPECT_THROW_MESSAGE(parse(wasm1), validation_error, "invalid local index");
+
+    /* wat2wasm --no-check
+    (func (param i32)
+      i32.const 0
+      local.set 1
+    )
+    */
+    const auto wasm2 = from_hex("0061736d0100000001050160017f00030201000a08010600410021010b");
+    EXPECT_THROW_MESSAGE(parse(wasm2), validation_error, "invalid local index");
+
+    /* wat2wasm --no-check
+    (func
+      (local i64)
+      i32.const 0
+      local.set 1
+    )
+    */
+    const auto wasm3 = from_hex("0061736d01000000010401600000030201000a0a010801017e410021010b");
+    EXPECT_THROW_MESSAGE(parse(wasm3), validation_error, "invalid local index");
+
+    /* wat2wasm --no-check
+    (func (param i32) (param i64)
+      (local i64)
+      (local i32)
+      i32.const 0
+      local.set 4
+    )
+    */
+    const auto wasm4 =
+        from_hex("0061736d0100000001060160027f7e00030201000a0c010a02017e017f410021040b");
+    EXPECT_THROW_MESSAGE(parse(wasm4), validation_error, "invalid local index");
+}
+
+TEST(validation, tee_local_out_of_bounds)
+{
+    /* wat2wasm --no-check
+    (func (result i32)
+      i32.const 0
+      local.tee 0
+    )
+    */
+    const auto wasm1 = from_hex("0061736d010000000105016000017f030201000a08010600410022000b");
+    EXPECT_THROW_MESSAGE(parse(wasm1), validation_error, "invalid local index");
+
+    /* wat2wasm --no-check
+    (func (param i32) (result i32)
+      i32.const 0
+      local.tee 1
+    )
+    */
+    const auto wasm2 = from_hex("0061736d0100000001060160017f017f030201000a08010600410022010b");
+    EXPECT_THROW_MESSAGE(parse(wasm2), validation_error, "invalid local index");
+
+    /* wat2wasm --no-check
+    (func (result i32)
+      (local i64)
+      i32.const 0
+      local.tee 1
+    )
+    */
+    const auto wasm3 = from_hex("0061736d010000000105016000017f030201000a0a010801017e410022010b");
+    EXPECT_THROW_MESSAGE(parse(wasm3), validation_error, "invalid local index");
+
+    /* wat2wasm --no-check
+    (func (param i32) (param i64) (result i32)
+      (local i64)
+      (local i32)
+      i32.const 0
+      local.tee 4
+    )
+    */
+    const auto wasm4 =
+        from_hex("0061736d0100000001070160027f7e017f030201000a0c010a02017e017f410022040b");
+    EXPECT_THROW_MESSAGE(parse(wasm4), validation_error, "invalid local index");
+}
