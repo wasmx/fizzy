@@ -6,7 +6,7 @@
 
 #include "bytes.hpp"
 
-namespace fizzy
+namespace fizzy::test
 {
 // This calculates the Adler-32 checksum of the data.
 // It is used in benchmarking.
@@ -25,4 +25,4 @@ inline uint32_t adler32(bytes_view data) noexcept
     return (b << 16) | a;
 }
 
-}  // namespace fizzy
+}  // namespace fizzy::test

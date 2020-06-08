@@ -8,6 +8,7 @@
 #include <test/utils/hex.hpp>
 
 using namespace fizzy;
+using namespace fizzy::test;
 
 TEST(validation_stack, func_stack_underflow)
 {

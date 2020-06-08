@@ -7,7 +7,7 @@
 #include "bytes.hpp"
 #include <cstdint>
 
-namespace fizzy
+namespace fizzy::test
 {
 /// Encode a byte to a hex string.
 inline std::string hex(uint8_t b) noexcept
@@ -37,7 +37,7 @@ inline namespace literals
 /// Operator for "" literals, e.g. "0a0b0c0d"_bytes.
 inline fizzy::bytes operator""_bytes(const char* literal, size_t /*length*/)
 {
-    return fizzy::from_hex(literal);
+    return from_hex(literal);
 }
 }  // namespace literals
-}  // namespace fizzy
+}  // namespace fizzy::test

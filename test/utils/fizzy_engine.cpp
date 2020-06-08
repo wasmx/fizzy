@@ -56,7 +56,7 @@ FuncType translate_signature(std::string_view signature)
 fizzy::execution_result env_adler32(fizzy::Instance& instance, std::vector<uint64_t> args, int)
 {
     assert(instance.memory != nullptr);
-    const auto ret = fizzy::adler32(bytes_view{*instance.memory}.substr(args[0], args[1]));
+    const auto ret = fizzy::test::adler32(bytes_view{*instance.memory}.substr(args[0], args[1]));
     return {false, {ret}};
 }
 }  // namespace

@@ -9,6 +9,7 @@
 #include <test/utils/hex.hpp>
 
 using namespace fizzy;
+using namespace fizzy::test;
 
 TEST(end_to_end, milestone1)
 {
