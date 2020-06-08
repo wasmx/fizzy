@@ -612,20 +612,6 @@ TEST(parser, global_multi_global_inited)
     EXPECT_EQ(module.globalsec[0].expression.value.global_index, 0x01);
 }
 
-TEST(parser, global_single_multi_instructions_inited)
-{
-    const auto section_contents = bytes{
-        0x01, 0x7f, 0x01, uint8_t(Instr::i32_const), 0x10, uint8_t(Instr::i64_const), 0x7f, 0x0b};
-    const auto bin = bytes{wasm_prefix} + make_section(6, section_contents);
-
-    const auto module = parse(bin);
-    ASSERT_EQ(module.globalsec.size(), 1);
-    EXPECT_TRUE(module.globalsec[0].type.is_mutable);
-    EXPECT_EQ(module.globalsec[0].type.value_type, ValType::i32);
-    EXPECT_EQ(module.globalsec[0].expression.kind, ConstantExpression::Kind::Constant);
-    EXPECT_EQ(module.globalsec[0].expression.value.constant, uint64_t(-1));
-}
-
 TEST(parser, global_multi_const_inited)
 {
     const auto section_contents =
@@ -916,7 +902,7 @@ TEST(parser, element_section_invalid_initializer)
 TEST(parser, element_section_no_table_section)
 {
     const auto wasm =
-        bytes{wasm_prefix} + make_section(9, make_vec({"000b"_bytes + make_vec({"00"_bytes})}));
+        bytes{wasm_prefix} + make_section(9, make_vec({"0041000b"_bytes + make_vec({"00"_bytes})}));
     EXPECT_THROW_MESSAGE(
         parse(wasm), validation_error, "element section encountered without a table section");
 }

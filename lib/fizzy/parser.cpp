@@ -123,60 +123,62 @@ inline parser_result<ConstantExpression> parse_constant_expression(
 {
     ConstantExpression result;
 
-    Instr instr;
-    do
+    uint8_t opcode;
+    std::tie(opcode, pos) = parse_byte(pos, end);
+
+    const auto instr = static_cast<Instr>(opcode);
+    switch (instr)
     {
-        uint8_t opcode;
-        std::tie(opcode, pos) = parse_byte(pos, end);
+    default:
+        throw validation_error{
+            "unexpected instruction in the constant expression: " + std::to_string(*(pos - 1))};
 
-        instr = static_cast<Instr>(opcode);
-        switch (instr)
-        {
-        default:
-            throw validation_error{
-                "unexpected instruction in the constant expression: " + std::to_string(*(pos - 1))};
+    case Instr::end:
+        throw validation_error{"constant expression is empty"};
 
-        case Instr::end:
-            break;
+    case Instr::global_get:
+    {
+        result.kind = ConstantExpression::Kind::GlobalGet;
+        std::tie(result.value.global_index, pos) = leb128u_decode<uint32_t>(pos, end);
+        break;
+    }
 
-        case Instr::global_get:
-        {
-            result.kind = ConstantExpression::Kind::GlobalGet;
-            std::tie(result.value.global_index, pos) = leb128u_decode<uint32_t>(pos, end);
-            break;
-        }
+    case Instr::i32_const:
+    {
+        result.kind = ConstantExpression::Kind::Constant;
+        int32_t value;
+        std::tie(value, pos) = leb128s_decode<int32_t>(pos, end);
+        result.value.constant = static_cast<uint32_t>(value);
+        break;
+    }
 
-        case Instr::i32_const:
-        {
-            result.kind = ConstantExpression::Kind::Constant;
-            int32_t value;
-            std::tie(value, pos) = leb128s_decode<int32_t>(pos, end);
-            result.value.constant = static_cast<uint32_t>(value);
-            break;
-        }
+    case Instr::i64_const:
+    {
+        result.kind = ConstantExpression::Kind::Constant;
+        int64_t value;
+        std::tie(value, pos) = leb128s_decode<int64_t>(pos, end);
+        result.value.constant = static_cast<uint64_t>(value);
+        break;
+    }
+    case Instr::f32_const:
+        // TODO: support this once floating points are implemented
+        result.kind = ConstantExpression::Kind::Constant;
+        result.value.constant = 0;
+        pos = skip(4, pos, end);
+        break;
+    case Instr::f64_const:
+        // TODO: support this once floating points are implemented
+        result.kind = ConstantExpression::Kind::Constant;
+        result.value.constant = 0;
+        pos = skip(8, pos, end);
+        break;
+    }
 
-        case Instr::i64_const:
-        {
-            result.kind = ConstantExpression::Kind::Constant;
-            int64_t value;
-            std::tie(value, pos) = leb128s_decode<int64_t>(pos, end);
-            result.value.constant = static_cast<uint64_t>(value);
-            break;
-        }
-        case Instr::f32_const:
-            // TODO: support this once floating points are implemented
-            result.kind = ConstantExpression::Kind::Constant;
-            result.value.constant = 0;
-            pos = skip(4, pos, end);
-            break;
-        case Instr::f64_const:
-            // TODO: support this once floating points are implemented
-            result.kind = ConstantExpression::Kind::Constant;
-            result.value.constant = 0;
-            pos = skip(8, pos, end);
-            break;
-        }
-    } while (instr != Instr::end);
+    uint8_t end_opcode;
+    std::tie(end_opcode, pos) = parse_byte(pos, end);
+
+    if (static_cast<Instr>(end_opcode) != Instr::end)
+        throw validation_error{"constant expression has multiple instructions"};
 
     return {result, pos};
 }

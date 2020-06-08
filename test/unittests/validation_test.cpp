@@ -52,6 +52,19 @@ TEST(validation, globals_invalid_initializer)
     const auto bin_invalid3 = from_hex("0061736d01000000060b027f00412a0b7f0123000b");
     EXPECT_THROW_MESSAGE(parse(bin_invalid3), validation_error,
         "global can be initialized by another const global only if it's imported");
+
+    /* wat2wasm --no-check
+      (global (mut i32) (i32.const 16) (i32.const -1))
+    */
+    const auto bin_multi = from_hex("0061736d010000000608017f014110417f0b");
+    EXPECT_THROW_MESSAGE(
+        parse(bin_multi), validation_error, "constant expression has multiple instructions");
+
+    /* wat2wasm --no-check
+      (global (mut i64))
+    */
+    const auto bin_no_instr = from_hex("0061736d010000000604017e010b");
+    EXPECT_THROW_MESSAGE(parse(bin_no_instr), validation_error, "constant expression is empty");
 }
 
 TEST(validation, import_memories_multiple)
