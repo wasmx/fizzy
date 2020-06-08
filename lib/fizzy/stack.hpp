@@ -135,6 +135,12 @@ public:
         return *m_top--;
     }
 
+    void drop(size_t num) noexcept
+    {
+        assert(num <= size());
+        m_top -= num;
+    }
+
     /// Shrinks the stack to the given new size by dropping items from the top.
     ///
     /// Requires new_size <= size().
