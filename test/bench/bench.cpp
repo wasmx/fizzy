@@ -163,8 +163,6 @@ bool validate_benchmark_case(benchmark::State& state, fizzy::test::WasmEngine& e
 void benchmark_execute(
     benchmark::State& state, EngineCreateFn create_fn, const ExecutionBenchmarkCase& benchmark_case)
 {
-    const auto has_memory = !benchmark_case.memory.empty();
-
     const auto engine = create_fn();
     const bool ok = validate_benchmark_case(state, *engine, benchmark_case);
 
@@ -177,15 +175,23 @@ void benchmark_execute(
 
     // The loop body will not be executed if validation error reported with state.SkipWithError().
     // However, due to a bug in libbenchmark, the loop must be always reached.
-    for ([[maybe_unused]] auto _ : state)
-    {
-        state.PauseTiming();
-        if (has_memory)
-            engine->init_memory(benchmark_case.memory);
-        state.ResumeTiming();
 
-        const auto result = engine->execute(*func_ref, benchmark_case.func_args);
-        benchmark::DoNotOptimize(result);
+    if (benchmark_case.memory.empty())
+    {
+        for ([[maybe_unused]] auto _ : state)
+        {
+            const auto result = engine->execute(*func_ref, benchmark_case.func_args);
+            benchmark::DoNotOptimize(result);
+        }
+    }
+    else
+    {
+        for ([[maybe_unused]] auto _ : state)
+        {
+            engine->init_memory(benchmark_case.memory);
+            const auto result = engine->execute(*func_ref, benchmark_case.func_args);
+            benchmark::DoNotOptimize(result);
+        }
     }
 }
 
