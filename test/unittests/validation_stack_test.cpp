@@ -502,7 +502,7 @@ TEST(validation_stack, unreachable_call_indirect)
     parse(wasm);
 }
 
-TEST(validation_stack, DISABLED_unreachable_too_many_results)
+TEST(validation_stack, unreachable_too_many_results)
 {
     // TODO: These are actually examples of invalid wasm.
     //       It is not allowed to have additional items in polymorphic stack (after unreachable).
@@ -514,7 +514,7 @@ TEST(validation_stack, DISABLED_unreachable_too_many_results)
     )
     */
     const auto wasm = from_hex("0061736d01000000010401600000030201000a070105000041010b");
-    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "too many results");
 
     /* wat2wasm --no-check
     (func (param i32) (result i32)
@@ -526,7 +526,7 @@ TEST(validation_stack, DISABLED_unreachable_too_many_results)
     */
     const auto wasm2 =
         from_hex("0061736d0100000001060160017f017f030201000a0c010a0020000c00410141020b");
-    EXPECT_THROW_MESSAGE(parse(wasm2), validation_error, "");
+    EXPECT_THROW_MESSAGE(parse(wasm2), validation_error, "too many results");
 }
 
 TEST(validation_stack, br)
