@@ -33,6 +33,10 @@ MATCHER_P(Result, value, "")  // NOLINT(readability-redundant-string-init)
     {                                                                                        \
         EXPECT_STREQ(exception.what(), expected);                                            \
     }                                                                                        \
+    catch (const std::exception& exception)                                                  \
+    {                                                                                        \
+        ADD_FAILURE() << "Unexpected exception type thrown: " << exception.what() << ".";    \
+    }                                                                                        \
     catch (...)                                                                              \
     {                                                                                        \
         ADD_FAILURE() << "Unexpected exception type thrown.";                                \
