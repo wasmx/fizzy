@@ -465,6 +465,47 @@ TEST(validation_stack, unreachable_2)
     EXPECT_THAT(module.codesec[0].max_stack_height, 0);
 }
 
+TEST(validation_stack, unreachable_3)
+{
+    /* wat2wasm
+    (func (result i32)
+      (block (result i32) unreachable)
+    )
+    */
+    const auto wasm = from_hex("0061736d010000000105016000017f030201000a08010600027f000b0b");
+    const auto module = parse(wasm);
+    EXPECT_THAT(module.codesec[0].max_stack_height, 1);
+}
+
+TEST(validation_stack, unreachable_4)
+{
+    /* wat2wasm
+    (func (result i32)
+      unreachable
+      (if (result i32) (then i32.const 0) (else i32.const 1))
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d010000000105016000017f030201000a0d010b0000047f41000541010b0b");
+    const auto module = parse(wasm);
+    EXPECT_THAT(module.codesec[0].max_stack_height, 1);
+}
+
+TEST(validation_stack, unreachable_5)
+{
+    /* wat2wasm
+    (func (result i32)
+      i64.const 0
+      unreachable
+      i32.eqz
+    )
+    */
+    const auto wasm = from_hex("0061736d010000000105016000017f030201000a08010600420000450b");
+    const auto module = parse(wasm);
+    EXPECT_THAT(module.codesec[0].max_stack_height, 1);
+}
+
+
 TEST(validation_stack, unreachable_call)
 {
     /* wat2wasm
@@ -502,10 +543,9 @@ TEST(validation_stack, unreachable_call_indirect)
     parse(wasm);
 }
 
-TEST(validation_stack, DISABLED_unreachable_too_many_results)
+TEST(validation_stack, unreachable_too_many_results)
 {
-    // TODO: These are actually examples of invalid wasm.
-    //       It is not allowed to have additional items in polymorphic stack (after unreachable).
+    // It is not allowed to have additional items in polymorphic stack (after unreachable).
 
     /* wat2wasm --no-check
     (func
@@ -514,7 +554,7 @@ TEST(validation_stack, DISABLED_unreachable_too_many_results)
     )
     */
     const auto wasm = from_hex("0061736d01000000010401600000030201000a070105000041010b");
-    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "too many results");
 
     /* wat2wasm --no-check
     (func (param i32) (result i32)
@@ -526,7 +566,79 @@ TEST(validation_stack, DISABLED_unreachable_too_many_results)
     */
     const auto wasm2 =
         from_hex("0061736d0100000001060160017f017f030201000a0c010a0020000c00410141020b");
-    EXPECT_THROW_MESSAGE(parse(wasm2), validation_error, "");
+    EXPECT_THROW_MESSAGE(parse(wasm2), validation_error, "too many results");
+
+    /* wat2wasm --no-check
+    (func (result i32)
+      unreachable
+      drop
+      i32.const 0
+      i32.const 0
+    )
+    */
+    const auto wasm3 = from_hex("0061736d010000000105016000017f030201000a0a010800001a410041000b");
+    EXPECT_THROW_MESSAGE(parse(wasm3), validation_error, "too many results");
+
+    /* wat2wasm --no-check
+    (func (result i32)
+      unreachable
+      i32.add
+      i32.const 0
+    )
+    */
+    const auto wasm4 = from_hex("0061736d010000000105016000017f030201000a08010600006a41000b");
+    EXPECT_THROW_MESSAGE(parse(wasm4), validation_error, "too many results");
+
+
+    /* wat2wasm --no-check
+    (func (result i32)
+      i32.const 0
+      (block (result i32)
+        unreachable
+        drop
+        i32.const 0
+        i32.const 0
+      )
+      drop
+    )
+    */
+    const auto wasm5 =
+        from_hex("0061736d010000000105016000017f030201000a10010e004100027f001a410041000b1a0b");
+    EXPECT_THROW_MESSAGE(parse(wasm5), validation_error, "too many results");
+
+    /* wat2wasm --no-check
+    (func (param i32) (param i32) (result i32)
+      unreachable
+      call 0
+      i32.const 0
+    )
+    */
+    const auto wasm6 = from_hex("0061736d0100000001070160027f7f017f030201000a0901070000100041000b");
+    EXPECT_THROW_MESSAGE(parse(wasm6), validation_error, "too many results");
+
+    /* wat2wasm --no-check
+    (table anyfunc (elem 0))
+    (func (param i32) (param i32) (result i32)
+      unreachable
+      (call_indirect (type 0))
+      i32.const 0
+    )
+    */
+    const auto wasm7 = from_hex(
+        "0061736d0100000001070160027f7f017f03020100040501700101010907010041000b01000a0a010800001100"
+        "0041000b");
+    EXPECT_THROW_MESSAGE(parse(wasm7), validation_error, "too many results");
+
+    /* wat2wasm --no-check
+    (func (result i32)
+      unreachable
+      i32.const 0
+      (block (result i32) i32.const 0)
+    )
+    */
+    const auto wasm8 =
+        from_hex("0061736d010000000105016000017f030201000a0c010a00004100027f41000b0b");
+    EXPECT_THROW_MESSAGE(parse(wasm8), validation_error, "too many results");
 }
 
 TEST(validation_stack, br)

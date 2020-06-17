@@ -93,28 +93,39 @@ void update_caller_frame(ControlFrame& frame, const FuncType& func_type)
 {
     const auto stack_height_required = static_cast<int>(func_type.inputs.size());
 
-    if (!frame.unreachable &&
-        (frame.stack_height - frame.parent_stack_height) < stack_height_required)
-        throw validation_error{"call/call_indirect instruction stack underflow"};
-
-    const auto stack_height_change =
-        static_cast<int>(func_type.outputs.size()) - stack_height_required;
-    frame.stack_height += stack_height_change;
+    if (frame.stack_height - frame.parent_stack_height < stack_height_required)
+    {
+        // Stack is polymorphic after unreachable instruction: underflow is ignored,
+        // but we need to count stack growth to detect extra values at the end of the block.
+        if (frame.unreachable)
+        {
+            frame.stack_height =
+                frame.parent_stack_height + static_cast<int>(func_type.outputs.size());
+        }
+        else
+            throw validation_error{"call/call_indirect instruction stack underflow"};
+    }
+    else
+    {
+        const auto stack_height_change =
+            static_cast<int>(func_type.outputs.size()) - stack_height_required;
+        frame.stack_height += stack_height_change;
+    }
 }
 
 void validate_result_count(const ControlFrame& frame)
 {
-    if (frame.unreachable)
-        return;
-
     // This is checked by "stack underflow".
     assert(frame.stack_height >= frame.parent_stack_height);
 
-    if (frame.stack_height < frame.parent_stack_height + frame.arity)
-        throw validation_error{"missing result"};
-
     if (frame.stack_height > frame.parent_stack_height + frame.arity)
         throw validation_error{"too many results"};
+
+    if (frame.unreachable)
+        return;
+
+    if (frame.stack_height < frame.parent_stack_height + frame.arity)
+        throw validation_error{"missing result"};
 }
 
 inline uint8_t get_branch_arity(const ControlFrame& frame) noexcept
@@ -132,6 +143,12 @@ void push_branch_immediates(const ControlFrame& frame, bytes& immediates)
     push(immediates, static_cast<uint32_t>(frame.immediates_offset));
     push(immediates, static_cast<uint32_t>(frame.parent_stack_height));
     push(immediates, get_branch_arity(frame));
+}
+
+inline void mark_frame_unreachable(ControlFrame& frame) noexcept
+{
+    frame.unreachable = true;
+    frame.stack_height = frame.parent_stack_height;
 }
 
 }  // namespace
@@ -162,21 +179,32 @@ parser_result<Code> parse_expr(
         auto& frame = control_stack.top();
         const auto& metrics = metrics_table[opcode];
 
-        if (!frame.unreachable)
+        if ((frame.stack_height - frame.parent_stack_height) < metrics.stack_height_required)
         {
-            if ((frame.stack_height - frame.parent_stack_height) < metrics.stack_height_required)
+            // Stack is polymorphic after unreachable instruction: underflow is ignored,
+            // but we need to count stack growth to detect extra values at the end of the block.
+            if (frame.unreachable)
+            {
+                // Add instruction's output values only.
+                frame.stack_height = frame.parent_stack_height + metrics.stack_height_required +
+                                     metrics.stack_height_change;
+            }
+            else
                 throw validation_error{"stack underflow"};
-
+        }
+        else
+        {
             // Update code's max_stack_height using frame.stack_height of the previous instruction.
             // At this point frame.stack_height includes additional changes to the stack height
             // if the previous instruction is a call/call_indirect.
             // This way the update is skipped for end/else instructions (because their frame is
             // already popped/reset), but it does not matter, as these instructions do not modify
             // stack height anyway.
-            code.max_stack_height = std::max(code.max_stack_height, frame.stack_height);
-        }
+            if (!frame.unreachable)
+                code.max_stack_height = std::max(code.max_stack_height, frame.stack_height);
 
-        frame.stack_height += metrics.stack_height_change;
+            frame.stack_height += metrics.stack_height_change;
+        }
 
         const auto instr = static_cast<Instr>(opcode);
         switch (instr)
@@ -264,9 +292,10 @@ parser_result<Code> parse_expr(
         case Instr::i64_reinterpret_f64:
         case Instr::f32_reinterpret_i32:
         case Instr::f64_reinterpret_i64:
+            break;
 
         case Instr::unreachable:
-            frame.unreachable = true;
+            mark_frame_unreachable(frame);
             break;
 
         case Instr::nop:
@@ -463,7 +492,7 @@ parser_result<Code> parse_expr(
             push_branch_immediates(branch_frame, code.immediates);
 
             if (instr == Instr::br)
-                frame.unreachable = true;
+                mark_frame_unreachable(frame);
 
             break;
         }
@@ -503,7 +532,7 @@ parser_result<Code> parse_expr(
             default_branch_frame.br_immediate_offsets.push_back(code.immediates.size());
             push_branch_immediates(default_branch_frame, code.immediates);
 
-            frame.unreachable = true;
+            mark_frame_unreachable(frame);
 
             break;
         }
@@ -519,7 +548,7 @@ parser_result<Code> parse_expr(
 
             push_branch_immediates(control_stack[label_idx], code.immediates);
 
-            frame.unreachable = true;
+            mark_frame_unreachable(frame);
             break;
         }
 
