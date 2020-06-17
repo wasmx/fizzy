@@ -135,6 +135,18 @@ inline uint8_t get_branch_arity(const ControlFrame& frame) noexcept
     return frame.instruction == Instr::loop ? 0 : frame.arity;
 }
 
+inline void validate_branch_stack_height(
+    const ControlFrame& current_frame, const ControlFrame& branch_frame)
+{
+    assert(current_frame.stack_height >= current_frame.parent_stack_height);
+
+    const auto arity = get_branch_arity(branch_frame);
+    if (!current_frame.unreachable &&
+        (current_frame.stack_height < current_frame.parent_stack_height + arity))
+        throw validation_error{"branch stack underflow"};
+}
+
+
 void push_branch_immediates(const ControlFrame& frame, bytes& immediates)
 {
     // Push frame start location as br immediates - these are final if frame is loop,
@@ -485,8 +497,11 @@ parser_result<Code> parse_expr(
             if (label_idx >= control_stack.size())
                 throw validation_error{"invalid label index"};
 
-            // Remember this br immediates offset to fill it at end instruction.
             auto& branch_frame = control_stack[label_idx];
+
+            validate_branch_stack_height(frame, branch_frame);
+
+            // Remember this br immediates offset to fill it at end instruction.
             branch_frame.br_immediate_offsets.push_back(code.immediates.size());
 
             push_branch_immediates(branch_frame, code.immediates);
@@ -516,6 +531,8 @@ parser_result<Code> parse_expr(
             auto& default_branch_frame = control_stack[default_label_idx];
             const auto default_branch_arity = get_branch_arity(default_branch_frame);
 
+            validate_branch_stack_height(frame, default_branch_frame);
+
             // Remember immediates offset for all br items to fill them at end instruction.
             push(code.immediates, static_cast<uint32_t>(label_indices.size()));
             for (const auto idx : label_indices)
@@ -544,6 +561,9 @@ parser_result<Code> parse_expr(
             const uint32_t label_idx = static_cast<uint32_t>(control_stack.size() - 1);
 
             auto& branch_frame = control_stack[label_idx];
+
+            validate_branch_stack_height(frame, branch_frame);
+
             branch_frame.br_immediate_offsets.push_back(code.immediates.size());
 
             push_branch_immediates(control_stack[label_idx], code.immediates);
