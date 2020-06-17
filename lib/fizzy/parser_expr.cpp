@@ -91,7 +91,7 @@ parser_result<uint8_t> parse_blocktype(const uint8_t* pos, const uint8_t* end)
 
 void update_stack_height(ControlFrame& frame, int stack_height_required, int stack_height_change)
 {
-    if ((frame.stack_height - frame.parent_stack_height) < stack_height_required)
+    if (frame.stack_height < frame.parent_stack_height + stack_height_required)
     {
         // Stack is polymorphic after unreachable instruction: underflow is ignored,
         // but we need to count stack growth to detect extra values at the end of the block.
