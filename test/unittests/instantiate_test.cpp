@@ -382,6 +382,27 @@ TEST(instantiate, imported_globals_mismatched_mutability)
         "global 0 mutability doesn't match module's global mutability");
 }
 
+TEST(instantiate, DISABLED_imported_globals_mismatched_type)
+{
+    /* wat2wasm
+      (global (export "g1") i64 (i64.const 0))
+    */
+    const auto bin1 = from_hex("0061736d010000000606017e0042000b0706010267310300");
+    auto instance1 = instantiate(parse(bin1));
+
+    const auto g = find_exported_global(*instance1, "g1");
+    ASSERT_TRUE(g.has_value());
+
+    /* wat2wasm
+      (global (import "mod" "g1") i32)
+    */
+    const auto bin2 = from_hex("0061736d01000000020b01036d6f64026731037f00");
+    const auto module2 = parse(bin2);
+
+    EXPECT_THROW_MESSAGE(
+        instantiate(module2, {}, {}, {}, {*g}), instantiate_error, "type mismatch");
+}
+
 TEST(instantiate, imported_globals_nullptr)
 {
     /* wat2wasm
