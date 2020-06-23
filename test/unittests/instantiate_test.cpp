@@ -527,7 +527,8 @@ TEST(instantiate, element_section_offset_from_mutable_global)
 {
     Module module;
     module.tablesec.emplace_back(Table{{4, std::nullopt}});
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
+    module.globalsec.emplace_back(
+        Global{{ValType::i32, true}, {ConstantExpression::Kind::Constant, {42}}});
     // Table contents: 0, 0xaa, 0xff, 0, ...
     module.elementsec.emplace_back(
         Element{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
@@ -626,7 +627,8 @@ TEST(instantiate, data_section_offset_from_global)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
-    module.globalsec.emplace_back(Global{false, {ConstantExpression::Kind::Constant, {42}}});
+    module.globalsec.emplace_back(
+        Global{{ValType::i32, false}, {ConstantExpression::Kind::Constant, {42}}});
     // Memory contents: 0, 0xaa, 0xff, 0, ...
     module.datasec.emplace_back(Data{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
 
@@ -658,7 +660,8 @@ TEST(instantiate, data_section_offset_from_mutable_global)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
+    module.globalsec.emplace_back(
+        Global{{ValType::i32, true}, {ConstantExpression::Kind::Constant, {42}}});
     // Memory contents: 0, 0xaa, 0xff, 0, ...
     module.datasec.emplace_back(Data{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
 
@@ -769,7 +772,8 @@ TEST(instantiate, data_elem_section_errors_dont_change_imports)
 TEST(instantiate, globals_single)
 {
     Module module;
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
+    module.globalsec.emplace_back(
+        Global{{ValType::i32, true}, {ConstantExpression::Kind::Constant, {42}}});
 
     auto instance = instantiate(module);
 
@@ -780,8 +784,10 @@ TEST(instantiate, globals_single)
 TEST(instantiate, globals_multiple)
 {
     Module module;
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
-    module.globalsec.emplace_back(Global{false, {ConstantExpression::Kind::Constant, {43}}});
+    module.globalsec.emplace_back(
+        Global{{ValType::i32, true}, {ConstantExpression::Kind::Constant, {42}}});
+    module.globalsec.emplace_back(
+        Global{{ValType::i32, false}, {ConstantExpression::Kind::Constant, {43}}});
 
     auto instance = instantiate(module);
 

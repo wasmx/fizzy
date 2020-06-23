@@ -84,9 +84,11 @@ inline parser_result<FuncType> parse(const uint8_t* pos, const uint8_t* end)
     return {result, pos};
 }
 
-inline std::tuple<bool, const uint8_t*> parse_global_type(const uint8_t* pos, const uint8_t* end)
+inline std::tuple<GlobalType, const uint8_t*> parse_global_type(
+    const uint8_t* pos, const uint8_t* end)
 {
-    std::tie(std::ignore, pos) = parse<ValType>(pos, end);
+    GlobalType type;
+    std::tie(type.value_type, pos) = parse<ValType>(pos, end);
 
     uint8_t mutability;
     std::tie(mutability, pos) = parse_byte(pos, end);
@@ -96,8 +98,8 @@ inline std::tuple<bool, const uint8_t*> parse_global_type(const uint8_t* pos, co
                            ", expected 0x00 or 0x01 for global mutability"};
     }
 
-    const bool is_mutable = (mutability == 0x01);
-    return {is_mutable, pos};
+    type.is_mutable = (mutability == 0x01);
+    return {type, pos};
 }
 
 inline parser_result<ConstantExpression> parse_constant_expression(
@@ -167,7 +169,7 @@ template <>
 inline parser_result<Global> parse(const uint8_t* pos, const uint8_t* end)
 {
     Global result;
-    std::tie(result.is_mutable, pos) = parse_global_type(pos, end);
+    std::tie(result.type, pos) = parse_global_type(pos, end);
     std::tie(result.expression, pos) = parse_constant_expression(pos, end);
 
     return {result, pos};
@@ -262,7 +264,7 @@ inline parser_result<Import> parse(const uint8_t* pos, const uint8_t* end)
         break;
     case 0x03:
         result.kind = ExternalKind::Global;
-        std::tie(result.desc.global_mutable, pos) = parse_global_type(pos, end);
+        std::tie(result.desc.global, pos) = parse_global_type(pos, end);
         break;
     default:
         throw parser_error{"unexpected import kind value " + std::to_string(kind)};
@@ -488,7 +490,7 @@ Module parse(bytes_view input)
             module.imported_memory_types.emplace_back(import.desc.memory);
             break;
         case ExternalKind::Global:
-            module.imported_globals_mutability.emplace_back(import.desc.global_mutable);
+            module.imported_global_types.emplace_back(import.desc.global);
             break;
         default:
             assert(false);

@@ -42,8 +42,8 @@ struct Module
     std::vector<Table> imported_table_types;
     // Types of memories defined in import section
     std::vector<Memory> imported_memory_types;
-    // Mutability of globals defined in import section
-    std::vector<bool> imported_globals_mutability;
+    // Types of globals defined in import section
+    std::vector<GlobalType> imported_global_types;
 
     const FuncType& get_function_type(FuncIdx idx) const noexcept
     {
@@ -65,7 +65,7 @@ struct Module
 
     size_t get_global_count() const noexcept
     {
-        return imported_globals_mutability.size() + globalsec.size();
+        return imported_global_types.size() + globalsec.size();
     }
 
     bool has_table() const noexcept { return !tablesec.empty() || !imported_table_types.empty(); }
@@ -78,9 +78,9 @@ struct Module
     bool is_global_mutable(GlobalIdx idx) const noexcept
     {
         assert(idx < get_global_count());
-        return idx < imported_globals_mutability.size() ?
-                   imported_globals_mutability[idx] :
-                   globalsec[idx - imported_globals_mutability.size()].is_mutable;
+        return idx < imported_global_types.size() ?
+                   imported_global_types[idx].is_mutable :
+                   globalsec[idx - imported_global_types.size()].type.is_mutable;
     }
 };
 }  // namespace fizzy
