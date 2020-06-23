@@ -135,7 +135,7 @@ inline void update_caller_frame(
     update_operand_stack(frame, operand_stack, func_type.inputs, func_type.outputs);
 }
 
-void validate_result_count(const ControlFrame& frame)
+void validate_result_stack(const ControlFrame& frame, const Stack<ValType>& operand_stack)
 {
     // This is checked by "stack underflow".
     assert(frame.stack_height >= frame.parent_stack_height);
@@ -145,11 +145,17 @@ void validate_result_count(const ControlFrame& frame)
     if (frame.stack_height > frame.parent_stack_height + arity)
         throw validation_error{"too many results"};
 
-    if (frame.unreachable)
+    if (!frame.unreachable && frame.stack_height < frame.parent_stack_height + arity)
+        throw validation_error{"missing result"};
+
+    if (arity == 0)
         return;
 
-    if (frame.stack_height < frame.parent_stack_height + arity)
-        throw validation_error{"missing result"};
+    const bool stack_has_item =
+        !frame.unreachable ||
+        (operand_stack.size() > static_cast<size_t>(frame.parent_stack_height));
+    if (stack_has_item && operand_stack.top() != frame.type)
+        throw validation_error{"block type mismatch"};
 }
 
 inline uint8_t get_branch_arity(const ControlFrame& frame) noexcept
@@ -190,10 +196,11 @@ void push_branch_immediates(
     push(immediates, arity);
 }
 
-inline void mark_frame_unreachable(ControlFrame& frame) noexcept
+inline void mark_frame_unreachable(ControlFrame& frame, Stack<ValType>& operand_stack) noexcept
 {
     frame.unreachable = true;
     frame.stack_height = frame.parent_stack_height;
+    operand_stack.shrink(static_cast<size_t>(frame.parent_stack_height));
 }
 
 }  // namespace
@@ -339,7 +346,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
             break;
 
         case Instr::unreachable:
-            mark_frame_unreachable(frame);
+            mark_frame_unreachable(frame, operand_stack);
             break;
 
         case Instr::nop:
@@ -450,7 +457,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
             if (frame.instruction != Instr::if_)
                 throw parser_error{"unexpected else instruction (if instruction missing)"};
 
-            validate_result_count(frame);  // else is the end of if.
+            validate_result_stack(frame, operand_stack);  // else is the end of if.
 
             // Reset frame after if. The if result type validation not implemented yet.
             frame.stack_height = frame.parent_stack_height;
@@ -478,7 +485,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
 
         case Instr::end:
         {
-            validate_result_count(frame);
+            validate_result_stack(frame, operand_stack);
 
             if (frame.instruction != Instr::loop)  // If end of block/if/else instruction.
             {
@@ -512,12 +519,16 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
                 }
             }
             const auto type = frame.type;
+            operand_stack.shrink(static_cast<size_t>(std::max(0, frame.parent_stack_height)));
             control_stack.pop();  // Pop the current frame.
 
             if (control_stack.empty())
                 continue_parsing = false;
             else if (type.has_value())
+            {
                 control_stack.top().stack_height += 1;  // The results of the popped frame.
+                operand_stack.push(*type);
+            }
             break;
         }
 
@@ -540,7 +551,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
             push_branch_immediates(branch_frame, frame.stack_height, code.immediates);
 
             if (instr == Instr::br)
-                mark_frame_unreachable(frame);
+                mark_frame_unreachable(frame, operand_stack);
 
             break;
         }
@@ -582,7 +593,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
             default_branch_frame.br_immediate_offsets.push_back(code.immediates.size());
             push_branch_immediates(default_branch_frame, frame.stack_height, code.immediates);
 
-            mark_frame_unreachable(frame);
+            mark_frame_unreachable(frame, operand_stack);
 
             break;
         }
@@ -601,7 +612,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
 
             push_branch_immediates(control_stack[label_idx], frame.stack_height, code.immediates);
 
-            mark_frame_unreachable(frame);
+            mark_frame_unreachable(frame, operand_stack);
             break;
         }
 
