@@ -33,8 +33,8 @@ struct ControlFrame
     /// The instruction that created the label.
     const Instr instruction{Instr::unreachable};
 
-    /// Number of results returned from the frame.
-    const uint8_t arity{0};
+    /// Return result type of the frame.
+    const std::optional<ValType> type;
 
     /// The target instruction code offset.
     const size_t code_offset{0};
@@ -58,10 +58,10 @@ struct ControlFrame
     /// Offsets of br/br_if/br_table instruction immediates, to be filled at the end of the block
     std::vector<size_t> br_immediate_offsets{};
 
-    ControlFrame(Instr _instruction, uint8_t _arity, int _parent_stack_height,
+    ControlFrame(Instr _instruction, std::optional<ValType> _type, int _parent_stack_height,
         size_t _code_offset = 0, size_t _immediates_offset = 0) noexcept
       : instruction{_instruction},
-        arity{_arity},
+        type{_type},
         code_offset{_code_offset},
         immediates_offset{_immediates_offset},
         parent_stack_height{_parent_stack_height},
@@ -72,8 +72,8 @@ struct ControlFrame
 /// Parses blocktype.
 ///
 /// Spec: https://webassembly.github.io/spec/core/binary/types.html#binary-blocktype.
-/// @return The type arity (can be 0 or 1).
-parser_result<uint8_t> parse_blocktype(const uint8_t* pos, const uint8_t* end)
+/// @return optional type of the block result.
+parser_result<std::optional<ValType>> parse_blocktype(const uint8_t* pos, const uint8_t* end)
 {
     // The byte meaning an empty wasm result type.
     // https://webassembly.github.io/spec/core/binary/types.html#result-types
@@ -83,10 +83,9 @@ parser_result<uint8_t> parse_blocktype(const uint8_t* pos, const uint8_t* end)
     std::tie(type, pos) = parse_byte(pos, end);
 
     if (type == BlockTypeEmpty)
-        return {0, pos};
+        return {std::nullopt, pos};
 
-    validate_valtype(type);
-    return {1, pos};
+    return {validate_valtype(type), pos};
 }
 
 void update_stack_height(ControlFrame& frame, int stack_height_required, int stack_height_change)
@@ -124,21 +123,25 @@ void validate_result_count(const ControlFrame& frame)
     // This is checked by "stack underflow".
     assert(frame.stack_height >= frame.parent_stack_height);
 
-    if (frame.stack_height > frame.parent_stack_height + frame.arity)
+    const auto arity = frame.type.has_value() ? 1 : 0;
+
+    if (frame.stack_height > frame.parent_stack_height + arity)
         throw validation_error{"too many results"};
 
     if (frame.unreachable)
         return;
 
-    if (frame.stack_height < frame.parent_stack_height + frame.arity)
+    if (frame.stack_height < frame.parent_stack_height + arity)
         throw validation_error{"missing result"};
 }
 
 inline uint8_t get_branch_arity(const ControlFrame& frame) noexcept
 {
+    const uint8_t arity = frame.type.has_value() ? 1 : 0;
+
     // For loops arity is considered always 0, because br executed in loop jumps to the top,
     // resetting frame stack to 0, so it should not keep top stack value even if loop has a result.
-    return frame.instruction == Instr::loop ? 0 : frame.arity;
+    return frame.instruction == Instr::loop ? 0 : arity;
 }
 
 inline void validate_branch_stack_height(
@@ -186,9 +189,10 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
     assert(func_type_idx < module.typesec.size());
     const auto& func_type = module.typesec[func_type_idx];
 
-    const auto function_arity = static_cast<uint8_t>(func_type.outputs.size());
+    const auto& func_outputs = func_type.outputs;
     // The function's implicit block.
-    control_stack.emplace(Instr::block, function_arity, 0);
+    control_stack.emplace(Instr::block,
+        func_outputs.empty() ? std::nullopt : std::optional<ValType>{func_outputs[0]}, 0);
 
     // TODO: Clarify in spec what happens if count of locals and arguments exceed uint32_t::max()
     //       Leave this assert here for the time being.
@@ -378,21 +382,21 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
 
         case Instr::block:
         {
-            uint8_t arity;
-            std::tie(arity, pos) = parse_blocktype(pos, end);
+            std::optional<ValType> type;
+            std::tie(type, pos) = parse_blocktype(pos, end);
 
             // Push label with immediates offset after arity.
-            control_stack.emplace(Instr::block, arity, frame.stack_height, code.instructions.size(),
+            control_stack.emplace(Instr::block, type, frame.stack_height, code.instructions.size(),
                 code.immediates.size());
             break;
         }
 
         case Instr::loop:
         {
-            uint8_t arity;
-            std::tie(arity, pos) = parse_blocktype(pos, end);
+            std::optional<ValType> type;
+            std::tie(type, pos) = parse_blocktype(pos, end);
 
-            control_stack.emplace(Instr::loop, arity, frame.stack_height, code.instructions.size(),
+            control_stack.emplace(Instr::loop, type, frame.stack_height, code.instructions.size(),
                 code.immediates.size());
 
             break;
@@ -400,10 +404,10 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
 
         case Instr::if_:
         {
-            uint8_t arity;
-            std::tie(arity, pos) = parse_blocktype(pos, end);
+            std::optional<ValType> type;
+            std::tie(type, pos) = parse_blocktype(pos, end);
 
-            control_stack.emplace(Instr::if_, arity, frame.stack_height, code.instructions.size(),
+            control_stack.emplace(Instr::if_, type, frame.stack_height, code.instructions.size(),
                 code.immediates.size());
 
             // Placeholders for immediate values, filled at the matching end or else instructions.
@@ -478,13 +482,13 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
                     // parent stack height and arity were already stored in br handler
                 }
             }
-            const auto arity = frame.arity;
+            const auto type = frame.type;
             control_stack.pop();  // Pop the current frame.
 
             if (control_stack.empty())
                 continue_parsing = false;
-            else
-                control_stack.top().stack_height += arity;  // The results of the popped frame.
+            else if (type.has_value())
+                control_stack.top().stack_height += 1;  // The results of the popped frame.
             break;
         }
 
