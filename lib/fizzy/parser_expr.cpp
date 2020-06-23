@@ -167,15 +167,24 @@ inline uint8_t get_branch_arity(const ControlFrame& frame) noexcept
     return frame.instruction == Instr::loop ? 0 : arity;
 }
 
-inline void validate_branch_stack_height(
-    const ControlFrame& current_frame, const ControlFrame& branch_frame)
+inline void validate_branch_stack(const ControlFrame& current_frame,
+    const ControlFrame& branch_frame, const Stack<ValType>& operand_stack)
 {
     assert(current_frame.stack_height >= current_frame.parent_stack_height);
 
     const auto arity = get_branch_arity(branch_frame);
+    if (arity == 0)
+        return;
+
     if (!current_frame.unreachable &&
         (current_frame.stack_height < current_frame.parent_stack_height + arity))
         throw validation_error{"branch stack underflow"};
+
+    const bool stack_has_item =
+        !current_frame.unreachable ||
+        (operand_stack.size() > static_cast<size_t>(current_frame.parent_stack_height));
+    if (stack_has_item && operand_stack.top() != *branch_frame.type)
+        throw validation_error{"branch stack type mismatch"};
 }
 
 
@@ -543,7 +552,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
 
             auto& branch_frame = control_stack[label_idx];
 
-            validate_branch_stack_height(frame, branch_frame);
+            validate_branch_stack(frame, branch_frame, operand_stack);
 
             // Remember this br immediates offset to fill it at end instruction.
             branch_frame.br_immediate_offsets.push_back(code.immediates.size());
@@ -575,7 +584,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
             auto& default_branch_frame = control_stack[default_label_idx];
             const auto default_branch_arity = get_branch_arity(default_branch_frame);
 
-            validate_branch_stack_height(frame, default_branch_frame);
+            validate_branch_stack(frame, default_branch_frame, operand_stack);
 
             // Remember immediates offset for all br items to fill them at end instruction.
             push(code.immediates, static_cast<uint32_t>(label_indices.size()));
@@ -606,7 +615,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
 
             auto& branch_frame = control_stack[label_idx];
 
-            validate_branch_stack_height(frame, branch_frame);
+            validate_branch_stack(frame, branch_frame, operand_stack);
 
             branch_frame.br_immediate_offsets.push_back(code.immediates.size());
 
