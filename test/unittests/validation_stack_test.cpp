@@ -225,8 +225,7 @@ TEST(validation_stack, call_stack_underflow)
     */
     const auto wasm =
         from_hex("0061736d01000000010a0260017f017f6000017f03030200010a0b02040020000b040010000b");
-    EXPECT_THROW_MESSAGE(
-        parse(wasm), validation_error, "call/call_indirect instruction stack underflow");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "stack underflow");
 }
 
 TEST(validation_stack, call_1arg_in_block)
@@ -258,8 +257,7 @@ TEST(validation_stack, call_1arg_in_block)
     */
     const auto wasm_invalid1 = from_hex(
         "0061736d0100000001080260017f0060000003030200010a0f0202000b0a00417f024010000b1a0b");
-    EXPECT_THROW_MESSAGE(
-        parse(wasm_invalid1), validation_error, "call/call_indirect instruction stack underflow");
+    EXPECT_THROW_MESSAGE(parse(wasm_invalid1), validation_error, "stack underflow");
 
     /* wat2wasm --no-check
     (func $f (param i32))
@@ -272,8 +270,7 @@ TEST(validation_stack, call_1arg_in_block)
     */
     const auto wasm_invalid2 =
         from_hex("0061736d0100000001080260017f0060000003030200010a0e0202000b0900417f024010000b0b");
-    EXPECT_THROW_MESSAGE(
-        parse(wasm_invalid2), validation_error, "call/call_indirect instruction stack underflow");
+    EXPECT_THROW_MESSAGE(parse(wasm_invalid2), validation_error, "stack underflow");
 }
 
 TEST(validation_stack, call_1arg_1result_in_block)
@@ -307,8 +304,7 @@ TEST(validation_stack, call_1arg_1result_in_block)
     */
     const auto wasm_invalid1 = from_hex(
         "0061736d0100000001090260017f017f60000003030200010a1102040020000b0a00417f024010000b1a0b");
-    EXPECT_THROW_MESSAGE(
-        parse(wasm_invalid1), validation_error, "call/call_indirect instruction stack underflow");
+    EXPECT_THROW_MESSAGE(parse(wasm_invalid1), validation_error, "stack underflow");
 
     /* wat2wasm --no-check
     (func $f (param i32) (result i32) (local.get 0))
@@ -322,8 +318,7 @@ TEST(validation_stack, call_1arg_1result_in_block)
     */
     const auto wasm_invalid2 = from_hex(
         "0061736d0100000001090260017f017f60000003030200010a1102040020000b0a00417f024010001a0b0b");
-    EXPECT_THROW_MESSAGE(
-        parse(wasm_invalid2), validation_error, "call/call_indirect instruction stack underflow");
+    EXPECT_THROW_MESSAGE(parse(wasm_invalid2), validation_error, "stack underflow");
 }
 
 TEST(validation_stack, call_stack_underflow_imported_function)
@@ -337,8 +332,7 @@ TEST(validation_stack, call_stack_underflow_imported_function)
     */
     const auto wasm = from_hex(
         "0061736d01000000010a0260017f017f6000017f020701016d01660000030201010a0601040010000b");
-    EXPECT_THROW_MESSAGE(
-        parse(wasm), validation_error, "call/call_indirect instruction stack underflow");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "stack underflow");
 }
 
 TEST(validation_stack, call_indirect_stack_underflow)
@@ -355,8 +349,7 @@ TEST(validation_stack, call_indirect_stack_underflow)
     const auto wasm = from_hex(
         "0061736d0100000001050160017f000303020000040501700101010907010041000b01000a0d020300010b0700"
         "20001100000b");
-    EXPECT_THROW_MESSAGE(
-        parse(wasm), validation_error, "call/call_indirect instruction stack underflow");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "stack underflow");
 }
 
 TEST(validation_stack, call_indirect_1arg_in_loop)
@@ -394,8 +387,7 @@ TEST(validation_stack, call_indirect_1arg_in_loop)
     const auto wasm_invalid = from_hex(
         "0061736d0100000001080260017f0060000003020101040501700101010907010041000b01000a0f010d00427f"
         "034041001100000b1a0b");
-    EXPECT_THROW_MESSAGE(
-        parse(wasm_invalid), validation_error, "call/call_indirect instruction stack underflow");
+    EXPECT_THROW_MESSAGE(parse(wasm_invalid), validation_error, "stack underflow");
 }
 
 TEST(validation_stack, call_indirect_1arg_1result_in_loop)
@@ -434,8 +426,7 @@ TEST(validation_stack, call_indirect_1arg_1result_in_loop)
     const auto wasm_invalid = from_hex(
         "0061736d0100000001090260017f017f60000003020101040501700101010907010041000b01000a0f010d0042"
         "7f034041001100000b1a0b");
-    EXPECT_THROW_MESSAGE(
-        parse(wasm_invalid), validation_error, "call/call_indirect instruction stack underflow");
+    EXPECT_THROW_MESSAGE(parse(wasm_invalid), validation_error, "stack underflow");
 }
 
 TEST(validation_stack, unreachable)
