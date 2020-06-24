@@ -168,6 +168,38 @@ TEST(stack, clear_on_empty)
     stack.clear();
 }
 
+TEST(stack, top)
+{
+    Stack<int> stack;
+    const auto& const_stack = stack;
+    EXPECT_EQ(stack.size(), 0);
+
+    stack.push(1);
+    EXPECT_EQ(stack.size(), 1);
+    EXPECT_EQ(stack.top(), 1);
+    EXPECT_EQ(stack[0], 1);
+    EXPECT_EQ(const_stack.top(), 1);
+    EXPECT_EQ(const_stack[0], 1);
+
+    stack.top() = 101;
+    EXPECT_EQ(stack.size(), 1);
+    EXPECT_EQ(stack.top(), 101);
+    EXPECT_EQ(stack[0], 101);
+    EXPECT_EQ(const_stack.top(), 101);
+    EXPECT_EQ(const_stack[0], 101);
+
+    stack.shrink(0);
+    EXPECT_EQ(stack.size(), 0);
+
+    stack.push(2);
+    EXPECT_EQ(stack.size(), 1);
+    EXPECT_EQ(stack.top(), 2);
+    EXPECT_EQ(stack[0], 2);
+    EXPECT_EQ(const_stack.top(), 2);
+    EXPECT_EQ(const_stack[0], 2);
+}
+
+
 TEST(operand_stack, construct)
 {
     OperandStack stack(0);
