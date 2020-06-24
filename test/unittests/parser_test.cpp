@@ -1026,7 +1026,7 @@ TEST(parser, code_section_with_2_trivial_codes)
 TEST(parser, code_section_with_basic_instructions)
 {
     const auto func_bin =
-        "00"  // vec(locals)
+        "01047f"  // vec(locals)
         "2001"
         "4102"
         "6a"
@@ -1044,7 +1044,7 @@ TEST(parser, code_section_with_basic_instructions)
     EXPECT_EQ(module.typesec[0].inputs.size(), 0);
     EXPECT_EQ(module.typesec[0].outputs.size(), 0);
     ASSERT_EQ(module.codesec.size(), 1);
-    EXPECT_EQ(module.codesec[0].local_count, 0);
+    EXPECT_EQ(module.codesec[0].local_count, 4);
     ASSERT_EQ(module.codesec[0].instructions.size(), 7);
     EXPECT_EQ(module.codesec[0].instructions[0], Instr::local_get);
     EXPECT_EQ(module.codesec[0].instructions[1], Instr::i32_const);
