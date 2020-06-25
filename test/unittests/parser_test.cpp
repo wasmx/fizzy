@@ -1263,12 +1263,18 @@ TEST(parser, data_section_empty)
 
 TEST(parser, data_section)
 {
-    const auto section_contents =
-        make_vec({"0041010b02aaff"_bytes, "0041020b025555"_bytes, "0023000b022424"_bytes});
-    const auto bin = bytes{wasm_prefix} + make_section(5, make_vec({"0000"_bytes})) +
-                     make_section(11, section_contents);
-
+    /* wat2wasm
+      (global (import "m" "g") i32)
+      (memory 0)
+      (data (i32.const 1) "\aa\ff")
+      (data (i32.const 2) "\55\55")
+      (data (global.get 0) "\24\24")
+    */
+    const auto bin = from_hex(
+        "0061736d01000000020801016d0167037f0005030100000b16030041010b02aaff0041020b0255550023000b02"
+        "2424");
     const auto module = parse(bin);
+
     ASSERT_EQ(module.datasec.size(), 3);
     EXPECT_EQ(module.datasec[0].offset.kind, ConstantExpression::Kind::Constant);
     EXPECT_EQ(module.datasec[0].offset.value.constant, 1);
