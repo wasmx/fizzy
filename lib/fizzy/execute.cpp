@@ -215,8 +215,7 @@ std::tuple<bytes_ptr, Limits> allocate_memory(const std::vector<Memory>& module_
 }
 
 uint64_t eval_constant_expression(ConstantExpression expr,
-    const std::vector<ExternalGlobal>& imported_globals, const std::vector<Global>& global_types,
-    const std::vector<uint64_t>& globals)
+    const std::vector<ExternalGlobal>& imported_globals, const std::vector<uint64_t>& globals)
 {
     if (expr.kind == ConstantExpression::Kind::Constant)
         return expr.value.constant;
@@ -224,12 +223,7 @@ uint64_t eval_constant_expression(ConstantExpression expr,
     assert(expr.kind == ConstantExpression::Kind::GlobalGet);
 
     const auto global_idx = expr.value.global_index;
-    const bool is_mutable =
-        (global_idx < imported_globals.size() ?
-                imported_globals[global_idx].is_mutable :
-                global_types[global_idx - imported_globals.size()].type.is_mutable);
-    if (is_mutable)
-        throw instantiate_error{"constant expression can use global_get only for const globals"};
+    assert(global_idx < imported_globals.size() + globals.size());
 
     if (global_idx < imported_globals.size())
         return *imported_globals[global_idx].value;
@@ -499,8 +493,7 @@ std::unique_ptr<Instance> instantiate(Module module,
         assert(global.expression.kind != ConstantExpression::Kind::GlobalGet ||
                global.expression.value.global_index < imported_globals.size());
 
-        const auto value = eval_constant_expression(
-            global.expression, imported_globals, module.globalsec, globals);
+        const auto value = eval_constant_expression(global.expression, imported_globals, globals);
         globals.emplace_back(value);
     }
 
@@ -514,8 +507,7 @@ std::unique_ptr<Instance> instantiate(Module module,
     datasec_offsets.reserve(module.datasec.size());
     for (const auto& data : module.datasec)
     {
-        const uint64_t offset =
-            eval_constant_expression(data.offset, imported_globals, module.globalsec, globals);
+        const uint64_t offset = eval_constant_expression(data.offset, imported_globals, globals);
 
         if (offset + data.init.size() > memory->size())
             throw instantiate_error{"data segment is out of memory bounds"};
@@ -528,8 +520,7 @@ std::unique_ptr<Instance> instantiate(Module module,
     elementsec_offsets.reserve(module.elementsec.size());
     for (const auto& element : module.elementsec)
     {
-        const uint64_t offset =
-            eval_constant_expression(element.offset, imported_globals, module.globalsec, globals);
+        const uint64_t offset = eval_constant_expression(element.offset, imported_globals, globals);
 
         if (offset + element.init.size() > table->size())
             throw instantiate_error{"element segment is out of table bounds"};
