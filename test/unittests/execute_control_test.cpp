@@ -506,6 +506,28 @@ TEST(execute_control, br_if_stack_cleanup)
     EXPECT_THAT(execute(parse(bin), 0, {7}), Result(0));
 }
 
+TEST(execute_control, br_if_stack_cleanup_arity1)
+{
+    /* wat2wasm
+    (func (param i32) (result i32)
+        i64.const 1   ;; Additional stack item.
+        i32.const 0
+        local.get 0
+        br_if 0       ;; Clean up stack.
+        drop
+        drop
+        i32.const 1
+    )
+    */
+
+    const auto bin =
+        from_hex("0061736d0100000001060160017f017f030201000a10010e004201410020000d001a1a41010b");
+
+    const auto module = parse(bin);
+    EXPECT_THAT(execute(module, 0, {0}), Result(1));
+    EXPECT_THAT(execute(module, 0, {1}), Result(0));
+}
+
 TEST(execute_control, br_multiple_blocks_stack_cleanup)
 {
     /* wat2wasm
