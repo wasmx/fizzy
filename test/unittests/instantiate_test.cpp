@@ -525,15 +525,19 @@ TEST(instantiate, element_section_offset_from_imported_global)
 
 TEST(instantiate, element_section_offset_from_mutable_global)
 {
-    Module module;
-    module.tablesec.emplace_back(Table{{4, std::nullopt}});
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
-    // Table contents: 0, 0xaa, 0xff, 0, ...
-    module.elementsec.emplace_back(
-        Element{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
+    /* wat2wasm --no-check
+      (global (mut i32) (i32.const 42))
+      (table 4 funcref)
+      (elem (global.get 0) 0 1)
+      (func)
+      (func)
+    */
+    const auto bin = from_hex(
+        "0061736d0100000001040160000003030200000404017000040606017f01412a0b0908010023000b0200010a07"
+        "0202000b02000b");
 
-    EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
-        "constant expression can use global_get only for const globals");
+    EXPECT_THROW_MESSAGE(parse(bin), validation_error,
+        "constant expression can use global.get only for const globals");
 }
 
 TEST(instantiate, element_section_offset_too_large)

@@ -550,6 +550,9 @@ Module parse(bytes_view input)
     if (!module.elementsec.empty() && !module.has_table())
         throw validation_error("element section encountered without a table section");
 
+    for (const auto& element : module.elementsec)
+        validate_constant_expression(element.offset, module);
+
     const auto total_global_count = module.get_global_count();
     for (const auto& global : module.globalsec)
     {

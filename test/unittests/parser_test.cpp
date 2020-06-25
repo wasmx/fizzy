@@ -857,30 +857,38 @@ TEST(parser, element_section_empty)
 
 TEST(parser, element_section)
 {
-    const auto table_contents = bytes{0x01, 0x70, 0x00, 0x7f};
-    const auto element_contents = make_vec({bytes{0x00, 0x41, 0x01, 0x0b, 0x02, 0x7f, 0x7f},
-        bytes{0x00, 0x41, 0x02, 0x0b, 0x02, 0x55, 0x55},
-        bytes{0x00, 0x23, 0x00, 0x0b, 0x02, 0x24, 0x24}});
-    const auto bin =
-        bytes{wasm_prefix} + make_section(4, table_contents) + make_section(9, element_contents);
-
+    /* wat2wasm
+      (global (import "m" "g") i32)
+      (table 0 10 funcref)
+      (elem (i32.const 1) 0 1)
+      (elem (i32.const 2) 2 3)
+      (elem (global.get 0) 0 3)
+      (func)
+      (func)
+      (func)
+      (func)
+    */
+    const auto bin = from_hex(
+        "0061736d01000000010401600000020801016d0167037f00030504000000000405017001000a0916030041010b"
+        "0200010041020b0202030023000b0200030a0d0402000b02000b02000b02000b");
     const auto module = parse(bin);
+
     ASSERT_EQ(module.elementsec.size(), 3);
     EXPECT_EQ(module.elementsec[0].offset.kind, ConstantExpression::Kind::Constant);
     EXPECT_EQ(module.elementsec[0].offset.value.constant, 1);
     ASSERT_EQ(module.elementsec[0].init.size(), 2);
-    EXPECT_EQ(module.elementsec[0].init[0], 0x7f);
-    EXPECT_EQ(module.elementsec[0].init[1], 0x7f);
+    EXPECT_EQ(module.elementsec[0].init[0], 0);
+    EXPECT_EQ(module.elementsec[0].init[1], 1);
     EXPECT_EQ(module.elementsec[1].offset.kind, ConstantExpression::Kind::Constant);
     EXPECT_EQ(module.elementsec[1].offset.value.constant, 2);
     ASSERT_EQ(module.elementsec[1].init.size(), 2);
-    EXPECT_EQ(module.elementsec[1].init[0], 0x55);
-    EXPECT_EQ(module.elementsec[1].init[1], 0x55);
+    EXPECT_EQ(module.elementsec[1].init[0], 2);
+    EXPECT_EQ(module.elementsec[1].init[1], 3);
     EXPECT_EQ(module.elementsec[2].offset.kind, ConstantExpression::Kind::GlobalGet);
     EXPECT_EQ(module.elementsec[2].offset.value.global_index, 0);
     ASSERT_EQ(module.elementsec[2].init.size(), 2);
-    EXPECT_EQ(module.elementsec[2].init[0], 0x24);
-    EXPECT_EQ(module.elementsec[2].init[1], 0x24);
+    EXPECT_EQ(module.elementsec[2].init[0], 0);
+    EXPECT_EQ(module.elementsec[2].init[1], 3);
 }
 
 TEST(parser, element_section_tableidx_nonzero)
