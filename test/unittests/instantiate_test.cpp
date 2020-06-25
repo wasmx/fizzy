@@ -830,25 +830,6 @@ TEST(instantiate, globals_initialized_from_imported)
 
     ASSERT_EQ(instance->globals.size(), 1);
     EXPECT_EQ(instance->globals[0], 42);
-
-    // initializing from mutable global is not allowed
-    /* wat2wasm --no-check
-      (global (import "mod" "g1") (mut i32))
-      (global (mut i32) (global.get 0))
-    */
-    const auto bin_invalid1 =
-        from_hex("0061736d01000000020b01036d6f64026731037f010606017f0123000b");
-    EXPECT_THROW_MESSAGE(parse(bin_invalid1), validation_error,
-        "constant expression can use global.get only for const globals");
-
-    // initializing from non-imported global is not allowed
-    /* wat2wasm --no-check
-      (global i32 (i32.const 42))
-      (global (mut i32) (global.get 0))
-    */
-    const auto bin_invalid2 = from_hex("0061736d01000000060b027f00412a0b7f0123000b");
-    EXPECT_THROW_MESSAGE(parse(bin_invalid2), validation_error,
-        "global can be initialized by another const global only if it's imported");
 }
 
 TEST(instantiate, start_unreachable)
