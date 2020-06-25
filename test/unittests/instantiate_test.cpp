@@ -654,19 +654,6 @@ TEST(instantiate, data_section_offset_from_imported_global)
     EXPECT_EQ(instance->memory->substr(42, 2), "aaff"_bytes);
 }
 
-TEST(instantiate, data_section_offset_from_mutable_global)
-{
-    /* wat2wasm --no-check
-      (global (mut i32) (i32.const 42))
-      (memory 1 1)
-      (data (global.get 0) "\aa\ff")
-    */
-    const auto bin = from_hex("0061736d010000000504010101010606017f01412a0b0b08010023000b02aaff");
-
-    EXPECT_THROW_MESSAGE(parse(bin), validation_error,
-        "constant expression can use global.get only for const globals");
-}
-
 TEST(instantiate, data_section_offset_too_large)
 {
     Module module;
