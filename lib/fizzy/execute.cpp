@@ -489,14 +489,9 @@ std::unique_ptr<Instance> instantiate(Module module,
     globals.reserve(module.globalsec.size());
     for (auto const& global : module.globalsec)
     {
-        // Wasm spec section 3.3.7 constrains initialization by another global to const imports only
-        // https://webassembly.github.io/spec/core/valid/instructions.html#expressions
-        if (global.expression.kind == ConstantExpression::Kind::GlobalGet &&
-            global.expression.value.global_index >= imported_globals.size())
-        {
-            throw instantiate_error(
-                "global can be initialized by another const global only if it's imported");
-        }
+        // Constraint to use global.get only with imported globals is checked at validation.
+        assert(global.expression.kind != ConstantExpression::Kind::GlobalGet ||
+               global.expression.value.global_index < imported_globals.size());
 
         const auto value = eval_constant_expression(
             global.expression, imported_globals, module.globalsec, globals);
