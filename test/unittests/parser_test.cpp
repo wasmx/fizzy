@@ -594,12 +594,17 @@ TEST(parser, global_single_mutable_const_inited)
     EXPECT_EQ(module.globalsec[0].expression.value.constant, 0x10);
 }
 
-TEST(parser, global_single_const_global_inited)
+TEST(parser, global_multi_global_inited)
 {
-    const auto section_contents = bytes{0x01, 0x7f, 0x00, uint8_t(Instr::global_get), 0x01, 0x0b};
-    const auto bin = bytes{wasm_prefix} + make_section(6, section_contents);
-
+    /* wat2wasm
+      (global (import "m" "g1") i32)
+      (global (import "m" "g2") i32)
+      (global i32 (global.get 1))
+    */
+    const auto bin =
+        from_hex("0061736d01000000021102016d026731037f00016d026732037f000606017f0023010b");
     const auto module = parse(bin);
+
     ASSERT_EQ(module.globalsec.size(), 1);
     EXPECT_FALSE(module.globalsec[0].type.is_mutable);
     EXPECT_EQ(module.globalsec[0].type.value_type, ValType::i32);

@@ -12,6 +12,22 @@
 
 namespace fizzy
 {
+namespace
+{
+void validate_constant_expression(const ConstantExpression& const_expr, const Module& module)
+{
+    if (const_expr.kind == ConstantExpression::Kind::Constant)
+        return;
+
+    const auto global_idx = const_expr.value.global_index;
+    if (global_idx >= module.get_global_count())
+        throw validation_error{"invalid global index in constant expression"};
+
+    if (module.is_global_mutable(global_idx))
+        throw validation_error{"constant expression can use global.get only for const globals"};
+}
+}  // namespace
+
 template <typename T>
 parser_result<T> parse(const uint8_t* pos, const uint8_t* end);
 
@@ -533,11 +549,26 @@ Module parse(bytes_view input)
     if (!module.elementsec.empty() && !module.has_table())
         throw validation_error{"element section encountered without a table section"};
 
+    const auto total_global_count = module.get_global_count();
+    for (const auto& global : module.globalsec)
+    {
+        validate_constant_expression(global.expression, module);
+
+        // Wasm spec section 3.3.7 constrains initialization by another global to const imports only
+        // https://webassembly.github.io/spec/core/valid/instructions.html#expressions
+        if (global.expression.kind == ConstantExpression::Kind::GlobalGet &&
+            global.expression.value.global_index >= module.imported_global_types.size())
+        {
+            throw validation_error{
+                "global can be initialized by another const global only if it's imported"};
+        }
+    }
+
+
     if (module.funcsec.size() != code_binaries.size())
         throw parser_error{"malformed binary: number of function and code entries must match"};
 
     const auto total_func_count = module.get_function_count();
-    const auto total_global_count = module.get_global_count();
 
     // Validate exports.
     std::unordered_set<std::string_view> export_names;
