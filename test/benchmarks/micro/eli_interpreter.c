@@ -7,6 +7,8 @@
  * Inputs utilize a sequence of 8 instructions which increases the value by 5:
  * OP_INC, OP_MUL2, OP_ADD7, OP_NEG, OP_DEC, OP_DEC, OP_NEG, OP_DIV2
  * hex: 0103050602020604.
+ *
+ * According to https://eli.thegreenplace.net/pages/about this code is in the public domain.
  */
 
 #define OP_HALT     0x0
