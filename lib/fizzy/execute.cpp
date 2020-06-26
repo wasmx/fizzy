@@ -1456,7 +1456,8 @@ execution_result execute(Instance& instance, FuncIdx func_idx, span<const uint64
     }
 
 end:
-    assert(pc == &code.instructions[code.instructions.size()] || trap);
+    // WebAssembly 1.0 allows at most one return variable.
+    assert(trap || (pc == &code.instructions[code.instructions.size()] && stack.size() <= 1));
     return {trap, {stack.rbegin(), stack.rend()}};
 }
 
