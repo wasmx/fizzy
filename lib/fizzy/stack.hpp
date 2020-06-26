@@ -68,18 +68,18 @@ class OperandStack
     /// in the constructor after the m_storage.
     uint64_t* m_top;
 
-    /// The bottom of the stack. Set in the constructor and never modified.
-    ///
-    /// TODO: This pointer is rarely used and may be removed.
-    ///       The value can be recomputed as (m_large_storage ? m_large_storage : m_small_storage).
-    ///       Moreover, methods using it may be replaced by ones not needing bottom of the stack.
-    uint64_t* m_bottom;
-
     /// The pre-allocated internal storage.
     uint64_t m_small_storage[small_storage_size];
 
     /// The unbounded storage for items.
     std::unique_ptr<uint64_t[]> m_large_storage;
+
+    uint64_t* bottom() { return m_large_storage ? m_large_storage.get() : m_small_storage; }
+
+    const uint64_t* bottom() const
+    {
+        return m_large_storage ? m_large_storage.get() : m_small_storage;
+    }
 
 public:
     /// Default constructor.
@@ -89,23 +89,16 @@ public:
     /// Sets the top item pointer to below the stack bottom.
     explicit OperandStack(size_t max_stack_height)
     {
-        if (max_stack_height <= small_storage_size)
-        {
-            m_bottom = &m_small_storage[0];
-        }
-        else
-        {
+        if (max_stack_height > small_storage_size)
             m_large_storage = std::make_unique<uint64_t[]>(max_stack_height);
-            m_bottom = &m_large_storage[0];
-        }
-        m_top = m_bottom - 1;
+        m_top = bottom() - 1;
     }
 
     OperandStack(const OperandStack&) = delete;
     OperandStack& operator=(const OperandStack&) = delete;
 
     /// The current number of items on the stack (aka stack height).
-    [[nodiscard]] size_t size() noexcept { return static_cast<size_t>(m_top + 1 - m_bottom); }
+    [[nodiscard]] size_t size() noexcept { return static_cast<size_t>(m_top + 1 - bottom()); }
 
     /// Returns the reference to the top item.
     /// Requires non-empty stack.
@@ -135,6 +128,12 @@ public:
         return *m_top--;
     }
 
+    void drop(size_t num) noexcept
+    {
+        assert(num <= size());
+        m_top -= num;
+    }
+
     /// Shrinks the stack to the given new size by dropping items from the top.
     ///
     /// Requires new_size <= size().
@@ -143,11 +142,11 @@ public:
     {
         assert(new_size <= size());
         // For new_size == 0, the m_top will point below the storage.
-        m_top = m_bottom + new_size - 1;
+        m_top = bottom() + new_size - 1;
     }
 
     /// Returns iterator to the bottom of the stack.
-    [[nodiscard]] const uint64_t* rbegin() const noexcept { return m_bottom; }
+    [[nodiscard]] const uint64_t* rbegin() const noexcept { return bottom(); }
 
     /// Returns end iterator counting from the bottom of the stack.
     [[nodiscard]] const uint64_t* rend() const noexcept { return m_top + 1; }

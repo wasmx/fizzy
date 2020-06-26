@@ -156,14 +156,21 @@ inline void validate_branch_stack_height(
 }
 
 
-void push_branch_immediates(const ControlFrame& frame, bytes& immediates)
+void push_branch_immediates(
+    const ControlFrame& branch_frame, int stack_height, bytes& immediates) noexcept
 {
+    const auto arity = get_branch_arity(branch_frame);
+
+    // How many stack items to drop when taking the branch.
+    // This value can be negative for unreachable instructions.
+    const auto stack_drop = stack_height - branch_frame.parent_stack_height - arity;
+
     // Push frame start location as br immediates - these are final if frame is loop,
     // but for block/if/else these are just placeholders, to be filled at end instruction.
-    push(immediates, static_cast<uint32_t>(frame.code_offset));
-    push(immediates, static_cast<uint32_t>(frame.immediates_offset));
-    push(immediates, static_cast<uint32_t>(frame.parent_stack_height));
-    push(immediates, get_branch_arity(frame));
+    push(immediates, static_cast<uint32_t>(branch_frame.code_offset));
+    push(immediates, static_cast<uint32_t>(branch_frame.immediates_offset));
+    push(immediates, static_cast<uint32_t>(stack_drop));
+    push(immediates, arity);
 }
 
 inline void mark_frame_unreachable(ControlFrame& frame) noexcept
@@ -479,7 +486,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
                     store(br_imm, static_cast<uint32_t>(target_pc));
                     br_imm += sizeof(uint32_t);
                     store(br_imm, static_cast<uint32_t>(target_imm));
-                    // parent stack height and arity were already stored in br handler
+                    // stack drop and arity were already stored in br handler
                 }
             }
             const auto type = frame.type;
@@ -508,7 +515,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
             // Remember this br immediates offset to fill it at end instruction.
             branch_frame.br_immediate_offsets.push_back(code.immediates.size());
 
-            push_branch_immediates(branch_frame, code.immediates);
+            push_branch_immediates(branch_frame, frame.stack_height, code.immediates);
 
             if (instr == Instr::br)
                 mark_frame_unreachable(frame);
@@ -547,11 +554,11 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
                     throw validation_error{"br_table labels have inconsistent types"};
 
                 branch_frame.br_immediate_offsets.push_back(code.immediates.size());
-                push_branch_immediates(branch_frame, code.immediates);
+                push_branch_immediates(branch_frame, frame.stack_height, code.immediates);
             }
 
             default_branch_frame.br_immediate_offsets.push_back(code.immediates.size());
-            push_branch_immediates(default_branch_frame, code.immediates);
+            push_branch_immediates(default_branch_frame, frame.stack_height, code.immediates);
 
             mark_frame_unreachable(frame);
 
@@ -570,7 +577,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
 
             branch_frame.br_immediate_offsets.push_back(code.immediates.size());
 
-            push_branch_immediates(control_stack[label_idx], code.immediates);
+            push_branch_immediates(control_stack[label_idx], frame.stack_height, code.immediates);
 
             mark_frame_unreachable(frame);
             break;
