@@ -544,20 +544,6 @@ TEST(instantiate, element_section_offset_from_imported_global)
     EXPECT_FALSE((*instance->table)[3].has_value());
 }
 
-TEST(instantiate, element_section_offset_from_mutable_global)
-{
-    Module module;
-    module.tablesec.emplace_back(Table{{4, std::nullopt}});
-    module.globalsec.emplace_back(
-        Global{{ValType::i32, true}, {ConstantExpression::Kind::Constant, {42}}});
-    // Table contents: 0, 0xaa, 0xff, 0, ...
-    module.elementsec.emplace_back(
-        Element{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
-
-    EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
-        "constant expression can use global_get only for const globals");
-}
-
 TEST(instantiate, element_section_offset_too_large)
 {
     Module module;
