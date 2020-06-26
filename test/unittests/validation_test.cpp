@@ -118,6 +118,28 @@ TEST(validation, table_multi_min_limit)
         parse(bin), validation_error, "too many table sections (at most one is allowed)");
 }
 
+TEST(validation, data_section_invalid_offset_expression)
+{
+    /* wat2wasm --no-check
+      (memory 1 1)
+      (data (global.get 0) "\aa\ff")
+    */
+    const auto bin1 = from_hex("0061736d010000000504010101010b08010023000b02aaff");
+
+    EXPECT_THROW_MESSAGE(
+        parse(bin1), validation_error, "invalid global index in constant expression");
+
+    /* wat2wasm --no-check
+      (global (mut i32) (i32.const 42))
+      (memory 1 1)
+      (data (global.get 0) "\aa\ff")
+    */
+    const auto bin2 = from_hex("0061736d010000000504010101010606017f01412a0b0b08010023000b02aaff");
+
+    EXPECT_THROW_MESSAGE(parse(bin2), validation_error,
+        "constant expression can use global.get only for const globals");
+}
+
 TEST(validation, i32_store_no_memory)
 {
     /* wat2wasm --no-check

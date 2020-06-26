@@ -537,6 +537,9 @@ Module parse(bytes_view input)
     if (!module.datasec.empty() && !module.has_memory())
         throw validation_error{"data section encountered without a memory section"};
 
+    for (const auto& data : module.datasec)
+        validate_constant_expression(data.offset, module);
+
     if (module.imported_table_types.size() > 1)
         throw validation_error{"too many imported tables (at most one is allowed)"};
 

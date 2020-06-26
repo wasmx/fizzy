@@ -677,19 +677,6 @@ TEST(instantiate, data_section_offset_from_imported_global)
     EXPECT_EQ(instance->memory->substr(42, 2), "aaff"_bytes);
 }
 
-TEST(instantiate, data_section_offset_from_mutable_global)
-{
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.globalsec.emplace_back(
-        Global{{ValType::i32, true}, {ConstantExpression::Kind::Constant, {42}}});
-    // Memory contents: 0, 0xaa, 0xff, 0, ...
-    module.datasec.emplace_back(Data{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
-
-    EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
-        "constant expression can use global_get only for const globals");
-}
-
 TEST(instantiate, data_section_offset_too_large)
 {
     Module module;
