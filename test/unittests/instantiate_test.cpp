@@ -382,6 +382,27 @@ TEST(instantiate, imported_globals_mismatched_mutability)
         "global 0 mutability doesn't match module's global mutability");
 }
 
+TEST(instantiate, DISABLED_imported_globals_mismatched_type)
+{
+    /* wat2wasm
+      (global (export "g1") i64 (i64.const 0))
+    */
+    const auto bin1 = from_hex("0061736d010000000606017e0042000b0706010267310300");
+    auto instance1 = instantiate(parse(bin1));
+
+    const auto g = find_exported_global(*instance1, "g1");
+    ASSERT_TRUE(g.has_value());
+
+    /* wat2wasm
+      (global (import "mod" "g1") i32)
+    */
+    const auto bin2 = from_hex("0061736d01000000020b01036d6f64026731037f00");
+    const auto module2 = parse(bin2);
+
+    EXPECT_THROW_MESSAGE(
+        instantiate(module2, {}, {}, {}, {*g}), instantiate_error, "type mismatch");
+}
+
 TEST(instantiate, imported_globals_nullptr)
 {
     /* wat2wasm
@@ -527,7 +548,8 @@ TEST(instantiate, element_section_offset_from_mutable_global)
 {
     Module module;
     module.tablesec.emplace_back(Table{{4, std::nullopt}});
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
+    module.globalsec.emplace_back(
+        Global{{ValType::i32, true}, {ConstantExpression::Kind::Constant, {42}}});
     // Table contents: 0, 0xaa, 0xff, 0, ...
     module.elementsec.emplace_back(
         Element{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
@@ -626,7 +648,8 @@ TEST(instantiate, data_section_offset_from_global)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
-    module.globalsec.emplace_back(Global{false, {ConstantExpression::Kind::Constant, {42}}});
+    module.globalsec.emplace_back(
+        Global{{ValType::i32, false}, {ConstantExpression::Kind::Constant, {42}}});
     // Memory contents: 0, 0xaa, 0xff, 0, ...
     module.datasec.emplace_back(Data{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
 
@@ -658,7 +681,8 @@ TEST(instantiate, data_section_offset_from_mutable_global)
 {
     Module module;
     module.memorysec.emplace_back(Memory{{1, 1}});
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
+    module.globalsec.emplace_back(
+        Global{{ValType::i32, true}, {ConstantExpression::Kind::Constant, {42}}});
     // Memory contents: 0, 0xaa, 0xff, 0, ...
     module.datasec.emplace_back(Data{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
 
@@ -769,7 +793,8 @@ TEST(instantiate, data_elem_section_errors_dont_change_imports)
 TEST(instantiate, globals_single)
 {
     Module module;
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
+    module.globalsec.emplace_back(
+        Global{{ValType::i32, true}, {ConstantExpression::Kind::Constant, {42}}});
 
     auto instance = instantiate(module);
 
@@ -780,8 +805,10 @@ TEST(instantiate, globals_single)
 TEST(instantiate, globals_multiple)
 {
     Module module;
-    module.globalsec.emplace_back(Global{true, {ConstantExpression::Kind::Constant, {42}}});
-    module.globalsec.emplace_back(Global{false, {ConstantExpression::Kind::Constant, {43}}});
+    module.globalsec.emplace_back(
+        Global{{ValType::i32, true}, {ConstantExpression::Kind::Constant, {42}}});
+    module.globalsec.emplace_back(
+        Global{{ValType::i32, false}, {ConstantExpression::Kind::Constant, {43}}});
 
     auto instance = instantiate(module);
 

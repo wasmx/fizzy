@@ -121,19 +121,21 @@ void match_imported_memories(const std::vector<Memory>& module_imported_memories
     }
 }
 
-void match_imported_globals(const std::vector<bool>& module_imports_mutability,
+void match_imported_globals(const std::vector<GlobalType>& module_imported_globals,
     const std::vector<ExternalGlobal>& imported_globals)
 {
-    if (module_imports_mutability.size() != imported_globals.size())
+    if (module_imported_globals.size() != imported_globals.size())
     {
         throw instantiate_error(
-            "module requires " + std::to_string(module_imports_mutability.size()) +
+            "module requires " + std::to_string(module_imported_globals.size()) +
             " imported globals, " + std::to_string(imported_globals.size()) + " provided");
     }
 
     for (size_t i = 0; i < imported_globals.size(); ++i)
     {
-        if (imported_globals[i].is_mutable != module_imports_mutability[i])
+        // TODO: match value type
+
+        if (imported_globals[i].is_mutable != module_imported_globals[i].is_mutable)
         {
             throw instantiate_error("global " + std::to_string(i) +
                                     " mutability doesn't match module's global mutability");
@@ -222,9 +224,10 @@ uint64_t eval_constant_expression(ConstantExpression expr,
     assert(expr.kind == ConstantExpression::Kind::GlobalGet);
 
     const auto global_idx = expr.value.global_index;
-    const bool is_mutable = (global_idx < imported_globals.size() ?
-                                 imported_globals[global_idx].is_mutable :
-                                 global_types[global_idx - imported_globals.size()].is_mutable);
+    const bool is_mutable =
+        (global_idx < imported_globals.size() ?
+                imported_globals[global_idx].is_mutable :
+                global_types[global_idx - imported_globals.size()].type.is_mutable);
     if (is_mutable)
         throw instantiate_error("constant expression can use global_get only for const globals");
 
@@ -484,7 +487,7 @@ std::unique_ptr<Instance> instantiate(Module module,
     match_imported_functions(module.imported_function_types, imported_functions);
     match_imported_tables(module.imported_table_types, imported_tables);
     match_imported_memories(module.imported_memory_types, imported_memories);
-    match_imported_globals(module.imported_globals_mutability, imported_globals);
+    match_imported_globals(module.imported_global_types, imported_globals);
 
     // Init globals
     std::vector<uint64_t> globals;
@@ -822,7 +825,7 @@ execution_result execute(
             {
                 const auto module_global_idx = idx - instance.imported_globals.size();
                 assert(module_global_idx < instance.module.globalsec.size());
-                assert(instance.module.globalsec[module_global_idx].is_mutable);
+                assert(instance.module.globalsec[module_global_idx].type.is_mutable);
                 instance.globals[module_global_idx] = stack.pop();
             }
             break;
@@ -1564,7 +1567,7 @@ std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::stri
         // global owned by instance
         const auto module_global_idx = global_idx - instance.imported_globals.size();
         return ExternalGlobal{&instance.globals[module_global_idx],
-            instance.module.globalsec[module_global_idx].is_mutable};
+            instance.module.globalsec[module_global_idx].type.is_mutable};
     }
 }
 

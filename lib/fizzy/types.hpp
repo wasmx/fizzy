@@ -295,10 +295,17 @@ struct ConstantExpression
     } value;
 };
 
+// https://webassembly.github.io/spec/core/binary/types.html#binary-globaltype
+struct GlobalType
+{
+    ValType value_type = ValType::i32;
+    bool is_mutable = false;
+};
+
 // https://webassembly.github.io/spec/core/binary/modules.html#global-section
 struct Global
 {
-    bool is_mutable = false;
+    GlobalType type;
     ConstantExpression expression;
 };
 
@@ -320,7 +327,7 @@ struct Import
     {
         TypeIdx function_type_index = 0;
         Memory memory;
-        bool global_mutable;
+        GlobalType global;
         Table table;
     } desc;
 };

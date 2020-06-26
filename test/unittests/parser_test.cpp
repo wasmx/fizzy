@@ -341,7 +341,8 @@ TEST(parser, import_multiple)
     EXPECT_EQ(module.importsec[2].module, "m3");
     EXPECT_EQ(module.importsec[2].name, "bar");
     EXPECT_EQ(module.importsec[2].kind, ExternalKind::Global);
-    EXPECT_FALSE(module.importsec[2].desc.global_mutable);
+    EXPECT_FALSE(module.importsec[2].desc.global.is_mutable);
+    EXPECT_EQ(module.importsec[2].desc.global.value_type, ValType::i32);
     EXPECT_EQ(module.importsec[3].module, "m4");
     EXPECT_EQ(module.importsec[3].name, "tab");
     EXPECT_EQ(module.importsec[3].kind, ExternalKind::Table);
@@ -587,7 +588,8 @@ TEST(parser, global_single_mutable_const_inited)
 
     const auto module = parse(bin);
     ASSERT_EQ(module.globalsec.size(), 1);
-    EXPECT_TRUE(module.globalsec[0].is_mutable);
+    EXPECT_TRUE(module.globalsec[0].type.is_mutable);
+    EXPECT_EQ(module.globalsec[0].type.value_type, ValType::i32);
     EXPECT_EQ(module.globalsec[0].expression.kind, ConstantExpression::Kind::Constant);
     EXPECT_EQ(module.globalsec[0].expression.value.constant, 0x10);
 }
@@ -599,7 +601,8 @@ TEST(parser, global_single_const_global_inited)
 
     const auto module = parse(bin);
     ASSERT_EQ(module.globalsec.size(), 1);
-    EXPECT_FALSE(module.globalsec[0].is_mutable);
+    EXPECT_FALSE(module.globalsec[0].type.is_mutable);
+    EXPECT_EQ(module.globalsec[0].type.value_type, ValType::i32);
     EXPECT_EQ(module.globalsec[0].expression.kind, ConstantExpression::Kind::GlobalGet);
     EXPECT_EQ(module.globalsec[0].expression.value.global_index, 0x01);
 }
@@ -612,7 +615,8 @@ TEST(parser, global_single_multi_instructions_inited)
 
     const auto module = parse(bin);
     ASSERT_EQ(module.globalsec.size(), 1);
-    EXPECT_TRUE(module.globalsec[0].is_mutable);
+    EXPECT_TRUE(module.globalsec[0].type.is_mutable);
+    EXPECT_EQ(module.globalsec[0].type.value_type, ValType::i32);
     EXPECT_EQ(module.globalsec[0].expression.kind, ConstantExpression::Kind::Constant);
     EXPECT_EQ(module.globalsec[0].expression.value.constant, uint64_t(-1));
 }
@@ -626,10 +630,12 @@ TEST(parser, global_multi_const_inited)
 
     const auto module = parse(bin);
     ASSERT_EQ(module.globalsec.size(), 2);
-    EXPECT_FALSE(module.globalsec[0].is_mutable);
+    EXPECT_FALSE(module.globalsec[0].type.is_mutable);
+    EXPECT_EQ(module.globalsec[0].type.value_type, ValType::i32);
     EXPECT_EQ(module.globalsec[0].expression.kind, ConstantExpression::Kind::Constant);
     EXPECT_EQ(module.globalsec[0].expression.value.constant, 0x01);
-    EXPECT_TRUE(module.globalsec[1].is_mutable);
+    EXPECT_TRUE(module.globalsec[1].type.is_mutable);
+    EXPECT_EQ(module.globalsec[1].type.value_type, ValType::i32);
     EXPECT_EQ(module.globalsec[1].expression.kind, ConstantExpression::Kind::Constant);
     EXPECT_EQ(module.globalsec[1].expression.value.constant, uint32_t(-1));
 }
