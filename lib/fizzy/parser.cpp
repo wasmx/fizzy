@@ -191,7 +191,7 @@ inline parser_result<Limits> parse_limits(const uint8_t* pos, const uint8_t* end
         std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos, end);
         std::tie(result.max, pos) = leb128u_decode<uint32_t>(pos, end);
         if (result.min > *result.max)
-            throw validation_error("malformed limits (minimum is larger than maximum)");
+            throw validation_error{"malformed limits (minimum is larger than maximum)"};
         return {result, pos};
     default:
         throw parser_error{"invalid limits " + std::to_string(b)};
@@ -415,7 +415,7 @@ Module parse(bytes_view input)
 
         const auto expected_section_end = it + size;
         if (expected_section_end > input.end())
-            throw parser_error("unexpected EOF");
+            throw parser_error{"unexpected EOF"};
 
         switch (id)
         {
@@ -519,7 +519,7 @@ Module parse(bytes_view input)
     }
 
     if (!module.datasec.empty() && !module.has_memory())
-        throw validation_error("data section encountered without a memory section");
+        throw validation_error{"data section encountered without a memory section"};
 
     if (module.imported_table_types.size() > 1)
         throw validation_error{"too many imported tables (at most one is allowed)"};
@@ -531,10 +531,10 @@ Module parse(bytes_view input)
     }
 
     if (!module.elementsec.empty() && !module.has_table())
-        throw validation_error("element section encountered without a table section");
+        throw validation_error{"element section encountered without a table section"};
 
     if (module.funcsec.size() != code_binaries.size())
-        throw parser_error("malformed binary: number of function and code entries must match");
+        throw parser_error{"malformed binary: number of function and code entries must match"};
 
     const auto total_func_count = module.get_function_count();
     const auto total_global_count = module.get_global_count();
@@ -565,7 +565,7 @@ Module parse(bytes_view input)
             assert(false);
         }
         if (!export_names.emplace(export_.name).second)
-            throw validation_error("duplicate export name " + export_.name);
+            throw validation_error{"duplicate export name " + export_.name};
     }
 
     if (module.startfunc)

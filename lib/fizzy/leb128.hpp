@@ -25,19 +25,19 @@ inline std::pair<T, const uint8_t*> leb128u_decode(const uint8_t* pos, const uin
     for (; result_shift < std::numeric_limits<T>::digits; ++pos, result_shift += 7)
     {
         if (pos == end)
-            throw parser_error("unexpected EOF");
+            throw parser_error{"unexpected EOF"};
 
         result |= static_cast<T>((static_cast<T>(*pos) & 0x7F) << result_shift);
         if ((*pos & 0x80) == 0)
         {
             if (*pos != (result >> result_shift))
-                throw parser_error("invalid LEB128 encoding: unused bits set");
+                throw parser_error{"invalid LEB128 encoding: unused bits set"};
 
             return {result, pos + 1};
         }
     }
 
-    throw parser_error("invalid LEB128 encoding: too many bytes");
+    throw parser_error{"invalid LEB128 encoding: too many bytes"};
 }
 
 template <typename T>
@@ -52,7 +52,7 @@ inline std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* pos, const uin
     for (; result_shift < std::numeric_limits<T_unsigned>::digits; ++pos, result_shift += 7)
     {
         if (pos == end)
-            throw parser_error("unexpected EOF");
+            throw parser_error{"unexpected EOF"};
 
         result |= static_cast<T_unsigned>((static_cast<T_unsigned>(*pos) & 0x7F) << result_shift);
         if ((*pos & 0x80) == 0)
@@ -75,8 +75,8 @@ inline std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* pos, const uin
 
                 if (*pos != expected)
                 {
-                    throw parser_error(
-                        "invalid LEB128 encoding: unused bits not equal to sign bit");
+                    throw parser_error{
+                        "invalid LEB128 encoding: unused bits not equal to sign bit"};
                 }
             }
 
@@ -84,7 +84,7 @@ inline std::pair<T, const uint8_t*> leb128s_decode(const uint8_t* pos, const uin
         }
     }
 
-    throw parser_error("invalid LEB128 encoding: too many bytes");
+    throw parser_error{"invalid LEB128 encoding: too many bytes"};
 }
 
 }  // namespace fizzy

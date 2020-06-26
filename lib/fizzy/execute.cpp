@@ -24,17 +24,17 @@ void match_imported_functions(const std::vector<FuncType>& module_imported_types
 {
     if (module_imported_types.size() != imported_functions.size())
     {
-        throw instantiate_error("module requires " + std::to_string(module_imported_types.size()) +
+        throw instantiate_error{"module requires " + std::to_string(module_imported_types.size()) +
                                 " imported functions, " +
-                                std::to_string(imported_functions.size()) + " provided");
+                                std::to_string(imported_functions.size()) + " provided"};
     }
 
     for (size_t i = 0; i < imported_functions.size(); ++i)
     {
         if (module_imported_types[i] != imported_functions[i].type)
         {
-            throw instantiate_error("function " + std::to_string(i) +
-                                    " type doesn't match module's imported function type");
+            throw instantiate_error{"function " + std::to_string(i) +
+                                    " type doesn't match module's imported function type"};
         }
     }
 }
@@ -42,7 +42,7 @@ void match_imported_functions(const std::vector<FuncType>& module_imported_types
 void match_limits(const Limits& external_limits, const Limits& module_limits)
 {
     if (external_limits.min < module_limits.min)
-        throw instantiate_error("provided import's min is below import's min defined in module");
+        throw instantiate_error{"provided import's min is below import's min defined in module"};
 
     if (!module_limits.max.has_value())
         return;
@@ -50,7 +50,7 @@ void match_limits(const Limits& external_limits, const Limits& module_limits)
     if (external_limits.max.has_value() && *external_limits.max <= *module_limits.max)
         return;
 
-    throw instantiate_error("provided import's max is above import's max defined in module");
+    throw instantiate_error{"provided import's max is above import's max defined in module"};
 }
 
 void match_imported_tables(const std::vector<Table>& module_imported_tables,
@@ -59,31 +59,31 @@ void match_imported_tables(const std::vector<Table>& module_imported_tables,
     assert(module_imported_tables.size() <= 1);
 
     if (imported_tables.size() > 1)
-        throw instantiate_error("only 1 imported table is allowed");
+        throw instantiate_error{"only 1 imported table is allowed"};
 
     if (module_imported_tables.empty())
     {
         if (!imported_tables.empty())
         {
-            throw instantiate_error(
-                "trying to provide imported table to a module that doesn't define one");
+            throw instantiate_error{
+                "trying to provide imported table to a module that doesn't define one"};
         }
     }
     else
     {
         if (imported_tables.empty())
-            throw instantiate_error("module defines an imported table but none was provided");
+            throw instantiate_error{"module defines an imported table but none was provided"};
 
         match_limits(imported_tables[0].limits, module_imported_tables[0].limits);
 
         if (imported_tables[0].table == nullptr)
-            throw instantiate_error("provided imported table has a null pointer to data");
+            throw instantiate_error{"provided imported table has a null pointer to data"};
 
         const auto size = imported_tables[0].table->size();
         const auto min = imported_tables[0].limits.min;
         const auto& max = imported_tables[0].limits.max;
         if (size < min || (max.has_value() && size > *max))
-            throw instantiate_error("provided imported table doesn't fit provided limits");
+            throw instantiate_error{"provided imported table doesn't fit provided limits"};
     }
 }
 
@@ -93,31 +93,31 @@ void match_imported_memories(const std::vector<Memory>& module_imported_memories
     assert(module_imported_memories.size() <= 1);
 
     if (imported_memories.size() > 1)
-        throw instantiate_error("only 1 imported memory is allowed");
+        throw instantiate_error{"only 1 imported memory is allowed"};
 
     if (module_imported_memories.empty())
     {
         if (!imported_memories.empty())
         {
-            throw instantiate_error(
-                "trying to provide imported memory to a module that doesn't define one");
+            throw instantiate_error{
+                "trying to provide imported memory to a module that doesn't define one"};
         }
     }
     else
     {
         if (imported_memories.empty())
-            throw instantiate_error("module defines an imported memory but none was provided");
+            throw instantiate_error{"module defines an imported memory but none was provided"};
 
         match_limits(imported_memories[0].limits, module_imported_memories[0].limits);
 
         if (imported_memories[0].data == nullptr)
-            throw instantiate_error("provided imported memory has a null pointer to data");
+            throw instantiate_error{"provided imported memory has a null pointer to data"};
 
         const auto size = imported_memories[0].data->size();
         const auto min = imported_memories[0].limits.min;
         const auto& max = imported_memories[0].limits.max;
         if (size < min * PageSize || (max.has_value() && size > *max * PageSize))
-            throw instantiate_error("provided imported memory doesn't fit provided limits");
+            throw instantiate_error{"provided imported memory doesn't fit provided limits"};
     }
 }
 
@@ -126,9 +126,9 @@ void match_imported_globals(const std::vector<GlobalType>& module_imported_globa
 {
     if (module_imported_globals.size() != imported_globals.size())
     {
-        throw instantiate_error(
+        throw instantiate_error{
             "module requires " + std::to_string(module_imported_globals.size()) +
-            " imported globals, " + std::to_string(imported_globals.size()) + " provided");
+            " imported globals, " + std::to_string(imported_globals.size()) + " provided"};
     }
 
     for (size_t i = 0; i < imported_globals.size(); ++i)
@@ -137,12 +137,12 @@ void match_imported_globals(const std::vector<GlobalType>& module_imported_globa
 
         if (imported_globals[i].is_mutable != module_imported_globals[i].is_mutable)
         {
-            throw instantiate_error("global " + std::to_string(i) +
-                                    " mutability doesn't match module's global mutability");
+            throw instantiate_error{"global " + std::to_string(i) +
+                                    " mutability doesn't match module's global mutability"};
         }
         if (imported_globals[i].value == nullptr)
         {
-            throw instantiate_error("global " + std::to_string(i) + " has a null pointer to value");
+            throw instantiate_error{"global " + std::to_string(i) + " has a null pointer to value"};
         }
     }
 }
@@ -183,8 +183,8 @@ std::tuple<bytes_ptr, Limits> allocate_memory(const std::vector<Memory>& module_
         if ((memory_min > MemoryPagesLimit) ||
             (memory_max.has_value() && *memory_max > MemoryPagesLimit))
         {
-            throw instantiate_error("cannot exceed hard memory limit of " +
-                                    std::to_string(MemoryPagesLimit * PageSize) + " bytes");
+            throw instantiate_error{"cannot exceed hard memory limit of " +
+                                    std::to_string(MemoryPagesLimit * PageSize) + " bytes"};
         }
 
         // NOTE: fill it with zeroes
@@ -200,8 +200,8 @@ std::tuple<bytes_ptr, Limits> allocate_memory(const std::vector<Memory>& module_
         if ((memory_min > MemoryPagesLimit) ||
             (memory_max.has_value() && *memory_max > MemoryPagesLimit))
         {
-            throw instantiate_error("imported memory limits cannot exceed hard memory limit of " +
-                                    std::to_string(MemoryPagesLimit * PageSize) + " bytes");
+            throw instantiate_error{"imported memory limits cannot exceed hard memory limit of " +
+                                    std::to_string(MemoryPagesLimit * PageSize) + " bytes"};
         }
 
         bytes_ptr memory{imported_memories[0].data, null_delete};
@@ -229,7 +229,7 @@ uint64_t eval_constant_expression(ConstantExpression expr,
                 imported_globals[global_idx].is_mutable :
                 global_types[global_idx - imported_globals.size()].type.is_mutable);
     if (is_mutable)
-        throw instantiate_error("constant expression can use global_get only for const globals");
+        throw instantiate_error{"constant expression can use global_get only for const globals"};
 
     if (global_idx < imported_globals.size())
         return *imported_globals[global_idx].value;
@@ -499,8 +499,8 @@ std::unique_ptr<Instance> instantiate(Module module,
         if (global.expression.kind == ConstantExpression::Kind::GlobalGet &&
             global.expression.value.global_index >= imported_globals.size())
         {
-            throw instantiate_error(
-                "global can be initialized by another const global only if it's imported");
+            throw instantiate_error{
+                "global can be initialized by another const global only if it's imported"};
         }
 
         const auto value = eval_constant_expression(
@@ -522,7 +522,7 @@ std::unique_ptr<Instance> instantiate(Module module,
             eval_constant_expression(data.offset, imported_globals, module.globalsec, globals);
 
         if (offset + data.init.size() > memory->size())
-            throw instantiate_error("data segment is out of memory bounds");
+            throw instantiate_error{"data segment is out of memory bounds"};
 
         datasec_offsets.emplace_back(offset);
     }
@@ -536,7 +536,7 @@ std::unique_ptr<Instance> instantiate(Module module,
             eval_constant_expression(element.offset, imported_globals, module.globalsec, globals);
 
         if (offset + element.init.size() > table->size())
-            throw instantiate_error("element segment is out of table bounds");
+            throw instantiate_error{"element segment is out of table bounds"};
 
         elementsec_offsets.emplace_back(offset);
     }
@@ -605,7 +605,7 @@ std::unique_ptr<Instance> instantiate(Module module,
                     }
                 }
             }
-            throw instantiate_error("start function failed to execute");
+            throw instantiate_error{"start function failed to execute"};
         }
     }
 
@@ -1499,8 +1499,8 @@ std::vector<ExternalFunction> resolve_imported_functions(
 
         if (it == imported_functions.end())
         {
-            throw instantiate_error(
-                "imported function " + import.module + "." + import.name + " is required");
+            throw instantiate_error{
+                "imported function " + import.module + "." + import.name + " is required"};
         }
 
         assert(import.desc.function_type_index < module.typesec.size());
@@ -1508,19 +1508,19 @@ std::vector<ExternalFunction> resolve_imported_functions(
 
         if (module_func_type.inputs != it->inputs)
         {
-            throw instantiate_error("function " + import.module + "." + import.name +
-                                    " input types don't match imported function in module");
+            throw instantiate_error{"function " + import.module + "." + import.name +
+                                    " input types don't match imported function in module"};
         }
         if (module_func_type.outputs.empty() && it->output.has_value())
         {
-            throw instantiate_error("function " + import.module + "." + import.name +
-                                    " has output but is defined void in module");
+            throw instantiate_error{"function " + import.module + "." + import.name +
+                                    " has output but is defined void in module"};
         }
         if (!module_func_type.outputs.empty() &&
             (!it->output.has_value() || module_func_type.outputs[0] != *it->output))
         {
-            throw instantiate_error("function " + import.module + "." + import.name +
-                                    " output type doesn't match imported function in module");
+            throw instantiate_error{"function " + import.module + "." + import.name +
+                                    " output type doesn't match imported function in module"};
         }
 
         external_functions.emplace_back(
