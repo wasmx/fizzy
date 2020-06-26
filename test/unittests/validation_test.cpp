@@ -129,6 +129,101 @@ TEST(validation, memory_size_no_memory)
         parse(wasm), validation_error, "memory instructions require imported or defined memory");
 }
 
+TEST(validation, store_alignment)
+{
+    // NOTE: could use instruction_metrics here, but better to have two sources of truth for testing
+    const std::map<Instr, int> test_cases{
+        {Instr::i32_store8, 0}, {Instr::i32_store16, 1}, {Instr::i32_store, 2},
+        // TODO: split these out once we have type validation
+        {Instr::i64_store8, 0}, {Instr::i64_store16, 1}, {Instr::i64_store32, 2},
+        {Instr::i64_store, 3},
+        // TODO: include floating point
+    };
+
+    for (const auto test_case : test_cases)
+    {
+        const auto instr = test_case.first;
+        const auto max_align = test_case.second;
+        // TODO: consider using leb128_encode and test 2^32-1
+        for (auto align : {0, 1, 2, 3, 4, 0x7f})
+        {
+            /*
+            (func (param i32)
+              get_local 0
+              i32.const 0
+              <instr> align=<align>
+            */
+            const auto type_section = make_vec({"60017f00"_bytes});
+            const auto function_section = make_vec({"00"_bytes});
+            // NOTE: this depends on align < 0x80
+            const auto code_bin = bytes{0,  // vec(locals)
+                uint8_t(Instr::local_get), 0, uint8_t(Instr::i32_const), 0, uint8_t(instr),
+                uint8_t(align), 0, uint8_t(Instr::end)};
+            const auto code_section = make_vec({add_size_prefix(code_bin)});
+            const auto memory_section = "01007f"_bytes;
+            const auto bin = bytes{wasm_prefix} + make_section(1, type_section) +
+                             make_section(3, function_section) + make_section(5, memory_section) +
+                             make_section(10, code_section);
+            if (align <= max_align)
+            {
+                EXPECT_NO_THROW(parse(bin));
+            }
+            else
+            {
+                EXPECT_THROW_MESSAGE(
+                    parse(bin), validation_error, "alignment cannot exceed operand size");
+            }
+        }
+    }
+}
+
+TEST(validation, load_alignment)
+{
+    // NOTE: could use instruction_metrics here, but better to have two sources of truth for testing
+    const std::map<Instr, int> test_cases{
+        {Instr::i32_load8_s, 0}, {Instr::i32_load8_u, 0}, {Instr::i32_load16_s, 1},
+        {Instr::i32_load16_u, 1}, {Instr::i32_load, 2}, {Instr::i64_load8_s, 0},
+        {Instr::i64_load8_u, 0}, {Instr::i64_load16_s, 1}, {Instr::i64_load16_u, 1},
+        {Instr::i64_load32_s, 2}, {Instr::i64_load32_u, 2}, {Instr::i64_load, 3},
+        // TODO: include floating point
+    };
+
+    for (const auto test_case : test_cases)
+    {
+        const auto instr = test_case.first;
+        const auto max_align = test_case.second;
+        // TODO: consider using leb128_encode and test 2^32-1
+        for (auto align : {0, 1, 2, 3, 4, 0x7f})
+        {
+            /*
+            (func (param i32)
+              get_local 0
+              <instr> align=<align>
+            */
+            const auto type_section = make_vec({"60017f00"_bytes});
+            const auto function_section = make_vec({"00"_bytes});
+            // NOTE: this depends on align < 0x80
+            const auto code_bin = bytes{0,  // vec(locals)
+                uint8_t(Instr::local_get), 0, uint8_t(instr), uint8_t(align), 0,
+                uint8_t(Instr::drop), uint8_t(Instr::end)};
+            const auto code_section = make_vec({add_size_prefix(code_bin)});
+            const auto memory_section = "01007f"_bytes;
+            const auto bin = bytes{wasm_prefix} + make_section(1, type_section) +
+                             make_section(3, function_section) + make_section(5, memory_section) +
+                             make_section(10, code_section);
+            if (align <= max_align)
+            {
+                EXPECT_NO_THROW(parse(bin));
+            }
+            else
+            {
+                EXPECT_THROW_MESSAGE(
+                    parse(bin), validation_error, "alignment cannot exceed operand size");
+            }
+        }
+    }
+}
+
 TEST(validation, br_invalid_label_index)
 {
     /* wat2wasm --no-check
