@@ -31,4 +31,10 @@ inline bytes i32_const(uint32_t c)
 {
     return uint8_t{0x41} + leb128u_encode(c);
 }
+
+/// Creates wasm binary representing i64.const instruction with following encoded immediate value.
+inline bytes i64_const(uint64_t c)
+{
+    return uint8_t{0x42} + leb128u_encode(c);
+}
 }  // namespace fizzy::test
