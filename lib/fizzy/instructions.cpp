@@ -55,8 +55,8 @@ constexpr InstructionMetrics instruction_metrics_table[256] = {
     /* local_get           = 0x20 */ {0, 0},
     /* local_set           = 0x21 */ {0, 0},
     /* local_tee           = 0x22 */ {0, 0},
-    /* global_get          = 0x23 */ {0, 1},
-    /* global_set          = 0x24 */ {1, -1},
+    /* global_get          = 0x23 */ {0, 0},
+    /* global_set          = 0x24 */ {0, 0},
 
     /*                       0x25 */ {},
     /*                       0x26 */ {},
