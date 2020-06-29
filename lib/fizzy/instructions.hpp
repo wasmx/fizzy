@@ -4,8 +4,10 @@
 
 #pragma once
 
+#include "types.hpp"
 #include <cassert>
 #include <cstdint>
+#include <initializer_list>
 
 namespace fizzy
 {
@@ -38,5 +40,13 @@ struct InstructionMetrics
 };
 
 const InstructionMetrics* get_instruction_metrics_table() noexcept;
+
+struct InstructionType
+{
+    std::initializer_list<ValType> inputs;
+    std::initializer_list<ValType> outputs;
+};
+
+const InstructionType* get_instruction_type_table() noexcept;
 
 }  // namespace fizzy
