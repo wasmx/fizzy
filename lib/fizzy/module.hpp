@@ -68,19 +68,19 @@ struct Module
         return imported_global_types.size() + globalsec.size();
     }
 
+    GlobalType get_global_type(GlobalIdx idx) const noexcept
+    {
+        assert(idx < get_global_count());
+        return idx < imported_global_types.size() ?
+                   imported_global_types[idx] :
+                   globalsec[idx - imported_global_types.size()].type;
+    }
+
     bool has_table() const noexcept { return !tablesec.empty() || !imported_table_types.empty(); }
 
     bool has_memory() const noexcept
     {
         return !memorysec.empty() || !imported_memory_types.empty();
-    }
-
-    bool is_global_mutable(GlobalIdx idx) const noexcept
-    {
-        assert(idx < get_global_count());
-        return idx < imported_global_types.size() ?
-                   imported_global_types[idx].is_mutable :
-                   globalsec[idx - imported_global_types.size()].type.is_mutable;
     }
 };
 }  // namespace fizzy

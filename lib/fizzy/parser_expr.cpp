@@ -644,7 +644,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
             if (global_idx >= module.get_global_count())
                 throw validation_error{"accessing global with invalid index"};
 
-            if (instr == Instr::global_set && !module.is_global_mutable(global_idx))
+            if (instr == Instr::global_set && !module.get_global_type(global_idx).is_mutable)
                 throw validation_error{"trying to mutate immutable global"};
 
             push(code.immediates, global_idx);
