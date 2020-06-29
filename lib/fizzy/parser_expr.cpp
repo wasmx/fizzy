@@ -112,8 +112,9 @@ void update_operand_stack(ControlFrame& frame, Stack<ValType>& operand_stack,
         frame.stack_height += outputs_size - inputs_size;
 
     // Update operand_stack.
-    for (const auto expected_type : inputs)
+    for (auto it = inputs.begin() + inputs.size(); it != inputs.begin(); --it)
     {
+        const auto expected_type = *(it - 1);
         const auto actual_type =
             (frame.unreachable &&
                         operand_stack.size() == static_cast<size_t>(frame.parent_stack_height) ?
