@@ -614,11 +614,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
 
             push(code.immediates, callee_type_idx);
 
-            if (pos == end)
-                throw parser_error{"unexpected EOF"};
-
-            const uint8_t tableidx{*pos++};
-            if (tableidx != 0)
+            uint8_t table_idx;
+            std::tie(table_idx, pos) = parse_byte(pos, end);
+            if (table_idx != 0)
                 throw parser_error{"invalid tableidx encountered with call_indirect"};
             break;
         }
@@ -707,10 +705,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
         case Instr::memory_size:
         case Instr::memory_grow:
         {
-            if (pos == end)
-                throw parser_error{"unexpected EOF"};
-
-            const uint8_t memory_idx{*pos++};
+            uint8_t memory_idx;
+            std::tie(memory_idx, pos) = parse_byte(pos, end);
             if (memory_idx != 0)
                 throw parser_error{"invalid memory index encountered"};
 

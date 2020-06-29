@@ -195,12 +195,11 @@ inline parser_result<Global> parse(const uint8_t* pos, const uint8_t* end)
 
 inline parser_result<Limits> parse_limits(const uint8_t* pos, const uint8_t* end)
 {
-    if (pos == end)
-        throw parser_error{"unexpected EOF"};
-
     Limits result;
-    const auto b = *pos++;
-    switch (b)
+
+    uint8_t kind;
+    std::tie(kind, pos) = parse_byte(pos, end);
+    switch (kind)
     {
     case 0x00:
         std::tie(result.min, pos) = leb128u_decode<uint32_t>(pos, end);
@@ -212,7 +211,7 @@ inline parser_result<Limits> parse_limits(const uint8_t* pos, const uint8_t* end
             throw validation_error{"malformed limits (minimum is larger than maximum)"};
         return {result, pos};
     default:
-        throw parser_error{"invalid limits " + std::to_string(b)};
+        throw parser_error{"invalid limits " + std::to_string(kind)};
     }
 }
 
