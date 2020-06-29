@@ -43,8 +43,8 @@ constexpr InstructionMetrics instruction_metrics_table[256] = {
     /*                       0x19 */ {},
 
     // 5.4.2 Parametric instructions
-    /* drop                = 0x1a */ {1, -1},
-    /* select              = 0x1b */ {3, -2},
+    /* drop                = 0x1a */ {0, 0},
+    /* select              = 0x1b */ {1, -1},
 
     /*                       0x1c */ {},
     /*                       0x1d */ {},
@@ -52,9 +52,9 @@ constexpr InstructionMetrics instruction_metrics_table[256] = {
     /*                       0x1f */ {},
 
     // 5.4.3 Variable instructions
-    /* local_get           = 0x20 */ {0, 1},
-    /* local_set           = 0x21 */ {1, -1},
-    /* local_tee           = 0x22 */ {1, 0},
+    /* local_get           = 0x20 */ {0, 0},
+    /* local_set           = 0x21 */ {0, 0},
+    /* local_tee           = 0x22 */ {0, 0},
     /* global_get          = 0x23 */ {0, 1},
     /* global_set          = 0x24 */ {1, -1},
 
