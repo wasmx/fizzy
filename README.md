@@ -1,3 +1,5 @@
+<div align="center"><img src="./docs/logo/fizzy_logo.svg" width="150px" height="150px"/></div>
+
 # Fizzy
 
 [![webassembly badge]][webassembly]
