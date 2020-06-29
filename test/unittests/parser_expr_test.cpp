@@ -46,7 +46,7 @@ TEST(parser_expr, instr_loop)
     EXPECT_EQ(code3.immediates.size(), 0);
     EXPECT_EQ(code3.max_stack_height, 1);
 
-    const auto loop_f64 = "037d4400000000000000000b1a0b"_bytes;
+    const auto loop_f64 = "037c4400000000000000000b1a0b"_bytes;
     const auto [code4, pos4] = parse_expr(loop_f64);
     EXPECT_EQ(code4.instructions,
         (std::vector{Instr::loop, Instr::f64_const, Instr::end, Instr::drop, Instr::end}));
@@ -513,12 +513,20 @@ TEST(parser_expr, load_store_immediates_out_of_bounds)
     for (const auto instr : {Instr::i32_load, Instr::i64_load, Instr::i32_load8_s,
              Instr::i32_load8_u, Instr::i32_load16_s, Instr::i32_load16_u, Instr::i64_load8_s,
              Instr::i64_load8_u, Instr::i64_load16_s, Instr::i64_load16_u, Instr::i64_load32_s,
-             Instr::i64_load32_u, Instr::i32_store, Instr::i64_store, Instr::i32_store8,
-             Instr::i32_store16, Instr::i64_store8, Instr::i64_store16, Instr::i64_store32})
+             Instr::i64_load32_u, Instr::i32_store, Instr::i32_store8, Instr::i32_store16})
     {
         const auto code_imm1 = i32_const(0) + i32_const(0) + bytes{uint8_t(instr), 0xa0};
         EXPECT_THROW_MESSAGE(parse_expr(code_imm1), parser_error, "unexpected EOF");
         const auto code_imm2 = i32_const(0) + i32_const(0) + bytes{uint8_t(instr), 0x00, 0xb0};
+        EXPECT_THROW_MESSAGE(parse_expr(code_imm2), parser_error, "unexpected EOF");
+    }
+
+    for (const auto instr :
+        {Instr::i64_store, Instr::i64_store8, Instr::i64_store16, Instr::i64_store32})
+    {
+        const auto code_imm1 = i32_const(0) + i64_const(0) + bytes{uint8_t(instr), 0xa0};
+        EXPECT_THROW_MESSAGE(parse_expr(code_imm1), parser_error, "unexpected EOF");
+        const auto code_imm2 = i32_const(0) + i64_const(0) + bytes{uint8_t(instr), 0x00, 0xb0};
         EXPECT_THROW_MESSAGE(parse_expr(code_imm2), parser_error, "unexpected EOF");
     }
 }
