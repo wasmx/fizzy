@@ -10,6 +10,92 @@
 using namespace fizzy;
 using namespace fizzy::test;
 
+TEST(validation_stack_type, instruction_type_mismatch)
+{
+    /* wat2wasm --no-check
+    (func (result i32)
+      i32.const 0
+      i64.const 0
+      i32.add
+    )
+    */
+    const auto wasm = from_hex("0061736d010000000105016000017f030201000a09010700410042006a0b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "type mismatch");
+}
+
+TEST(validation_stack_type, instruction_multiple_args)
+{
+    /* wat2wasm
+    (memory 1)
+    (func
+      i32.const 0
+      i64.const 0
+      i64.store
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d010000000104016000000302010005030100010a0b010900410042003703000b");
+    EXPECT_NO_THROW(parse(wasm));
+
+    /* wat2wasm --no-check
+    (memory 1)
+    (func
+      i64.const 0
+      i32.const 0
+      i64.store
+    )
+    */
+    const auto wasm_invalid =
+        from_hex("0061736d010000000104016000000302010005030100010a0b010900420041003703000b");
+    EXPECT_THROW_MESSAGE(parse(wasm_invalid), validation_error, "type mismatch");
+}
+
+TEST(validation_stack_type, unreachable_instruction)
+{
+    /* wat2wasm
+    (func (result i32)
+      unreachable
+      i32.add
+    )
+    */
+    const auto wasm = from_hex("0061736d010000000105016000017f030201000a06010400006a0b");
+    EXPECT_NO_THROW(parse(wasm));
+
+    /* wat2wasm
+    (func (result i32)
+      unreachable
+      i32.const 0
+      i32.add
+    )
+    */
+    const auto wasm_arg = from_hex("0061736d010000000105016000017f030201000a080106000041006a0b");
+    EXPECT_NO_THROW(parse(wasm_arg));
+
+    /* wat2wasm
+    (func (result i32)
+      unreachable
+      i32.const 0
+      i32.const 0
+      i32.add
+    )
+    */
+    const auto wasm_multi_arg =
+        from_hex("0061736d010000000105016000017f030201000a0a01080000410041006a0b");
+    EXPECT_NO_THROW(parse(wasm_multi_arg));
+
+    /* wat2wasm --no-check
+    (func (result i32)
+      unreachable
+      i64.const 0
+      i32.const 0
+      i32.add
+    )
+    */
+    const auto wasm_invalid =
+        from_hex("0061736d010000000105016000017f030201000a0a01080000420041006a0b");
+    EXPECT_THROW_MESSAGE(parse(wasm_invalid), validation_error, "type mismatch");
+}
+
 TEST(validation_stack_type, call_multiple_args)
 {
     /* wat2wasm
