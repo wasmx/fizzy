@@ -27,6 +27,7 @@ target_sources(
     types_test.cpp
     utf8_test.cpp
     validation_stack_test.cpp
+    validation_stack_type_test.cpp
     validation_test.cpp
     wasm_engine_test.cpp
 )

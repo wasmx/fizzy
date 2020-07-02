@@ -199,6 +199,7 @@ jobs:
           ./wat2wasm4cpp.py test/unittests/module_test.cpp
           ./wat2wasm4cpp.py test/unittests/parser_test.cpp
           ./wat2wasm4cpp.py test/unittests/validation_stack_test.cpp
+          ./wat2wasm4cpp.py test/unittests/validation_stack_type_test.cpp
           ./wat2wasm4cpp.py test/unittests/validation_test.cpp
           ./wat2wasm4cpp.py test/unittests/wasm_engine_test.cpp
           ./wat2wasm4cpp.py test/spectests/spectests.cpp
