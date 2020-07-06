@@ -1464,12 +1464,6 @@ end:
     return {trap, {stack.rbegin(), stack.rend()}};
 }
 
-execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uint64_t> args)
-{
-    auto instance = instantiate(module);
-    return execute(*instance, func_idx, std::move(args));
-}
-
 std::vector<ExternalFunction> resolve_imported_functions(
     const Module& module, std::vector<ImportedFunction> imported_functions)
 {
