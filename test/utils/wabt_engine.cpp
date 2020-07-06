@@ -62,7 +62,7 @@ bool WabtEngine::instantiate(bytes_view wasm_binary)
     assert(hostModule != nullptr);
 
     hostModule->AppendFuncExport("adler32", {{wabt::Type::I32, wabt::Type::I32}, {wabt::Type::I32}},
-        [=](const wabt::interp::HostFunc*, const wabt::interp::FuncSignature*,
+        [this](const wabt::interp::HostFunc*, const wabt::interp::FuncSignature*,
             const wabt::interp::TypedValues& args, wabt::interp::TypedValues& results) {
             const auto offset = args[0].value.i32;
             const auto length = args[1].value.i32;

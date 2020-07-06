@@ -12,6 +12,9 @@ executors:
   linux-gcc-9:
     docker:
       - image: ethereum/cpp-build-env:14-gcc-9
+  linux-gcc-latest:
+    docker:
+      - image: ethereum/cpp-build-env:14-gcc-10
   linux-clang-latest:
     docker:
       - image: ethereum/cpp-build-env:14-clang-10
@@ -65,7 +68,7 @@ commands:
             - ~/.hunter/_Base/Cache
       - run:
           name: "Build"
-          command: cmake --build ~/build --target <<parameters.target>> -- -j16
+          command: cmake --build ~/build --target <<parameters.target>> -- -j12
 
   test:
     description: "Test"
@@ -197,6 +200,16 @@ jobs:
       BUILD_TYPE: Release
     steps:
       - install_macos_deps
+      - checkout
+      - build
+      - test
+
+  cxx20:
+    executor: linux-gcc-latest
+    environment:
+      BUILD_TYPE: Debug
+      CMAKE_OPTIONS: -DCMAKE_CXX_STANDARD=20
+    steps:
       - checkout
       - build
       - test
@@ -395,6 +408,7 @@ workflows:
       - release-linux
       - release-macos
       - coverage-tidy
+      - cxx20
       - sanitizers
       - sanitizers-macos
       - fuzzing
