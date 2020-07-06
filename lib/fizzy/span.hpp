@@ -4,6 +4,18 @@
 
 #pragma once
 
+#if __cplusplus > 201703L
+
+#include <span>
+
+namespace fizzy
+{
+template <typename T>
+using span = std::span<T>;
+}
+
+#else
+
 #include <iterator>
 #include <type_traits>
 
@@ -49,3 +61,5 @@ public:
     constexpr reverse_iterator rend() const noexcept { return reverse_iterator{begin()}; }
 };
 }  // namespace fizzy
+
+#endif /* __cplusplus > 201703L */
