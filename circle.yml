@@ -212,11 +212,6 @@ jobs:
       - checkout
       - build
       - test
-      - persist_to_workspace:
-          root: ~/build
-          paths:
-            - bin/fizzy-bench
-            - bin/fizzy-spectests
 
   release-macos:
     executor: macos
@@ -246,6 +241,10 @@ jobs:
     steps:
       - checkout
       - build
+      - persist_to_workspace:
+          root: ~/build
+          paths:
+            - bin/*
       - test
       - collect_coverage_data
       - run:
@@ -390,7 +389,7 @@ jobs:
           destination: artifacts
 
   spectest:
-    executor: linux-gcc-9
+    executor: linux-clang-latest
     steps:
       - attach_workspace:
           at: ~/build
@@ -420,7 +419,7 @@ workflows:
       - fuzzing
       - spectest:
           requires:
-            - release-linux
+            - coverage-tidy
 
   benchmarking:
     when: <<pipeline.parameters.benchmark>>
