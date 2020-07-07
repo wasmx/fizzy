@@ -86,6 +86,29 @@ commands:
         working_directory: ~/build
         command: ctest -E 'unittests|smoketests' -j4 --schedule-random --output-on-failure
 
+  collect_coverage_data:
+    description: "Collect coverage data"
+    steps:
+      - run:
+          name: "Collect coverage data"
+          working_directory: ~/build
+          command: |
+            binaries='-object bin/fizzy-unittests -object bin/fizzy-spectests -object bin/fizzy-bench'
+
+            mkdir coverage
+            find -name '*.profraw'
+            llvm-profdata merge *.profraw -o fizzy.profdata
+
+            llvm-cov report -use-color -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $binaries
+            llvm-cov report -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $binaries > coverage/report.txt
+            llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt -region-coverage-lt=100 $binaries > coverage/missing.html
+            llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $binaries > coverage/full.html
+            llvm-cov export -instr-profile fizzy.profdata -format=lcov $binaries > fizzy.lcov
+            genhtml fizzy.lcov -o coverage -t Fizzy
+      - store_artifacts:
+          path: ~/build/coverage
+          destination: coverage
+
 
   benchmark:
     description: "Run benchmarks"
@@ -224,25 +247,7 @@ jobs:
       - checkout
       - build
       - test
-      - run:
-          name: "Collect coverage data"
-          working_directory: ~/build
-          command: |
-            binaries='-object bin/fizzy-unittests -object bin/fizzy-spectests -object bin/fizzy-bench'
-
-            mkdir coverage
-            find -name '*.profraw'
-            llvm-profdata merge *.profraw -o fizzy.profdata
-
-            llvm-cov report -use-color -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $binaries
-            llvm-cov report -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $binaries > coverage/report.txt
-            llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt -region-coverage-lt=100 $binaries > coverage/missing.html
-            llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $binaries > coverage/full.html
-            llvm-cov export -instr-profile fizzy.profdata -format=lcov $binaries > fizzy.lcov
-            genhtml fizzy.lcov -o coverage -t Fizzy
-      - store_artifacts:
-          path: ~/build/coverage
-          destination: coverage
+      - collect_coverage_data
       - run:
           name: "Upgrade codecov"
           command: sudo pip3 install --upgrade --quiet --no-cache-dir codecov
