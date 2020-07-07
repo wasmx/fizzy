@@ -1,6 +1,8 @@
 ---
-Language:        Cpp
-BasedOnStyle:  Chromium
+Language:     Cpp
+Standard:     c++17
+BasedOnStyle: Chromium
+
 AccessModifierOffset: -4
 AlignAfterOpenBracket: DontAlign
 BinPackParameters: true
