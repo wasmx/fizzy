@@ -1,11 +1,13 @@
 256_bytes
 memset_bench
+ii:i
 85 256
 
 21760
 
 60000_bytes
 memset_bench
+ii:i
 85 60000
 
 5100000
