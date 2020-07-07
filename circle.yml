@@ -233,11 +233,10 @@ jobs:
       - build
       - test
 
-  coverage-tidy:
+  coverage:
     executor: linux-clang-latest
     environment:
       BUILD_TYPE: Coverage
-      CMAKE_OPTIONS: -DCMAKE_CXX_CLANG_TIDY=clang-tidy
     steps:
       - checkout
       - build
@@ -261,7 +260,7 @@ jobs:
     executor: linux-clang-latest
     environment:
       BUILD_TYPE: RelWithDebInfo
-      CMAKE_OPTIONS: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
+      CMAKE_OPTIONS: -DCMAKE_CXX_CLANG_TIDY=clang-tidy -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
       UBSAN_OPTIONS: halt_on_error=1
     steps:
       - checkout
@@ -414,14 +413,14 @@ workflows:
       - lint
       - release-linux
       - release-macos
-      - coverage-tidy
+      - coverage
       - cxx20
       - sanitizers
       - sanitizers-macos
       - fuzzing
       - spectest:
           requires:
-            - coverage-tidy
+            - coverage
 
   benchmarking:
     when: <<pipeline.parameters.benchmark>>
