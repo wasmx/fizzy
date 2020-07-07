@@ -17,6 +17,7 @@ target_sources(
     execute_test.cpp
     instantiate_test.cpp
     leb128_test.cpp
+    module_test.cpp
     parser_expr_test.cpp
     parser_test.cpp
     span_test.cpp
