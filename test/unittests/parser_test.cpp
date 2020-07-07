@@ -1131,12 +1131,10 @@ TEST(parser, code_section_fp_instructions)
         0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6, 0xa8, 0xa9, 0xaa, 0xab, 0xae, 0xaf, 0xb0, 0xb1, 0xb2,
         0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf};
 
-    const auto metrics_table = fizzy::get_instruction_metrics_table();
     const auto types_table = fizzy::get_instruction_type_table();
 
     for (const auto instr : fp_instructions)
     {
-        const auto metrics = metrics_table[instr];
         const auto types = types_table[instr];
 
         auto func_bin = "00"_bytes;  // vec(locals)
@@ -1176,7 +1174,7 @@ TEST(parser, code_section_fp_instructions)
             break;
         }
 
-        if (metrics.stack_height_required + metrics.stack_height_change == 1)
+        if (types.outputs.size() == 1)
             func_bin += bytes{0x1a};  // drop
         func_bin += bytes{0xb};       // end
 
