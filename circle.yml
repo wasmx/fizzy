@@ -391,6 +391,7 @@ jobs:
   spectest:
     executor: linux-clang-latest
     steps:
+      - checkout
       - attach_workspace:
           at: ~/build
       - spectest:
@@ -402,6 +403,7 @@ jobs:
           expected_passed: 5140
           expected_failed: 292
           expected_skipped: 6381
+      - collect_coverage_data
 
 workflows:
   version: 2
