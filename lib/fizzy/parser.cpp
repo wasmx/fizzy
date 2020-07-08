@@ -23,7 +23,7 @@ void validate_constant_expression(const ConstantExpression& const_expr, const Mo
     if (global_idx >= module.get_global_count())
         throw validation_error{"invalid global index in constant expression"};
 
-    if (module.is_global_mutable(global_idx))
+    if (module.get_global_type(global_idx).is_mutable)
         throw validation_error{"constant expression can use global.get only for const globals"};
 }
 }  // namespace
