@@ -79,9 +79,9 @@ ValType validate_valtype(uint8_t byte)
         return ValType::i32;
     case 0x7E:
         return ValType::i64;
-    case 0x7D:  // f32
+    case 0x7D:
         return ValType::f32;
-    case 0x7C:  // f64
+    case 0x7C:
         return ValType::f64;
     default:
         throw parser_error{"invalid valtype " + std::to_string(byte)};

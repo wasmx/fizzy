@@ -17,6 +17,11 @@ constexpr bytes_view wasm_prefix{wasm_prefix_data, sizeof(wasm_prefix_data)};
 template <typename T>
 using parser_result = std::pair<T, const uint8_t*>;
 
+/// Parses `input` into a Module.
+///
+/// @param  input    The WebAssembly binary. No need to persist by the caller, since all relevant
+///                  parts will be copied.
+/// @return          The parsed module.
 std::unique_ptr<const Module> parse(bytes_view input);
 
 inline parser_result<uint8_t> parse_byte(const uint8_t* pos, const uint8_t* end)
@@ -39,17 +44,22 @@ inline parser_result<T> parse_value(const uint8_t* pos, const uint8_t* end)
     return {value, pos + size};
 }
 
-/// Parse `expr`, i.e. a function's instructions residing in the code section.
+/// Parses `expr`, i.e. a function's instructions residing in the code section.
 /// https://webassembly.github.io/spec/core/binary/instructions.html#binary-expr
 ///
-/// @param pos      The beginning of the expr binary input.
-/// @param end      The end of the binary input.
-/// @param func_idx Index of the function being parsed.
-/// @param locals   Vector of local type and counts for the function being parsed.
-/// @param module   Module that this code is part of.
+/// @param  pos         The beginning of the expr binary input.
+/// @param  end         The end of the binary input.
+/// @param  func_idx    Index of the function being parsed.
+/// @param  locals      Vector of local type and counts for the function being parsed.
+/// @param  module      Module that this code is part of.
+/// @return             The parsed code.
 parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx func_idx,
     const std::vector<Locals>& locals, const Module& module);
 
+/// Parses a string and validates it against UTF-8 encoding rules.
+/// @param  pos    The beginning of the string input.
+/// @param  end    The end of the string input.
+/// @return        The parsed and UTF-8 validated string.
 parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end);
 
 /// Parses the vec of i32 values.

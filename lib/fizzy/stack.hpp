@@ -89,13 +89,14 @@ public:
     /// Based on required storage space decides to use small pre-allocated
     /// storage or allocate large storage.
     /// Sets the top stack operand pointer to below the operand stack bottom.
-    /// @param args                 Function arguments. Values are copied at the beginning of the
-    ///                             storage space.
-    /// @param num_local_variables  The number of the function local variables (excluding
-    ///                             arguments). This number of values is zeroed in the storage space
-    ///                             after the arguments.
-    /// @param max_stack_height     The maximum operand stack height in the function. This excludes
-    ///                             args and num_local_variables.
+    ///
+    /// @param  args                   Function arguments. Values are copied at the beginning of the
+    ///                                storage space.
+    /// @param  num_local_variables    The number of the function local variables (excluding
+    ///                                arguments). This number of values is zeroed in the storage
+    ///                                space after the arguments.
+    /// @param  max_stack_height       The maximum operand stack height in the function. This
+    ///                                excludes @a args and @a num_local_variables.
     OperandStack(
         const Value* args, size_t num_args, size_t num_local_variables, size_t max_stack_height)
     {

@@ -18,7 +18,6 @@
 
 namespace fizzy
 {
-// The result of an execution.
 struct ExecutionResult;
 struct Instance;
 
@@ -28,16 +27,16 @@ struct ExternalFunction
     FuncType type;
 };
 
-// Table element, which references a function in any instance.
+/// Table element, which references a function in any instance.
 struct TableElement
 {
-    // Pointer to function's instance or nullptr when table element is not initialized.
+    /// Pointer to function's instance or nullptr when table element is not initialized.
     Instance* instance = nullptr;
-    // Index of the function in instance.
+    /// Index of the function in instance.
     FuncIdx func_idx = 0;
-    // This pointer is empty most of the time and is used only to keep instance alive in one edge
-    // case, when start function traps, but instantiate has already modified some elements of a
-    // shared (imported) table.
+    /// This pointer is empty most of the time and is used only to keep instance alive in one edge
+    /// case, when start function traps, but instantiate has already modified some elements of a
+    /// shared (imported) table.
     std::shared_ptr<Instance> shared_instance;
 };
 
@@ -64,7 +63,7 @@ struct ExternalGlobal
 
 using bytes_ptr = std::unique_ptr<bytes, void (*)(bytes*)>;
 
-// The module instance.
+/// The module instance.
 struct Instance
 {
     std::unique_ptr<const Module> module;
@@ -99,7 +98,7 @@ struct Instance
     {}
 };
 
-// Instantiate a module.
+/// Instantiate a module.
 std::unique_ptr<Instance> instantiate(std::unique_ptr<const Module> module,
     std::vector<ExternalFunction> imported_functions = {},
     std::vector<ExternalTable> imported_tables = {},
@@ -107,7 +106,7 @@ std::unique_ptr<Instance> instantiate(std::unique_ptr<const Module> module,
     std::vector<ExternalGlobal> imported_globals = {},
     uint32_t memory_pages_limit = DefaultMemoryPagesLimit);
 
-// Function that should be used by instantiate as imports, identified by module and function name.
+/// Function that should be used by instantiate as imports, identified by module and function name.
 struct ImportedFunction
 {
     std::string module;
@@ -117,25 +116,25 @@ struct ImportedFunction
     std::function<ExecutionResult(Instance&, const Value*, int depth)> function;
 };
 
-// Create vector of ExternalFunctions ready to be passed to instantiate.
-// imported_functions may be in any order,
-// but must contain functions for all of the imported function names defined in the module.
+/// Create vector of ExternalFunctions ready to be passed to instantiate.
+/// @a imported_functions may be in any order, but must contain functions for all of the imported
+/// function names defined in the module.
 std::vector<ExternalFunction> resolve_imported_functions(
     const Module& module, std::vector<ImportedFunction> imported_functions);
 
-// Find exported function index by name.
+/// Find exported function index by name.
 std::optional<FuncIdx> find_exported_function(const Module& module, std::string_view name);
 
-// Find exported function by name.
+/// Find exported function by name.
 std::optional<ExternalFunction> find_exported_function(Instance& instance, std::string_view name);
 
-// Find exported global by name.
+/// Find exported global by name.
 std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::string_view name);
 
-// Find exported table by name.
+/// Find exported table by name.
 std::optional<ExternalTable> find_exported_table(Instance& instance, std::string_view name);
 
-// Find exported memory by name.
+/// Find exported memory by name.
 std::optional<ExternalMemory> find_exported_memory(Instance& instance, std::string_view name);
 
 }  // namespace fizzy
