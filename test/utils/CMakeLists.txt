@@ -13,6 +13,7 @@ target_sources(
     adler32.hpp
     asserts.cpp
     asserts.hpp
+    execute_helpers.hpp
     fizzy_engine.cpp
     hex.cpp
     hex.hpp

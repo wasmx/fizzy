@@ -31,8 +31,9 @@ TEST(end_to_end, milestone1)
     const auto wasm = from_hex(
         "0061736d0100000001070160027f7f017f030201000a13011101017f200020016a20026a220220006a0b");
     const auto module = parse(wasm);
+    auto instance = instantiate(module);
 
-    EXPECT_THAT(execute(module, 0, {20, 22}), Result(20 + 22 + 20));
+    EXPECT_THAT(execute(*instance, 0, {20, 22}), Result(20 + 22 + 20));
 }
 
 TEST(end_to_end, milestone2)
@@ -128,7 +129,8 @@ TEST(end_to_end, nested_loops_in_c)
     const auto func_idx = find_exported_function(module, "test");
     ASSERT_TRUE(func_idx);
 
-    EXPECT_THAT(execute(module, *func_idx, {10, 2, 5}), Result(4));
+    auto instance = instantiate(module);
+    EXPECT_THAT(execute(*instance, *func_idx, {10, 2, 5}), Result(4));
 }
 
 TEST(end_to_end, memset)
