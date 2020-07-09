@@ -13,12 +13,8 @@ std::ostream& operator<<(std::ostream& os, execution_result result)
         return os << "trapped";
 
     os << "result(";
-    std::string_view separator;
-    for (const auto& x : result.stack)
-    {
-        os << separator << x;
-        separator = ", ";
-    }
+    if (result.has_value)
+        os << result.value;
     os << ")";
     return os;
 }

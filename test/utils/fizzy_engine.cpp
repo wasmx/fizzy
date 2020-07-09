@@ -58,7 +58,7 @@ fizzy::execution_result env_adler32(
 {
     assert(instance.memory != nullptr);
     const auto ret = fizzy::test::adler32(bytes_view{*instance.memory}.substr(args[0], args[1]));
-    return {false, {ret}};
+    return ret;
 }
 }  // namespace
 
@@ -134,8 +134,12 @@ std::optional<WasmEngine::FuncRef> FizzyEngine::find_function(
 WasmEngine::Result FizzyEngine::execute(
     WasmEngine::FuncRef func_ref, const std::vector<uint64_t>& args)
 {
-    const auto [trapped, result_stack] =
-        fizzy::execute(*m_instance, static_cast<uint32_t>(func_ref), args);
-    return {trapped, !result_stack.empty() ? result_stack.back() : std::optional<uint64_t>{}};
+    const auto status = fizzy::execute(*m_instance, static_cast<uint32_t>(func_ref), args);
+    if (status.trapped)
+        return {true, std::nullopt};
+    else if (status.has_value)
+        return {false, status.value};
+    else
+        return {false, std::nullopt};
 }
 }  // namespace fizzy::test

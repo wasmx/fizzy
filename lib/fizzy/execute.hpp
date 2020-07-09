@@ -17,12 +17,20 @@ namespace fizzy
 // The result of an execution.
 struct execution_result
 {
-    // true if execution resulted in a trap
-    bool trapped;
-    // the resulting stack (e.g. return values)
-    // NOTE: this can be either 0 or 1 items
-    std::vector<uint64_t> stack;
+    const bool trapped = false;
+    const bool has_value = false;
+    const uint64_t value = 0;
+
+    /// Constructs result with a value.
+    constexpr execution_result(uint64_t _value) noexcept : has_value{true}, value{_value} {}
+
+    /// Constructs result in "void" or "trap" state depending on the success flag.
+    /// Prefer using Void and Trap constants instead.
+    constexpr explicit execution_result(bool success) noexcept : trapped{!success} {}
 };
+
+constexpr execution_result Void{true};
+constexpr execution_result Trap{false};
 
 struct Instance;
 
