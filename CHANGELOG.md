@@ -16,7 +16,61 @@ It passes a large part of the [official test suite (spectest 1.0)]:
 
 Secondly, two major optimisations are included: branch resolution is done once in the parser and not during execution; and an optimised stack implementation is introduced.
 
-In many cases this results in v0.2.0 executing code twice as fast compared to v0.1.0.
+#### Performance comparison to v0.1.0
+
+The time of WebAssembly module instantiation (including binary loading and verification) has increased by 15–30%, while the execution is approximately twice as fast.
+
+##### Detailed benchmark results
+```
+Comparing Fizzy 0.1.0 to 0.2.0 (Intel Haswell CPU, 4.0 GHz)
+Benchmark                                  CPU Time [µs]       Old       New
+----------------------------------------------------------------------------
+
+fizzy/parse/blake2b                              +0.1637        12        14
+fizzy/instantiate/blake2b                        +0.1793        16        19
+fizzy/parse/ecpairing                            +0.1551       681       786
+fizzy/instantiate/ecpairing                      +0.1352       730       828
+fizzy/parse/keccak256                            +0.2674        20        26
+fizzy/instantiate/keccak256                      +0.2974        24        31
+fizzy/parse/memset                               +0.1975         3         4
+fizzy/instantiate/memset                         +0.1580         7         8
+fizzy/parse/mul256_opt0                          +0.1739         4         5
+fizzy/instantiate/mul256_opt0                    +0.1262         8         9
+fizzy/parse/sha1                                 +0.2054        19        23
+fizzy/instantiate/sha1                           +0.2159        23        28
+fizzy/parse/sha256                               +0.1333        31        35
+fizzy/instantiate/sha256                         +0.1518        35        41
+fizzy/parse/micro/eli_interpreter                +0.4832         2         3
+fizzy/instantiate/micro/eli_interpreter          +0.2681         6         7
+fizzy/parse/micro/factorial                      +0.2279         1         1
+fizzy/instantiate/micro/factorial                +0.5395         1         1
+fizzy/parse/micro/fibonacci                      +0.2599         1         1
+fizzy/instantiate/micro/fibonacci                +0.5027         1         1
+fizzy/parse/micro/spinner                        +0.2709         1         1
+fizzy/instantiate/micro/spinner                  +0.6040         1         1
+
+fizzy/execute/blake2b/512_bytes_rounds_1         -0.4871       167        86
+fizzy/execute/blake2b/512_bytes_rounds_16        -0.4922      2543      1291
+fizzy/execute/ecpairing/onepoint                 -0.4883    932374    477057
+fizzy/execute/keccak256/512_bytes_rounds_1       -0.4542       185       101
+fizzy/execute/keccak256/512_bytes_rounds_16      -0.4642      2712      1453
+fizzy/execute/memset/256_bytes                   -0.4643        14         7
+fizzy/execute/memset/60000_bytes                 -0.4680      3020      1607
+fizzy/execute/mul256_opt0/input0                 -0.4134        46        27
+fizzy/execute/mul256_opt0/input1                 -0.4119        46        27
+fizzy/execute/sha1/512_bytes_rounds_1            -0.4815       182        95
+fizzy/execute/sha1/512_bytes_rounds_16           -0.4836      2547      1315
+fizzy/execute/sha256/512_bytes_rounds_1          -0.5236       196        93
+fizzy/execute/sha256/512_bytes_rounds_16         -0.5289      2719      1281
+fizzy/execute/micro/eli_interpreter/halt         -0.5890         0         0
+fizzy/execute/micro/eli_interpreter/exec105      -0.5095        10         5
+fizzy/execute/micro/factorial/10                 -0.4531         1         1
+fizzy/execute/micro/factorial/20                 -0.4632         2         1
+fizzy/execute/micro/fibonacci/24                 -0.4107     17374     10238
+fizzy/execute/micro/spinner/1                    -0.5706         0         0
+fizzy/execute/micro/spinner/1000                 -0.4801        20        10
+```
+
 
 ### Added
 
