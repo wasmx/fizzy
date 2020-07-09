@@ -8,6 +8,7 @@ add_library(fizzy::fizzy ALIAS fizzy)
 target_sources(
     fizzy PRIVATE
     bytes.hpp
+    constexpr_vector.hpp
     execute.cpp
     execute.hpp
     instructions.cpp
