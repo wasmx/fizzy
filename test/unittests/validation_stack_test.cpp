@@ -10,6 +10,69 @@
 using namespace fizzy;
 using namespace fizzy::test;
 
+TEST(validation_stack, DISABLED_select_stack_underflow)
+{
+    /* wat2wasm --no-check
+    (func
+      i32.const 0
+      i32.const 1
+      select
+      unreachable ;; don't check stack after this
+    )
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a0a010800410041011b000b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "stack underflow");
+}
+
+TEST(validation_stack_type, DISABLED_select_stack_underflow_2)
+{
+    /* wat2wasm --no-check
+    (func (param i32) (result i32)
+      i32.const 1
+      local.get 0
+      select
+      i32.const 0
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d0100000001060160017f017f030201000a0b010900410120001b41000b");
+
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "stack underflow");
+}
+
+TEST(validation_stack, unreachable_select)
+{
+    /* wat2wasm
+    (func (result i32)
+      unreachable
+      i32.const 0
+      i32.const 1
+      select
+    )
+    */
+    const auto wasm1 = from_hex("0061736d010000000105016000017f030201000a0a01080000410041011b0b");
+    EXPECT_NO_THROW(parse(wasm1));
+
+    /* wat2wasm
+    (func (result i32)
+      unreachable
+      i32.const 0
+      select
+    )
+    */
+    const auto wasm2 = from_hex("0061736d010000000105016000017f030201000a080106000041001b0b");
+    EXPECT_NO_THROW(parse(wasm2));
+
+    /* wat2wasm
+    (func (result i32)
+      unreachable
+      select
+    )
+    */
+    const auto wasm3 = from_hex("0061736d010000000105016000017f030201000a06010400001b0b");
+    EXPECT_NO_THROW(parse(wasm3));
+}
+
 TEST(validation_stack, func_stack_underflow)
 {
     /* wat2wasm --no-check
