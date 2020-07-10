@@ -712,6 +712,18 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         }
 
         case Instr::global_get:
+        {
+            GlobalIdx global_idx;
+            std::tie(global_idx, pos) = leb128u_decode<uint32_t>(pos, end);
+
+            if (global_idx >= module.get_global_count())
+                throw validation_error{"accessing global with invalid index"};
+
+            push_operand(frame, operand_stack, module.get_global_type(global_idx).value_type);
+
+            push(code.immediates, global_idx);
+            break;
+        }
         case Instr::global_set:
         {
             GlobalIdx global_idx;
@@ -720,8 +732,10 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             if (global_idx >= module.get_global_count())
                 throw validation_error{"accessing global with invalid index"};
 
-            if (instr == Instr::global_set && !module.get_global_type(global_idx).is_mutable)
+            if (!module.get_global_type(global_idx).is_mutable)
                 throw validation_error{"trying to mutate immutable global"};
+
+            drop_operand(frame, operand_stack, module.get_global_type(global_idx).value_type);
 
             push(code.immediates, global_idx);
             break;
