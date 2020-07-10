@@ -19,6 +19,7 @@ TEST(span, vector)
     EXPECT_EQ(s[0], 2);
     EXPECT_EQ(s[1], 3);
     EXPECT_EQ(s[2], 4);
+    EXPECT_EQ(*s.data(), 2);
     EXPECT_EQ(*s.begin(), 2);
     EXPECT_EQ(*(s.end() - 1), 4);
 
@@ -89,6 +90,7 @@ TEST(span, iterator)
     span<const char> slice{str.data() + 2, 3};
 
     auto it = slice.begin();
+    EXPECT_EQ(&*it, slice.data());
     EXPECT_EQ(*it, 'a');
     ++it;
     EXPECT_EQ(*it, 'b');
