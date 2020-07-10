@@ -189,14 +189,56 @@ inline void mark_frame_unreachable(ControlFrame& frame) noexcept
     frame.stack_height = frame.parent_stack_height;
 }
 
+inline void drop_operand(
+    ControlFrame& frame, Stack<ValType>& operand_stack, std::optional<ValType> expected_type)
+{
+    if (frame.stack_height < frame.parent_stack_height + 1)
+    {
+        if (!frame.unreachable)
+            throw validation_error{"stack underflow"};
+    }
+    else
+        --frame.stack_height;
+
+    if (frame.unreachable && static_cast<int>(operand_stack.size()) == frame.parent_stack_height)
+        return;
+
+    const auto actual_type = operand_stack.pop();
+    if (expected_type.has_value() && actual_type != *expected_type)
+        throw validation_error{"type mismatch"};
+}
+
+inline void push_operand(ControlFrame& frame, Stack<ValType>& operand_stack, ValType type)
+{
+    ++frame.stack_height;
+    operand_stack.push(type);
+}
+
+ValType find_local_type(
+    const std::vector<ValType>& params, const std::vector<Locals>& locals, LocalIdx idx)
+{
+    if (idx < params.size())
+        return params[idx];
+
+    // TODO: Consider more efficient algorithm with calculating cumulative sums only once and then
+    // using binary search for each local instruction.
+    const auto local_idx = idx - params.size();
+    uint64_t local_count = 0;
+    for (const auto& l : locals)
+    {
+        if (local_idx >= local_count && local_idx < local_count + l.count)
+            return l.type;
+        local_count += l.count;
+    }
+
+    throw validation_error{"invalid local index"};
+}
 }  // namespace
 
-parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t local_count,
-    FuncIdx func_idx, const Module& module)
+parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx func_idx,
+    const std::vector<Locals>& locals, const Module& module)
 {
-    // TODO: consider adding a constructor
     Code code;
-    code.local_count = local_count;
 
     // The stack of control frames allowing to distinguish between block/if/else and label
     // instructions as defined in Wasm Validation Algorithm.
@@ -208,16 +250,11 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
     assert(func_type_idx < module.typesec.size());
     const auto& func_type = module.typesec[func_type_idx];
 
+    const auto& func_inputs = func_type.inputs;
     const auto& func_outputs = func_type.outputs;
     // The function's implicit block.
     control_stack.emplace(Instr::block,
         func_outputs.empty() ? std::nullopt : std::optional<ValType>{func_outputs[0]}, 0);
-
-    // TODO: Clarify in spec what happens if count of locals and arguments exceed uint32_t::max()
-    //       Leave this assert here for the time being.
-    assert(
-        (uint64_t{local_count} + func_type.inputs.size()) <= std::numeric_limits<uint32_t>::max());
-    const uint32_t max_local_index = local_count + static_cast<uint32_t>(func_type.inputs.size());
 
     const auto metrics_table = get_instruction_metrics_table();
     const auto type_table = get_instruction_type_table();
@@ -335,9 +372,13 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
             mark_frame_unreachable(frame);
             break;
 
-        case Instr::nop:
         case Instr::drop:
         case Instr::select:
+            // TODO: for select validate that two top operands are the same type
+            drop_operand(frame, operand_stack, std::nullopt);
+            break;
+
+        case Instr::nop:
         case Instr::i32_eq:
         case Instr::i32_eqz:
         case Instr::i32_ne:
@@ -638,14 +679,33 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
         }
 
         case Instr::local_get:
+        {
+            LocalIdx local_idx;
+            std::tie(local_idx, pos) = leb128u_decode<uint32_t>(pos, end);
+
+            push_operand(frame, operand_stack, find_local_type(func_inputs, locals, local_idx));
+
+            push(code.immediates, local_idx);
+            break;
+        }
         case Instr::local_set:
+        {
+            LocalIdx local_idx;
+            std::tie(local_idx, pos) = leb128u_decode<uint32_t>(pos, end);
+
+            drop_operand(frame, operand_stack, find_local_type(func_inputs, locals, local_idx));
+
+            push(code.immediates, local_idx);
+            break;
+        }
         case Instr::local_tee:
         {
             LocalIdx local_idx;
             std::tie(local_idx, pos) = leb128u_decode<uint32_t>(pos, end);
 
-            if (local_idx >= max_local_index)
-                throw validation_error{"invalid local index"};
+            const auto local_type = find_local_type(func_inputs, locals, local_idx);
+            drop_operand(frame, operand_stack, local_type);
+            push_operand(frame, operand_stack, local_type);
 
             push(code.immediates, local_idx);
             break;
