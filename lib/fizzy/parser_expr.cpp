@@ -624,7 +624,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
         case Instr::local_set:
         case Instr::local_tee:
         {
-            uint32_t local_idx;
+            LocalIdx local_idx;
             std::tie(local_idx, pos) = leb128u_decode<uint32_t>(pos, end);
 
             if (local_idx >= max_local_index)
@@ -637,7 +637,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
         case Instr::global_get:
         case Instr::global_set:
         {
-            uint32_t global_idx;
+            GlobalIdx global_idx;
             std::tie(global_idx, pos) = leb128u_decode<uint32_t>(pos, end);
 
             if (global_idx >= module.get_global_count())

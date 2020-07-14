@@ -64,6 +64,9 @@ using MemIdx = uint32_t;
 // https://webassembly.github.io/spec/core/binary/modules.html#binary-globalidx
 using GlobalIdx = uint32_t;
 
+// https://webassembly.github.io/spec/core/binary/modules.html#binary-localidx
+using LocalIdx = uint32_t;
+
 /// Function locals.
 /// https://webassembly.github.io/spec/core/binary/modules.html#binary-local
 struct Locals
