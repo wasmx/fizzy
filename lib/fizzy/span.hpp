@@ -52,6 +52,7 @@ public:
 
     constexpr T& operator[](std::size_t index) const noexcept { return m_begin[index]; }
 
+    constexpr T* data() const noexcept { return m_begin; }
     [[nodiscard]] constexpr std::size_t size() const noexcept { return m_size; }
 
     constexpr iterator begin() const noexcept { return m_begin; }

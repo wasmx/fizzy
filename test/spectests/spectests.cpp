@@ -441,7 +441,7 @@ private:
 
         try
         {
-            return fizzy::execute(*instance, *func_idx, std::move(args));
+            return fizzy::execute(*instance, *func_idx, args);
         }
         catch (fizzy::unsupported_feature const& ex)
         {

@@ -6,6 +6,7 @@
 
 #include "exceptions.hpp"
 #include "module.hpp"
+#include "span.hpp"
 #include "types.hpp"
 #include <cstdint>
 #include <functional>
@@ -27,7 +28,7 @@ struct Instance;
 
 struct ExternalFunction
 {
-    std::function<execution_result(Instance&, std::vector<uint64_t>, int depth)> function;
+    std::function<execution_result(Instance&, span<const uint64_t>, int depth)> function;
     FuncType type;
 };
 
@@ -95,7 +96,13 @@ std::unique_ptr<Instance> instantiate(Module module,
 
 // Execute a function on an instance.
 execution_result execute(
-    Instance& instance, FuncIdx func_idx, std::vector<uint64_t> args, int depth = 0);
+    Instance& instance, FuncIdx func_idx, span<const uint64_t> args, int depth = 0);
+
+inline execution_result execute(
+    Instance& instance, FuncIdx func_idx, std::initializer_list<uint64_t> args)
+{
+    return execute(instance, func_idx, span<const uint64_t>{args});
+}
 
 
 // Function that should be used by instantiate as imports, identified by module and function name.
@@ -105,7 +112,7 @@ struct ImportedFunction
     std::string name;
     std::vector<ValType> inputs;
     std::optional<ValType> output;
-    std::function<execution_result(Instance&, std::vector<uint64_t>, int depth)> function;
+    std::function<execution_result(Instance&, span<const uint64_t>, int depth)> function;
 };
 
 // Create vector of ExternalFunctions ready to be passed to instantiate.
