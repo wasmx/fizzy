@@ -388,21 +388,21 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
 
         case Instr::block:
         {
-            std::optional<ValType> type;
-            std::tie(type, pos) = parse_blocktype(pos, end);
+            std::optional<ValType> block_type;
+            std::tie(block_type, pos) = parse_blocktype(pos, end);
 
             // Push label with immediates offset after arity.
-            control_stack.emplace(Instr::block, type, frame.stack_height, code.instructions.size(),
+            control_stack.emplace(Instr::block, block_type, frame.stack_height, code.instructions.size(),
                 code.immediates.size());
             break;
         }
 
         case Instr::loop:
         {
-            std::optional<ValType> type;
-            std::tie(type, pos) = parse_blocktype(pos, end);
+            std::optional<ValType> loop_type;
+            std::tie(loop_type, pos) = parse_blocktype(pos, end);
 
-            control_stack.emplace(Instr::loop, type, frame.stack_height, code.instructions.size(),
+            control_stack.emplace(Instr::loop, loop_type, frame.stack_height, code.instructions.size(),
                 code.immediates.size());
 
             break;
@@ -410,10 +410,10 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
 
         case Instr::if_:
         {
-            std::optional<ValType> type;
-            std::tie(type, pos) = parse_blocktype(pos, end);
+            std::optional<ValType> if_type;
+            std::tie(if_type, pos) = parse_blocktype(pos, end);
 
-            control_stack.emplace(Instr::if_, type, frame.stack_height, code.instructions.size(),
+            control_stack.emplace(Instr::if_, if_type, frame.stack_height, code.instructions.size(),
                 code.immediates.size());
 
             // Placeholders for immediate values, filled at the matching end or else instructions.
@@ -488,12 +488,12 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
                     // stack drop and arity were already stored in br handler
                 }
             }
-            const auto type = frame.type;
+            const auto frame_type = frame.type;
             control_stack.pop();  // Pop the current frame.
 
             if (control_stack.empty())
                 continue_parsing = false;
-            else if (type.has_value())
+            else if (frame_type.has_value())
                 control_stack.top().stack_height += 1;  // The results of the popped frame.
             break;
         }
