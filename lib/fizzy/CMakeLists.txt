@@ -11,8 +11,8 @@ target_sources(
     constexpr_vector.hpp
     execute.cpp
     execute.hpp
-    instructions.cpp
-    instructions.hpp
+    instruction_metrics.cpp
+    instruction_metrics.hpp
     leb128.hpp
     limits.hpp
     module.hpp

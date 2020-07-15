@@ -2,7 +2,7 @@
 // Copyright 2019-2020 The Fizzy Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-#include "instructions.hpp"
+#include "instruction_metrics.hpp"
 #include "parser.hpp"
 #include <gtest/gtest.h>
 #include <test/utils/asserts.hpp>
