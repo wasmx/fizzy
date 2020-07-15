@@ -86,6 +86,29 @@ commands:
         working_directory: ~/build
         command: ctest -E 'unittests|smoketests' -j4 --schedule-random --output-on-failure
 
+  collect_coverage_data:
+    description: "Collect coverage data"
+    steps:
+      - run:
+          name: "Collect coverage data"
+          working_directory: ~/build
+          command: |
+            binaries='-object bin/fizzy-unittests -object bin/fizzy-spectests -object bin/fizzy-bench'
+
+            mkdir coverage
+            find -name '*.profraw'
+            llvm-profdata merge *.profraw -o fizzy.profdata
+
+            llvm-cov report -use-color -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $binaries
+            llvm-cov report -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $binaries > coverage/report.txt
+            llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt -region-coverage-lt=100 $binaries > coverage/missing.html
+            llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $binaries > coverage/full.html
+            llvm-cov export -instr-profile fizzy.profdata -format=lcov $binaries > fizzy.lcov
+            genhtml fizzy.lcov -o coverage -t Fizzy
+      - store_artifacts:
+          path: ~/build/coverage
+          destination: coverage
+
 
   benchmark:
     description: "Run benchmarks"
@@ -189,11 +212,6 @@ jobs:
       - checkout
       - build
       - test
-      - persist_to_workspace:
-          root: ~/build
-          paths:
-            - bin/fizzy-bench
-            - bin/fizzy-spectests
 
   release-macos:
     executor: macos
@@ -215,34 +233,19 @@ jobs:
       - build
       - test
 
-  coverage-tidy:
+  coverage:
     executor: linux-clang-latest
     environment:
       BUILD_TYPE: Coverage
-      CMAKE_OPTIONS: -DCMAKE_CXX_CLANG_TIDY=clang-tidy
     steps:
       - checkout
       - build
+      - persist_to_workspace:
+          root: ~/build
+          paths:
+            - bin/*
       - test
-      - run:
-          name: "Collect coverage data"
-          working_directory: ~/build
-          command: |
-            binaries='-object bin/fizzy-unittests -object bin/fizzy-spectests -object bin/fizzy-bench'
-
-            mkdir coverage
-            find -name '*.profraw'
-            llvm-profdata merge *.profraw -o fizzy.profdata
-
-            llvm-cov report -use-color -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $binaries
-            llvm-cov report -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $binaries > coverage/report.txt
-            llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt -region-coverage-lt=100 $binaries > coverage/missing.html
-            llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $binaries > coverage/full.html
-            llvm-cov export -instr-profile fizzy.profdata -format=lcov $binaries > fizzy.lcov
-            genhtml fizzy.lcov -o coverage -t Fizzy
-      - store_artifacts:
-          path: ~/build/coverage
-          destination: coverage
+      - collect_coverage_data
       - run:
           name: "Upgrade codecov"
           command: sudo pip3 install --upgrade --quiet --no-cache-dir codecov
@@ -257,7 +260,7 @@ jobs:
     executor: linux-clang-latest
     environment:
       BUILD_TYPE: RelWithDebInfo
-      CMAKE_OPTIONS: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
+      CMAKE_OPTIONS: -DCMAKE_CXX_CLANG_TIDY=clang-tidy -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
       UBSAN_OPTIONS: halt_on_error=1
     steps:
       - checkout
@@ -385,8 +388,9 @@ jobs:
           destination: artifacts
 
   spectest:
-    executor: linux-gcc-9
+    executor: linux-clang-latest
     steps:
+      - checkout
       - attach_workspace:
           at: ~/build
       - spectest:
@@ -398,6 +402,7 @@ jobs:
           expected_passed: 5140
           expected_failed: 292
           expected_skipped: 6381
+      - collect_coverage_data
 
 workflows:
   version: 2
@@ -408,14 +413,14 @@ workflows:
       - lint
       - release-linux
       - release-macos
-      - coverage-tidy
+      - coverage
       - cxx20
       - sanitizers
       - sanitizers-macos
       - fuzzing
       - spectest:
           requires:
-            - release-linux
+            - coverage
 
   benchmarking:
     when: <<pipeline.parameters.benchmark>>
