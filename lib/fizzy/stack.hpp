@@ -98,11 +98,11 @@ public:
     OperandStack& operator=(const OperandStack&) = delete;
 
     /// The current number of items on the stack (aka stack height).
-    [[nodiscard]] size_t size() noexcept { return static_cast<size_t>(m_top + 1 - bottom()); }
+    size_t size() noexcept { return static_cast<size_t>(m_top + 1 - bottom()); }
 
     /// Returns the reference to the top item.
     /// Requires non-empty stack.
-    [[nodiscard]] auto& top() noexcept
+    auto& top() noexcept
     {
         assert(size() != 0);
         return *m_top;
@@ -110,7 +110,7 @@ public:
 
     /// Returns the reference to the stack item on given position from the stack top.
     /// Requires index < size().
-    [[nodiscard]] auto& operator[](size_t index) noexcept
+    auto& operator[](size_t index) noexcept
     {
         assert(index < size());
         return *(m_top - index);
@@ -146,9 +146,9 @@ public:
     }
 
     /// Returns iterator to the bottom of the stack.
-    [[nodiscard]] const uint64_t* rbegin() const noexcept { return bottom(); }
+    const uint64_t* rbegin() const noexcept { return bottom(); }
 
     /// Returns end iterator counting from the bottom of the stack.
-    [[nodiscard]] const uint64_t* rend() const noexcept { return m_top + 1; }
+    const uint64_t* rend() const noexcept { return m_top + 1; }
 };
 }  // namespace fizzy

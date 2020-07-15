@@ -100,8 +100,7 @@ inline parser_result<FuncType> parse(const uint8_t* pos, const uint8_t* end)
     return {result, pos};
 }
 
-inline std::tuple<GlobalType, const uint8_t*> parse_global_type(
-    const uint8_t* pos, const uint8_t* end)
+inline parser_result<GlobalType> parse_global_type(const uint8_t* pos, const uint8_t* end)
 {
     GlobalType type;
     std::tie(type.value_type, pos) = parse<ValType>(pos, end);
