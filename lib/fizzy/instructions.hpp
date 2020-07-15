@@ -37,6 +37,54 @@ inline void comparison_op(OperandStack& stack, Op<T> op) noexcept
 }
 
 template <typename T>
+inline T add(T lhs, T rhs) noexcept
+{
+    return lhs + rhs;
+}
+
+template <typename T>
+inline T sub(T lhs, T rhs) noexcept
+{
+    return lhs - rhs;
+}
+
+template <typename T>
+inline T mul(T lhs, T rhs) noexcept
+{
+    return lhs * rhs;
+}
+
+template <typename T>
+inline T div(T lhs, T rhs) noexcept
+{
+    return lhs / rhs;
+}
+
+template <typename T>
+inline T rem(T lhs, T rhs) noexcept
+{
+    return lhs % rhs;
+}
+
+template <typename T>
+inline T bit_and(T lhs, T rhs) noexcept
+{
+    return lhs & rhs;
+}
+
+template <typename T>
+inline T bit_or(T lhs, T rhs) noexcept
+{
+    return lhs | rhs;
+}
+
+template <typename T>
+inline T bit_xor(T lhs, T rhs) noexcept
+{
+    return lhs ^ rhs;
+}
+
+template <typename T>
 inline T shift_left(T lhs, T rhs) noexcept
 {
     constexpr T num_bits{sizeof(T) * 8};

@@ -1032,17 +1032,17 @@ execution_result execute(Instance& instance, FuncIdx func_idx, span<const uint64
         }
         case Instr::i32_add:
         {
-            binary_op(stack, std::plus<uint32_t>());
+            binary_op(stack, add<uint32_t>);
             break;
         }
         case Instr::i32_sub:
         {
-            binary_op(stack, std::minus<uint32_t>());
+            binary_op(stack, sub<uint32_t>);
             break;
         }
         case Instr::i32_mul:
         {
-            binary_op(stack, std::multiplies<uint32_t>());
+            binary_op(stack, mul<uint32_t>);
             break;
         }
         case Instr::i32_div_s:
@@ -1054,7 +1054,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, span<const uint64
                 trap = true;
                 goto end;
             }
-            binary_op(stack, std::divides<int32_t>());
+            binary_op(stack, div<int32_t>);
             break;
         }
         case Instr::i32_div_u:
@@ -1065,7 +1065,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, span<const uint64
                 trap = true;
                 goto end;
             }
-            binary_op(stack, std::divides<uint32_t>());
+            binary_op(stack, div<uint32_t>);
             break;
         }
         case Instr::i32_rem_s:
@@ -1083,7 +1083,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, span<const uint64
                 stack.top() = 0;
             }
             else
-                binary_op(stack, std::modulus<int32_t>());
+                binary_op(stack, rem<int32_t>);
             break;
         }
         case Instr::i32_rem_u:
@@ -1094,22 +1094,22 @@ execution_result execute(Instance& instance, FuncIdx func_idx, span<const uint64
                 trap = true;
                 goto end;
             }
-            binary_op(stack, std::modulus<uint32_t>());
+            binary_op(stack, rem<uint32_t>);
             break;
         }
         case Instr::i32_and:
         {
-            binary_op(stack, std::bit_and<uint32_t>());
+            binary_op(stack, bit_and<uint32_t>);
             break;
         }
         case Instr::i32_or:
         {
-            binary_op(stack, std::bit_or<uint32_t>());
+            binary_op(stack, bit_or<uint32_t>);
             break;
         }
         case Instr::i32_xor:
         {
-            binary_op(stack, std::bit_xor<uint32_t>());
+            binary_op(stack, bit_xor<uint32_t>);
             break;
         }
         case Instr::i32_shl:
@@ -1154,17 +1154,17 @@ execution_result execute(Instance& instance, FuncIdx func_idx, span<const uint64
         }
         case Instr::i64_add:
         {
-            binary_op(stack, std::plus<uint64_t>());
+            binary_op(stack, add<uint64_t>);
             break;
         }
         case Instr::i64_sub:
         {
-            binary_op(stack, std::minus<uint64_t>());
+            binary_op(stack, sub<uint64_t>);
             break;
         }
         case Instr::i64_mul:
         {
-            binary_op(stack, std::multiplies<uint64_t>());
+            binary_op(stack, mul<uint64_t>);
             break;
         }
         case Instr::i64_div_s:
@@ -1176,7 +1176,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, span<const uint64
                 trap = true;
                 goto end;
             }
-            binary_op(stack, std::divides<int64_t>());
+            binary_op(stack, div<int64_t>);
             break;
         }
         case Instr::i64_div_u:
@@ -1187,7 +1187,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, span<const uint64
                 trap = true;
                 goto end;
             }
-            binary_op(stack, std::divides<uint64_t>());
+            binary_op(stack, div<uint64_t>);
             break;
         }
         case Instr::i64_rem_s:
@@ -1205,7 +1205,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, span<const uint64
                 stack.top() = 0;
             }
             else
-                binary_op(stack, std::modulus<int64_t>());
+                binary_op(stack, rem<int64_t>);
             break;
         }
         case Instr::i64_rem_u:
@@ -1216,22 +1216,22 @@ execution_result execute(Instance& instance, FuncIdx func_idx, span<const uint64
                 trap = true;
                 goto end;
             }
-            binary_op(stack, std::modulus<uint64_t>());
+            binary_op(stack, rem<uint64_t>);
             break;
         }
         case Instr::i64_and:
         {
-            binary_op(stack, std::bit_and<uint64_t>());
+            binary_op(stack, bit_and<uint64_t>);
             break;
         }
         case Instr::i64_or:
         {
-            binary_op(stack, std::bit_or<uint64_t>());
+            binary_op(stack, bit_or<uint64_t>);
             break;
         }
         case Instr::i64_xor:
         {
-            binary_op(stack, std::bit_xor<uint64_t>());
+            binary_op(stack, bit_xor<uint64_t>);
             break;
         }
         case Instr::i64_shl:
