@@ -13,6 +13,7 @@ target_sources(
     execute.hpp
     instruction_metrics.cpp
     instruction_metrics.hpp
+    instructions.hpp
     leb128.hpp
     limits.hpp
     module.hpp
