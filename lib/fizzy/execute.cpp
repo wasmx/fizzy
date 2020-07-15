@@ -611,7 +611,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const uint64_
     const auto& code = instance.module.codesec[code_idx];
     auto* const memory = instance.memory.get();
 
-    std::vector<uint64_t> locals(args.size() + code.local_count, 0);
+    std::vector<Value> locals(args.size() + code.local_count);
     std::copy_n(args.begin(), args.size(), locals.begin());
 
     OperandStack stack(static_cast<size_t>(code.max_stack_height));
