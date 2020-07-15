@@ -270,7 +270,8 @@ bool invoke_function(
 {
     const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
-    span<const uint64_t> call_args{stack.rend() - num_args, num_args};
+    const auto* first_arg = stack.rend() - num_args;
+    span<const uint64_t> call_args{&first_arg->i64, num_args};  // FIXME: hack!
     stack.drop(num_args);
 
     const auto ret = func(instance, call_args, depth + 1);
