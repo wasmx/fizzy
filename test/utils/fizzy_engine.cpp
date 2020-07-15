@@ -53,11 +53,11 @@ FuncType translate_signature(std::string_view signature)
     return func_type;
 }
 
-fizzy::ExecutionResult env_adler32(fizzy::Instance& instance, fizzy::span<const uint64_t> args, int)
+fizzy::ExecutionResult env_adler32(fizzy::Instance& instance, fizzy::span<const Value> args, int)
 {
     assert(instance.memory != nullptr);
     const auto ret = fizzy::test::adler32(bytes_view{*instance.memory}.substr(args[0], args[1]));
-    return ret;
+    return Value{ret};
 }
 }  // namespace
 
@@ -133,7 +133,10 @@ std::optional<WasmEngine::FuncRef> FizzyEngine::find_function(
 WasmEngine::Result FizzyEngine::execute(
     WasmEngine::FuncRef func_ref, const std::vector<uint64_t>& args)
 {
-    const auto status = fizzy::execute(*m_instance, static_cast<uint32_t>(func_ref), args);
+    static_assert(sizeof(uint64_t) == sizeof(Value));
+    const auto first_arg = reinterpret_cast<const Value*>(args.data());
+    const auto status =
+        fizzy::execute(*m_instance, static_cast<uint32_t>(func_ref), {first_arg, args.size()});
     if (status.trapped)
         return {true, std::nullopt};
     else if (status.has_value)

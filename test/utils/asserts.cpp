@@ -14,7 +14,7 @@ std::ostream& operator<<(std::ostream& os, ExecutionResult result)
 
     os << "result(";
     if (result.has_value)
-        os << result.value;
+        os << result.value.i64;
     os << ")";
     return os;
 }

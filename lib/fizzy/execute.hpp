@@ -8,6 +8,7 @@
 #include "module.hpp"
 #include "span.hpp"
 #include "types.hpp"
+#include "value.hpp"
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -19,10 +20,10 @@ struct ExecutionResult
 {
     const bool trapped = false;
     const bool has_value = false;
-    const uint64_t value = 0;
+    const Value value = 0;
 
     /// Constructs result with a value.
-    constexpr ExecutionResult(uint64_t _value) noexcept : has_value{true}, value{_value} {}
+    constexpr ExecutionResult(Value _value) noexcept : has_value{true}, value{_value} {}
 
     /// Constructs result in "void" or "trap" state depending on the success flag.
     /// Prefer using Void and Trap constants instead.
@@ -36,7 +37,7 @@ struct Instance;
 
 struct ExternalFunction
 {
-    std::function<ExecutionResult(Instance&, span<const uint64_t>, int depth)> function;
+    std::function<ExecutionResult(Instance&, span<const Value>, int depth)> function;
     FuncType type;
 };
 
@@ -104,12 +105,12 @@ std::unique_ptr<Instance> instantiate(Module module,
 
 // Execute a function on an instance.
 ExecutionResult execute(
-    Instance& instance, FuncIdx func_idx, span<const uint64_t> args, int depth = 0);
+    Instance& instance, FuncIdx func_idx, span<const Value> args, int depth = 0);
 
 inline ExecutionResult execute(
-    Instance& instance, FuncIdx func_idx, std::initializer_list<uint64_t> args)
+    Instance& instance, FuncIdx func_idx, std::initializer_list<Value> args)
 {
-    return execute(instance, func_idx, span<const uint64_t>{args});
+    return execute(instance, func_idx, span<const Value>{args});
 }
 
 
@@ -120,7 +121,7 @@ struct ImportedFunction
     std::string name;
     std::vector<ValType> inputs;
     std::optional<ValType> output;
-    std::function<ExecutionResult(Instance&, span<const uint64_t>, int depth)> function;
+    std::function<ExecutionResult(Instance&, span<const Value>, int depth)> function;
 };
 
 // Create vector of ExternalFunctions ready to be passed to instantiate.

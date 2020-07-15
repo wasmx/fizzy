@@ -270,8 +270,7 @@ bool invoke_function(
 {
     const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
-    const auto* first_arg = stack.rend() - num_args;
-    span<const uint64_t> call_args{&first_arg->i64, num_args};  // FIXME: hack!
+    span<const Value> call_args{stack.rend() - num_args, num_args};
     stack.drop(num_args);
 
     const auto ret = func(instance, call_args, depth + 1);
@@ -293,7 +292,7 @@ bool invoke_function(
 inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
     OperandStack& stack, int depth)
 {
-    const auto func = [func_idx](Instance& _instance, span<const uint64_t> args, int _depth) {
+    const auto func = [func_idx](Instance& _instance, span<const Value> args, int _depth) {
         return execute(_instance, func_idx, args, _depth);
     };
     return invoke_function(func_type, func, instance, stack, depth);
@@ -549,8 +548,7 @@ std::unique_ptr<Instance> instantiate(Module module,
         auto it_table = instance->table->begin() + elementsec_offsets[i];
         for (const auto idx : instance->module.elementsec[i].init)
         {
-            auto func = [idx, &instance_ref = *instance](fizzy::Instance&,
-                            span<const uint64_t> args,
+            auto func = [idx, &instance_ref = *instance](fizzy::Instance&, span<const Value> args,
                             int depth) { return execute(instance_ref, idx, args, depth); };
 
             *it_table++ =
@@ -583,7 +581,7 @@ std::unique_ptr<Instance> instantiate(Module module,
                         // Wrap the function with the lambda capturing shared instance
                         auto& table_function = (*it_table)->function;
                         table_function = [shared_instance, func = std::move(table_function)](
-                                             fizzy::Instance& _instance, span<const uint64_t> args,
+                                             fizzy::Instance& _instance, span<const Value> args,
                                              int depth) { return func(_instance, args, depth); };
                         ++it_table;
                     }
@@ -596,7 +594,7 @@ std::unique_ptr<Instance> instantiate(Module module,
     return instance;
 }
 
-ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const uint64_t> args, int depth)
+ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> args, int depth)
 {
     assert(depth >= 0);
     if (depth > CallStackLimit)
@@ -1527,7 +1525,7 @@ std::optional<ExternalFunction> find_exported_function(Instance& instance, std::
         return std::nullopt;
 
     const auto idx = *opt_index;
-    auto func = [idx, &instance](fizzy::Instance&, span<const uint64_t> args, int depth) {
+    auto func = [idx, &instance](fizzy::Instance&, span<const Value> args, int depth) {
         return execute(instance, idx, args, depth);
     };
 
