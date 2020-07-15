@@ -156,8 +156,7 @@ inline void validate_branch_stack_height(
 }
 
 
-void push_branch_immediates(
-    const ControlFrame& branch_frame, int stack_height, bytes& immediates) noexcept
+void push_branch_immediates(const ControlFrame& branch_frame, int stack_height, bytes& immediates)
 {
     const auto arity = get_branch_arity(branch_frame);
 
