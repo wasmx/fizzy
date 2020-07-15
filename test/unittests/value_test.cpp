@@ -41,6 +41,12 @@ TEST(value, constructor_from_signed_ints)
     EXPECT_EQ(Value{int64_t{-3}}.i64, 0xfffffffffffffffd);
 }
 
+TEST(value, constructor_from_floating_points)
+{
+    EXPECT_EQ(Value{123.456f}.f32, 123.456f);
+    EXPECT_EQ(Value{123.456789001}.f64, 123.456789001);
+}
+
 TEST(value, as_integer)
 {
     const Value v{0xfffffffffffffffe};
@@ -48,6 +54,46 @@ TEST(value, as_integer)
     EXPECT_EQ(v.as<uint32_t>(), 0xfffffffe);
     EXPECT_EQ(v.as<int64_t>(), -2);
     EXPECT_EQ(v.as<int32_t>(), -2);
+}
+
+TEST(value, as_floating_point)
+{
+    EXPECT_EQ(Value{123.456f}.as<float>(), 123.456f);
+    EXPECT_EQ(Value{123.456789001}.as<double>(), 123.456789001);
+
+    float f;
+    f = std::numeric_limits<float>::infinity();
+    EXPECT_EQ(Value{f}.f32, f);
+    EXPECT_EQ(Value{f}.as<float>(), f);
+    f = std::numeric_limits<float>::min();
+    EXPECT_EQ(Value{f}.f32, f);
+    EXPECT_EQ(Value{f}.as<float>(), f);
+    f = std::numeric_limits<float>::max();
+    EXPECT_EQ(Value{f}.f32, f);
+    EXPECT_EQ(Value{f}.as<float>(), f);
+    f = std::numeric_limits<float>::denorm_min();
+    EXPECT_EQ(Value{f}.f32, f);
+    EXPECT_EQ(Value{f}.as<float>(), f);
+    f = std::numeric_limits<float>::lowest();
+    EXPECT_EQ(Value{f}.f32, f);
+    EXPECT_EQ(Value{f}.as<float>(), f);
+
+    double d;
+    d = std::numeric_limits<double>::infinity();
+    EXPECT_EQ(Value{d}.f64, d);
+    EXPECT_EQ(Value{d}.as<double>(), d);
+    d = std::numeric_limits<double>::min();
+    EXPECT_EQ(Value{d}.f64, d);
+    EXPECT_EQ(Value{d}.as<double>(), d);
+    d = std::numeric_limits<double>::max();
+    EXPECT_EQ(Value{d}.f64, d);
+    EXPECT_EQ(Value{d}.as<double>(), d);
+    d = std::numeric_limits<double>::denorm_min();
+    EXPECT_EQ(Value{d}.f64, d);
+    EXPECT_EQ(Value{d}.as<double>(), d);
+    d = std::numeric_limits<double>::lowest();
+    EXPECT_EQ(Value{d}.f64, d);
+    EXPECT_EQ(Value{d}.as<double>(), d);
 }
 
 TEST(value, implicit_conversion_to_i64)
