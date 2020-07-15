@@ -30,5 +30,34 @@ union Value
     constexpr Value(T) = delete;
 
     constexpr operator uint64_t() const noexcept { return i64; }
+
+    /// Get the value as the given type. Handy in templates.
+    /// Only required specializations are provided.
+    template <typename T>
+    constexpr T as() const noexcept;
 };
+
+template <>
+constexpr uint64_t Value::as<uint64_t>() const noexcept
+{
+    return i64;
+}
+
+template <>
+constexpr uint32_t Value::as<uint32_t>() const noexcept
+{
+    return static_cast<uint32_t>(i64);
+}
+
+template <>
+constexpr int64_t Value::as<int64_t>() const noexcept
+{
+    return static_cast<int64_t>(i64);
+}
+
+template <>
+constexpr int32_t Value::as<int32_t>() const noexcept
+{
+    return static_cast<int32_t>(i64);
+}
 }  // namespace fizzy

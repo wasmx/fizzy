@@ -41,6 +41,15 @@ TEST(value, constructor_from_signed_ints)
     EXPECT_EQ(Value{int64_t{-3}}.i64, 0xfffffffffffffffd);
 }
 
+TEST(value, as_integer)
+{
+    const Value v{0xfffffffffffffffe};
+    EXPECT_EQ(v.as<uint64_t>(), 0xfffffffffffffffe);
+    EXPECT_EQ(v.as<uint32_t>(), 0xfffffffe);
+    EXPECT_EQ(v.as<int64_t>(), -2);
+    EXPECT_EQ(v.as<int32_t>(), -2);
+}
+
 TEST(value, implicit_conversion_to_i64)
 {
     const Value v{1};
