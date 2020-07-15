@@ -482,8 +482,6 @@ ExecutionResult execute(
 
     OperandStack stack(static_cast<size_t>(code.max_stack_height));
 
-    bool trap = false;
-
     const Instr* pc = code.instructions.data();
     const uint8_t* immediates = code.immediates.data();
 
@@ -493,8 +491,7 @@ ExecutionResult execute(
         switch (instruction)
         {
         case Instr::unreachable:
-            trap = true;
-            goto end;
+            goto trap;
         case Instr::nop:
         case Instr::block:
         case Instr::loop:
@@ -569,10 +566,7 @@ ExecutionResult execute(
             const auto& func_type = instance.module.get_function_type(called_func_idx);
 
             if (!invoke_function(func_type, called_func_idx, instance, stack, depth))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::call_indirect:
@@ -584,32 +578,20 @@ ExecutionResult execute(
 
             const auto elem_idx = stack.pop().as<uint32_t>();
             if (elem_idx >= instance.table->size())
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
 
             const auto called_func = (*instance.table)[elem_idx];
             if (!called_func.has_value())
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
 
             // check actual type against expected type
             const auto& actual_type = called_func->type;
             const auto& expected_type = instance.module.typesec[expected_type_idx];
             if (expected_type != actual_type)
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
 
             if (!invoke_function(actual_type, called_func->function, instance, stack, depth))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::drop:
@@ -686,192 +668,129 @@ ExecutionResult execute(
         case Instr::i32_load:
         {
             if (!load_from_memory<uint32_t>(*memory, stack, immediates))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i64_load:
         {
             if (!load_from_memory<uint64_t>(*memory, stack, immediates))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::f32_load:
         {
             if (!load_from_memory<float>(*memory, stack, immediates))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::f64_load:
         {
             if (!load_from_memory<double>(*memory, stack, immediates))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i32_load8_s:
         {
             if (!load_from_memory<uint32_t, int8_t>(*memory, stack, immediates))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i32_load8_u:
         {
             if (!load_from_memory<uint32_t, uint8_t>(*memory, stack, immediates))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i32_load16_s:
         {
             if (!load_from_memory<uint32_t, int16_t>(*memory, stack, immediates))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i32_load16_u:
         {
             if (!load_from_memory<uint32_t, uint16_t>(*memory, stack, immediates))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i64_load8_s:
         {
             if (!load_from_memory<uint64_t, int8_t>(*memory, stack, immediates))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i64_load8_u:
         {
             if (!load_from_memory<uint64_t, uint8_t>(*memory, stack, immediates))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i64_load16_s:
         {
             if (!load_from_memory<uint64_t, int16_t>(*memory, stack, immediates))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i64_load16_u:
         {
             if (!load_from_memory<uint64_t, uint16_t>(*memory, stack, immediates))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i64_load32_s:
         {
             if (!load_from_memory<uint64_t, int32_t>(*memory, stack, immediates))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i64_load32_u:
         {
             if (!load_from_memory<uint64_t, uint32_t>(*memory, stack, immediates))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i32_store:
         {
             if (!store_into_memory<uint32_t>(*memory, stack, immediates))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i64_store:
         {
             if (!store_into_memory<uint64_t>(*memory, stack, immediates))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::f32_store:
         {
             if (!store_into_memory<float>(*memory, stack, immediates))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::f64_store:
         {
             if (!store_into_memory<double>(*memory, stack, immediates))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i32_store8:
         case Instr::i64_store8:
         {
             if (!store_into_memory<uint8_t>(*memory, stack, immediates))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i32_store16:
         case Instr::i64_store16:
         {
             if (!store_into_memory<uint16_t>(*memory, stack, immediates))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i64_store32:
         {
             if (!store_into_memory<uint32_t>(*memory, stack, immediates))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::memory_size:
@@ -1123,10 +1042,7 @@ ExecutionResult execute(
             auto const rhs = stack[0].as<int32_t>();
             auto const lhs = stack[1].as<int32_t>();
             if (rhs == 0 || (lhs == std::numeric_limits<int32_t>::min() && rhs == -1))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             binary_op(stack, div<int32_t>);
             break;
         }
@@ -1134,10 +1050,7 @@ ExecutionResult execute(
         {
             auto const rhs = stack.top().as<uint32_t>();
             if (rhs == 0)
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             binary_op(stack, div<uint32_t>);
             break;
         }
@@ -1145,10 +1058,7 @@ ExecutionResult execute(
         {
             auto const rhs = stack.top().as<int32_t>();
             if (rhs == 0)
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             auto const lhs = stack[1].as<int32_t>();
             if (lhs == std::numeric_limits<int32_t>::min() && rhs == -1)
             {
@@ -1163,10 +1073,7 @@ ExecutionResult execute(
         {
             auto const rhs = stack.top().as<uint32_t>();
             if (rhs == 0)
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             binary_op(stack, rem<uint32_t>);
             break;
         }
@@ -1246,10 +1153,7 @@ ExecutionResult execute(
             auto const rhs = stack[0].as<int64_t>();
             auto const lhs = stack[1].as<int64_t>();
             if (rhs == 0 || (lhs == std::numeric_limits<int64_t>::min() && rhs == -1))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             binary_op(stack, div<int64_t>);
             break;
         }
@@ -1257,10 +1161,7 @@ ExecutionResult execute(
         {
             auto const rhs = stack.top().i64;
             if (rhs == 0)
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             binary_op(stack, div<uint64_t>);
             break;
         }
@@ -1268,10 +1169,7 @@ ExecutionResult execute(
         {
             auto const rhs = stack.top().as<int64_t>();
             if (rhs == 0)
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             auto const lhs = stack[1].as<int64_t>();
             if (lhs == std::numeric_limits<int64_t>::min() && rhs == -1)
             {
@@ -1286,10 +1184,7 @@ ExecutionResult execute(
         {
             auto const rhs = stack.top().i64;
             if (rhs == 0)
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             binary_op(stack, rem<uint64_t>);
             break;
         }
@@ -1493,37 +1388,25 @@ ExecutionResult execute(
         case Instr::i32_trunc_f32_s:
         {
             if (!trunc<float, int32_t>(stack))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i32_trunc_f32_u:
         {
             if (!trunc<float, uint32_t>(stack))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i32_trunc_f64_s:
         {
             if (!trunc<double, int32_t>(stack))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i32_trunc_f64_u:
         {
             if (!trunc<double, uint32_t>(stack))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i64_extend_i32_s:
@@ -1540,37 +1423,25 @@ ExecutionResult execute(
         case Instr::i64_trunc_f32_s:
         {
             if (!trunc<float, int64_t>(stack))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i64_trunc_f32_u:
         {
             if (!trunc<float, uint64_t>(stack))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i64_trunc_f64_s:
         {
             if (!trunc<double, int64_t>(stack))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::i64_trunc_f64_u:
         {
             if (!trunc<double, uint64_t>(stack))
-            {
-                trap = true;
-                goto end;
-            }
+                goto trap;
             break;
         }
         case Instr::f32_convert_i32_s:
@@ -1652,10 +1523,11 @@ ExecutionResult execute(
 
 end:
     // WebAssembly 1.0 allows at most one return variable.
-    assert(trap || (pc == &code.instructions[code.instructions.size()] && stack.size() <= 1));
-    if (trap)
-        return Trap;
+    assert(pc == &code.instructions[code.instructions.size()] && stack.size() <= 1);
 
     return stack.size() != 0 ? ExecutionResult{stack.pop()} : Void;
+
+trap:
+    return Trap;
 }
 }  // namespace fizzy
