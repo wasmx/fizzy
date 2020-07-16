@@ -144,6 +144,30 @@ TEST(wasm_engine, start_func)
     }
 }
 
+// This is another case of instantiate_error
+TEST(wasm_engine, start_func_fail)
+{
+    /* wat2wasm
+    (func $start
+      unreachable
+    )
+    (start 0)
+    (func $test (export "test") (result i32)
+      i32.const 0
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000108026000006000017f0303020001070801047465737400010801000a0a020300000b0400"
+        "41000b");
+
+    for (auto engine_create_fn : all_engines)
+    {
+        auto engine = engine_create_fn();
+        ASSERT_TRUE(engine->parse(wasm));
+        ASSERT_FALSE(engine->instantiate(wasm));
+    }
+}
+
 TEST(wasm_engine, multi_i32_args_ret_i32)
 {
     /* wat2wasm

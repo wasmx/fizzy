@@ -84,18 +84,12 @@ bool Wasm3Engine::instantiate(bytes_view wasm_binary)
     // Transfers ownership to runtime.
     if (m3_LoadModule(m_runtime, module) != m3Err_none)
     {
-        m3_FreeModule(module);
+        // NOTE: apparently m3_FreeModule isn't needed in neither the failure nor the success case
         return false;
     }
 
     auto ret = m3_LinkRawFunction(module, "env", "adler32", "i(ii)", env_adler32);
-    if (ret != m3Err_none && ret != m3Err_functionLookupFailed)
-    {
-        m3_FreeRuntime(m_runtime);
-        return false;
-    }
-
-    return true;
+    return ret == m3Err_none || ret == m3Err_functionLookupFailed;
 }
 
 bool Wasm3Engine::init_memory(fizzy::bytes_view memory)
