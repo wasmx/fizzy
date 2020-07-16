@@ -384,7 +384,7 @@ TEST(validation, br_table_default_invalid_label_index)
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "invalid label index");
 }
 
-TEST(validation, br_table_invalid_arity)
+TEST(validation, br_table_invalid_type)
 {
     /* wat2wasm --no-check
     (func  (param $x i32) (result i32)
@@ -450,6 +450,22 @@ TEST(validation, br_table_invalid_arity)
         "0061736d0100000001060160017f017f030201000a12011000027f037f410120000e0100010b0b0b");
 
     EXPECT_THROW_MESSAGE(parse(wasm4), validation_error, "br_table labels have inconsistent types");
+
+    /* wat2wasm --no-check
+    (func (param $x i32)
+      (block $a (result i32)
+        (block $b (result i64)
+          i32.const 1
+          local.get $x
+          br_table $a $b
+        )
+      )
+      drop
+    )
+    */
+    const auto wasm5 = from_hex(
+        "0061736d0100000001050160017f00030201000a13011100027f027e410120000e0101000b0b1a0b");
+    EXPECT_THROW_MESSAGE(parse(wasm5), validation_error, "br_table labels have inconsistent types");
 }
 
 TEST(validation, call_unknown_function)
