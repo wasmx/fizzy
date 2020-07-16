@@ -131,13 +131,16 @@ void validate_result_count(const ControlFrame& frame, const Stack<ValType>& oper
         throw validation_error{"missing result"};
 }
 
-inline uint8_t get_branch_arity(const ControlFrame& frame) noexcept
+inline std::optional<ValType> get_branch_frame_type(const ControlFrame& frame) noexcept
 {
-    const uint8_t arity = frame.type.has_value() ? 1 : 0;
-
     // For loops arity is considered always 0, because br executed in loop jumps to the top,
     // resetting frame stack to 0, so it should not keep top stack value even if loop has a result.
-    return frame.instruction == Instr::loop ? 0 : arity;
+    return frame.instruction == Instr::loop ? std::nullopt : frame.type;
+}
+
+inline uint8_t get_branch_arity(const ControlFrame& frame) noexcept
+{
+    return get_branch_frame_type(frame).has_value() ? 1 : 0;
 }
 
 inline void validate_branch_stack_height(const ControlFrame& current_frame,
