@@ -210,20 +210,14 @@ public:
                     const auto& expected = cmd.at("expected");
                     if (expected.empty())
                     {
-                        if (result->stack.empty())
+                        if (!result->has_value)
                             pass();
                         else
                             fail("Unexpected returned value.");
                         continue;
                     }
 
-                    if (result->stack.size() != 1)
-                    {
-                        fail("More than 1 value returned.");
-                        continue;
-                    }
-
-                    if (!check_result(result->stack[0], expected.at(0)))
+                    if (!check_result(result->value, expected.at(0)))
                         continue;
 
                     pass();

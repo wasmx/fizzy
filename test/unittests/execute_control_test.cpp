@@ -665,7 +665,7 @@ TEST(execute_control, br_1_out_of_function_and_imported_function)
         "0a0d010b00034041010c010b41000b");
 
     constexpr auto fake_imported_function = [](Instance&, span<const uint64_t>,
-                                                int) noexcept -> execution_result { return {}; };
+                                                int) noexcept -> execution_result { return Void; };
 
     const auto module = parse(bin);
     auto instance = instantiate(module, {{fake_imported_function, module.typesec[0]}});

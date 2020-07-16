@@ -18,7 +18,8 @@ uint64_t call_table_func(Instance& instance, size_t idx)
 {
     const auto& elem = (*instance.table)[idx];
     const auto res = elem->function(instance, {}, 0);
-    return res.stack.front();
+    EXPECT_TRUE(res.has_value);
+    return res.value;
 }
 }  // namespace
 
@@ -30,9 +31,7 @@ TEST(instantiate, imported_functions)
     const auto bin = from_hex("0061736d0100000001060160017f017f020b01036d6f6403666f6f0000");
     const auto module = parse(bin);
 
-    auto host_foo = [](Instance&, span<const uint64_t>, int) -> execution_result {
-        return {true, {}};
-    };
+    auto host_foo = [](Instance&, span<const uint64_t>, int) -> execution_result { return Trap; };
     auto instance = instantiate(module, {{host_foo, module.typesec[0]}});
 
     ASSERT_EQ(instance->imported_functions.size(), 1);
@@ -53,12 +52,8 @@ TEST(instantiate, imported_functions_multiple)
         "0061736d0100000001090260017f017f600000021702036d6f6404666f6f310000036d6f6404666f6f320001");
     const auto module = parse(bin);
 
-    auto host_foo1 = [](Instance&, span<const uint64_t>, int) -> execution_result {
-        return {true, {0}};
-    };
-    auto host_foo2 = [](Instance&, span<const uint64_t>, int) -> execution_result {
-        return {true, {}};
-    };
+    auto host_foo1 = [](Instance&, span<const uint64_t>, int) -> execution_result { return Trap; };
+    auto host_foo2 = [](Instance&, span<const uint64_t>, int) -> execution_result { return Trap; };
     auto instance =
         instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[1]}});
 
@@ -93,9 +88,7 @@ TEST(instantiate, imported_function_wrong_type)
     const auto bin = from_hex("0061736d0100000001060160017f017f020b01036d6f6403666f6f0000");
     const auto module = parse(bin);
 
-    auto host_foo = [](Instance&, span<const uint64_t>, int) -> execution_result {
-        return {true, {}};
-    };
+    auto host_foo = [](Instance&, span<const uint64_t>, int) -> execution_result { return Trap; };
     const auto host_foo_type = FuncType{{}, {}};
 
     EXPECT_THROW_MESSAGE(instantiate(module, {{host_foo, host_foo_type}}), instantiate_error,
@@ -574,7 +567,7 @@ TEST(instantiate, element_section_fills_imported_table)
         "0061736d010000000105016000017f020b01016d037461620170000403050400000000090f020041010b020001"
         "0041020b0202030a1504040041010b040041020b040041030b040041040b");
 
-    auto f0 = [](Instance&, span<const uint64_t>, int) { return execution_result{false, {0}}; };
+    auto f0 = [](Instance&, span<const uint64_t>, int) { return 0; };
 
     table_elements table(4);
     table[0] = ExternalFunction{f0, FuncType{{}, {ValType::i32}}};
@@ -602,7 +595,7 @@ TEST(instantiate, element_section_out_of_bounds_doesnt_change_imported_table)
         "0b0200000a0601040041010b");
     Module module = parse(bin);
 
-    auto f0 = [](Instance&, span<const uint64_t>, int) { return execution_result{false, {0}}; };
+    auto f0 = [](Instance&, span<const uint64_t>, int) { return 0; };
 
     table_elements table(3);
     table[0] = ExternalFunction{f0, FuncType{{}, {ValType::i32}}};

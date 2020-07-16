@@ -281,11 +281,11 @@ bool invoke_function(
 
     const auto num_outputs = func_type.outputs.size();
     // NOTE: we can assume these two from validation
-    assert(ret.stack.size() == num_outputs);
     assert(num_outputs <= 1);
+    assert(ret.has_value == (num_outputs == 1));
     // Push back the result
     if (num_outputs != 0)
-        stack.push(ret.stack[0]);
+        stack.push(ret.value);
 
     return true;
 }
@@ -600,7 +600,7 @@ execution_result execute(Instance& instance, FuncIdx func_idx, span<const uint64
 {
     assert(depth >= 0);
     if (depth > CallStackLimit)
-        return {true, {}};
+        return Trap;
 
     if (func_idx < instance.imported_functions.size())
         return instance.imported_functions[func_idx].function(instance, args, depth);
@@ -1458,7 +1458,10 @@ execution_result execute(Instance& instance, FuncIdx func_idx, span<const uint64
 end:
     // WebAssembly 1.0 allows at most one return variable.
     assert(trap || (pc == &code.instructions[code.instructions.size()] && stack.size() <= 1));
-    return {trap, {stack.rbegin(), stack.rend()}};
+    if (trap)
+        return Trap;
+
+    return stack.size() != 0 ? stack.pop() : Void;
 }
 
 std::vector<ExternalFunction> resolve_imported_functions(

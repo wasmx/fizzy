@@ -147,11 +147,11 @@ TEST(execute_call, call_indirect_imported_table)
 
     const Module module = parse(bin);
 
-    auto f1 = [](Instance&, span<const uint64_t>, int) { return execution_result{false, {1}}; };
-    auto f2 = [](Instance&, span<const uint64_t>, int) { return execution_result{false, {2}}; };
-    auto f3 = [](Instance&, span<const uint64_t>, int) { return execution_result{false, {3}}; };
-    auto f4 = [](Instance&, span<const uint64_t>, int) { return execution_result{false, {4}}; };
-    auto f5 = [](Instance&, span<const uint64_t>, int) { return execution_result{true, {}}; };
+    auto f1 = [](Instance&, span<const uint64_t>, int) { return 1; };
+    auto f2 = [](Instance&, span<const uint64_t>, int) { return 2; };
+    auto f3 = [](Instance&, span<const uint64_t>, int) { return 3; };
+    auto f4 = [](Instance&, span<const uint64_t>, int) { return 4; };
+    auto f5 = [](Instance&, span<const uint64_t>, int) { return Trap; };
 
     auto out_i32 = FuncType{{}, {ValType::i32}};
     auto out_i64 = FuncType{{}, {ValType::i64}};
@@ -219,7 +219,7 @@ TEST(execute_call, imported_function_call)
     const auto module = parse(wasm);
 
     constexpr auto host_foo = [](Instance&, span<const uint64_t>, int) -> execution_result {
-        return {false, {42}};
+        return 42;
     };
     const auto host_foo_type = module.typesec[0];
 
@@ -246,7 +246,7 @@ TEST(execute_call, imported_function_call_with_arguments)
     const auto module = parse(wasm);
 
     auto host_foo = [](Instance&, span<const uint64_t> args, int) -> execution_result {
-        return {false, {args[0] * 2}};
+        return args[0] * 2;
     };
     const auto host_foo_type = module.typesec[0];
 
@@ -290,10 +290,10 @@ TEST(execute_call, imported_functions_call_indirect)
     ASSERT_EQ(module.codesec.size(), 2);
 
     constexpr auto sqr = [](Instance&, span<const uint64_t> args, int) -> execution_result {
-        return {false, {args[0] * args[0]}};
+        return args[0] * args[0];
     };
     constexpr auto isqrt = [](Instance&, span<const uint64_t> args, int) -> execution_result {
-        return {false, {(11 + args[0] / 11) / 2}};
+        return (11 + args[0] / 11) / 2;
     };
 
     auto instance = instantiate(module, {{sqr, module.typesec[0]}, {isqrt, module.typesec[0]}});
