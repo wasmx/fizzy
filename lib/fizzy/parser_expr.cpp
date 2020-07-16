@@ -5,6 +5,7 @@
 #include "instructions.hpp"
 #include "module.hpp"
 #include "parser.hpp"
+#include "span.hpp"
 #include "stack.hpp"
 #include <cassert>
 
@@ -88,34 +89,44 @@ parser_result<std::optional<ValType>> parse_blocktype(const uint8_t* pos, const 
     return {validate_valtype(type), pos};
 }
 
-void update_stack_height(ControlFrame& frame, int stack_height_required, int stack_height_change)
+void update_operand_stack(ControlFrame& frame, Stack<ValType>& operand_stack,
+    span<const ValType> inputs, span<const ValType> outputs)
 {
-    if (frame.stack_height < frame.parent_stack_height + stack_height_required)
+    const auto inputs_size = static_cast<int>(inputs.size());
+    const auto outputs_size = static_cast<int>(outputs.size());
+
+    // Update frame.stack_height.
+    if (frame.stack_height < frame.parent_stack_height + inputs_size)
     {
         // Stack is polymorphic after unreachable instruction: underflow is ignored,
         // but we need to count stack growth to detect extra values at the end of the block.
         if (frame.unreachable)
         {
             // Add instruction's/call's output values only.
-            frame.stack_height =
-                frame.parent_stack_height + stack_height_required + stack_height_change;
+            frame.stack_height = frame.parent_stack_height + outputs_size;
         }
         else
             throw validation_error{"stack underflow"};
     }
     else
+        frame.stack_height += outputs_size - inputs_size;
+
+    // Update operand_stack.
+    for (auto it = inputs.rbegin(); it != inputs.rend(); ++it)
     {
-        frame.stack_height += stack_height_change;
+        // Underflow is ignored for unreachable frame.
+        if (frame.unreachable &&
+            static_cast<int>(operand_stack.size()) == frame.parent_stack_height)
+            break;
+
+        const auto expected_type = *it;
+        const auto actual_type = operand_stack.pop();
+        if (actual_type != expected_type)
+            throw validation_error{"type mismatch"};
     }
-}
-
-inline void update_caller_frame(ControlFrame& frame, const FuncType& func_type)
-{
-    const auto stack_height_required = static_cast<int>(func_type.inputs.size());
-    const auto stack_height_change =
-        static_cast<int>(func_type.outputs.size()) - stack_height_required;
-
-    update_stack_height(frame, stack_height_required, stack_height_change);
+    // Push output values even if frame is unreachable.
+    for (const auto output_type : outputs)
+        operand_stack.push(output_type);
 }
 
 void validate_result_count(const ControlFrame& frame)
@@ -191,6 +202,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
     // instructions as defined in Wasm Validation Algorithm.
     Stack<ControlFrame> control_stack;
 
+    Stack<ValType> operand_stack;
+
     const auto func_type_idx = module.funcsec[func_idx];
     assert(func_type_idx < module.typesec.size());
     const auto& func_type = module.typesec[func_type_idx];
@@ -207,6 +220,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
     const uint32_t max_local_index = local_count + static_cast<uint32_t>(func_type.inputs.size());
 
     const auto metrics_table = get_instruction_metrics_table();
+    const auto type_table = get_instruction_type_table();
 
     bool continue_parsing = true;
     while (continue_parsing)
@@ -216,6 +230,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
 
         auto& frame = control_stack.top();
         const auto& metrics = metrics_table[opcode];
+        const auto& type = type_table[opcode];
 
         // Update code's max_stack_height using frame.stack_height of the previous instruction.
         // At this point frame.stack_height includes additional changes to the stack height
@@ -226,7 +241,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
         if (!frame.unreachable)
             code.max_stack_height = std::max(code.max_stack_height, frame.stack_height);
 
-        update_stack_height(frame, metrics.stack_height_required, metrics.stack_height_change);
+        update_operand_stack(frame, operand_stack, type.inputs, type.outputs);
 
         const auto instr = static_cast<Instr>(opcode);
         switch (instr)
@@ -392,8 +407,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
             std::tie(block_type, pos) = parse_blocktype(pos, end);
 
             // Push label with immediates offset after arity.
-            control_stack.emplace(Instr::block, block_type, frame.stack_height, code.instructions.size(),
-                code.immediates.size());
+            control_stack.emplace(Instr::block, block_type, frame.stack_height,
+                code.instructions.size(), code.immediates.size());
             break;
         }
 
@@ -402,9 +417,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
             std::optional<ValType> loop_type;
             std::tie(loop_type, pos) = parse_blocktype(pos, end);
 
-            control_stack.emplace(Instr::loop, loop_type, frame.stack_height, code.instructions.size(),
-                code.immediates.size());
-
+            control_stack.emplace(Instr::loop, loop_type, frame.stack_height,
+                code.instructions.size(), code.immediates.size());
             break;
         }
 
@@ -435,6 +449,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
             frame.unreachable = false;
             const auto if_imm_offset = frame.immediates_offset;
             frame.immediates_offset = code.immediates.size();
+            operand_stack.shrink(static_cast<size_t>(frame.parent_stack_height));
 
             // Placeholders for immediate values, filled at the matching end instructions.
             push(code.immediates, uint32_t{0});  // Diff to the end instruction.
@@ -591,7 +606,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
                 throw validation_error{"invalid funcidx encountered with call"};
 
             const auto& callee_func_type = module.get_function_type(callee_func_idx);
-            update_caller_frame(frame, callee_func_type);
+            update_operand_stack(
+                frame, operand_stack, callee_func_type.inputs, callee_func_type.outputs);
 
             push(code.immediates, callee_func_idx);
             break;
@@ -609,7 +625,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
                 throw validation_error{"invalid type index with call_indirect"};
 
             const auto& callee_func_type = module.typesec[callee_type_idx];
-            update_caller_frame(frame, callee_func_type);
+            update_operand_stack(
+                frame, operand_stack, callee_func_type.inputs, callee_func_type.outputs);
 
             push(code.immediates, callee_type_idx);
 
