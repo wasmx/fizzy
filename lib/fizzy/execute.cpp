@@ -596,7 +596,7 @@ std::unique_ptr<Instance> instantiate(Module module,
     return instance;
 }
 
-execution_result execute(Instance& instance, FuncIdx func_idx, span<const uint64_t> args, int depth)
+ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const uint64_t> args, int depth)
 {
     assert(depth >= 0);
     if (depth > CallStackLimit)

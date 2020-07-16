@@ -402,7 +402,7 @@ private:
         return it_instance->second.get();
     }
 
-    std::optional<fizzy::execution_result> invoke(const json& action)
+    std::optional<fizzy::ExecutionResult> invoke(const json& action)
     {
         auto instance = find_instance_for_action(action);
         if (!instance)

@@ -15,28 +15,28 @@
 namespace fizzy
 {
 // The result of an execution.
-struct execution_result
+struct ExecutionResult
 {
     const bool trapped = false;
     const bool has_value = false;
     const uint64_t value = 0;
 
     /// Constructs result with a value.
-    constexpr execution_result(uint64_t _value) noexcept : has_value{true}, value{_value} {}
+    constexpr ExecutionResult(uint64_t _value) noexcept : has_value{true}, value{_value} {}
 
     /// Constructs result in "void" or "trap" state depending on the success flag.
     /// Prefer using Void and Trap constants instead.
-    constexpr explicit execution_result(bool success) noexcept : trapped{!success} {}
+    constexpr explicit ExecutionResult(bool success) noexcept : trapped{!success} {}
 };
 
-constexpr execution_result Void{true};
-constexpr execution_result Trap{false};
+constexpr ExecutionResult Void{true};
+constexpr ExecutionResult Trap{false};
 
 struct Instance;
 
 struct ExternalFunction
 {
-    std::function<execution_result(Instance&, span<const uint64_t>, int depth)> function;
+    std::function<ExecutionResult(Instance&, span<const uint64_t>, int depth)> function;
     FuncType type;
 };
 
@@ -103,10 +103,10 @@ std::unique_ptr<Instance> instantiate(Module module,
     std::vector<ExternalGlobal> imported_globals = {});
 
 // Execute a function on an instance.
-execution_result execute(
+ExecutionResult execute(
     Instance& instance, FuncIdx func_idx, span<const uint64_t> args, int depth = 0);
 
-inline execution_result execute(
+inline ExecutionResult execute(
     Instance& instance, FuncIdx func_idx, std::initializer_list<uint64_t> args)
 {
     return execute(instance, func_idx, span<const uint64_t>{args});
@@ -120,7 +120,7 @@ struct ImportedFunction
     std::string name;
     std::vector<ValType> inputs;
     std::optional<ValType> output;
-    std::function<execution_result(Instance&, span<const uint64_t>, int depth)> function;
+    std::function<ExecutionResult(Instance&, span<const uint64_t>, int depth)> function;
 };
 
 // Create vector of ExternalFunctions ready to be passed to instantiate.

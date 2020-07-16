@@ -7,7 +7,7 @@
 
 namespace fizzy
 {
-std::ostream& operator<<(std::ostream& os, execution_result result)
+std::ostream& operator<<(std::ostream& os, ExecutionResult result)
 {
     if (result.trapped)
         return os << "trapped";
