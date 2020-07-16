@@ -1355,7 +1355,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const uint64_
         case Instr::i64_reinterpret_f64:
         case Instr::f32_reinterpret_i32:
         case Instr::f64_reinterpret_i64:
-            throw unsupported_feature("Floating point instruction.");
+            // TODO: report error kind
+            return RuntimeError;
         default:
             assert(false);
             break;

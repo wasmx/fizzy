@@ -14,9 +14,13 @@
 
 namespace fizzy
 {
+struct error_tag
+{
+};
 // The result of an execution.
 struct ExecutionResult
 {
+    const bool errored = false;
     const bool trapped = false;
     const bool has_value = false;
     const uint64_t value = 0;
@@ -27,10 +31,13 @@ struct ExecutionResult
     /// Constructs result in "void" or "trap" state depending on the success flag.
     /// Prefer using Void and Trap constants instead.
     constexpr explicit ExecutionResult(bool success) noexcept : trapped{!success} {}
+
+    constexpr explicit ExecutionResult(error_tag) noexcept : errored{true}, trapped{true} {}
 };
 
 constexpr ExecutionResult Void{true};
 constexpr ExecutionResult Trap{false};
+constexpr ExecutionResult RuntimeError{error_tag{}};
 
 struct Instance;
 
