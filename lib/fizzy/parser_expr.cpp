@@ -582,7 +582,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
                 throw validation_error{"invalid label index"};
 
             auto& default_branch_frame = control_stack[default_label_idx];
-            const auto default_branch_arity = get_branch_arity(default_branch_frame);
+            const auto default_branch_type = get_branch_frame_type(default_branch_frame);
 
             validate_branch_stack_height(frame, default_branch_frame, operand_stack);
 
@@ -592,7 +592,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             {
                 auto& branch_frame = control_stack[idx];
 
-                if (get_branch_arity(branch_frame) != default_branch_arity)
+                if (get_branch_frame_type(branch_frame) != default_branch_type)
                     throw validation_error{"br_table labels have inconsistent types"};
 
                 branch_frame.br_immediate_offsets.push_back(code.immediates.size());
