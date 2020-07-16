@@ -1,6 +1,6 @@
 ---
 Language:     Cpp
-Standard:     c++17
+Standard:     Cpp11
 BasedOnStyle: Chromium
 
 AccessModifierOffset: -4
