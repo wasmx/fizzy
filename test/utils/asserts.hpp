@@ -45,5 +45,5 @@ MATCHER_P(Result, value, "")  // NOLINT(readability-redundant-string-init)
 
 namespace fizzy
 {
-std::ostream& operator<<(std::ostream& os, execution_result);
+std::ostream& operator<<(std::ostream& os, ExecutionResult);
 }

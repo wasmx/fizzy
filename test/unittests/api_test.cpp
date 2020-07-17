@@ -19,7 +19,7 @@ auto function_returning_value(uint64_t value) noexcept
     return [value](Instance&, span<const uint64_t>, int) { return value; };
 }
 
-execution_result function_returning_void(Instance&, span<const uint64_t>, int) noexcept
+ExecutionResult function_returning_void(Instance&, span<const uint64_t>, int) noexcept
 {
     return Void;
 }
