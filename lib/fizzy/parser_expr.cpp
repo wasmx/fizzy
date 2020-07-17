@@ -5,6 +5,7 @@
 #include "instructions.hpp"
 #include "module.hpp"
 #include "parser.hpp"
+#include "span.hpp"
 #include "stack.hpp"
 #include <cassert>
 
@@ -44,12 +45,7 @@ struct ControlFrame
     size_t immediates_offset{0};
 
     /// The frame stack height of the parent frame.
-    /// TODO: Storing this is not strictly required, as the parent frame is available
-    ///       in the control_stack.
     const int parent_stack_height{0};
-
-    /// The frame stack height.
-    int stack_height{0};
 
     /// Whether the remainder of the block is unreachable (used to handle stack-polymorphic typing
     /// after branches).
@@ -64,8 +60,7 @@ struct ControlFrame
         type{_type},
         code_offset{_code_offset},
         immediates_offset{_immediates_offset},
-        parent_stack_height{_parent_stack_height},
-        stack_height{_parent_stack_height}
+        parent_stack_height{_parent_stack_height}
     {}
 };
 
@@ -88,50 +83,51 @@ parser_result<std::optional<ValType>> parse_blocktype(const uint8_t* pos, const 
     return {validate_valtype(type), pos};
 }
 
-void update_stack_height(ControlFrame& frame, int stack_height_required, int stack_height_change)
+void update_operand_stack(const ControlFrame& frame, Stack<ValType>& operand_stack,
+    span<const ValType> inputs, span<const ValType> outputs)
 {
-    if (frame.stack_height < frame.parent_stack_height + stack_height_required)
+    const auto frame_stack_height = static_cast<int>(operand_stack.size());
+    const auto inputs_size = static_cast<int>(inputs.size());
+
+    // Stack is polymorphic after unreachable instruction: underflow is ignored,
+    // but we need to count stack growth to detect extra values at the end of the block.
+    if (!frame.unreachable && frame_stack_height < frame.parent_stack_height + inputs_size)
+        throw validation_error{"stack underflow"};
+
+    // Update operand_stack.
+    for (auto it = inputs.rbegin(); it != inputs.rend(); ++it)
     {
-        // Stack is polymorphic after unreachable instruction: underflow is ignored,
-        // but we need to count stack growth to detect extra values at the end of the block.
-        if (frame.unreachable)
-        {
-            // Add instruction's/call's output values only.
-            frame.stack_height =
-                frame.parent_stack_height + stack_height_required + stack_height_change;
-        }
-        else
-            throw validation_error{"stack underflow"};
+        // Underflow is ignored for unreachable frame.
+        if (frame.unreachable &&
+            static_cast<int>(operand_stack.size()) == frame.parent_stack_height)
+            break;
+
+        const auto expected_type = *it;
+        const auto actual_type = operand_stack.pop();
+        if (actual_type != expected_type)
+            throw validation_error{"type mismatch"};
     }
-    else
-    {
-        frame.stack_height += stack_height_change;
-    }
+    // Push output values even if frame is unreachable.
+    for (const auto output_type : outputs)
+        operand_stack.push(output_type);
 }
 
-inline void update_caller_frame(ControlFrame& frame, const FuncType& func_type)
+void validate_result_count(const ControlFrame& frame, const Stack<ValType>& operand_stack)
 {
-    const auto stack_height_required = static_cast<int>(func_type.inputs.size());
-    const auto stack_height_change =
-        static_cast<int>(func_type.outputs.size()) - stack_height_required;
+    const auto frame_stack_height = static_cast<int>(operand_stack.size());
 
-    update_stack_height(frame, stack_height_required, stack_height_change);
-}
-
-void validate_result_count(const ControlFrame& frame)
-{
     // This is checked by "stack underflow".
-    assert(frame.stack_height >= frame.parent_stack_height);
+    assert(frame_stack_height >= frame.parent_stack_height);
 
     const auto arity = frame.type.has_value() ? 1 : 0;
 
-    if (frame.stack_height > frame.parent_stack_height + arity)
+    if (frame_stack_height > frame.parent_stack_height + arity)
         throw validation_error{"too many results"};
 
     if (frame.unreachable)
         return;
 
-    if (frame.stack_height < frame.parent_stack_height + arity)
+    if (frame_stack_height < frame.parent_stack_height + arity)
         throw validation_error{"missing result"};
 }
 
@@ -144,14 +140,16 @@ inline uint8_t get_branch_arity(const ControlFrame& frame) noexcept
     return frame.instruction == Instr::loop ? 0 : arity;
 }
 
-inline void validate_branch_stack_height(
-    const ControlFrame& current_frame, const ControlFrame& branch_frame)
+inline void validate_branch_stack_height(const ControlFrame& current_frame,
+    const ControlFrame& branch_frame, const Stack<ValType>& operand_stack)
 {
-    assert(current_frame.stack_height >= current_frame.parent_stack_height);
+    const auto current_frame_stack_height = static_cast<int>(operand_stack.size());
+
+    assert(current_frame_stack_height >= current_frame.parent_stack_height);
 
     const auto arity = get_branch_arity(branch_frame);
     if (!current_frame.unreachable &&
-        (current_frame.stack_height < current_frame.parent_stack_height + arity))
+        (current_frame_stack_height < current_frame.parent_stack_height + arity))
         throw validation_error{"branch stack underflow"};
 }
 
@@ -172,41 +170,76 @@ void push_branch_immediates(const ControlFrame& branch_frame, int stack_height, 
     push(immediates, arity);
 }
 
-inline void mark_frame_unreachable(ControlFrame& frame) noexcept
+inline void mark_frame_unreachable(ControlFrame& frame, Stack<ValType>& operand_stack) noexcept
 {
     frame.unreachable = true;
-    frame.stack_height = frame.parent_stack_height;
+    operand_stack.shrink(static_cast<size_t>(frame.parent_stack_height));
 }
 
+inline void drop_operand(
+    const ControlFrame& frame, Stack<ValType>& operand_stack, std::optional<ValType> expected_type)
+{
+    if (!frame.unreachable &&
+        static_cast<int>(operand_stack.size()) < frame.parent_stack_height + 1)
+        throw validation_error{"stack underflow"};
+
+    if (frame.unreachable && static_cast<int>(operand_stack.size()) == frame.parent_stack_height)
+        return;
+
+    const auto actual_type = operand_stack.pop();
+    if (expected_type.has_value() && actual_type != *expected_type)
+        throw validation_error{"type mismatch"};
+}
+
+inline void push_operand(Stack<ValType>& operand_stack, ValType type)
+{
+    operand_stack.push(type);
+}
+
+ValType find_local_type(
+    const std::vector<ValType>& params, const std::vector<Locals>& locals, LocalIdx idx)
+{
+    if (idx < params.size())
+        return params[idx];
+
+    // TODO: Consider more efficient algorithm with calculating cumulative sums only once and then
+    // using binary search for each local instruction.
+    const auto local_idx = idx - params.size();
+    uint64_t local_count = 0;
+    for (const auto& l : locals)
+    {
+        if (local_idx >= local_count && local_idx < local_count + l.count)
+            return l.type;
+        local_count += l.count;
+    }
+
+    throw validation_error{"invalid local index"};
+}
 }  // namespace
 
-parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t local_count,
-    FuncIdx func_idx, const Module& module)
+parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx func_idx,
+    const std::vector<Locals>& locals, const Module& module)
 {
-    // TODO: consider adding a constructor
     Code code;
-    code.local_count = local_count;
 
     // The stack of control frames allowing to distinguish between block/if/else and label
     // instructions as defined in Wasm Validation Algorithm.
     Stack<ControlFrame> control_stack;
 
+    Stack<ValType> operand_stack;
+
     const auto func_type_idx = module.funcsec[func_idx];
     assert(func_type_idx < module.typesec.size());
     const auto& func_type = module.typesec[func_type_idx];
 
+    const auto& func_inputs = func_type.inputs;
     const auto& func_outputs = func_type.outputs;
     // The function's implicit block.
     control_stack.emplace(Instr::block,
         func_outputs.empty() ? std::nullopt : std::optional<ValType>{func_outputs[0]}, 0);
 
-    // TODO: Clarify in spec what happens if count of locals and arguments exceed uint32_t::max()
-    //       Leave this assert here for the time being.
-    assert(
-        (uint64_t{local_count} + func_type.inputs.size()) <= std::numeric_limits<uint32_t>::max());
-    const uint32_t max_local_index = local_count + static_cast<uint32_t>(func_type.inputs.size());
-
     const auto metrics_table = get_instruction_metrics_table();
+    const auto type_table = get_instruction_type_table();
 
     bool continue_parsing = true;
     while (continue_parsing)
@@ -216,6 +249,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
 
         auto& frame = control_stack.top();
         const auto& metrics = metrics_table[opcode];
+        const auto& type = type_table[opcode];
 
         // Update code's max_stack_height using frame.stack_height of the previous instruction.
         // At this point frame.stack_height includes additional changes to the stack height
@@ -224,9 +258,10 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
         // already popped/reset), but it does not matter, as these instructions do not modify
         // stack height anyway.
         if (!frame.unreachable)
-            code.max_stack_height = std::max(code.max_stack_height, frame.stack_height);
+            code.max_stack_height =
+                std::max(code.max_stack_height, static_cast<int>(operand_stack.size()));
 
-        update_stack_height(frame, metrics.stack_height_required, metrics.stack_height_change);
+        update_operand_stack(frame, operand_stack, type.inputs, type.outputs);
 
         const auto instr = static_cast<Instr>(opcode);
         switch (instr)
@@ -317,12 +352,16 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
             break;
 
         case Instr::unreachable:
-            mark_frame_unreachable(frame);
+            mark_frame_unreachable(frame, operand_stack);
+            break;
+
+        case Instr::drop:
+        case Instr::select:
+            // TODO: for select validate that two top operands are the same type
+            drop_operand(frame, operand_stack, std::nullopt);
             break;
 
         case Instr::nop:
-        case Instr::drop:
-        case Instr::select:
         case Instr::i32_eq:
         case Instr::i32_eqz:
         case Instr::i32_ne:
@@ -388,33 +427,32 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
 
         case Instr::block:
         {
-            std::optional<ValType> type;
-            std::tie(type, pos) = parse_blocktype(pos, end);
+            std::optional<ValType> block_type;
+            std::tie(block_type, pos) = parse_blocktype(pos, end);
 
             // Push label with immediates offset after arity.
-            control_stack.emplace(Instr::block, type, frame.stack_height, code.instructions.size(),
-                code.immediates.size());
+            control_stack.emplace(Instr::block, block_type, static_cast<int>(operand_stack.size()),
+                code.instructions.size(), code.immediates.size());
             break;
         }
 
         case Instr::loop:
         {
-            std::optional<ValType> type;
-            std::tie(type, pos) = parse_blocktype(pos, end);
+            std::optional<ValType> loop_type;
+            std::tie(loop_type, pos) = parse_blocktype(pos, end);
 
-            control_stack.emplace(Instr::loop, type, frame.stack_height, code.instructions.size(),
-                code.immediates.size());
-
+            control_stack.emplace(Instr::loop, loop_type, static_cast<int>(operand_stack.size()),
+                code.instructions.size(), code.immediates.size());
             break;
         }
 
         case Instr::if_:
         {
-            std::optional<ValType> type;
-            std::tie(type, pos) = parse_blocktype(pos, end);
+            std::optional<ValType> if_type;
+            std::tie(if_type, pos) = parse_blocktype(pos, end);
 
-            control_stack.emplace(Instr::if_, type, frame.stack_height, code.instructions.size(),
-                code.immediates.size());
+            control_stack.emplace(Instr::if_, if_type, static_cast<int>(operand_stack.size()),
+                code.instructions.size(), code.immediates.size());
 
             // Placeholders for immediate values, filled at the matching end or else instructions.
             push(code.immediates, uint32_t{0});  // Diff to the else instruction
@@ -428,13 +466,13 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
             if (frame.instruction != Instr::if_)
                 throw parser_error{"unexpected else instruction (if instruction missing)"};
 
-            validate_result_count(frame);  // else is the end of if.
+            validate_result_count(frame, operand_stack);  // else is the end of if.
 
             // Reset frame after if. The if result type validation not implemented yet.
-            frame.stack_height = frame.parent_stack_height;
             frame.unreachable = false;
             const auto if_imm_offset = frame.immediates_offset;
             frame.immediates_offset = code.immediates.size();
+            operand_stack.shrink(static_cast<size_t>(frame.parent_stack_height));
 
             // Placeholders for immediate values, filled at the matching end instructions.
             push(code.immediates, uint32_t{0});  // Diff to the end instruction.
@@ -455,7 +493,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
 
         case Instr::end:
         {
-            validate_result_count(frame);
+            validate_result_count(frame, operand_stack);
 
             if (frame.instruction != Instr::loop)  // If end of block/if/else instruction.
             {
@@ -488,13 +526,14 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
                     // stack drop and arity were already stored in br handler
                 }
             }
-            const auto type = frame.type;
+            const auto frame_type = frame.type;
+            operand_stack.shrink(static_cast<size_t>(frame.parent_stack_height));
             control_stack.pop();  // Pop the current frame.
 
             if (control_stack.empty())
                 continue_parsing = false;
-            else if (type.has_value())
-                control_stack.top().stack_height += 1;  // The results of the popped frame.
+            else if (frame_type.has_value())
+                operand_stack.push(*frame_type);
             break;
         }
 
@@ -509,15 +548,16 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
 
             auto& branch_frame = control_stack[label_idx];
 
-            validate_branch_stack_height(frame, branch_frame);
+            validate_branch_stack_height(frame, branch_frame, operand_stack);
 
             // Remember this br immediates offset to fill it at end instruction.
             branch_frame.br_immediate_offsets.push_back(code.immediates.size());
 
-            push_branch_immediates(branch_frame, frame.stack_height, code.immediates);
+            push_branch_immediates(
+                branch_frame, static_cast<int>(operand_stack.size()), code.immediates);
 
             if (instr == Instr::br)
-                mark_frame_unreachable(frame);
+                mark_frame_unreachable(frame, operand_stack);
 
             break;
         }
@@ -541,7 +581,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
             auto& default_branch_frame = control_stack[default_label_idx];
             const auto default_branch_arity = get_branch_arity(default_branch_frame);
 
-            validate_branch_stack_height(frame, default_branch_frame);
+            validate_branch_stack_height(frame, default_branch_frame, operand_stack);
 
             // Remember immediates offset for all br items to fill them at end instruction.
             push(code.immediates, static_cast<uint32_t>(label_indices.size()));
@@ -553,13 +593,15 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
                     throw validation_error{"br_table labels have inconsistent types"};
 
                 branch_frame.br_immediate_offsets.push_back(code.immediates.size());
-                push_branch_immediates(branch_frame, frame.stack_height, code.immediates);
+                push_branch_immediates(
+                    branch_frame, static_cast<int>(operand_stack.size()), code.immediates);
             }
 
             default_branch_frame.br_immediate_offsets.push_back(code.immediates.size());
-            push_branch_immediates(default_branch_frame, frame.stack_height, code.immediates);
+            push_branch_immediates(
+                default_branch_frame, static_cast<int>(operand_stack.size()), code.immediates);
 
-            mark_frame_unreachable(frame);
+            mark_frame_unreachable(frame, operand_stack);
 
             break;
         }
@@ -572,13 +614,14 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
 
             auto& branch_frame = control_stack[label_idx];
 
-            validate_branch_stack_height(frame, branch_frame);
+            validate_branch_stack_height(frame, branch_frame, operand_stack);
 
             branch_frame.br_immediate_offsets.push_back(code.immediates.size());
 
-            push_branch_immediates(control_stack[label_idx], frame.stack_height, code.immediates);
+            push_branch_immediates(
+                control_stack[label_idx], static_cast<int>(operand_stack.size()), code.immediates);
 
-            mark_frame_unreachable(frame);
+            mark_frame_unreachable(frame, operand_stack);
             break;
         }
 
@@ -591,7 +634,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
                 throw validation_error{"invalid funcidx encountered with call"};
 
             const auto& callee_func_type = module.get_function_type(callee_func_idx);
-            update_caller_frame(frame, callee_func_type);
+            update_operand_stack(
+                frame, operand_stack, callee_func_type.inputs, callee_func_type.outputs);
 
             push(code.immediates, callee_func_idx);
             break;
@@ -609,7 +653,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
                 throw validation_error{"invalid type index with call_indirect"};
 
             const auto& callee_func_type = module.typesec[callee_type_idx];
-            update_caller_frame(frame, callee_func_type);
+            update_operand_stack(
+                frame, operand_stack, callee_func_type.inputs, callee_func_type.outputs);
 
             push(code.immediates, callee_type_idx);
 
@@ -621,30 +666,63 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t 
         }
 
         case Instr::local_get:
-        case Instr::local_set:
-        case Instr::local_tee:
         {
-            uint32_t local_idx;
+            LocalIdx local_idx;
             std::tie(local_idx, pos) = leb128u_decode<uint32_t>(pos, end);
 
-            if (local_idx >= max_local_index)
-                throw validation_error{"invalid local index"};
+            push_operand(operand_stack, find_local_type(func_inputs, locals, local_idx));
+
+            push(code.immediates, local_idx);
+            break;
+        }
+        case Instr::local_set:
+        {
+            LocalIdx local_idx;
+            std::tie(local_idx, pos) = leb128u_decode<uint32_t>(pos, end);
+
+            drop_operand(frame, operand_stack, find_local_type(func_inputs, locals, local_idx));
+
+            push(code.immediates, local_idx);
+            break;
+        }
+        case Instr::local_tee:
+        {
+            LocalIdx local_idx;
+            std::tie(local_idx, pos) = leb128u_decode<uint32_t>(pos, end);
+
+            const auto local_type = find_local_type(func_inputs, locals, local_idx);
+            drop_operand(frame, operand_stack, local_type);
+            push_operand(operand_stack, local_type);
 
             push(code.immediates, local_idx);
             break;
         }
 
         case Instr::global_get:
-        case Instr::global_set:
         {
-            uint32_t global_idx;
+            GlobalIdx global_idx;
             std::tie(global_idx, pos) = leb128u_decode<uint32_t>(pos, end);
 
             if (global_idx >= module.get_global_count())
                 throw validation_error{"accessing global with invalid index"};
 
-            if (instr == Instr::global_set && !module.get_global_type(global_idx).is_mutable)
+            push_operand(operand_stack, module.get_global_type(global_idx).value_type);
+
+            push(code.immediates, global_idx);
+            break;
+        }
+        case Instr::global_set:
+        {
+            GlobalIdx global_idx;
+            std::tie(global_idx, pos) = leb128u_decode<uint32_t>(pos, end);
+
+            if (global_idx >= module.get_global_count())
+                throw validation_error{"accessing global with invalid index"};
+
+            if (!module.get_global_type(global_idx).is_mutable)
                 throw validation_error{"trying to mutate immutable global"};
+
+            drop_operand(frame, operand_stack, module.get_global_type(global_idx).value_type);
 
             push(code.immediates, global_idx);
             break;

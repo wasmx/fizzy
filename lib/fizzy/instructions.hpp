@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "constexpr_vector.hpp"
+#include "types.hpp"
 #include <cassert>
 #include <cstdint>
 
@@ -38,5 +40,14 @@ struct InstructionMetrics
 };
 
 const InstructionMetrics* get_instruction_metrics_table() noexcept;
+
+// Wasm 1.0 spec only has instructions which take at most 2 items and return at most 1 item.
+struct InstructionType
+{
+    constexpr_vector<ValType, 2> inputs;
+    constexpr_vector<ValType, 1> outputs;
+};
+
+const InstructionType* get_instruction_type_table() noexcept;
 
 }  // namespace fizzy

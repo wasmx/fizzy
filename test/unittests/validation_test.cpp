@@ -199,14 +199,14 @@ TEST(validation, i32_store_no_memory)
 TEST(validation, f32_store_no_memory)
 {
     /* wat2wasm --no-check
-    (func (param f32)
+    (func (param i32)
       get_local 0
       f32.const 0
       f32.store
     )
     */
     const auto wasm =
-        from_hex("0061736d0100000001050160017d00030201000a0e010c00200043000000003802000b");
+        from_hex("0061736d0100000001050160017f00030201000a0e010c00200043000000003802000b");
     EXPECT_THROW_MESSAGE(
         parse(wasm), validation_error, "memory instructions require imported or defined memory");
 }
@@ -226,18 +226,17 @@ TEST(validation, memory_size_no_memory)
 TEST(validation, store_alignment)
 {
     // NOTE: could use instruction_metrics here, but better to have two sources of truth for testing
-    const std::map<Instr, int> test_cases{
-        {Instr::i32_store8, 0}, {Instr::i32_store16, 1}, {Instr::i32_store, 2},
-        // TODO: split these out once we have type validation
-        {Instr::i64_store8, 0}, {Instr::i64_store16, 1}, {Instr::i64_store32, 2},
-        {Instr::i64_store, 3},
+    const std::tuple<Instr, int, Instr> test_cases[] = {
+        {Instr::i32_store8, 0, Instr::i32_const}, {Instr::i32_store16, 1, Instr::i32_const},
+        {Instr::i32_store, 2, Instr::i32_const}, {Instr::i64_store8, 0, Instr::i64_const},
+        {Instr::i64_store16, 1, Instr::i64_const}, {Instr::i64_store32, 2, Instr::i64_const},
+        {Instr::i64_store, 3, Instr::i64_const},
         // TODO: include floating point
     };
 
-    for (const auto test_case : test_cases)
+    for (const auto& test_case : test_cases)
     {
-        const auto instr = test_case.first;
-        const auto max_align = test_case.second;
+        const auto [instr, max_align, push_address_instr] = test_case;
         // TODO: consider using leb128_encode and test 2^32-1
         for (auto align : {0, 1, 2, 3, 4, 0x7f})
         {
@@ -251,7 +250,7 @@ TEST(validation, store_alignment)
             const auto function_section = make_vec({"00"_bytes});
             // NOTE: this depends on align < 0x80
             const auto code_bin = bytes{0,  // vec(locals)
-                uint8_t(Instr::local_get), 0, uint8_t(Instr::i32_const), 0, uint8_t(instr),
+                uint8_t(Instr::local_get), 0, uint8_t(push_address_instr), 0, uint8_t(instr),
                 uint8_t(align), 0, uint8_t(Instr::end)};
             const auto code_section = make_vec({add_size_prefix(code_bin)});
             const auto memory_section = "01007f"_bytes;

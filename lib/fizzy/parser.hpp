@@ -37,13 +37,13 @@ inline parser_result<uint8_t> parse_byte(const uint8_t* pos, const uint8_t* end)
 /// Parse `expr`, i.e. a function's instructions residing in the code section.
 /// https://webassembly.github.io/spec/core/binary/instructions.html#binary-expr
 ///
-/// @param pos         The beginning of the expr binary input.
-/// @param end         The end of the binary input.
-/// @param local_count The number of locals defined.
-/// @param func_idx    Index of the function being parsed.
-/// @param module      Module that this code is part of.
-parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, uint32_t local_count,
-    FuncIdx func_idx, const Module& module);
+/// @param pos      The beginning of the expr binary input.
+/// @param end      The end of the binary input.
+/// @param func_idx Index of the function being parsed.
+/// @param locals   Vector of local type and counts for the function being parsed.
+/// @param module   Module that this code is part of.
+parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx func_idx,
+    const std::vector<Locals>& locals, const Module& module);
 
 parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end);
 

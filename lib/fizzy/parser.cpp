@@ -372,13 +372,18 @@ inline Code parse_code(code_view code_binary, FuncIdx func_idx, const Module& mo
             throw parser_error{"too many local variables"};
     }
 
-    const auto [code, pos2] =
-        parse_expr(pos1, end, static_cast<uint32_t>(local_count), func_idx, module);
+    // TODO: Clarify in spec what happens if count of locals and arguments exceed uint32_t::max()
+    //       Leave this assert here for the time being.
+    assert((uint64_t{local_count} + module.typesec[module.funcsec[func_idx]].inputs.size()) <=
+           std::numeric_limits<uint32_t>::max());
+
+    auto [code, pos2] = parse_expr(pos1, end, func_idx, locals_vec, module);
 
     // Size is the total bytes of locals and expressions.
     if (pos2 != end)
         throw parser_error{"malformed size field for function"};
 
+    code.local_count = static_cast<uint32_t>(local_count);
     return code;
 }
 

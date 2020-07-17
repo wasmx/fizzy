@@ -1132,13 +1132,32 @@ TEST(parser, code_section_fp_instructions)
         0xb3, 0xb4, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xba, 0xbb, 0xbc, 0xbd, 0xbe, 0xbf};
 
     const auto metrics_table = fizzy::get_instruction_metrics_table();
+    const auto types_table = fizzy::get_instruction_type_table();
 
     for (const auto instr : fp_instructions)
     {
         const auto metrics = metrics_table[instr];
+        const auto types = types_table[instr];
+
         auto func_bin = "00"_bytes;  // vec(locals)
-        for (int i = 0; i < metrics.stack_height_required; ++i)
-            func_bin += i32_const(0);
+        for (const auto input : types.inputs)
+        {
+            switch (input)
+            {
+            case (ValType::i32):
+                func_bin += i32_const(0);
+                break;
+            case (ValType::i64):
+                func_bin += i64_const(0);
+                break;
+            case (ValType::f32):
+                func_bin += uint8_t(Instr::f32_const) + bytes(4, 0);
+                break;
+            case (ValType::f64):
+                func_bin += uint8_t(Instr::f64_const) + bytes(8, 0);
+                break;
+            }
+        }
         func_bin += bytes{instr};
 
         switch (instr)
