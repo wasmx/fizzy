@@ -431,7 +431,7 @@ TEST(validation_stack_type, block_type_mismatch)
     )
     */
     const auto wasm = from_hex("0061736d010000000105016000017f030201000a0601040042000b");
-    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "block type mismatch");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "type mismatch");
 }
 
 TEST(validation_stack_type, unreachable_end)
@@ -460,7 +460,7 @@ TEST(validation_stack_type, unreachable_end)
     )
     */
     const auto wasm_mismatch = from_hex("0061736d010000000105016000017f030201000a070105000042000b");
-    EXPECT_THROW_MESSAGE(parse(wasm_mismatch), validation_error, "block type mismatch");
+    EXPECT_THROW_MESSAGE(parse(wasm_mismatch), validation_error, "type mismatch");
 }
 
 TEST(validation_stack_type, if_type_mismatch)
@@ -474,7 +474,7 @@ TEST(validation_stack_type, if_type_mismatch)
     )
     */
     const auto wasm = from_hex("0061736d010000000105016000017f030201000a0b0109004100047f42000b0b");
-    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "block type mismatch");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "type mismatch");
 
     /* wat2wasm --no-check
     (func (result i32)
@@ -487,7 +487,7 @@ TEST(validation_stack_type, if_type_mismatch)
     */
     const auto wasm_else =
         from_hex("0061736d010000000105016000017f030201000a0e010c004100047f41000542000b0b");
-    EXPECT_THROW_MESSAGE(parse(wasm_else), validation_error, "block type mismatch");
+    EXPECT_THROW_MESSAGE(parse(wasm_else), validation_error, "type mismatch");
 }
 
 TEST(validation_stack_type, if_unreachable)
@@ -537,7 +537,7 @@ TEST(validation_stack_type, if_unreachable)
     */
     const auto wasm_then_mismatch =
         from_hex("0061736d010000000105016000017f030201000a0f010d004100047f0042000541000b0b");
-    EXPECT_THROW_MESSAGE(parse(wasm_then_mismatch), validation_error, "block type mismatch");
+    EXPECT_THROW_MESSAGE(parse(wasm_then_mismatch), validation_error, "type mismatch");
 
     /* wat2wasm --no-check
     (func (result i32)
@@ -552,5 +552,5 @@ TEST(validation_stack_type, if_unreachable)
     */
     const auto wasm_else_mismatch =
         from_hex("0061736d010000000105016000017f030201000a0f010d004100047f4100050042000b0b");
-    EXPECT_THROW_MESSAGE(parse(wasm_else_mismatch), validation_error, "block type mismatch");
+    EXPECT_THROW_MESSAGE(parse(wasm_else_mismatch), validation_error, "type mismatch");
 }

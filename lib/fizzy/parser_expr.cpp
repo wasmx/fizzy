@@ -112,6 +112,21 @@ void update_operand_stack(const ControlFrame& frame, Stack<ValType>& operand_sta
         operand_stack.push(output_type);
 }
 
+inline void drop_operand(
+    const ControlFrame& frame, Stack<ValType>& operand_stack, std::optional<ValType> expected_type)
+{
+    if (!frame.unreachable &&
+        static_cast<int>(operand_stack.size()) < frame.parent_stack_height + 1)
+        throw validation_error{"stack underflow"};
+
+    if (frame.unreachable && static_cast<int>(operand_stack.size()) == frame.parent_stack_height)
+        return;
+
+    const auto actual_type = operand_stack.pop();
+    if (expected_type.has_value() && actual_type != *expected_type)
+        throw validation_error{"type mismatch"};
+}
+
 void update_result_stack(const ControlFrame& frame, Stack<ValType>& operand_stack)
 {
     const auto frame_stack_height = static_cast<int>(operand_stack.size());
@@ -124,15 +139,8 @@ void update_result_stack(const ControlFrame& frame, Stack<ValType>& operand_stac
     if (frame_stack_height > frame.parent_stack_height + arity)
         throw validation_error{"too many results"};
 
-    if (!frame.unreachable && frame_stack_height < frame.parent_stack_height + arity)
-        throw validation_error{"missing result"};
-
-    // If there's an item above parent stack, we know it's the result value,
-    // that needs to be type checked.
-    // If there's none, either block doesn't have result,
-    // or it's an unreachable frame without pushed result.
-    if (frame_stack_height > frame.parent_stack_height && operand_stack.pop() != frame.type)
-        throw validation_error{"block type mismatch"};
+    if (arity != 0)
+        drop_operand(frame, operand_stack, frame.type);
 }
 
 inline std::optional<ValType> get_branch_frame_type(const ControlFrame& frame) noexcept
@@ -181,21 +189,6 @@ inline void mark_frame_unreachable(ControlFrame& frame, Stack<ValType>& operand_
 {
     frame.unreachable = true;
     operand_stack.shrink(static_cast<size_t>(frame.parent_stack_height));
-}
-
-inline void drop_operand(
-    const ControlFrame& frame, Stack<ValType>& operand_stack, std::optional<ValType> expected_type)
-{
-    if (!frame.unreachable &&
-        static_cast<int>(operand_stack.size()) < frame.parent_stack_height + 1)
-        throw validation_error{"stack underflow"};
-
-    if (frame.unreachable && static_cast<int>(operand_stack.size()) == frame.parent_stack_height)
-        return;
-
-    const auto actual_type = operand_stack.pop();
-    if (expected_type.has_value() && actual_type != *expected_type)
-        throw validation_error{"type mismatch"};
 }
 
 inline void push_operand(Stack<ValType>& operand_stack, ValType type)
