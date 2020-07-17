@@ -112,7 +112,7 @@ void update_operand_stack(const ControlFrame& frame, Stack<ValType>& operand_sta
         operand_stack.push(output_type);
 }
 
-void validate_result_count(const ControlFrame& frame, const Stack<ValType>& operand_stack)
+void update_result_stack(const ControlFrame& frame, Stack<ValType>& operand_stack)
 {
     const auto frame_stack_height = static_cast<int>(operand_stack.size());
 
@@ -124,11 +124,15 @@ void validate_result_count(const ControlFrame& frame, const Stack<ValType>& oper
     if (frame_stack_height > frame.parent_stack_height + arity)
         throw validation_error{"too many results"};
 
-    if (frame.unreachable)
-        return;
-
-    if (frame_stack_height < frame.parent_stack_height + arity)
+    if (!frame.unreachable && frame_stack_height < frame.parent_stack_height + arity)
         throw validation_error{"missing result"};
+
+    // If there's an item above parent stack, we know it's the result value,
+    // that needs to be type checked.
+    // If there's none, either block doesn't have result,
+    // or it's an unreachable frame without pushed result.
+    if (frame_stack_height > frame.parent_stack_height && operand_stack.pop() != frame.type)
+        throw validation_error{"block type mismatch"};
 }
 
 inline std::optional<ValType> get_branch_frame_type(const ControlFrame& frame) noexcept
@@ -469,13 +473,12 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             if (frame.instruction != Instr::if_)
                 throw parser_error{"unexpected else instruction (if instruction missing)"};
 
-            validate_result_count(frame, operand_stack);  // else is the end of if.
+            update_result_stack(frame, operand_stack);  // else is the end of if.
 
-            // Reset frame after if. The if result type validation not implemented yet.
+            // Reset frame after if.
             frame.unreachable = false;
             const auto if_imm_offset = frame.immediates_offset;
             frame.immediates_offset = code.immediates.size();
-            operand_stack.shrink(static_cast<size_t>(frame.parent_stack_height));
 
             // Placeholders for immediate values, filled at the matching end instructions.
             push(code.immediates, uint32_t{0});  // Diff to the end instruction.
@@ -496,7 +499,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
         case Instr::end:
         {
-            validate_result_count(frame, operand_stack);
+            update_result_stack(frame, operand_stack);
 
             if (frame.instruction != Instr::loop)  // If end of block/if/else instruction.
             {
