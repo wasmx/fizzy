@@ -119,8 +119,11 @@ inline void drop_operand(
         static_cast<int>(operand_stack.size()) < frame.parent_stack_height + 1)
         throw validation_error{"stack underflow"};
 
-    if (frame.unreachable && static_cast<int>(operand_stack.size()) == frame.parent_stack_height)
+    if (static_cast<int>(operand_stack.size()) == frame.parent_stack_height)
+    {
+        assert(frame.unreachable);  // implied from stack underflow check above
         return;
+    }
 
     const auto actual_type = operand_stack.pop();
     if (expected_type.has_value() && actual_type != *expected_type)
