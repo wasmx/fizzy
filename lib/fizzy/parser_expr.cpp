@@ -41,8 +41,7 @@ struct ControlFrame
     const size_t code_offset{0};
 
     /// The immediates offset for block instructions.
-    /// Non-const because else block changes it (to resolve jumping over else block).
-    size_t immediates_offset{0};
+    const size_t immediates_offset{0};
 
     /// The frame stack height of the parent frame.
     const int parent_stack_height{0};
@@ -471,10 +470,15 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
             update_result_stack(frame, operand_stack);  // else is the end of if.
 
-            // Reset frame after if.
-            frame.unreachable = false;
             const auto if_imm_offset = frame.immediates_offset;
-            frame.immediates_offset = code.immediates.size();
+            const auto frame_type = frame.type;
+            auto frame_br_immediate_offsets = std::move(frame.br_immediate_offsets);
+
+            control_stack.pop();
+            control_stack.emplace(Instr::else_, frame_type, static_cast<int>(operand_stack.size()),
+                code.instructions.size(), code.immediates.size());
+            // br immediates from `then` branch will need to be filled at the end of `else`
+            control_stack.top().br_immediate_offsets = std::move(frame_br_immediate_offsets);
 
             // Placeholders for immediate values, filled at the matching end instructions.
             push(code.immediates, uint32_t{0});  // Diff to the end instruction.
@@ -497,6 +501,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         {
             update_result_stack(frame, operand_stack);
 
+            if (frame.type.has_value() && frame.instruction == Instr::if_)
+                throw validation_error{"missing result in else branch"};
+
             if (frame.instruction != Instr::loop)  // If end of block/if/else instruction.
             {
                 // In case it's an outermost implicit function block,
@@ -507,7 +514,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
                                            static_cast<uint32_t>(code.instructions.size() + 1);
                 const auto target_imm = static_cast<uint32_t>(code.immediates.size());
 
-                if (frame.instruction == Instr::if_)
+                if (frame.instruction == Instr::if_ || frame.instruction == Instr::else_)
                 {
                     // We're at the end instruction of the if block without else or at the end of
                     // else block. Fill in if/else's immediates with offsets of first instruction

@@ -840,6 +840,34 @@ TEST(validation_stack, else_missing_result)
     const auto wasm =
         from_hex("0061736d01000000010401600000030201000a0e010c004100047f410105010b1a0b");
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "stack underflow");
+
+    /* wat2wasm --no-check
+    (func (result i32)
+      (i32.const 0)
+      (if (result i32)
+        (then (i32.const 0))
+        (else)
+      )
+    )
+    */
+    const auto wasm_missing_else =
+        from_hex("0061736d010000000105016000017f030201000a0b0109004100047f41000b0b");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm_missing_else), validation_error, "missing result in else branch");
+
+    /* wat2wasm --no-check
+    (func (result i32)
+      unreachable
+      (if (result i32)
+        (then (i32.const 0))
+        (else)
+      )
+    )
+    */
+    const auto wasm_unreachable =
+        from_hex("0061736d010000000105016000017f030201000a0a01080000047f41000b0b");
+    EXPECT_THROW_MESSAGE(
+        parse(wasm_unreachable), validation_error, "missing result in else branch");
 }
 
 TEST(validation_stack, else_missing_result_v2)
@@ -1004,6 +1032,32 @@ TEST(validation_stack, if_with_unreachable)
     const auto wasm =
         from_hex("0061736d0100000001060160017f017e030201000a0e010c002000047e004201051a0b0b");
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "stack underflow");
+
+    /* wat2wasm
+    (func (result i32)
+      (i32.const 0)
+      (if (result i32)
+        (then (unreachable))
+        (else (i32.const 0))
+      )
+    )
+    */
+    const auto wasm2 =
+        from_hex("0061736d010000000105016000017f030201000a0d010b004100047f000541000b0b");
+    EXPECT_NO_THROW(parse(wasm2));
+
+    /* wat2wasm
+    (func (result i32)
+      (i32.const 0)
+      (if (result i32)
+        (then (i32.const 0))
+        (else (unreachable))
+      )
+    )
+    */
+    const auto wasm3 =
+        from_hex("0061736d010000000105016000017f030201000a0d010b004100047f410005000b0b");
+    EXPECT_NO_THROW(parse(wasm3));
 }
 
 TEST(validation_stack, br_missing_result)
