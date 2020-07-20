@@ -582,6 +582,36 @@ TEST(validation_stack_type, br_type_mismatch)
     EXPECT_THROW_MESSAGE(parse(wasm_br_if), validation_error, "type mismatch");
 }
 
+TEST(validation_stack_type, br_if_branch_not_taken)
+{
+    /* wat2wasm
+    (func (result i32)
+      (block (result i32)
+        i32.const 0
+        i32.const 0
+        br_if 0
+      )
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d010000000105016000017f030201000a0d010b00027f410041000d000b0b");
+    EXPECT_NO_THROW(parse(wasm));
+
+    /* wat2wasm --no-check
+    (func (result i32)
+      (block
+        i32.const 0
+        i32.const 0
+        br_if 1
+      )
+      i32.const 0
+    )
+    */
+    const auto wasm_mismatch =
+        from_hex("0061736d010000000105016000017f030201000a0f010d000240410041000d010b41000b");
+    EXPECT_THROW_MESSAGE(parse(wasm_mismatch), validation_error, "too many results");
+}
+
 TEST(validation_stack_type, unreachable_br)
 {
     /* wat2wasm
