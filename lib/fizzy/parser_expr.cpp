@@ -549,6 +549,14 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
             if (instr == Instr::br)
                 mark_frame_unreachable(frame, operand_stack);
+            else
+            {
+                // For the case when branch is not taken for br_if,
+                // we push back the block result value, that was popped in update_branch_stack.
+                const auto branch_frame_type = get_branch_frame_type(branch_frame);
+                if (branch_frame_type.has_value())
+                    push_operand(operand_stack, *branch_frame.type);
+            }
 
             break;
         }
