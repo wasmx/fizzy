@@ -1,0 +1,8 @@
+{"source_filename": "broken.wast",
+ "commands": [
+  {"type": "invalid_command", "line": 0},
+  {"type": "module", "line": 2, "filename": "missing_file.wasm"},
+  {"type": "module", "line": 5, "filename": "unparsable.wasm"},
+  {"type": "assert_return", "line": 10, "action": {"type": "get", "field": "tmp"}, "expected": []},
+  {"type": "assert_return", "line": 15, "action": {"type": "invalid_action_type"}, "expected": []},
+  {"type": "assert_trap", "line": 20, "action": {"type": "invalid_action_type"}, "expected": []}]}

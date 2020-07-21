@@ -33,6 +33,16 @@ set_tests_properties(
 )
 
 add_test(
+    NAME fizzy/smoketests/spectests/broken
+    COMMAND fizzy-spectests ${CMAKE_CURRENT_LIST_DIR}/broken
+)
+set_tests_properties(
+    fizzy/smoketests/spectests/broken
+    PROPERTIES
+    PASS_REGULAR_EXPRESSION "PASSED 0, FAILED 2, SKIPPED 4"
+)
+
+add_test(
     NAME fizzy/smoketests/spectests/cli-missing-dir-arg
     COMMAND fizzy-spectests
 )
@@ -58,6 +68,7 @@ set_tests_properties(
     fizzy/smoketests/spectests/default
     fizzy/smoketests/spectests/skipvalidation
     fizzy/smoketests/spectests/failures
+    fizzy/smoketests/spectests/broken
     fizzy/smoketests/spectests/cli-missing-dir-arg
     fizzy/smoketests/spectests/cli-invalid-arg
     PROPERTIES
