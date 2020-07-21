@@ -35,6 +35,34 @@ if(is_big_endian)
 endif()
 
 cable_configure_compiler()
+add_compile_options(
+    -Wcast-qual
+    -Wcast-align
+    -Wextra-semi
+    -Wmissing-declarations
+    -Wold-style-cast
+)
+cable_add_cxx_compiler_flag_if_supported(-Wfinal-dtor-non-final-class)
+cable_add_cxx_compiler_flag_if_supported(-Wnewline-eof)
+cable_add_cxx_compiler_flag_if_supported(-Wsuggest-destructor-override)
+cable_add_cxx_compiler_flag_if_supported(-Wunreachable-code-break)
+cable_add_cxx_compiler_flag_if_supported(-Wduplicated-cond)
+cable_add_cxx_compiler_flag_if_supported(-Wduplicate-enum)
+cable_add_cxx_compiler_flag_if_supported(-Wlogical-op)
+
+option(WEVERYTHING "Enable almost all compiler warnings" OFF)
+if(WEVERYTHING)
+    add_compile_options(-Weverything)
+    add_compile_options(
+        -Wno-c++98-compat
+        -Wno-c++98-compat-pedantic
+        -Wno-covered-switch-default
+        -Wno-double-promotion
+        -Wno-float-equal
+        -Wno-padded
+        -Wno-switch-enum
+    )
+endif()
 
 # An option to enable assertions in non-Debug build types.
 # Disabling assertions in Debug build type has no effect (assertions are still enabled).

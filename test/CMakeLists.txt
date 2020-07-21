@@ -2,6 +2,16 @@
 # Copyright 2019-2020 The Fizzy Authors.
 # SPDX-License-Identifier: Apache-2.0
 
+if(WEVERYTHING)
+    add_compile_options(
+        -Wno-exit-time-destructors
+        -Wno-global-constructors
+        -Wno-unneeded-member-function  # Seems to be buggy.
+        -Wno-unused-member-function    # Seems to be buggy.
+        -Wno-used-but-marked-unused
+    )
+endif()
+
 if(HUNTER_ENABLED)
     hunter_add_package(benchmark)
 endif()
