@@ -557,8 +557,17 @@ Module parse(bytes_view input)
     if (!module.elementsec.empty() && !module.has_table())
         throw validation_error{"element section encountered without a table section"};
 
+    const auto total_func_count = module.get_function_count();
+
     for (const auto& element : module.elementsec)
+    {
         validate_constant_expression(element.offset, module);
+        for (const auto func_idx : element.init)
+        {
+            if (func_idx >= total_func_count)
+                throw validation_error{"invalid function index in element section"};
+        }
+    }
 
     const auto total_global_count = module.get_global_count();
     for (const auto& global : module.globalsec)
@@ -578,8 +587,6 @@ Module parse(bytes_view input)
 
     if (module.funcsec.size() != code_binaries.size())
         throw parser_error{"malformed binary: number of function and code entries must match"};
-
-    const auto total_func_count = module.get_function_count();
 
     // Validate exports.
     std::unordered_set<std::string_view> export_names;
