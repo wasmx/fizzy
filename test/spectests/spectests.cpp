@@ -576,29 +576,20 @@ bool run_tests_from_dir(const fs::path& path, const test_settings& settings)
     std::sort(std::begin(files), std::end(files));
 
     test_results total;
-    bool exception_thrown = false;
     for (const auto& f : files)
     {
-        try
-        {
-            const auto res = test_runner{settings}.run_from_file(f);
+        const auto res = test_runner{settings}.run_from_file(f);
 
-            total.passed += res.passed;
-            total.failed += res.failed;
-            total.skipped += res.skipped;
-        }
-        catch (const std::exception& ex)
-        {
-            std::cerr << "Exception: " << ex.what() << "\n\n";
-            exception_thrown = true;
-        }
+        total.passed += res.passed;
+        total.failed += res.failed;
+        total.skipped += res.skipped;
     }
 
     std::cout << "TOTAL " << (total.passed + total.failed + total.skipped) << " tests ran from "
               << path << ".\n  PASSED " << total.passed << ", FAILED " << total.failed
               << ", SKIPPED " << total.skipped << ".\n";
 
-    return (total.failed == 0 && !exception_thrown);
+    return total.failed == 0;
 }
 
 }  // namespace
