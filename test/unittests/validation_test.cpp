@@ -182,6 +182,50 @@ TEST(validation, element_section_invalid_offset_expression)
         "constant expression can use global.get only for const globals");
 }
 
+TEST(validation, element_section_invalid_function_index)
+{
+    /* wat2wasm --no-check
+      (table 4 funcref)
+      (elem (i32.const 0) 0)
+    */
+    const auto bin1 = from_hex("0061736d010000000404017000040907010041000b0100");
+    EXPECT_THROW_MESSAGE(
+        parse(bin1), validation_error, "invalid function index in element section");
+
+    /* wat2wasm --no-check
+      (table 4 funcref)
+      (elem (i32.const 0) 0 1)
+      (func)
+    */
+    const auto bin2 = from_hex(
+        "0061736d01000000010401600000030201000404017000040908010041000b0200010a040102000b");
+    EXPECT_THROW_MESSAGE(
+        parse(bin2), validation_error, "invalid function index in element section");
+
+    /* wat2wasm --no-check
+      (table 4 funcref)
+      (elem (i32.const 0) 0)
+      (elem (i32.const 1) 1)
+      (func)
+    */
+    const auto bin3 = from_hex(
+        "0061736d0100000001040160000003020100040401700004090d020041000b01000041010b01010a040102000"
+        "b");
+    EXPECT_THROW_MESSAGE(
+        parse(bin3), validation_error, "invalid function index in element section");
+
+    /* wat2wasm --no-check
+      (type (func (result i32)))
+      (func (import "m" "f") (type 0))
+      (table 4 funcref)
+      (elem (i32.const 0) 0 1)
+    */
+    const auto bin4 = from_hex(
+        "0061736d010000000105016000017f020701016d016600000404017000040908010041000b020001");
+    EXPECT_THROW_MESSAGE(
+        parse(bin4), validation_error, "invalid function index in element section");
+}
+
 TEST(validation, i32_store_no_memory)
 {
     /* wat2wasm --no-check
