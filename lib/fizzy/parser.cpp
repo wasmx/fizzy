@@ -97,6 +97,10 @@ inline parser_result<FuncType> parse(const uint8_t* pos, const uint8_t* end)
     FuncType result;
     std::tie(result.inputs, pos) = parse_vec<ValType>(pos, end);
     std::tie(result.outputs, pos) = parse_vec<ValType>(pos, end);
+
+    if (result.outputs.size() > 1)
+        throw validation_error{"function has more than one result"};
+
     return {result, pos};
 }
 

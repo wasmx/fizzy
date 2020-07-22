@@ -13,6 +13,15 @@
 using namespace fizzy;
 using namespace fizzy::test;
 
+TEST(validation, function_type_invalid_arity)
+{
+    /* wat2wasm --no-check
+    (type (func (result i32 i32)))
+    */
+    const auto wasm = from_hex("0061736d010000000106016000027f7f");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "function has more than one result");
+}
+
 TEST(validation, imported_function_unknown_type)
 {
     /* wat2wasm --no-check
