@@ -14,7 +14,8 @@ namespace fizzy
 {
 namespace
 {
-void validate_constant_expression(const ConstantExpression& const_expr, const Module& module)
+void validate_constant_expression(
+    const ConstantExpression& const_expr, const Module& module, ValType expected_type)
 {
     if (const_expr.kind == ConstantExpression::Kind::Constant)
         return;
@@ -23,8 +24,12 @@ void validate_constant_expression(const ConstantExpression& const_expr, const Mo
     if (global_idx >= module.get_global_count())
         throw validation_error{"invalid global index in constant expression"};
 
-    if (module.get_global_type(global_idx).is_mutable)
+    const auto global_type = module.get_global_type(global_idx);
+    if (global_type.is_mutable)
         throw validation_error{"constant expression can use global.get only for const globals"};
+
+    if (global_type.value_type != expected_type)
+        throw validation_error{"constant expression type mismatch"};
 }
 }  // namespace
 
@@ -561,7 +566,11 @@ Module parse(bytes_view input)
         throw validation_error{"data section encountered without a memory section"};
 
     for (const auto& data : module.datasec)
-        validate_constant_expression(data.offset, module);
+    {
+        // Offset expression is required to have i32 result value
+        // https://webassembly.github.io/spec/core/valid/modules.html#data-segments
+        validate_constant_expression(data.offset, module, ValType::i32);
+    }
 
     if (module.imported_table_types.size() > 1)
         throw validation_error{"too many imported tables (at most one is allowed)"};
@@ -579,7 +588,9 @@ Module parse(bytes_view input)
 
     for (const auto& element : module.elementsec)
     {
-        validate_constant_expression(element.offset, module);
+        // Offset expression is required to have i32 result value
+        // https://webassembly.github.io/spec/core/valid/modules.html#element-segments
+        validate_constant_expression(element.offset, module, ValType::i32);
         for (const auto func_idx : element.init)
         {
             if (func_idx >= total_func_count)
@@ -590,7 +601,7 @@ Module parse(bytes_view input)
     const auto total_global_count = module.get_global_count();
     for (const auto& global : module.globalsec)
     {
-        validate_constant_expression(global.expression, module);
+        validate_constant_expression(global.expression, module, global.type.value_type);
 
         // Wasm spec section 3.3.7 constrains initialization by another global to const imports only
         // https://webassembly.github.io/spec/core/valid/instructions.html#expressions
