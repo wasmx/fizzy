@@ -14,7 +14,8 @@ namespace fizzy
 {
 namespace
 {
-void validate_constant_expression(const ConstantExpression& const_expr, const Module& module)
+void validate_constant_expression(
+    const ConstantExpression& const_expr, const Module& module, ValType expected_type)
 {
     if (const_expr.kind == ConstantExpression::Kind::Constant)
         return;
@@ -23,8 +24,12 @@ void validate_constant_expression(const ConstantExpression& const_expr, const Mo
     if (global_idx >= module.get_global_count())
         throw validation_error{"invalid global index in constant expression"};
 
-    if (module.get_global_type(global_idx).is_mutable)
+    const auto global_type = module.get_global_type(global_idx);
+    if (global_type.is_mutable)
         throw validation_error{"constant expression can use global.get only for const globals"};
+
+    if (global_type.value_type != expected_type)
+        throw validation_error{"constant expression type mismatch"};
 }
 }  // namespace
 
@@ -122,9 +127,12 @@ inline parser_result<GlobalType> parse_global_type(const uint8_t* pos, const uin
 }
 
 inline parser_result<ConstantExpression> parse_constant_expression(
-    const uint8_t* pos, const uint8_t* end)
+    ValType expected_type, const uint8_t* pos, const uint8_t* end)
 {
     ConstantExpression result;
+    // Module is needed to know the type of globals accessed with global.get,
+    // therefore here we can validate the type only for const instructions.
+    std::optional<ValType> constant_actual_type;
 
     uint8_t opcode;
     std::tie(opcode, pos) = parse_byte(pos, end);
@@ -152,6 +160,7 @@ inline parser_result<ConstantExpression> parse_constant_expression(
         int32_t value;
         std::tie(value, pos) = leb128s_decode<int32_t>(pos, end);
         result.value.constant = static_cast<uint32_t>(value);
+        constant_actual_type = ValType::i32;
         break;
     }
 
@@ -161,6 +170,7 @@ inline parser_result<ConstantExpression> parse_constant_expression(
         int64_t value;
         std::tie(value, pos) = leb128s_decode<int64_t>(pos, end);
         result.value.constant = static_cast<uint64_t>(value);
+        constant_actual_type = ValType::i64;
         break;
     }
     case Instr::f32_const:
@@ -168,12 +178,14 @@ inline parser_result<ConstantExpression> parse_constant_expression(
         result.kind = ConstantExpression::Kind::Constant;
         result.value.constant = 0;
         pos = skip(4, pos, end);
+        constant_actual_type = ValType::f32;
         break;
     case Instr::f64_const:
         // TODO: support this once floating points are implemented
         result.kind = ConstantExpression::Kind::Constant;
         result.value.constant = 0;
         pos = skip(8, pos, end);
+        constant_actual_type = ValType::f64;
         break;
     }
 
@@ -183,6 +195,9 @@ inline parser_result<ConstantExpression> parse_constant_expression(
     if (static_cast<Instr>(end_opcode) != Instr::end)
         throw validation_error{"constant expression has multiple instructions"};
 
+    if (constant_actual_type.has_value() && constant_actual_type != expected_type)
+        throw validation_error{"constant expression type mismatch"};
+
     return {result, pos};
 }
 
@@ -191,7 +206,7 @@ inline parser_result<Global> parse(const uint8_t* pos, const uint8_t* end)
 {
     Global result;
     std::tie(result.type, pos) = parse_global_type(pos, end);
-    std::tie(result.expression, pos) = parse_constant_expression(pos, end);
+    std::tie(result.expression, pos) = parse_constant_expression(result.type.value_type, pos, end);
 
     return {result, pos};
 }
@@ -333,7 +348,9 @@ inline parser_result<Element> parse(const uint8_t* pos, const uint8_t* end)
         throw parser_error{"unexpected tableidx value " + std::to_string(table_index)};
 
     ConstantExpression offset;
-    std::tie(offset, pos) = parse_constant_expression(pos, end);
+    // Offset expression is required to have i32 result value
+    // https://webassembly.github.io/spec/core/valid/modules.html#element-segments
+    std::tie(offset, pos) = parse_constant_expression(ValType::i32, pos, end);
 
     std::vector<FuncIdx> init;
     std::tie(init, pos) = parse_vec<FuncIdx>(pos, end);
@@ -400,7 +417,9 @@ inline parser_result<Data> parse(const uint8_t* pos, const uint8_t* end)
         throw parser_error{"unexpected memidx value " + std::to_string(memory_index)};
 
     ConstantExpression offset;
-    std::tie(offset, pos) = parse_constant_expression(pos, end);
+    // Offset expression is required to have i32 result value
+    // https://webassembly.github.io/spec/core/valid/modules.html#data-segments
+    std::tie(offset, pos) = parse_constant_expression(ValType::i32, pos, end);
 
     // NOTE: this is an optimised version of parse_vec<uint8_t>
     uint32_t size;
@@ -547,7 +566,11 @@ Module parse(bytes_view input)
         throw validation_error{"data section encountered without a memory section"};
 
     for (const auto& data : module.datasec)
-        validate_constant_expression(data.offset, module);
+    {
+        // Offset expression is required to have i32 result value
+        // https://webassembly.github.io/spec/core/valid/modules.html#data-segments
+        validate_constant_expression(data.offset, module, ValType::i32);
+    }
 
     if (module.imported_table_types.size() > 1)
         throw validation_error{"too many imported tables (at most one is allowed)"};
@@ -565,7 +588,9 @@ Module parse(bytes_view input)
 
     for (const auto& element : module.elementsec)
     {
-        validate_constant_expression(element.offset, module);
+        // Offset expression is required to have i32 result value
+        // https://webassembly.github.io/spec/core/valid/modules.html#element-segments
+        validate_constant_expression(element.offset, module, ValType::i32);
         for (const auto func_idx : element.init)
         {
             if (func_idx >= total_func_count)
@@ -576,7 +601,7 @@ Module parse(bytes_view input)
     const auto total_global_count = module.get_global_count();
     for (const auto& global : module.globalsec)
     {
-        validate_constant_expression(global.expression, module);
+        validate_constant_expression(global.expression, module, global.type.value_type);
 
         // Wasm spec section 3.3.7 constrains initialization by another global to const imports only
         // https://webassembly.github.io/spec/core/valid/instructions.html#expressions

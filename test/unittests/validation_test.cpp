@@ -74,6 +74,22 @@ TEST(validation, globals_invalid_initializer)
     */
     const auto bin_no_instr = from_hex("0061736d010000000604017e010b");
     EXPECT_THROW_MESSAGE(parse(bin_no_instr), validation_error, "constant expression is empty");
+
+    /* wat2wasm --no-check
+      (global (mut i32) (i64.const 16))
+    */
+    const auto bin_const_type_mismatch = from_hex("0061736d010000000606017f0142100b");
+    EXPECT_THROW_MESSAGE(
+        parse(bin_const_type_mismatch), validation_error, "constant expression type mismatch");
+
+    /* wat2wasm --no-check
+      (global (import "mod" "g1") i64)
+      (global i32 (global.get 0))
+    */
+    const auto bin_global_type_mismatch =
+        from_hex("0061736d01000000020b01036d6f64026731037e000606017f0023000b");
+    EXPECT_THROW_MESSAGE(
+        parse(bin_global_type_mismatch), validation_error, "constant expression type mismatch");
 }
 
 TEST(validation, import_memories_multiple)
@@ -160,6 +176,25 @@ TEST(validation, data_section_invalid_offset_expression)
 
     EXPECT_THROW_MESSAGE(parse(bin2), validation_error,
         "constant expression can use global.get only for const globals");
+
+    /* wat2wasm --no-check
+      (memory 1 1)
+      (global i64 (i64.const 42))
+      (data (global.get 0) "\aa\ff")
+    */
+    const auto bin_const_type_mismatch =
+        from_hex("0061736d010000000504010101010606017e00422a0b0b08010023000b02aaff");
+    EXPECT_THROW_MESSAGE(
+        parse(bin_const_type_mismatch), validation_error, "constant expression type mismatch");
+
+    /* wat2wasm --no-check
+      (memory 1 1)
+      (data (i64.const 0) "\aa\ff")
+    */
+    const auto bin_global_type_mismatch =
+        from_hex("0061736d010000000504010101010b08010042000b02aaff");
+    EXPECT_THROW_MESSAGE(
+        parse(bin_global_type_mismatch), validation_error, "constant expression type mismatch");
 }
 
 TEST(validation, element_section_invalid_offset_expression)
@@ -189,6 +224,30 @@ TEST(validation, element_section_invalid_offset_expression)
 
     EXPECT_THROW_MESSAGE(parse(bin2), validation_error,
         "constant expression can use global.get only for const globals");
+
+    /* wat2wasm --no-check
+      (global i64 (i64.const 42))
+      (table 4 funcref)
+      (elem (global.get 0) 0 1)
+      (func)
+      (func)
+    */
+    const auto bin_const_type_mismatch = from_hex(
+        "0061736d0100000001040160000003030200000404017000040606017e00422a0b0908010023000b0200010a07"
+        "0202000b02000b");
+    EXPECT_THROW_MESSAGE(
+        parse(bin_const_type_mismatch), validation_error, "constant expression type mismatch");
+
+    /* wat2wasm --no-check
+      (table 4 funcref)
+      (elem (i64.const 0) 0 1)
+      (func)
+      (func)
+    */
+    const auto bin_global_type_mismatch = from_hex(
+        "0061736d0100000001040160000003030200000404017000040908010042000b0200010a070202000b02000b");
+    EXPECT_THROW_MESSAGE(
+        parse(bin_global_type_mismatch), validation_error, "constant expression type mismatch");
 }
 
 TEST(validation, element_section_invalid_function_index)
