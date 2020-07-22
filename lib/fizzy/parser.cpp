@@ -122,9 +122,12 @@ inline parser_result<GlobalType> parse_global_type(const uint8_t* pos, const uin
 }
 
 inline parser_result<ConstantExpression> parse_constant_expression(
-    const uint8_t* pos, const uint8_t* end)
+    ValType expected_type, const uint8_t* pos, const uint8_t* end)
 {
     ConstantExpression result;
+    // Module is needed to know the type of globals accessed with global.get,
+    // therefore here we can validate the type only for const instructions.
+    std::optional<ValType> constant_actual_type;
 
     uint8_t opcode;
     std::tie(opcode, pos) = parse_byte(pos, end);
@@ -152,6 +155,7 @@ inline parser_result<ConstantExpression> parse_constant_expression(
         int32_t value;
         std::tie(value, pos) = leb128s_decode<int32_t>(pos, end);
         result.value.constant = static_cast<uint32_t>(value);
+        constant_actual_type = ValType::i32;
         break;
     }
 
@@ -161,6 +165,7 @@ inline parser_result<ConstantExpression> parse_constant_expression(
         int64_t value;
         std::tie(value, pos) = leb128s_decode<int64_t>(pos, end);
         result.value.constant = static_cast<uint64_t>(value);
+        constant_actual_type = ValType::i64;
         break;
     }
     case Instr::f32_const:
@@ -168,12 +173,14 @@ inline parser_result<ConstantExpression> parse_constant_expression(
         result.kind = ConstantExpression::Kind::Constant;
         result.value.constant = 0;
         pos = skip(4, pos, end);
+        constant_actual_type = ValType::f32;
         break;
     case Instr::f64_const:
         // TODO: support this once floating points are implemented
         result.kind = ConstantExpression::Kind::Constant;
         result.value.constant = 0;
         pos = skip(8, pos, end);
+        constant_actual_type = ValType::f64;
         break;
     }
 
@@ -183,6 +190,9 @@ inline parser_result<ConstantExpression> parse_constant_expression(
     if (static_cast<Instr>(end_opcode) != Instr::end)
         throw validation_error{"constant expression has multiple instructions"};
 
+    if (constant_actual_type.has_value() && constant_actual_type != expected_type)
+        throw validation_error{"constant expression type mismatch"};
+
     return {result, pos};
 }
 
@@ -191,7 +201,7 @@ inline parser_result<Global> parse(const uint8_t* pos, const uint8_t* end)
 {
     Global result;
     std::tie(result.type, pos) = parse_global_type(pos, end);
-    std::tie(result.expression, pos) = parse_constant_expression(pos, end);
+    std::tie(result.expression, pos) = parse_constant_expression(result.type.value_type, pos, end);
 
     return {result, pos};
 }
@@ -333,7 +343,9 @@ inline parser_result<Element> parse(const uint8_t* pos, const uint8_t* end)
         throw parser_error{"unexpected tableidx value " + std::to_string(table_index)};
 
     ConstantExpression offset;
-    std::tie(offset, pos) = parse_constant_expression(pos, end);
+    // Offset expression is required to have i32 result value
+    // https://webassembly.github.io/spec/core/valid/modules.html#element-segments
+    std::tie(offset, pos) = parse_constant_expression(ValType::i32, pos, end);
 
     std::vector<FuncIdx> init;
     std::tie(init, pos) = parse_vec<FuncIdx>(pos, end);
@@ -400,7 +412,9 @@ inline parser_result<Data> parse(const uint8_t* pos, const uint8_t* end)
         throw parser_error{"unexpected memidx value " + std::to_string(memory_index)};
 
     ConstantExpression offset;
-    std::tie(offset, pos) = parse_constant_expression(pos, end);
+    // Offset expression is required to have i32 result value
+    // https://webassembly.github.io/spec/core/valid/modules.html#data-segments
+    std::tie(offset, pos) = parse_constant_expression(ValType::i32, pos, end);
 
     // NOTE: this is an optimised version of parse_vec<uint8_t>
     uint32_t size;
