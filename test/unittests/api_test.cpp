@@ -25,6 +25,48 @@ ExecutionResult function_returning_void(Instance&, span<const uint64_t>, int) no
 }
 }  // namespace
 
+TEST(api, execution_result_trap)
+{
+    const auto result = Trap;
+    EXPECT_TRUE(result.trapped);
+    EXPECT_FALSE(result.has_value);
+    EXPECT_EQ(result.value, 0);
+}
+
+TEST(api, execution_result_void)
+{
+    const auto result = Void;
+    EXPECT_FALSE(result.trapped);
+    EXPECT_FALSE(result.has_value);
+    EXPECT_EQ(result.value, 0);
+}
+
+TEST(api, execution_result_value)
+{
+    const ExecutionResult result = 1234;
+    EXPECT_FALSE(result.trapped);
+    EXPECT_TRUE(result.has_value);
+    EXPECT_EQ(result.value, 1234);
+}
+
+TEST(api, execution_result_bool_constructor)
+{
+    bool success = false;
+    const ExecutionResult result{success};
+    EXPECT_TRUE(result.trapped);
+    EXPECT_FALSE(result.has_value);
+    EXPECT_EQ(result.value, 0);
+}
+
+TEST(api, execution_result_uint64_constructor)
+{
+    uint64_t value = 1234;
+    const ExecutionResult result{value};
+    EXPECT_FALSE(result.trapped);
+    EXPECT_TRUE(result.has_value);
+    EXPECT_EQ(result.value, 1234);
+}
+
 TEST(api, resolve_imported_functions)
 {
     /* wat2wasm
