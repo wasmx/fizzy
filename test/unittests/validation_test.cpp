@@ -338,13 +338,11 @@ TEST(validation, memory_size_no_memory)
 TEST(validation, store_alignment)
 {
     // NOTE: could use instruction_metrics here, but better to have two sources of truth for testing
-    const std::tuple<Instr, int, Instr> test_cases[] = {
-        {Instr::i32_store8, 0, Instr::i32_const}, {Instr::i32_store16, 1, Instr::i32_const},
-        {Instr::i32_store, 2, Instr::i32_const}, {Instr::i64_store8, 0, Instr::i64_const},
-        {Instr::i64_store16, 1, Instr::i64_const}, {Instr::i64_store32, 2, Instr::i64_const},
-        {Instr::i64_store, 3, Instr::i64_const},
-        // TODO: include floating point
-    };
+    const std::tuple<Instr, int, Instr> test_cases[] = {{Instr::i32_store8, 0, Instr::i32_const},
+        {Instr::i32_store16, 1, Instr::i32_const}, {Instr::i32_store, 2, Instr::i32_const},
+        {Instr::i64_store8, 0, Instr::i64_const}, {Instr::i64_store16, 1, Instr::i64_const},
+        {Instr::i64_store32, 2, Instr::i64_const}, {Instr::i64_store, 3, Instr::i64_const},
+        {Instr::f32_store, 2, Instr::f32_const}, {Instr::f64_store, 3, Instr::f64_const}};
 
     for (const auto& test_case : test_cases)
     {
@@ -361,9 +359,15 @@ TEST(validation, store_alignment)
             const auto type_section = make_vec({"60017f00"_bytes});
             const auto function_section = make_vec({"00"_bytes});
             // NOTE: this depends on align < 0x80
-            const auto code_bin = bytes{0,  // vec(locals)
-                uint8_t(Instr::local_get), 0, uint8_t(push_address_instr), 0, uint8_t(instr),
-                uint8_t(align), 0, uint8_t(Instr::end)};
+            auto code_bin = bytes{0,  // vec(locals)
+                uint8_t(Instr::local_get), 0, uint8_t(push_address_instr)};
+            if (push_address_instr == Instr::f32_const)
+                code_bin += "00000000"_bytes;
+            else if (push_address_instr == Instr::f64_const)
+                code_bin += "0000000000000000"_bytes;
+            else
+                code_bin += "00"_bytes;
+            code_bin += bytes{uint8_t(instr), uint8_t(align), 0, uint8_t(Instr::end)};
             const auto code_section = make_vec({add_size_prefix(code_bin)});
             const auto memory_section = "01007f"_bytes;
             const auto bin = bytes{wasm_prefix} + make_section(1, type_section) +
@@ -386,11 +390,20 @@ TEST(validation, load_alignment)
 {
     // NOTE: could use instruction_metrics here, but better to have two sources of truth for testing
     const std::map<Instr, int> test_cases{
-        {Instr::i32_load8_s, 0}, {Instr::i32_load8_u, 0}, {Instr::i32_load16_s, 1},
-        {Instr::i32_load16_u, 1}, {Instr::i32_load, 2}, {Instr::i64_load8_s, 0},
-        {Instr::i64_load8_u, 0}, {Instr::i64_load16_s, 1}, {Instr::i64_load16_u, 1},
-        {Instr::i64_load32_s, 2}, {Instr::i64_load32_u, 2}, {Instr::i64_load, 3},
-        // TODO: include floating point
+        {Instr::i32_load8_s, 0},
+        {Instr::i32_load8_u, 0},
+        {Instr::i32_load16_s, 1},
+        {Instr::i32_load16_u, 1},
+        {Instr::i32_load, 2},
+        {Instr::i64_load8_s, 0},
+        {Instr::i64_load8_u, 0},
+        {Instr::i64_load16_s, 1},
+        {Instr::i64_load16_u, 1},
+        {Instr::i64_load32_s, 2},
+        {Instr::i64_load32_u, 2},
+        {Instr::i64_load, 3},
+        {Instr::f32_load, 2},
+        {Instr::f64_load, 3},
     };
 
     for (const auto test_case : test_cases)
