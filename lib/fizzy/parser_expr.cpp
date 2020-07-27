@@ -272,17 +272,6 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             throw parser_error{"invalid instruction " + std::to_string(*(pos - 1))};
 
         // Floating point instructions are unsupported
-        case Instr::f32_load:
-        case Instr::f64_load:
-        case Instr::f32_store:
-        case Instr::f64_store:
-            if (!module.has_memory())
-                throw validation_error{"memory instructions require imported or defined memory"};
-            // alignment
-            std::tie(std::ignore, pos) = leb128u_decode<uint32_t>(pos, end);
-            // offset
-            std::tie(std::ignore, pos) = leb128u_decode<uint32_t>(pos, end);
-            break;
         case Instr::f32_const:
             pos = skip(4, pos, end);
             break;
@@ -772,6 +761,10 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         case Instr::i64_store8:
         case Instr::i64_store16:
         case Instr::i64_store32:
+        case Instr::f32_load:
+        case Instr::f64_load:
+        case Instr::f32_store:
+        case Instr::f64_store:
         {
             uint32_t align;
             std::tie(align, pos) = leb128u_decode<uint32_t>(pos, end);
