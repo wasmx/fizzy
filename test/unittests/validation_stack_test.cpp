@@ -1071,7 +1071,7 @@ TEST(validation_stack, br_missing_result)
     )
     */
     const auto wasm1 = from_hex("0061736d01000000010401600000030201000a0a010800027f0c000b1a0b");
-    EXPECT_THROW_MESSAGE(parse(wasm1), validation_error, "branch stack underflow");
+    EXPECT_THROW_MESSAGE(parse(wasm1), validation_error, "stack underflow");
 
     /* wat2wasm --no-check
     (func (result i32)
@@ -1080,7 +1080,7 @@ TEST(validation_stack, br_missing_result)
     )
     */
     const auto wasm2 = from_hex("0061736d010000000105016000017f030201000a0b010900410002400c010b0b");
-    EXPECT_THROW_MESSAGE(parse(wasm2), validation_error, "branch stack underflow");
+    EXPECT_THROW_MESSAGE(parse(wasm2), validation_error, "stack underflow");
 
     /* wat2wasm
     (func
@@ -1121,7 +1121,7 @@ TEST(validation_stack, br_if_missing_result)
     )
     */
     const auto wasm1 = from_hex("0061736d01000000010401600000030201000a0c010a00027f41000d000b1a0b");
-    EXPECT_THROW_MESSAGE(parse(wasm1), validation_error, "branch stack underflow");
+    EXPECT_THROW_MESSAGE(parse(wasm1), validation_error, "stack underflow");
 
     /* wat2wasm --no-check
     (func (result i32)
@@ -1134,7 +1134,7 @@ TEST(validation_stack, br_if_missing_result)
     */
     const auto wasm2 =
         from_hex("0061736d010000000105016000017f030201000a0d010b004100024041000d010b0b");
-    EXPECT_THROW_MESSAGE(parse(wasm2), validation_error, "branch stack underflow");
+    EXPECT_THROW_MESSAGE(parse(wasm2), validation_error, "stack underflow");
 
     /* wat2wasm
     (func
@@ -1178,7 +1178,7 @@ TEST(validation_stack, br_table_missing_result)
     */
     const auto wasm1 =
         from_hex("0061736d010000000105016000017f030201000a0e010c00027f41000e0100010b1a0b");
-    EXPECT_THROW_MESSAGE(parse(wasm1), validation_error, "branch stack underflow");
+    EXPECT_THROW_MESSAGE(parse(wasm1), validation_error, "stack underflow");
 
     /* wat2wasm --no-check
     (func (result i32)
@@ -1191,7 +1191,7 @@ TEST(validation_stack, br_table_missing_result)
     */
     const auto wasm2 =
         from_hex("0061736d010000000105016000017f030201000a0f010d004100027f41000e0100010b0b");
-    EXPECT_THROW_MESSAGE(parse(wasm2), validation_error, "branch stack underflow");
+    EXPECT_THROW_MESSAGE(parse(wasm2), validation_error, "stack underflow");
 
     /* wat2wasm
     (func (result i32)
@@ -1230,7 +1230,7 @@ TEST(validation_stack, return_missing_result)
     )
     */
     const auto wasm1 = from_hex("0061736d010000000105016000017f030201000a050103000f0b");
-    EXPECT_THROW_MESSAGE(parse(wasm1), validation_error, "branch stack underflow");
+    EXPECT_THROW_MESSAGE(parse(wasm1), validation_error, "stack underflow");
 
     /* wat2wasm --no-check
     (func (result i32)
@@ -1239,7 +1239,7 @@ TEST(validation_stack, return_missing_result)
     )
     */
     const auto wasm2 = from_hex("0061736d010000000105016000017f030201000a0a010800410002400f0b0b");
-    EXPECT_THROW_MESSAGE(parse(wasm2), validation_error, "branch stack underflow");
+    EXPECT_THROW_MESSAGE(parse(wasm2), validation_error, "stack underflow");
 
     /* wat2wasm
     (func

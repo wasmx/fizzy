@@ -554,3 +554,191 @@ TEST(validation_stack_type, if_unreachable)
         from_hex("0061736d010000000105016000017f030201000a0f010d004100047f4100050042000b0b");
     EXPECT_THROW_MESSAGE(parse(wasm_else_mismatch), validation_error, "type mismatch");
 }
+
+TEST(validation_stack_type, br_type_mismatch)
+{
+    /* wat2wasm --no-check
+    (func (result i32)
+      (block (result i32)
+        i64.const 0
+        br 0
+      )
+    )
+    */
+    const auto wasm = from_hex("0061736d010000000105016000017f030201000a0b010900027f42000c000b0b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "type mismatch");
+
+    /* wat2wasm --no-check
+    (func (result i32)
+      (block (result i32)
+        i64.const 0
+        i32.const 0
+        br_if 0
+      )
+    )
+    */
+    const auto wasm_br_if =
+        from_hex("0061736d010000000105016000017f030201000a0d010b00027f420041000d000b0b");
+    EXPECT_THROW_MESSAGE(parse(wasm_br_if), validation_error, "type mismatch");
+}
+
+TEST(validation_stack_type, br_if_branch_not_taken)
+{
+    /* wat2wasm
+    (func (result i32)
+      (block (result i32)
+        i32.const 0
+        i32.const 0
+        br_if 0
+      )
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d010000000105016000017f030201000a0d010b00027f410041000d000b0b");
+    EXPECT_NO_THROW(parse(wasm));
+
+    /* wat2wasm --no-check
+    (func (result i32)
+      (block
+        i32.const 0
+        i32.const 0
+        br_if 1
+      )
+      i32.const 0
+    )
+    */
+    const auto wasm_mismatch =
+        from_hex("0061736d010000000105016000017f030201000a0f010d000240410041000d010b41000b");
+    EXPECT_THROW_MESSAGE(parse(wasm_mismatch), validation_error, "too many results");
+}
+
+TEST(validation_stack_type, unreachable_br)
+{
+    /* wat2wasm
+    (func (result i32)
+      unreachable
+      i32.const 0
+      br 0
+    )
+    */
+    const auto wasm_br = from_hex("0061736d010000000105016000017f030201000a090107000041000c000b");
+    EXPECT_NO_THROW(parse(wasm_br));
+
+    /* wat2wasm --no-check
+    (func (result i32)
+      unreachable
+      i64.const 0
+      br 0
+    )
+    */
+    const auto wasm_br_mismatch =
+        from_hex("0061736d010000000105016000017f030201000a090107000042000c000b");
+    EXPECT_THROW_MESSAGE(parse(wasm_br_mismatch), validation_error, "type mismatch");
+
+    /* wat2wasm
+    (func (result i32)
+      unreachable
+      i32.const 0
+      i32.const 0
+      br_if 0
+    )
+    */
+    const auto wasm_br_if =
+        from_hex("0061736d010000000105016000017f030201000a0b01090000410041000d000b");
+    EXPECT_NO_THROW(parse(wasm_br_if));
+
+    /* wat2wasm --no-check
+    (func (result i32)
+      unreachable
+      i64.const 0
+      i32.const 0
+      br_if 0
+    )
+    */
+    const auto wasm_br_if_mismatch =
+        from_hex("0061736d010000000105016000017f030201000a0b01090000420041000d000b");
+    EXPECT_THROW_MESSAGE(parse(wasm_br_if_mismatch), validation_error, "type mismatch");
+}
+
+TEST(validation_stack_type, br_table_type_mismatch)
+{
+    /* wat2wasm --no-check
+    (func (result i32)
+      (block (result i32)
+        i64.const 0
+        i32.const 0
+        br_table 0 1
+      )
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d010000000105016000017f030201000a0f010d00027f420041000e0100010b0b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "type mismatch");
+}
+
+TEST(validation_stack_type, unreachable_br_table)
+{
+    /* wat2wasm
+    (func (result i32)
+      (block (result i32)
+        unreachable
+        i32.const 0
+        i32.const 0
+        br_table 0 1
+      )
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d010000000105016000017f030201000a10010e00027f00410041000e0100010b0b");
+    EXPECT_NO_THROW(parse(wasm));
+
+    /* wat2wasm --no-check
+    (func (result i32)
+      (block (result i32)
+        unreachable
+        i64.const 0
+        i32.const 0
+        br_table 0 1
+      )
+    )
+    */
+    const auto wasm_br_mismatch =
+        from_hex("0061736d010000000105016000017f030201000a10010e00027f00420041000e0100010b0b");
+    EXPECT_THROW_MESSAGE(parse(wasm_br_mismatch), validation_error, "type mismatch");
+}
+
+TEST(validation_stack_type, return_type_mismatch)
+{
+    /* wat2wasm --no-check
+    (func (result i32)
+      i64.const 0
+      return
+    )
+    */
+    const auto wasm = from_hex("0061736d010000000105016000017f030201000a0701050042000f0b");
+    EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "type mismatch");
+}
+
+TEST(validation_stack_type, unreachable_return)
+{
+    /* wat2wasm
+    (func (result i32)
+      unreachable
+      i32.const 0
+      return
+    )
+    */
+    const auto wasm_br = from_hex("0061736d010000000105016000017f030201000a080106000041000f0b");
+    EXPECT_NO_THROW(parse(wasm_br));
+
+    /* wat2wasm --no-check
+    (func (result i32)
+      unreachable
+      i64.const 0
+      return
+    )
+    */
+    const auto wasm_br_if_mismatch =
+        from_hex("0061736d010000000105016000017f030201000a080106000042000f0b");
+    EXPECT_THROW_MESSAGE(parse(wasm_br_if_mismatch), validation_error, "type mismatch");
+}

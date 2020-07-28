@@ -580,7 +580,7 @@ TEST(validation, br_table_invalid_type)
     (func (param $x i32)
       (block $a (result i32)
         (block $b (result i64)
-          i32.const 1
+          i64.const 1
           local.get $x
           br_table $a $b
         )
@@ -589,7 +589,7 @@ TEST(validation, br_table_invalid_type)
     )
     */
     const auto wasm5 = from_hex(
-        "0061736d0100000001050160017f00030201000a13011100027f027e410120000e0101000b0b1a0b");
+        "0061736d0100000001050160017f00030201000a13011100027f027e420120000e0101000b0b1a0b");
     EXPECT_THROW_MESSAGE(parse(wasm5), validation_error, "br_table labels have inconsistent types");
 }
 
