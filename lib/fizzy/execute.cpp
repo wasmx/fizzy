@@ -243,10 +243,10 @@ inline T read(const uint8_t*& input) noexcept
 void branch(
     const Code& code, OperandStack& stack, const Instr*& pc, const uint8_t*& immediates) noexcept
 {
+    const auto arity = read<uint8_t>(immediates);
     const auto code_offset = read<uint32_t>(immediates);
     const auto imm_offset = read<uint32_t>(immediates);
     const auto stack_drop = read<uint32_t>(immediates);
-    const auto arity = read<uint8_t>(immediates);
 
     pc = code.instructions.data() + code_offset;
     immediates = code.immediates.data() + imm_offset;

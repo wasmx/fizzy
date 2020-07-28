@@ -204,6 +204,8 @@ inline void update_branch_stack(const ControlFrame& current_frame, const Control
 
 void push_branch_immediates(const ControlFrame& branch_frame, int stack_height, bytes& immediates)
 {
+    push(immediates, get_branch_arity(branch_frame));  // arity is uint8_t
+
     // How many stack items to drop when taking the branch.
     const auto stack_drop = stack_height - branch_frame.parent_stack_height;
 
@@ -212,7 +214,6 @@ void push_branch_immediates(const ControlFrame& branch_frame, int stack_height, 
     push(immediates, static_cast<uint32_t>(branch_frame.code_offset));
     push(immediates, static_cast<uint32_t>(branch_frame.immediates_offset));
     push(immediates, static_cast<uint32_t>(stack_drop));
-    push(immediates, get_branch_arity(branch_frame));  // arity is uint8_t
 }
 
 inline void mark_frame_unreachable(
@@ -569,7 +570,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
                 // Fill in immediates all br/br_table instructions jumping out of this block.
                 for (const auto br_imm_offset : frame.br_immediate_offsets)
                 {
-                    auto* br_imm = code.immediates.data() + br_imm_offset;
+                    auto* br_imm = code.immediates.data() + br_imm_offset + sizeof(uint8_t);
                     store(br_imm, static_cast<uint32_t>(target_pc));
                     br_imm += sizeof(uint32_t);
                     store(br_imm, static_cast<uint32_t>(target_imm));
