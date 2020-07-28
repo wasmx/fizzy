@@ -66,6 +66,10 @@ Follow [this guide](./test/spectests/README.md) for using the tool.
 
 This is the unit tests suite of Fizzy.
 
+## Releases
+
+For a list of releases and changelog see the [CHANGELOG file](./CHANGELOG.md).
+
 ## Maintainers
 
 - Alex Beregszaszi [@axic]
