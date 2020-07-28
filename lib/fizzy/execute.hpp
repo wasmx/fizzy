@@ -105,10 +105,10 @@ std::unique_ptr<Instance> instantiate(Module module,
 
 // Execute a function on an instance.
 ExecutionResult execute(
-    Instance& instance, FuncIdx func_idx, span<const Value> args, int depth = 0);
+    Instance& instance, FuncIdx func_idx, span<const Value> args, int depth = 0) noexcept;
 
 inline ExecutionResult execute(
-    Instance& instance, FuncIdx func_idx, std::initializer_list<Value> args)
+    Instance& instance, FuncIdx func_idx, std::initializer_list<Value> args) noexcept
 {
     return execute(instance, func_idx, span<const Value>{args});
 }
