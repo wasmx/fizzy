@@ -63,6 +63,36 @@ struct ControlFrame
     {}
 };
 
+enum class OperandStackType : uint8_t
+{
+    Unknown = 0,
+    i32 = static_cast<uint8_t>(ValType::i32),
+    i64 = static_cast<uint8_t>(ValType::i64),
+    f32 = static_cast<uint8_t>(ValType::f32),
+    f64 = static_cast<uint8_t>(ValType::f64),
+};
+
+inline OperandStackType from_valtype(ValType val_type) noexcept
+{
+    return static_cast<OperandStackType>(val_type);
+}
+
+inline bool type_matches(OperandStackType actual_type, ValType expected_type) noexcept
+{
+    if (actual_type == OperandStackType::Unknown)
+        return true;
+
+    return static_cast<ValType>(actual_type) == expected_type;
+}
+
+inline bool type_matches(OperandStackType actual_type, OperandStackType expected_type) noexcept
+{
+    if (expected_type == OperandStackType::Unknown || actual_type == OperandStackType::Unknown)
+        return true;
+
+    return expected_type == actual_type;
+}
+
 /// Parses blocktype.
 ///
 /// Spec: https://webassembly.github.io/spec/core/binary/types.html#binary-blocktype.
@@ -82,7 +112,7 @@ parser_result<std::optional<ValType>> parse_blocktype(const uint8_t* pos, const 
     return {validate_valtype(type), pos};
 }
 
-void update_operand_stack(const ControlFrame& frame, Stack<ValType>& operand_stack,
+void update_operand_stack(const ControlFrame& frame, Stack<OperandStackType>& operand_stack,
     span<const ValType> inputs, span<const ValType> outputs)
 {
     const auto frame_stack_height = static_cast<int>(operand_stack.size());
@@ -103,16 +133,16 @@ void update_operand_stack(const ControlFrame& frame, Stack<ValType>& operand_sta
 
         const auto expected_type = *it;
         const auto actual_type = operand_stack.pop();
-        if (actual_type != expected_type)
+        if (!type_matches(actual_type, expected_type))
             throw validation_error{"type mismatch"};
     }
     // Push output values even if frame is unreachable.
     for (const auto output_type : outputs)
-        operand_stack.push(output_type);
+        operand_stack.push(from_valtype(output_type));
 }
 
-inline void drop_operand(
-    const ControlFrame& frame, Stack<ValType>& operand_stack, std::optional<ValType> expected_type)
+inline void drop_operand(const ControlFrame& frame, Stack<OperandStackType>& operand_stack,
+    OperandStackType expected_type)
 {
     if (!frame.unreachable &&
         static_cast<int>(operand_stack.size()) < frame.parent_stack_height + 1)
@@ -124,12 +154,17 @@ inline void drop_operand(
         return;
     }
 
-    const auto actual_type = operand_stack.pop();
-    if (expected_type.has_value() && actual_type != *expected_type)
+    if (!type_matches(operand_stack.pop(), expected_type))
         throw validation_error{"type mismatch"};
 }
 
-void update_result_stack(const ControlFrame& frame, Stack<ValType>& operand_stack)
+inline void drop_operand(
+    const ControlFrame& frame, Stack<OperandStackType>& operand_stack, ValType expected_type)
+{
+    return drop_operand(frame, operand_stack, from_valtype(expected_type));
+}
+
+void update_result_stack(const ControlFrame& frame, Stack<OperandStackType>& operand_stack)
 {
     const auto frame_stack_height = static_cast<int>(operand_stack.size());
 
@@ -142,7 +177,7 @@ void update_result_stack(const ControlFrame& frame, Stack<ValType>& operand_stac
         throw validation_error{"too many results"};
 
     if (arity != 0)
-        drop_operand(frame, operand_stack, frame.type);
+        drop_operand(frame, operand_stack, from_valtype(*frame.type));
 }
 
 inline std::optional<ValType> get_branch_frame_type(const ControlFrame& frame) noexcept
@@ -158,13 +193,13 @@ inline uint8_t get_branch_arity(const ControlFrame& frame) noexcept
 }
 
 inline void update_branch_stack(const ControlFrame& current_frame, const ControlFrame& branch_frame,
-    Stack<ValType>& operand_stack)
+    Stack<OperandStackType>& operand_stack)
 {
     assert(static_cast<int>(operand_stack.size()) >= current_frame.parent_stack_height);
 
     const auto branch_frame_type = get_branch_frame_type(branch_frame);
     if (branch_frame_type.has_value())
-        drop_operand(current_frame, operand_stack, *branch_frame_type);
+        drop_operand(current_frame, operand_stack, from_valtype(*branch_frame_type));
 }
 
 void push_branch_immediates(const ControlFrame& branch_frame, int stack_height, bytes& immediates)
@@ -180,13 +215,19 @@ void push_branch_immediates(const ControlFrame& branch_frame, int stack_height, 
     push(immediates, get_branch_arity(branch_frame));  // arity is uint8_t
 }
 
-inline void mark_frame_unreachable(ControlFrame& frame, Stack<ValType>& operand_stack) noexcept
+inline void mark_frame_unreachable(
+    ControlFrame& frame, Stack<OperandStackType>& operand_stack) noexcept
 {
     frame.unreachable = true;
     operand_stack.shrink(static_cast<size_t>(frame.parent_stack_height));
 }
 
-inline void push_operand(Stack<ValType>& operand_stack, ValType type)
+inline void push_operand(Stack<OperandStackType>& operand_stack, ValType type)
+{
+    operand_stack.push(from_valtype(type));
+}
+
+inline void push_operand(Stack<OperandStackType>& operand_stack, OperandStackType type)
 {
     operand_stack.push(type);
 }
@@ -221,7 +262,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
     // instructions as defined in Wasm Validation Algorithm.
     Stack<ControlFrame> control_stack;
 
-    Stack<ValType> operand_stack;
+    Stack<OperandStackType> operand_stack;
 
     const auto func_type_idx = module.funcsec[func_idx];
     assert(func_type_idx < module.typesec.size());
@@ -340,10 +381,28 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             break;
 
         case Instr::drop:
-        case Instr::select:
-            // TODO: for select validate that two top operands are the same type
-            drop_operand(frame, operand_stack, std::nullopt);
+            drop_operand(frame, operand_stack, OperandStackType::Unknown);
             break;
+        case Instr::select:
+        {
+            const auto frame_stack_height = static_cast<int>(operand_stack.size());
+
+            // Two operands are expected, because the selector operand was already popped
+            // according to instruction type table
+            if (!frame.unreachable && frame_stack_height < frame.parent_stack_height + 2)
+                throw validation_error{"stack underflow"};
+
+
+            const auto operand_type = frame_stack_height > frame.parent_stack_height ?
+                                          operand_stack[0] :
+                                          OperandStackType::Unknown;
+
+            drop_operand(frame, operand_stack, operand_type);
+            drop_operand(frame, operand_stack, operand_type);
+            push_operand(operand_stack, operand_type);
+
+            break;
+        }
 
         case Instr::nop:
         case Instr::i32_eq:
@@ -524,7 +583,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             if (control_stack.empty())
                 continue_parsing = false;
             else if (frame_type.has_value())
-                operand_stack.push(*frame_type);
+                push_operand(operand_stack, *frame_type);
             break;
         }
 

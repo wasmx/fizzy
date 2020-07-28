@@ -10,7 +10,7 @@
 using namespace fizzy;
 using namespace fizzy::test;
 
-TEST(validation_stack, DISABLED_select_stack_underflow)
+TEST(validation_stack, select_stack_underflow)
 {
     /* wat2wasm --no-check
     (func
@@ -24,7 +24,7 @@ TEST(validation_stack, DISABLED_select_stack_underflow)
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "stack underflow");
 }
 
-TEST(validation_stack_type, DISABLED_select_stack_underflow_2)
+TEST(validation_stack_type, select_stack_underflow_2)
 {
     /* wat2wasm --no-check
     (func (param i32) (result i32)
