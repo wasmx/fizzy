@@ -240,8 +240,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
     control_stack.emplace(Instr::block,
         func_outputs.empty() ? std::nullopt : std::optional<ValType>{func_outputs[0]}, 0);
 
-    const auto metrics_table = get_instruction_metrics_table();
     const auto type_table = get_instruction_type_table();
+    const auto max_align_table = get_instruction_max_align_table();
 
     bool continue_parsing = true;
     while (continue_parsing)
@@ -250,8 +250,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         std::tie(opcode, pos) = parse_byte(pos, end);
 
         auto& frame = control_stack.top();
-        const auto& metrics = metrics_table[opcode];
         const auto& type = type_table[opcode];
+        const auto max_align = max_align_table[opcode];
 
         // Update code's max_stack_height using frame.stack_height of the previous instruction.
         // At this point frame.stack_height includes additional changes to the stack height
@@ -770,7 +770,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             std::tie(align, pos) = leb128u_decode<uint32_t>(pos, end);
             // NOTE: [0, 3] is the correct range (the hard limit is log2(64 / 8)) and checking it to
             // avoid overflows
-            if (align > metrics.max_align)
+            if (align > max_align)
                 throw validation_error{"alignment cannot exceed operand size"};
 
             uint32_t offset;
