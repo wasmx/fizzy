@@ -157,34 +157,27 @@ inline uint8_t get_branch_arity(const ControlFrame& frame) noexcept
     return get_branch_frame_type(frame).has_value() ? 1 : 0;
 }
 
-inline void validate_branch_stack_height(const ControlFrame& current_frame,
-    const ControlFrame& branch_frame, const Stack<ValType>& operand_stack)
+inline void update_branch_stack(const ControlFrame& current_frame, const ControlFrame& branch_frame,
+    Stack<ValType>& operand_stack)
 {
-    const auto current_frame_stack_height = static_cast<int>(operand_stack.size());
+    assert(static_cast<int>(operand_stack.size()) >= current_frame.parent_stack_height);
 
-    assert(current_frame_stack_height >= current_frame.parent_stack_height);
-
-    const auto arity = get_branch_arity(branch_frame);
-    if (!current_frame.unreachable &&
-        (current_frame_stack_height < current_frame.parent_stack_height + arity))
-        throw validation_error{"branch stack underflow"};
+    const auto branch_frame_type = get_branch_frame_type(branch_frame);
+    if (branch_frame_type.has_value())
+        drop_operand(current_frame, operand_stack, *branch_frame_type);
 }
-
 
 void push_branch_immediates(const ControlFrame& branch_frame, int stack_height, bytes& immediates)
 {
-    const auto arity = get_branch_arity(branch_frame);
-
     // How many stack items to drop when taking the branch.
-    // This value can be negative for unreachable instructions.
-    const auto stack_drop = stack_height - branch_frame.parent_stack_height - arity;
+    const auto stack_drop = stack_height - branch_frame.parent_stack_height;
 
     // Push frame start location as br immediates - these are final if frame is loop,
     // but for block/if/else these are just placeholders, to be filled at end instruction.
     push(immediates, static_cast<uint32_t>(branch_frame.code_offset));
     push(immediates, static_cast<uint32_t>(branch_frame.immediates_offset));
     push(immediates, static_cast<uint32_t>(stack_drop));
-    push(immediates, arity);
+    push(immediates, get_branch_arity(branch_frame));  // arity is uint8_t
 }
 
 inline void mark_frame_unreachable(ControlFrame& frame, Stack<ValType>& operand_stack) noexcept
@@ -546,7 +539,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
             auto& branch_frame = control_stack[label_idx];
 
-            validate_branch_stack_height(frame, branch_frame, operand_stack);
+            update_branch_stack(frame, branch_frame, operand_stack);
 
             // Remember this br immediates offset to fill it at end instruction.
             branch_frame.br_immediate_offsets.push_back(code.immediates.size());
@@ -579,7 +572,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             auto& default_branch_frame = control_stack[default_label_idx];
             const auto default_branch_type = get_branch_frame_type(default_branch_frame);
 
-            validate_branch_stack_height(frame, default_branch_frame, operand_stack);
+            update_branch_stack(frame, default_branch_frame, operand_stack);
 
             // Remember immediates offset for all br items to fill them at end instruction.
             push(code.immediates, static_cast<uint32_t>(label_indices.size()));
@@ -612,7 +605,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
             auto& branch_frame = control_stack[label_idx];
 
-            validate_branch_stack_height(frame, branch_frame, operand_stack);
+            update_branch_stack(frame, branch_frame, operand_stack);
 
             branch_frame.br_immediate_offsets.push_back(code.immediates.size());
 
