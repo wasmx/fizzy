@@ -227,6 +227,11 @@ inline void push_operand(Stack<OperandStackType>& operand_stack, ValType type)
     operand_stack.push(from_valtype(type));
 }
 
+inline void push_operand(Stack<OperandStackType>& operand_stack, OperandStackType type)
+{
+    operand_stack.push(type);
+}
+
 ValType find_local_type(
     const std::vector<ValType>& params, const std::vector<Locals>& locals, LocalIdx idx)
 {
@@ -376,10 +381,28 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             break;
 
         case Instr::drop:
-        case Instr::select:
-            // TODO: for select validate that two top operands are the same type
             drop_operand(frame, operand_stack, OperandStackType::Unknown);
             break;
+        case Instr::select:
+        {
+            const auto frame_stack_height = static_cast<int>(operand_stack.size());
+
+            // Two operands are expected, because the selector operand was already popped
+            // according to instruction type table
+            if (!frame.unreachable && frame_stack_height < frame.parent_stack_height + 2)
+                throw validation_error{"stack underflow"};
+
+
+            const auto operand_type = frame_stack_height > frame.parent_stack_height ?
+                                          operand_stack[0] :
+                                          OperandStackType::Unknown;
+
+            drop_operand(frame, operand_stack, operand_type);
+            drop_operand(frame, operand_stack, operand_type);
+            push_operand(operand_stack, operand_type);
+
+            break;
+        }
 
         case Instr::nop:
         case Instr::i32_eq:
