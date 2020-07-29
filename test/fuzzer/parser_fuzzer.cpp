@@ -34,6 +34,11 @@ struct Stats
 
 Stats stats;
 
+constexpr auto wabt_ignored_errors = {
+    "unable to read u32 leb128: version",
+    "invalid linking metadata version:",
+};
+
 wabt::Errors wabt_errors;
 
 bool wabt_parse(const uint8_t* data, size_t data_size) noexcept
@@ -76,11 +81,25 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
         ++stats.valid;
         if (!expected)
         {
+            bool has_errors = false;
             for (const auto& err : wabt_errors)
             {
+                bool ignored = false;
+
+                for (const auto& m : wabt_ignored_errors)
+                {
+                    if (err.message.find(m) != std::string::npos)
+                        ignored = true;
+                }
+                if (ignored)
+                    continue;
+
                 std::cerr << "MISSED ERROR: " << err.message << "\n";
+                has_errors = true;
             }
-            __builtin_trap();
+
+            if (has_errors)
+                __builtin_trap();
         }
     }
     catch (const fizzy::parser_error& err)
