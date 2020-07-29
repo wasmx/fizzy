@@ -187,7 +187,7 @@ inline std::optional<ValType> get_branch_frame_type(const ControlFrame& frame) n
     return frame.instruction == Instr::loop ? std::nullopt : frame.type;
 }
 
-inline uint8_t get_branch_arity(const ControlFrame& frame) noexcept
+inline uint32_t get_branch_arity(const ControlFrame& frame) noexcept
 {
     return get_branch_frame_type(frame).has_value() ? 1 : 0;
 }
@@ -212,7 +212,6 @@ void push_branch_immediates(const ControlFrame& branch_frame, int stack_height, 
     push(immediates, static_cast<uint32_t>(branch_frame.code_offset));
     push(immediates, static_cast<uint32_t>(branch_frame.immediates_offset));
     push(immediates, static_cast<uint32_t>(stack_drop));
-    push(immediates, get_branch_arity(branch_frame));  // arity is uint8_t
 }
 
 inline void mark_frame_unreachable(
@@ -600,6 +599,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
             update_branch_stack(frame, branch_frame, operand_stack);
 
+            push(code.immediates, get_branch_arity(branch_frame));
+
             // Remember this br immediates offset to fill it at end instruction.
             branch_frame.br_immediate_offsets.push_back(code.immediates.size());
 
@@ -636,13 +637,17 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             if (default_label_idx >= control_stack.size())
                 throw validation_error{"invalid label index"};
 
+            push(code.immediates, static_cast<uint32_t>(label_indices.size()));
+
             auto& default_branch_frame = control_stack[default_label_idx];
             const auto default_branch_type = get_branch_frame_type(default_branch_frame);
 
             update_branch_stack(frame, default_branch_frame, operand_stack);
 
+            // arity is the same for all indices, so we push it once
+            push(code.immediates, get_branch_arity(default_branch_frame));
+
             // Remember immediates offset for all br items to fill them at end instruction.
-            push(code.immediates, static_cast<uint32_t>(label_indices.size()));
             for (const auto idx : label_indices)
             {
                 auto& branch_frame = control_stack[idx];
@@ -654,7 +659,6 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
                 push_branch_immediates(
                     branch_frame, static_cast<int>(operand_stack.size()), code.immediates);
             }
-
             default_branch_frame.br_immediate_offsets.push_back(code.immediates.size());
             push_branch_immediates(
                 default_branch_frame, static_cast<int>(operand_stack.size()), code.immediates);
@@ -674,10 +678,12 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
             update_branch_stack(frame, branch_frame, operand_stack);
 
+            push(code.immediates, get_branch_arity(branch_frame));
+
             branch_frame.br_immediate_offsets.push_back(code.immediates.size());
 
             push_branch_immediates(
-                control_stack[label_idx], static_cast<int>(operand_stack.size()), code.immediates);
+                branch_frame, static_cast<int>(operand_stack.size()), code.immediates);
 
             mark_frame_unreachable(frame, operand_stack);
             break;
