@@ -241,7 +241,7 @@ inline T read(const uint8_t*& input) noexcept
 }
 
 void branch(const Code& code, OperandStack& stack, const Instr*& pc, const uint8_t*& immediates,
-    uint8_t arity) noexcept
+    uint32_t arity) noexcept
 {
     const auto code_offset = read<uint32_t>(immediates);
     const auto imm_offset = read<uint32_t>(immediates);
@@ -669,7 +669,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const uint64_
         case Instr::br_if:
         case Instr::return_:
         {
-            const auto arity = read<uint8_t>(immediates);
+            const auto arity = read<uint32_t>(immediates);
 
             // Check condition for br_if.
             if (instruction == Instr::br_if && static_cast<uint32_t>(stack.pop()) == 0)
@@ -684,7 +684,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const uint64_
         case Instr::br_table:
         {
             const auto br_table_size = read<uint32_t>(immediates);
-            const auto arity = read<uint8_t>(immediates);
+            const auto arity = read<uint32_t>(immediates);
 
             const auto br_table_idx = stack.pop();
 

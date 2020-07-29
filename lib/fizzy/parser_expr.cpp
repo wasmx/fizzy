@@ -187,7 +187,7 @@ inline std::optional<ValType> get_branch_frame_type(const ControlFrame& frame) n
     return frame.instruction == Instr::loop ? std::nullopt : frame.type;
 }
 
-inline uint8_t get_branch_arity(const ControlFrame& frame) noexcept
+inline uint32_t get_branch_arity(const ControlFrame& frame) noexcept
 {
     return get_branch_frame_type(frame).has_value() ? 1 : 0;
 }
