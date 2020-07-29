@@ -581,14 +581,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
                 goto end;
             break;
         }
-        case Instr::br:
-        case Instr::return_:
-        {
-            const auto arity = read<uint32_t>(immediates);
-
-            branch(code, stack, pc, immediates, arity);
-            break;
-        }
         case Instr::br_if:
         {
             if (stack.pop().as<uint32_t>() == 0)
@@ -597,8 +589,13 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
                 immediates += sizeof(uint32_t) + BranchImmediateSize;
                 break;
             }
-
+            [[fallthrough]];
+        }
+        case Instr::br:
+        case Instr::return_:
+        {
             const auto arity = read<uint32_t>(immediates);
+
             branch(code, stack, pc, immediates, arity);
             break;
         }
