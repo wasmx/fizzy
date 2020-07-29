@@ -5,7 +5,7 @@ Documentation of all notable changes to the **Fizzy** project.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
-## [0.3.0] — Unreleased
+## [0.3.0] — 2020-07-29
 
 This main focus for this release is to implement every WebAssembly validation rule from the specification.
 
@@ -255,7 +255,7 @@ First release!
 
 [0.1.0]: https://github.com/wasmx/fizzy/releases/tag/v0.1.0
 [0.2.0]: https://github.com/wasmx/fizzy/releases/tag/v0.2.0
-[0.3.0]: https://github.com/wasmx/fizzy/compare/v0.2.0..master
+[0.3.0]: https://github.com/wasmx/fizzy/releases/tag/v0.3.0
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Semantic Versioning]: https://semver.org
