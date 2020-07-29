@@ -11,7 +11,7 @@ set(binary_dir ${prefix}/src/wabt-build)
 set(include_dir ${source_dir})
 set(wabt_library ${binary_dir}/${CMAKE_STATIC_LIBRARY_PREFIX}wabt${CMAKE_STATIC_LIBRARY_SUFFIX})
 
-set(flags -fvisibility=hidden)
+set(flags "${fuzzing_flags} -fvisibility=hidden")
 if(SANITIZE MATCHES address)
     # Instrument WABT with ASan - required for container-overflow checks.
     set(flags "-fsanitize=address ${flags}")
