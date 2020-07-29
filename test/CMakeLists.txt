@@ -22,6 +22,9 @@ if(HUNTER_ENABLED)
 endif()
 find_package(GTest REQUIRED)
 
+include(ProjectWabt)
+include(ProjectWasm3)
+
 add_subdirectory(utils)
 add_subdirectory(bench)
 add_subdirectory(bench_internal)
