@@ -5,6 +5,114 @@ Documentation of all notable changes to the **Fizzy** project.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
+## [0.3.0] — Unreleased
+
+This main focus for this release is to implement every WebAssembly validation rule from the specification.
+
+It passes a large part of the [official test suite (spectest 1.0)]:
+  - 4481 of 4490 binary parser and execution tests,
+  - 942 of 942 validation tests,
+  - 6381 skipped due to containing floating-point instructions or testing text format parser.
+
+Additionally, measurable speed improvements were made for branching and function calls.
+
+#### Performance comparison to v0.2.0
+
+The time of WebAssembly module instantiation (including binary loading and verification) has almost doubled, while the execution is 10% faster in heavy cases.
+
+##### Detailed benchmark results
+
+```
+Comparing Fizzy 0.2.0 to 0.3.0 (Intel Haswell CPU, 4.0 GHz)
+Benchmark                                  CPU Time [µs]       Old       New
+----------------------------------------------------------------------------
+
+fizzy/parse/blake2b                              +0.5960        14        23
+fizzy/instantiate/blake2b                        +0.4412        19        28
+fizzy/parse/ecpairing                            +0.8076       760      1373
+fizzy/instantiate/ecpairing                      +0.7055       828      1412
+fizzy/parse/keccak256                            +0.6071        26        42
+fizzy/instantiate/keccak256                      +0.4818        32        47
+fizzy/parse/memset                               +0.3710         4         6
+fizzy/instantiate/memset                         +0.2013         8        10
+fizzy/parse/mul256_opt0                          +0.6683         5         8
+fizzy/instantiate/mul256_opt0                    +0.3370         9        12
+fizzy/parse/sha1                                 +0.6466        23        38
+fizzy/instantiate/sha1                           +0.4696        29        43
+fizzy/parse/sha256                               +0.7765        36        63
+fizzy/instantiate/sha256                         +0.6920        42        70
+fizzy/parse/micro/eli_interpreter                +0.2003         3         4
+fizzy/instantiate/micro/eli_interpreter          +0.0935         7         8
+fizzy/parse/micro/factorial                      +0.2105         1         1
+fizzy/instantiate/micro/factorial                +0.1369         1         1
+fizzy/parse/micro/fibonacci                      +0.2773         1         1
+fizzy/instantiate/micro/fibonacci                +0.1888         1         2
+fizzy/parse/micro/host_adler32                   +0.1448         1         2
+fizzy/instantiate/micro/host_adler32             +0.0674         4         4
+fizzy/parse/micro/spinner                        +0.1232         1         1
+fizzy/instantiate/micro/spinner                  +0.0774         1         1
+
+fizzy/execute/blake2b/512_bytes_rounds_1         -0.0250        86        83
+fizzy/execute/blake2b/512_bytes_rounds_16        -0.0197      1294      1268
+fizzy/execute/ecpairing/onepoint                 -0.1027    479448    430202
+fizzy/execute/keccak256/512_bytes_rounds_1       -0.0422       104       100
+fizzy/execute/keccak256/512_bytes_rounds_16      -0.0352      1512      1458
+fizzy/execute/memset/256_bytes                   -0.0318         7         7
+fizzy/execute/memset/60000_bytes                 -0.0109      1609      1592
+fizzy/execute/mul256_opt0/input0                 -0.0254        27        26
+fizzy/execute/mul256_opt0/input1                 -0.0262        27        26
+fizzy/execute/sha1/512_bytes_rounds_1            -0.0452        95        90
+fizzy/execute/sha1/512_bytes_rounds_16           -0.0478      1318      1255
+fizzy/execute/sha256/512_bytes_rounds_1          +0.0446        93        97
+fizzy/execute/sha256/512_bytes_rounds_16         +0.0457      1280      1338
+fizzy/execute/micro/eli_interpreter/halt         -0.3601         0         0
+fizzy/execute/micro/eli_interpreter/exec105      -0.0299         5         5
+fizzy/execute/micro/factorial/10                 -0.2383         1         0
+fizzy/execute/micro/factorial/20                 -0.2363         1         1
+fizzy/execute/micro/fibonacci/24                 -0.2760     10273      7438
+fizzy/execute/micro/host_adler32/1               -0.5324         0         0
+fizzy/execute/micro/host_adler32/100             -0.5275         6         3
+fizzy/execute/micro/host_adler32/1000            -0.5303        63        30
+fizzy/execute/micro/spinner/1                    -0.0677         0         0
+fizzy/execute/micro/spinner/1000                 -0.0256        10        10
+```
+
+### Added
+
+- Type validation of instructions. [#403](https://github.com/wasmx/fizzy/pull/403) 
+  [#404](https://github.com/wasmx/fizzy/pull/404) [#411](https://github.com/wasmx/fizzy/pull/411)
+  [#414](https://github.com/wasmx/fizzy/pull/414) [#415](https://github.com/wasmx/fizzy/pull/415)
+- Type validation of block results. [#407](https://github.com/wasmx/fizzy/pull/407)
+  [#429](https://github.com/wasmx/fizzy/pull/429)
+- Type validation of branch instructions. [#408](https://github.com/wasmx/fizzy/pull/408)
+- Type validation of select instruction. [#413](https://github.com/wasmx/fizzy/pull/413)
+- Type validation in constant expressions. [#430](https://github.com/wasmx/fizzy/pull/430)
+- Validation of `else` branch in `if` instruction. [#417](https://github.com/wasmx/fizzy/pull/417)
+- Validation of frame types in `br_table` instruction. [#427](https://github.com/wasmx/fizzy/pull/427)
+- Validation of function indices in element section. [#432](https://github.com/wasmx/fizzy/pull/432)
+- Validation of functions' arity. [#433](https://github.com/wasmx/fizzy/pull/433)
+- Validation of alignment for floating point memory instructions. [#437](https://github.com/wasmx/fizzy/pull/437)
+- CI now includes compiling and testing with C++20 standard. [#405](https://github.com/wasmx/fizzy/pull/405)
+
+### Changed
+
+- API cleanup (`execute` function overload taking `Module` is used only internally).
+  [#409](https://github.com/wasmx/fizzy/pull/409)
+- `execution_result` changed to returning single value instead of the entire stack and renamed to `ExecutionResult`. 
+  [#219](https://github.com/wasmx/fizzy/pull/219) [#428](https://github.com/wasmx/fizzy/pull/428)
+- Optimization for branch instructions. [#354](https://github.com/wasmx/fizzy/pull/354)
+- Optimization of passing arguments to functions (eliminate extra copy). `execute` function now takes the arguments as 
+  `span<const uint64_t>`. [#359](https://github.com/wasmx/fizzy/pull/359) [#404](https://github.com/wasmx/fizzy/pull/404)  
+- Better unit test coverage. [#381](https://github.com/wasmx/fizzy/pull/381) [#410](https://github.com/wasmx/fizzy/pull/410)
+  [#431](https://github.com/wasmx/fizzy/pull/431) [#435](https://github.com/wasmx/fizzy/pull/435) 
+  [#444](https://github.com/wasmx/fizzy/pull/444)
+
+### Fixed
+
+- `fizzy-bench` correctly handles errors during instantiation in wasm3. 
+  [#381](https://github.com/wasmx/fizzy/pull/381) 
+
+
 ## [0.2.0] — 2020-06-29
 
 Firstly, this release implements many validation steps prescribed by the specification, with the exception of type checking.
@@ -21,6 +129,7 @@ Secondly, two major optimisations are included: branch resolution is done once i
 The time of WebAssembly module instantiation (including binary loading and verification) has increased by 15–30%, while the execution is approximately twice as fast.
 
 ##### Detailed benchmark results
+
 ```
 Comparing Fizzy 0.1.0 to 0.2.0 (Intel Haswell CPU, 4.0 GHz)
 Benchmark                                  CPU Time [µs]       Old       New
@@ -70,7 +179,6 @@ fizzy/execute/micro/fibonacci/24                 -0.4107     17374     10238
 fizzy/execute/micro/spinner/1                    -0.5706         0         0
 fizzy/execute/micro/spinner/1000                 -0.4801        20        10
 ```
-
 
 ### Added
 
@@ -127,6 +235,7 @@ fizzy/execute/micro/spinner/1000                 -0.4801        20        10
   [#349](https://github.com/wasmx/fizzy/pull/349) 
 - `fizzy-bench` correctly handles errors during validation phase. [#340](https://github.com/wasmx/fizzy/pull/340)
 
+
 ## [0.1.0] — 2020-05-14
 
 First release!
@@ -146,6 +255,7 @@ First release!
 
 [0.1.0]: https://github.com/wasmx/fizzy/releases/tag/v0.1.0
 [0.2.0]: https://github.com/wasmx/fizzy/releases/tag/v0.2.0
+[0.3.0]: https://github.com/wasmx/fizzy/compare/v0.2.0..master
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Semantic Versioning]: https://semver.org
