@@ -591,14 +591,14 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::br_if:
         {
-            const auto arity = read<uint32_t>(immediates);
-
             if (stack.pop().as<uint32_t>() == 0)
             {
-                immediates += BranchImmediateSize;
+                // Arity and immediates.
+                immediates += sizeof(uint32_t) + BranchImmediateSize;
                 break;
             }
 
+            const auto arity = read<uint32_t>(immediates);
             branch(code, stack, pc, immediates, arity);
             break;
         }
