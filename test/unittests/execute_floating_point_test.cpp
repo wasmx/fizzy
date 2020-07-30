@@ -10,6 +10,35 @@
 using namespace fizzy;
 using namespace fizzy::test;
 
+TEST(execute_floating_point, f32_const)
+{
+    /* wat2wasm
+    (func (result f32)
+      f32.const 4194304.1
+    )
+    */
+    const auto wasm = from_hex("0061736d010000000105016000017d030201000a09010700430000804a0b");
+
+    auto instance = instantiate(parse(wasm));
+    const auto result = execute(*instance, 0, {});
+    EXPECT_EQ(result.value.f32, 4194304.1f);
+}
+
+TEST(execute_floating_point, f64_const)
+{
+    /* wat2wasm
+    (func (result f64)
+      f64.const 8589934592.1
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d010000000105016000017c030201000a0d010b0044cdcc0000000000420b");
+
+    auto instance = instantiate(parse(wasm));
+    const auto result = execute(*instance, 0, {});
+    EXPECT_EQ(result.value.f64, 8589934592.1);
+}
+
 TEST(execute_floating_point, f32_add)
 {
     /* wat2wasm

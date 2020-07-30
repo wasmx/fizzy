@@ -1002,12 +1002,14 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             break;
         }
         case Instr::i32_const:
+        case Instr::f32_const:
         {
             const auto value = read<uint32_t>(immediates);
             stack.push(value);
             break;
         }
         case Instr::i64_const:
+        case Instr::f64_const:
         {
             const auto value = read<uint64_t>(immediates);
             stack.push(value);
@@ -1399,8 +1401,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f64_load:
         case Instr::f32_store:
         case Instr::f64_store:
-        case Instr::f32_const:
-        case Instr::f64_const:
         case Instr::f32_eq:
         case Instr::f32_ne:
         case Instr::f32_lt:
