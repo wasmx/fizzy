@@ -359,17 +359,19 @@ inline bool store_into_memory(
 template <typename Op>
 inline void unary_op(OperandStack& stack, Op op) noexcept
 {
-    using T = decltype(op(stack.top()));
-    stack.top() = op(static_cast<T>(stack.top()));
+    using T = decltype(op({}));
+    const auto result = op(stack.top().as<T>());
+    stack.top() = Value{result};  // Convert to Value, also from signed integer types.
 }
 
 template <typename Op>
 inline void binary_op(OperandStack& stack, Op op) noexcept
 {
-    using T = decltype(op(stack.top(), stack.top()));
-    const auto val2 = static_cast<T>(stack.pop());
-    const auto val1 = static_cast<T>(stack.top());
-    stack.top() = static_cast<std::make_unsigned_t<T>>(op(val1, val2));
+    using T = decltype(op({}, {}));
+    const auto val2 = stack.pop().as<T>();
+    const auto val1 = stack.top().as<T>();
+    const auto result = op(val1, val2);
+    stack.top() = Value{result};  // Convert to Value, also from signed integer types.
 }
 
 template <typename T, template <typename> class Op>
@@ -1014,7 +1016,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::i32_eqz:
         {
             const auto value = static_cast<uint32_t>(stack.pop());
-            stack.push(value == 0);
+            stack.push(uint32_t{value == 0});
             break;
         }
         case Instr::i32_eq:
@@ -1069,7 +1071,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         }
         case Instr::i64_eqz:
         {
-            stack.push(stack.pop() == 0);
+            stack.push(uint32_t{stack.pop() == 0});
             break;
         }
         case Instr::i64_eq:
@@ -1463,7 +1465,7 @@ end:
     if (trap)
         return Trap;
 
-    return stack.size() != 0 ? stack.pop() : Void;
+    return stack.size() != 0 ? ExecutionResult{stack.pop()} : Void;
 }
 
 std::vector<ExternalFunction> resolve_imported_functions(
