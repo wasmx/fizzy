@@ -135,8 +135,8 @@ WasmEngine::Result FizzyEngine::execute(
 {
     static_assert(sizeof(uint64_t) == sizeof(Value));
     const auto first_arg = reinterpret_cast<const Value*>(args.data());
-    const auto status =
-        fizzy::execute(*m_instance, static_cast<uint32_t>(func_ref), {first_arg, args.size()});
+    const auto status = fizzy::execute(
+        *m_instance, static_cast<uint32_t>(func_ref), span<const Value>(first_arg, args.size()));
     if (status.trapped)
         return {true, std::nullopt};
     else if (status.has_value)

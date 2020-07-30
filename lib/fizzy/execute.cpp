@@ -1014,7 +1014,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::i32_eqz:
         {
             const auto value = static_cast<uint32_t>(stack.pop());
-            stack.push(value == 0);
+            stack.push(uint32_t{value == 0});
             break;
         }
         case Instr::i32_eq:
@@ -1069,7 +1069,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         }
         case Instr::i64_eqz:
         {
-            stack.push(stack.pop() == 0);
+            stack.push(uint32_t{stack.pop() == 0});
             break;
         }
         case Instr::i64_eq:
@@ -1463,7 +1463,7 @@ end:
     if (trap)
         return Trap;
 
-    return stack.size() != 0 ? stack.pop() : Void;
+    return stack.size() != 0 ? ExecutionResult{stack.pop()} : Void;
 }
 
 std::vector<ExternalFunction> resolve_imported_functions(
