@@ -57,7 +57,7 @@ TEST(span, stack)
     stack.push(13);
 
     constexpr auto num_items = 2;
-    span<const uint64_t> s(stack.rend() - num_items, num_items);
+    span<const Value> s(stack.rend() - num_items, num_items);
     EXPECT_EQ(s.size(), 2);
     EXPECT_EQ(s[0], 12);
     EXPECT_EQ(s[1], 13);

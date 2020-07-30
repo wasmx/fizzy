@@ -416,7 +416,7 @@ private:
             return std::nullopt;
         }
 
-        std::vector<uint64_t> args;
+        std::vector<fizzy::Value> args;
         for (const auto& arg : action.at("args"))
         {
             const auto arg_type = arg.at("type").get<std::string>();

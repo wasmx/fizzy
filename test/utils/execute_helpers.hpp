@@ -10,7 +10,7 @@
 namespace fizzy::test
 {
 inline ExecutionResult execute(
-    const Module& module, FuncIdx func_idx, std::initializer_list<uint64_t> args)
+    const Module& module, FuncIdx func_idx, std::initializer_list<Value> args)
 {
     auto instance = instantiate(module);
     return execute(*instance, func_idx, args);

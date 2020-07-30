@@ -29,6 +29,7 @@ target_sources(
     validation_stack_test.cpp
     validation_stack_type_test.cpp
     validation_test.cpp
+    value_test.cpp
     wasm_engine_test.cpp
 )
 

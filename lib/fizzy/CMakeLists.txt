@@ -24,5 +24,6 @@ target_sources(
     types.hpp
     utf8.cpp
     utf8.hpp
+    value.hpp
 )
 target_compile_features(fizzy PUBLIC cxx_std_17)

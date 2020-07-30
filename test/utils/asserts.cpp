@@ -12,10 +12,12 @@ std::ostream& operator<<(std::ostream& os, ExecutionResult result)
     if (result.trapped)
         return os << "trapped";
 
+    const auto format_flags = os.flags();
     os << "result(";
     if (result.has_value)
-        os << result.value;
+        os << result.value.i64 << " [0x" << std::hex << result.value.i64 << "]";
     os << ")";
+    os.flags(format_flags);
     return os;
 }
 }  // namespace fizzy

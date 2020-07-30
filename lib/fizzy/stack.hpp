@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "value.hpp"
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -59,24 +60,24 @@ public:
 class OperandStack
 {
     /// The size of the pre-allocated internal storage: 128 bytes.
-    static constexpr auto small_storage_size = 128 / sizeof(uint64_t);
+    static constexpr auto small_storage_size = 128 / sizeof(Value);
 
     /// The pointer to the top item, or below the stack bottom if stack is empty.
     ///
     /// This pointer always alias m_storage, but it is kept as the first field
     /// because it is accessed the most. Therefore, it must be initialized
     /// in the constructor after the m_storage.
-    uint64_t* m_top;
+    Value* m_top;
 
     /// The pre-allocated internal storage.
-    uint64_t m_small_storage[small_storage_size];
+    Value m_small_storage[small_storage_size];
 
     /// The unbounded storage for items.
-    std::unique_ptr<uint64_t[]> m_large_storage;
+    std::unique_ptr<Value[]> m_large_storage;
 
-    uint64_t* bottom() { return m_large_storage ? m_large_storage.get() : m_small_storage; }
+    Value* bottom() { return m_large_storage ? m_large_storage.get() : m_small_storage; }
 
-    const uint64_t* bottom() const
+    const Value* bottom() const
     {
         return m_large_storage ? m_large_storage.get() : m_small_storage;
     }
@@ -90,7 +91,7 @@ public:
     explicit OperandStack(size_t max_stack_height)
     {
         if (max_stack_height > small_storage_size)
-            m_large_storage = std::make_unique<uint64_t[]>(max_stack_height);
+            m_large_storage = std::make_unique<Value[]>(max_stack_height);
         m_top = bottom() - 1;
     }
 
@@ -118,7 +119,7 @@ public:
 
     /// Pushes an item on the stack.
     /// The stack max height limit is not checked.
-    void push(uint64_t item) noexcept { *++m_top = item; }
+    void push(Value item) noexcept { *++m_top = item; }
 
     /// Returns an item popped from the top of the stack.
     /// Requires non-empty stack.
@@ -146,9 +147,9 @@ public:
     }
 
     /// Returns iterator to the bottom of the stack.
-    const uint64_t* rbegin() const noexcept { return bottom(); }
+    const Value* rbegin() const noexcept { return bottom(); }
 
     /// Returns end iterator counting from the bottom of the stack.
-    const uint64_t* rend() const noexcept { return m_top + 1; }
+    const Value* rend() const noexcept { return m_top + 1; }
 };
 }  // namespace fizzy
