@@ -9,7 +9,7 @@ add_test(
 set_tests_properties(
     fizzy/smoketests/spectests/default
     PROPERTIES
-    PASS_REGULAR_EXPRESSION "PASSED 23, FAILED 0, SKIPPED 7"
+    PASS_REGULAR_EXPRESSION "PASSED 26, FAILED 1, SKIPPED 3"
 )
 
 add_test(
@@ -19,7 +19,7 @@ add_test(
 set_tests_properties(
     fizzy/smoketests/spectests/skipvalidation
     PROPERTIES
-    PASS_REGULAR_EXPRESSION "PASSED 22, FAILED 0, SKIPPED 8"
+    PASS_REGULAR_EXPRESSION "PASSED 25, FAILED 1, SKIPPED 4"
 )
 
 add_test(
@@ -39,7 +39,7 @@ add_test(
 set_tests_properties(
     fizzy/smoketests/spectests/broken
     PROPERTIES
-    PASS_REGULAR_EXPRESSION "PASSED 0, FAILED 2, SKIPPED 4"
+    PASS_REGULAR_EXPRESSION "PASSED 1, FAILED 2, SKIPPED 6"
 )
 
 add_test(

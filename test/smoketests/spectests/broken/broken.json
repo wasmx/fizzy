@@ -5,4 +5,8 @@
   {"type": "module", "line": 5, "filename": "unparsable.wasm"},
   {"type": "assert_return", "line": 10, "action": {"type": "get", "field": "tmp"}, "expected": []},
   {"type": "assert_return", "line": 15, "action": {"type": "invalid_action_type"}, "expected": []},
-  {"type": "assert_trap", "line": 20, "action": {"type": "invalid_action_type"}, "expected": []}]}
+  {"type": "assert_trap", "line": 20, "action": {"type": "invalid_action_type"}, "expected": []},
+  {"type": "module", "line": 25, "filename": "single_func.wasm"},
+  {"type": "assert_return", "line": 35, "action": {"type": "invoke", "field": "foo", "args": [{"type": "invalid_type", "value": "0"}]}, "expected": []},
+  {"type": "assert_return", "line": 45, "action": {"type": "invoke", "field": "foo", "args": []}, "expected": [{"type": "invalid_type", "value": "0"}]}]
+}
