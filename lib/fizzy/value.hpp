@@ -11,6 +11,8 @@ namespace fizzy
 union Value
 {
     uint64_t i64;
+    float f32;
+    double f64;
 
     Value() = default;
 
@@ -24,6 +26,9 @@ union Value
     constexpr Value(unsigned long long v) noexcept : i64{v} {}
     constexpr Value(int64_t v) noexcept : i64{static_cast<uint64_t>(v)} {}
     constexpr Value(int32_t v) noexcept : i64{static_cast<uint32_t>(v)} {}
+
+    constexpr Value(float v) noexcept : f32{v} {}
+    constexpr Value(double v) noexcept : f64{v} {}
 
     /// Converting constructor from any other type (including smaller integer types) is deleted.
     template <typename T>
@@ -59,5 +64,17 @@ template <>
 constexpr int32_t Value::as<int32_t>() const noexcept
 {
     return static_cast<int32_t>(i64);
+}
+
+template <>
+constexpr float Value::as() const noexcept
+{
+    return f32;
+}
+
+template <>
+constexpr double Value::as() const noexcept
+{
+    return f64;
 }
 }  // namespace fizzy

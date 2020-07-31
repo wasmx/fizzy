@@ -27,6 +27,18 @@ inline void push(bytes& b, T value)
     b.append(storage, sizeof(storage));
 }
 
+template <typename T>
+inline parser_result<T> read_const(const uint8_t* pos, const uint8_t* end)
+{
+    constexpr auto size = sizeof(T);
+    if (pos + size > end)
+        throw parser_error{"unexpected EOF"};
+
+    T value;
+    __builtin_memcpy(&value, pos, size);
+    return {value, pos + size};
+}
+
 /// The control frame to keep information about labels and blocks as defined in
 /// Wasm Validation Algorithm https://webassembly.github.io/spec/core/appendix/algorithm.html.
 struct ControlFrame
@@ -305,12 +317,6 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             throw parser_error{"invalid instruction " + std::to_string(*(pos - 1))};
 
         // Floating point instructions are unsupported
-        case Instr::f32_const:
-            pos = skip(4, pos, end);
-            break;
-        case Instr::f64_const:
-            pos = skip(8, pos, end);
-            break;
         case Instr::f32_eq:
         case Instr::f32_ne:
         case Instr::f32_lt:
@@ -799,12 +805,25 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             push(code.immediates, static_cast<uint32_t>(value));
             break;
         }
-
         case Instr::i64_const:
         {
             int64_t value;
             std::tie(value, pos) = leb128s_decode<int64_t>(pos, end);
             push(code.immediates, static_cast<uint64_t>(value));
+            break;
+        }
+        case Instr::f32_const:
+        {
+            uint32_t value;
+            std::tie(value, pos) = read_const<uint32_t>(pos, end);
+            push(code.immediates, value);
+            break;
+        }
+        case Instr::f64_const:
+        {
+            uint64_t value;
+            std::tie(value, pos) = read_const<uint64_t>(pos, end);
+            push(code.immediates, value);
             break;
         }
 

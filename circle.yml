@@ -193,6 +193,7 @@ jobs:
           ./wat2wasm4cpp.py test/unittests/end_to_end_test.cpp
           ./wat2wasm4cpp.py test/unittests/execute_call_test.cpp
           ./wat2wasm4cpp.py test/unittests/execute_control_test.cpp
+          ./wat2wasm4cpp.py test/unittests/execute_floating_point_test.cpp
           ./wat2wasm4cpp.py test/unittests/execute_numeric_test.cpp
           ./wat2wasm4cpp.py test/unittests/execute_test.cpp
           ./wat2wasm4cpp.py test/unittests/instantiate_test.cpp
@@ -270,9 +271,9 @@ jobs:
       - benchmark:
           min_time: "0.01"
       - spectest:
-          expected_passed: 5423
+          expected_passed: 5468
           expected_failed: 9
-          expected_skipped: 6381
+          expected_skipped: 6336
 
   sanitizers-macos:
     executor: macos
@@ -288,9 +289,9 @@ jobs:
       - benchmark:
           min_time: "0.01"
       - spectest:
-          expected_passed: 5423
+          expected_passed: 5468
           expected_failed: 9
-          expected_skipped: 6381
+          expected_skipped: 6336
 
   benchmark:
     machine:
@@ -396,13 +397,13 @@ jobs:
           at: ~/build
       - spectest:
           skip_validation: true
-          expected_passed: 4481
+          expected_passed: 4526
           expected_failed: 9
-          expected_skipped: 7323
+          expected_skipped: 7278
       - spectest:
-          expected_passed: 5423
+          expected_passed: 5468
           expected_failed: 9
-          expected_skipped: 6381
+          expected_skipped: 6336
       - collect_coverage_data
 
 workflows:

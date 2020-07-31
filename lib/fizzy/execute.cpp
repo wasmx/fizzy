@@ -1002,12 +1002,14 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             break;
         }
         case Instr::i32_const:
+        case Instr::f32_const:
         {
             const auto value = read<uint32_t>(immediates);
             stack.push(value);
             break;
         }
         case Instr::i64_const:
+        case Instr::f64_const:
         {
             const auto value = read<uint64_t>(immediates);
             stack.push(value);
@@ -1384,12 +1386,21 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             // effectively no-op
             break;
         }
+        case Instr::f32_add:
+        {
+            binary_op(stack, std::plus<float>{});
+            break;
+        }
+        case Instr::f64_add:
+        {
+            binary_op(stack, std::plus<double>{});
+            break;
+        }
+
         case Instr::f32_load:
         case Instr::f64_load:
         case Instr::f32_store:
         case Instr::f64_store:
-        case Instr::f32_const:
-        case Instr::f64_const:
         case Instr::f32_eq:
         case Instr::f32_ne:
         case Instr::f32_lt:
@@ -1409,7 +1420,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f32_trunc:
         case Instr::f32_nearest:
         case Instr::f32_sqrt:
-        case Instr::f32_add:
         case Instr::f32_sub:
         case Instr::f32_mul:
         case Instr::f32_div:
@@ -1423,7 +1433,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f64_trunc:
         case Instr::f64_nearest:
         case Instr::f64_sqrt:
-        case Instr::f64_add:
         case Instr::f64_sub:
         case Instr::f64_mul:
         case Instr::f64_div:

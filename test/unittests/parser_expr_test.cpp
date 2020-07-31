@@ -42,14 +42,14 @@ TEST(parser_expr, instr_loop)
     const auto [code3, pos3] = parse_expr(loop_f32);
     EXPECT_EQ(code3.instructions,
         (std::vector{Instr::loop, Instr::f32_const, Instr::end, Instr::drop, Instr::end}));
-    EXPECT_EQ(code3.immediates.size(), 0);
+    EXPECT_EQ(code3.immediates.size(), 4);
     EXPECT_EQ(code3.max_stack_height, 1);
 
     const auto loop_f64 = "037c4400000000000000000b1a0b"_bytes;
     const auto [code4, pos4] = parse_expr(loop_f64);
     EXPECT_EQ(code4.instructions,
         (std::vector{Instr::loop, Instr::f64_const, Instr::end, Instr::drop, Instr::end}));
-    EXPECT_EQ(code4.immediates.size(), 0);
+    EXPECT_EQ(code4.immediates.size(), 8);
     EXPECT_EQ(code4.max_stack_height, 1);
 }
 
@@ -81,7 +81,7 @@ TEST(parser_expr, instr_block)
     const auto [code3, pos3] = parse_expr(block_f64);
     EXPECT_EQ(code3.instructions,
         (std::vector{Instr::block, Instr::f64_const, Instr::end, Instr::drop, Instr::end}));
-    EXPECT_TRUE(code3.immediates.empty());
+    EXPECT_EQ(code2.immediates, "0000000000000000"_bytes);
 }
 
 TEST(parser_expr, instr_block_input_buffer_overflow)
