@@ -1151,6 +1151,69 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             comparison_op(stack, std::greater_equal<uint64_t>());
             break;
         }
+
+        case Instr::f32_eq:
+        {
+            comparison_op(stack, std::equal_to<float>());
+            break;
+        }
+        case Instr::f32_ne:
+        {
+            comparison_op(stack, std::not_equal_to<float>());
+            break;
+        }
+        case Instr::f32_lt:
+        {
+            comparison_op(stack, std::less<float>());
+            break;
+        }
+        case Instr::f32_gt:
+        {
+            comparison_op<float>(stack, std::greater<float>());
+            break;
+        }
+        case Instr::f32_le:
+        {
+            comparison_op(stack, std::less_equal<float>());
+            break;
+        }
+        case Instr::f32_ge:
+        {
+            comparison_op(stack, std::greater_equal<float>());
+            break;
+        }
+
+        case Instr::f64_eq:
+        {
+            comparison_op(stack, std::equal_to<double>());
+            break;
+        }
+        case Instr::f64_ne:
+        {
+            comparison_op(stack, std::not_equal_to<double>());
+            break;
+        }
+        case Instr::f64_lt:
+        {
+            comparison_op(stack, std::less<double>());
+            break;
+        }
+        case Instr::f64_gt:
+        {
+            comparison_op<double>(stack, std::greater<double>());
+            break;
+        }
+        case Instr::f64_le:
+        {
+            comparison_op(stack, std::less_equal<double>());
+            break;
+        }
+        case Instr::f64_ge:
+        {
+            comparison_op(stack, std::greater_equal<double>());
+            break;
+        }
+
         case Instr::i32_clz:
         {
             unary_op(stack, clz32);
@@ -1502,18 +1565,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f64_load:
         case Instr::f32_store:
         case Instr::f64_store:
-        case Instr::f32_eq:
-        case Instr::f32_ne:
-        case Instr::f32_lt:
-        case Instr::f32_gt:
-        case Instr::f32_le:
-        case Instr::f32_ge:
-        case Instr::f64_eq:
-        case Instr::f64_ne:
-        case Instr::f64_lt:
-        case Instr::f64_gt:
-        case Instr::f64_le:
-        case Instr::f64_ge:
         case Instr::f32_abs:
         case Instr::f32_neg:
         case Instr::f32_ceil:
