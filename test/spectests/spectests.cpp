@@ -50,12 +50,6 @@ const auto spectest_bin = fizzy::test::from_hex(
 const auto spectest_module = fizzy::parse(spectest_bin);
 const std::string spectest_name = "spectest";
 
-template <typename T>
-uint64_t json_to_value(const json& v)
-{
-    return static_cast<std::make_unsigned_t<T>>(std::stoull(v.get<std::string>()));
-}
-
 fizzy::bytes load_wasm_file(const fs::path& json_file_path, std::string_view filename)
 {
     std::ifstream wasm_file{fs::path{json_file_path}.replace_filename(filename)};
@@ -402,6 +396,20 @@ private:
         return it_instance->second.get();
     }
 
+    std::optional<fizzy::Value> read_value(const json& v)
+    {
+        const auto arg_type = v.at("type").get<std::string>();
+        if (arg_type != "i32" && arg_type != "i64" && arg_type != "f32" && arg_type != "f64")
+        {
+            skip("Unsupported value type '" + arg_type + "'.");
+            return std::nullopt;
+        }
+
+        // Values of all types are serialized to JSON as integers.
+        // Value type will handle correct conversions.
+        return std::stoull(v.at("value").get<std::string>());
+    }
+
     std::optional<fizzy::ExecutionResult> invoke(const json& action)
     {
         auto instance = find_instance_for_action(action);
@@ -419,18 +427,11 @@ private:
         std::vector<fizzy::Value> args;
         for (const auto& arg : action.at("args"))
         {
-            const auto arg_type = arg.at("type").get<std::string>();
-            uint64_t arg_value;
-            if (arg_type == "i32")
-                arg_value = json_to_value<int32_t>(arg.at("value"));
-            else if (arg_type == "i64")
-                arg_value = json_to_value<int64_t>(arg.at("value"));
-            else
-            {
-                skip("Unsupported argument type '" + arg_type + "'.");
+            const auto arg_value = read_value(arg);
+            if (!arg_value.has_value())
                 return std::nullopt;
-            }
-            args.push_back(arg_value);
+
+            args.push_back(*arg_value);
         }
 
         try
@@ -444,25 +445,17 @@ private:
         }
     }
 
-    bool check_result(uint64_t actual_value, const json& expected)
+    bool check_result(fizzy::Value actual_value, const json& expected)
     {
-        const auto expected_type = expected.at("type").get<std::string>();
-        uint64_t expected_value;
-        if (expected_type == "i32")
-            expected_value = json_to_value<int32_t>(expected.at("value"));
-        else if (expected_type == "i64")
-            expected_value = json_to_value<int64_t>(expected.at("value"));
-        else
-        {
-            skip("Unsupported expected type '" + expected_type + "'.");
+        const auto expected_value = read_value(expected);
+        if (!expected_value.has_value())
             return false;
-        }
 
-        if (expected_value != actual_value)
+        if (*expected_value != actual_value)
         {
             std::stringstream message;
-            message << "Incorrect returned value. Expected: " << expected_value << " (0x"
-                    << std::hex << expected_value << ") Actual: " << std::dec << actual_value
+            message << "Incorrect returned value. Expected: " << *expected_value << " (0x"
+                    << std::hex << *expected_value << ") Actual: " << std::dec << actual_value
                     << " (0x" << std::hex << actual_value << std::dec << ")";
             fail(message.str());
             return false;
