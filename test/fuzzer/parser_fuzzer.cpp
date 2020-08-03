@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "parser.hpp"
+#include <cstdlib>
 #include <iomanip>
 #include <iostream>
 
@@ -36,7 +37,14 @@ Stats stats;
 
 void handle_unexpected_errors() noexcept
 {
-    __builtin_trap();
+    static const bool ignore_errors = [] {
+        const auto options = std::getenv("OPTIONS");
+        if (!options)
+            return false;
+        return std::string{options}.find("ignore_errors") != std::string::npos;
+    }();
+    if (!ignore_errors)
+        __builtin_trap();
 }
 
 constexpr auto wabt_ignored_errors = {
@@ -99,7 +107,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
                 if (ignored)
                     continue;
 
-                std::cerr << "MISSED ERROR: " << err.message << "\n";
+                std::cerr << "  MISSED ERROR: " << err.message << "\n";
                 has_errors = true;
             }
 
@@ -112,7 +120,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
         ++stats.malformed;
         if (expected)
         {
-            std::cerr << "\nMALFORMED: " << err.what() << "\n\n";
+            std::cerr << "  MALFORMED: " << err.what() << "\n";
             handle_unexpected_errors();
         }
     }
@@ -121,7 +129,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
         ++stats.invalid;
         if (expected)
         {
-            std::cerr << "\nINVALID: " << err.what() << "\n\n";
+            std::cerr << "  INVALID: " << err.what() << "\n";
             handle_unexpected_errors();
         }
     }
