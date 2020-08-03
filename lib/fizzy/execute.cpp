@@ -687,7 +687,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             const auto br_table_size = read<uint32_t>(immediates);
             const auto arity = read<uint32_t>(immediates);
 
-            const auto br_table_idx = stack.pop();
+            const auto br_table_idx = static_cast<uint32_t>(stack.pop());
 
             const auto label_idx_offset = br_table_idx < br_table_size ?
                                               br_table_idx * BranchImmediateSize :
@@ -716,7 +716,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             const auto expected_type_idx = read<uint32_t>(immediates);
             assert(expected_type_idx < instance.module.typesec.size());
 
-            const auto elem_idx = stack.pop();
+            const auto elem_idx = static_cast<uint32_t>(stack.pop());
             if (elem_idx >= instance.table->size())
             {
                 trap = true;
