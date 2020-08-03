@@ -61,6 +61,9 @@ fizzy::bytes load_wasm_file(const fs::path& json_file_path, std::string_view fil
 struct test_settings
 {
     bool skip_validation = false;
+    bool show_passed = false;
+    bool show_failed = true;
+    bool show_skipped = false;
 };
 
 struct test_results
@@ -98,12 +101,12 @@ public:
         {
             const auto type = cmd.at("type").get<std::string>();
 
-            log_no_newline("Line " + std::to_string(cmd.at("line").get<int>()) + ": " + type + " ");
+            m_current_line = cmd.at("line").get<int>();
+            m_current_test_type = type;
 
             if (type == "module")
             {
                 const auto filename = cmd.at("filename").get<std::string>();
-                log_no_newline("Instantiating " + filename + " ");
 
                 const std::string name =
                     (cmd.find("name") != cmd.end() ? cmd.at("name").get<std::string>() :
@@ -371,6 +374,9 @@ public:
                 skip("Unsupported command type");
         }
 
+        log("");  // newline after dots line
+        if (!m_result_details.empty())
+            log_no_newline(m_result_details);
         log(std::to_string(m_results.passed + m_results.failed + m_results.skipped) +
             " tests ran from " + path.filename().string() + ".\n  PASSED " +
             std::to_string(m_results.passed) + ", FAILED " + std::to_string(m_results.failed) +
@@ -531,30 +537,48 @@ private:
     void pass()
     {
         ++m_results.passed;
-        std::cout << "PASSED\n";
+        if (m_settings.show_passed)
+            add_to_result_details("PASSED");
+        log_no_newline(".");
     }
 
     void fail(std::string_view message)
     {
         ++m_results.failed;
-        std::cout << "FAILED " << message << "\n";
+        if (m_settings.show_failed)
+            add_to_result_details("FAILED " + std::string{message});
+        log_no_newline("F");
     }
 
     void skip(std::string_view message)
     {
         ++m_results.skipped;
-        std::cout << "SKIPPED " << message << "\n";
+        if (m_settings.show_skipped)
+            add_to_result_details("SKIPPED " + std::string{message});
+        log_no_newline("s");
     }
 
     static void log(std::string_view message) { std::cout << message << "\n"; }
 
     static void log_no_newline(std::string_view message) { std::cout << message << std::flush; }
 
+    void add_to_result_details(std::string_view message)
+    {
+        assert(!m_current_test_type.empty() && m_current_line != 0);
+        m_result_details += "Line " + std::to_string(m_current_line) + ": " + m_current_test_type +
+                            " " + std::string(message) + "\n";
+        m_current_line = 0;
+        m_current_test_type.clear();
+    }
+
     test_settings m_settings;
     std::unordered_map<std::string, std::unique_ptr<fizzy::Instance>> m_instances;
     std::unordered_map<std::string, std::string> m_registered_names;
     std::string m_last_module_name;
     test_results m_results;
+    std::string m_result_details;
+    int m_current_line = 0;
+    std::string m_current_test_type;
 };
 
 bool run_tests_from_dir(const fs::path& path, const test_settings& settings)
@@ -600,6 +624,12 @@ int main(int argc, char** argv)
             {
                 if (argv[i] == std::string{"--skip-validation"})
                     settings.skip_validation = true;
+                else if (argv[i] == std::string{"--hide-failed"})
+                    settings.show_failed = false;
+                else if (argv[i] == std::string{"--show-passed"})
+                    settings.show_passed = true;
+                else if (argv[i] == std::string{"--show-skipped"})
+                    settings.show_skipped = true;
                 else
                 {
                     std::cerr << "Unknown argument: " << argv[i] << "\n";
