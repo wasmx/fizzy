@@ -20,7 +20,15 @@ MATCHER(Result, "empty result")
 
 MATCHER_P(Result, value, "")  // NOLINT(readability-redundant-string-init)
 {
-    return !arg.trapped && arg.has_value && arg.value == uint64_t(value);
+    if (arg.trapped || !arg.has_value)
+        return false;
+
+    if constexpr (std::is_same_v<value_type, float>)
+        return arg.value.f32 == value;
+    else if constexpr (std::is_same_v<value_type, double>)
+        return arg.value.f64 == value;
+    else  // always check 64 bit of result for all integers, including 32-bit results
+        return arg.value.template as<uint64_t>() == static_cast<uint64_t>(value);
 }
 
 #define EXPECT_THROW_MESSAGE(stmt, ex_type, expected)                                        \
