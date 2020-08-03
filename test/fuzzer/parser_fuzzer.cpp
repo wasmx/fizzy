@@ -34,6 +34,11 @@ struct Stats
 
 Stats stats;
 
+void handle_unexpected_errors() noexcept
+{
+    __builtin_trap();
+}
+
 constexpr auto wabt_ignored_errors = {
     "unable to read u32 leb128: version",
     "invalid linking metadata version:",
@@ -99,7 +104,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
             }
 
             if (has_errors)
-                __builtin_trap();
+                handle_unexpected_errors();
         }
     }
     catch (const fizzy::parser_error& err)
@@ -108,7 +113,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
         if (expected)
         {
             std::cerr << "\nMALFORMED: " << err.what() << "\n\n";
-            __builtin_trap();
+            handle_unexpected_errors();
         }
     }
     catch (const fizzy::validation_error& err)
@@ -117,7 +122,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
         if (expected)
         {
             std::cerr << "\nINVALID: " << err.what() << "\n\n";
-            __builtin_trap();
+            handle_unexpected_errors();
         }
     }
 
