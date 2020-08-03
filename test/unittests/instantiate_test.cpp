@@ -825,6 +825,38 @@ TEST(instantiate, globals_initialized_from_imported)
     EXPECT_EQ(instance->globals[0], 42);
 }
 
+TEST(instantiate, globals_float)
+{
+    /* wat2wasm
+      (global (import "m" "g1") (mut f32))
+      (global (import "m" "g2") f64)
+      (global f32 (f32.const 1.2))
+      (global (mut f64) (f64.const 3.4))
+      (global f64 (global.get 1))
+    */
+    const auto bin = from_hex(
+        "0061736d01000000021102016d026731037d01016d026732037c00061a037d00439a99993f0b7c014433333333"
+        "33330b400b7c0023010b");
+    const auto module = parse(bin);
+
+    Value global_value1 = 5.6f;
+    ExternalGlobal g1{&global_value1, true};
+    Value global_value2 = 7.8;
+    ExternalGlobal g2{&global_value2, false};
+
+    auto instance = instantiate(module, {}, {}, {}, {g1, g2});
+
+    ASSERT_EQ(instance->imported_globals.size(), 2);
+    EXPECT_EQ(instance->imported_globals[0].value->f32, 5.6f);
+    EXPECT_EQ(instance->imported_globals[0].is_mutable, true);
+    EXPECT_EQ(instance->imported_globals[1].value->f64, 7.8);
+    EXPECT_EQ(instance->imported_globals[1].is_mutable, false);
+    ASSERT_EQ(instance->globals.size(), 3);
+    EXPECT_EQ(instance->globals[0].f32, 1.2f);
+    EXPECT_EQ(instance->globals[1].f64, 3.4);
+    EXPECT_EQ(instance->globals[2].f64, 7.8);
+}
+
 TEST(instantiate, start_unreachable)
 {
     /* wat2wasm

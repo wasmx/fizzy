@@ -182,6 +182,38 @@ TEST(execute, global_get_imported_and_internal)
     EXPECT_THAT(execute(*instance, 3, {}), Result(43));
 }
 
+TEST(execute, global_get_float)
+{
+    /* wat2wasm
+    (global (import "m" "g1") (mut f32))
+    (global (import "m" "g2") f64)
+    (global f32 (f32.const 1.2))
+    (global (mut f64) (f64.const 3.4))
+    (global f64 (global.get 1))
+
+    (func (result f32) get_global 0)
+    (func (result f64) get_global 1)
+    (func (result f32) get_global 2)
+    (func (result f64) get_global 3)
+    (func (result f64) get_global 4)
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000109026000017d6000017c021102016d026731037d01016d026732037c0003060500010001"
+        "01061a037d00439a99993f0b7c01443333333333330b400b7c0023010b0a1a05040023000b040023010b040023"
+        "020b040023030b040023040b");
+
+    Value g1 = 5.6f;
+    Value g2 = 7.8;
+    auto instance = instantiate(
+        parse(wasm), {}, {}, {}, {ExternalGlobal{&g1, true}, ExternalGlobal{&g2, false}});
+
+    EXPECT_THAT(execute(*instance, 0, {}), Result(5.6f));
+    EXPECT_THAT(execute(*instance, 1, {}), Result(7.8));
+    EXPECT_THAT(execute(*instance, 2, {}), Result(1.2f));
+    EXPECT_THAT(execute(*instance, 3, {}), Result(3.4));
+    EXPECT_THAT(execute(*instance, 4, {}), Result(7.8));
+}
+
 TEST(execute, global_set)
 {
     /* wat2wasm
@@ -237,6 +269,39 @@ TEST(execute, global_set_imported)
     auto instance = instantiate(parse(wasm), {}, {}, {}, {ExternalGlobal{&global_value, true}});
     EXPECT_THAT(execute(*instance, 0, {}), Result());
     EXPECT_EQ(global_value, 42);
+}
+
+TEST(execute, global_set_float)
+{
+    /* wat2wasm
+    (global (import "m" "g1") (mut f32))
+    (global (import "m" "g2") (mut f64))
+    (global (mut f32) (f32.const 1.2))
+    (global (mut f64) (f64.const 3.4))
+
+    (func (set_global 0 (f32.const 11.22)))
+    (func (set_global 1 (f64.const 33.44)))
+    (func (set_global 2 (f32.const 55.66)))
+    (func (set_global 3 (f64.const 77.88)))
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010401600000021102016d026731037d01016d026732037c01030504000000000615027d01"
+        "439a99993f0b7c01443333333333330b400b0a31040900431f85334124000b0d0044b81e85eb51b8404024010b"
+        "090043d7a35e4224020b0d0044b81e85eb5178534024030b");
+
+    Value g1 = 5.6f;
+    Value g2 = 7.8;
+    auto instance = instantiate(
+        parse(wasm), {}, {}, {}, {ExternalGlobal{&g1, true}, ExternalGlobal{&g2, true}});
+
+    EXPECT_THAT(execute(*instance, 0, {}), Result());
+    EXPECT_EQ(g1.f32, 11.22f);
+    EXPECT_THAT(execute(*instance, 1, {}), Result());
+    EXPECT_EQ(g2.f64, 33.44);
+    EXPECT_THAT(execute(*instance, 2, {}), Result());
+    EXPECT_EQ(instance->globals[0].f32, 55.66f);
+    EXPECT_THAT(execute(*instance, 3, {}), Result());
+    EXPECT_EQ(instance->globals[1].f64, 77.88);
 }
 
 TEST(execute, i32_load_imported_memory)
