@@ -33,3 +33,10 @@ TEST(test_utils, from_hex)
     EXPECT_THROW_MESSAGE(from_hex("fg"), std::out_of_range, "not a hex digit");
     EXPECT_THROW_MESSAGE(from_hex("FG"), std::out_of_range, "not a hex digit");
 }
+
+TEST(test_utils, result_signed_int)
+{
+    EXPECT_THAT(ExecutionResult{Value{-1}}, Result(-1));
+    constexpr auto v = std::numeric_limits<int32_t>::min();
+    EXPECT_THAT(ExecutionResult{Value{v}}, Result(v));
+}
