@@ -34,6 +34,18 @@ inline parser_result<uint8_t> parse_byte(const uint8_t* pos, const uint8_t* end)
     return {*pos, pos + 1};
 }
 
+template <typename T>
+inline parser_result<T> parse_value(const uint8_t* pos, const uint8_t* end)
+{
+    constexpr auto size = sizeof(T);
+    if (pos + size > end)
+        throw parser_error{"unexpected EOF"};
+
+    T value;
+    __builtin_memcpy(&value, pos, size);
+    return {value, pos + size};
+}
+
 /// Parse `expr`, i.e. a function's instructions residing in the code section.
 /// https://webassembly.github.io/spec/core/binary/instructions.html#binary-expr
 ///

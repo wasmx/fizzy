@@ -27,18 +27,6 @@ inline void push(bytes& b, T value)
     b.append(storage, sizeof(storage));
 }
 
-template <typename T>
-inline parser_result<T> read_const(const uint8_t* pos, const uint8_t* end)
-{
-    constexpr auto size = sizeof(T);
-    if (pos + size > end)
-        throw parser_error{"unexpected EOF"};
-
-    T value;
-    __builtin_memcpy(&value, pos, size);
-    return {value, pos + size};
-}
-
 /// The control frame to keep information about labels and blocks as defined in
 /// Wasm Validation Algorithm https://webassembly.github.io/spec/core/appendix/algorithm.html.
 struct ControlFrame
@@ -815,14 +803,14 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         case Instr::f32_const:
         {
             uint32_t value;
-            std::tie(value, pos) = read_const<uint32_t>(pos, end);
+            std::tie(value, pos) = parse_value<uint32_t>(pos, end);
             push(code.immediates, value);
             break;
         }
         case Instr::f64_const:
         {
             uint64_t value;
-            std::tie(value, pos) = read_const<uint64_t>(pos, end);
+            std::tie(value, pos) = parse_value<uint64_t>(pos, end);
             push(code.immediates, value);
             break;
         }
