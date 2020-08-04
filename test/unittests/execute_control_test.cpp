@@ -139,7 +139,7 @@ TEST(execute_control, loop_with_result_br_if)
     */
     const auto wasm = from_hex(
         "0061736d0100000001060160017f017f030201000a12011000037f417f200041016b22000d000b0b");
-    EXPECT_THAT(execute(parse(wasm), 0, {2}), Result(uint32_t(-1)));
+    EXPECT_THAT(execute(parse(wasm), 0, {2}), Result(-1));
 }
 
 TEST(execute_control, loop_with_result_br)

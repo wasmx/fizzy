@@ -267,8 +267,7 @@ TEST(execute_numeric, i32_mul)
 
 TEST(execute_numeric, i32_div_s)
 {
-    EXPECT_THAT(
-        execute_binary_operation(Instr::i32_div_s, uint64_t(-84), 2), Result(uint32_t(-42)));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_div_s, uint64_t(-84), 2), Result(-42));
 }
 
 TEST(execute_numeric, i32_div_s_by_zero)
@@ -308,8 +307,7 @@ TEST(execute_numeric, i32_div_u_by_zero)
 
 TEST(execute_numeric, i32_rem_s)
 {
-    EXPECT_THAT(
-        execute_binary_operation(Instr::i32_rem_s, uint64_t(-4242), 4200), Result(uint32_t(-42)));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_rem_s, uint64_t(-4242), 4200), Result(-42));
     constexpr auto i32_min = std::numeric_limits<int32_t>::min();
     EXPECT_THAT(
         execute_binary_operation(Instr::i32_rem_s, uint64_t(i32_min), uint64_t(-1)), Result(0));
@@ -371,8 +369,7 @@ TEST(execute_numeric, i32_shl)
 
 TEST(execute_numeric, i32_shr_s)
 {
-    EXPECT_THAT(
-        execute_binary_operation(Instr::i32_shr_s, uint64_t(-84), 1), Result(uint32_t(-42)));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, uint64_t(-84), 1), Result(-42));
     EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 0), Result(0xffffffff));
     EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 1), Result(0xffffffff));
     EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 31), Result(0xffffffff));
