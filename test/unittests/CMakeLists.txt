@@ -17,6 +17,7 @@ target_sources(
     execute_floating_point_test.cpp
     execute_numeric_test.cpp
     execute_test.cpp
+    floating_point_utils_test.cpp
     instantiate_test.cpp
     leb128_test.cpp
     module_test.cpp

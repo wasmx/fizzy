@@ -15,6 +15,7 @@ target_sources(
     asserts.hpp
     execute_helpers.hpp
     fizzy_engine.cpp
+    floating_point_utils.hpp
     hex.cpp
     hex.hpp
     leb128_encode.cpp
