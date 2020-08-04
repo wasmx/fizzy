@@ -850,6 +850,106 @@ TEST(execute_floating_point, f64_promote_f32)
     EXPECT_GT(FP{res4.value.f64}.nan_payload(), FP64::canon);
 }
 
+TEST(execute_floating_point, f32_demote_f64)
+{
+    /* wat2wasm
+    (func (param f64) (result f32)
+      local.get 0
+      f32.demote_f64
+    )
+    */
+    const auto wasm = from_hex("0061736d0100000001060160017c017d030201000a070105002000b60b");
+    auto instance = instantiate(parse(wasm));
+
+    constexpr double f32_max = FP32::Limits::max();
+    ASSERT_EQ(f32_max, 0x1.fffffep127);
+
+    // The "artificial" f32 range limit: the next f32 number that could be represented
+    // if the exponent had a larger range.
+    // Wasm spec Rounding section denotes this as the limit_N in the float_N function (for N=32).
+    // https://webassembly.github.io/spec/core/exec/numerics.html#rounding
+    constexpr double f32_limit = 0x1p128;  // 2**128.
+
+    // The lower boundary input value that results in the infinity. The number is midway between
+    // f32_max and f32_limit. For this value rounding prefers infinity, because f32_limit is even.
+    constexpr double lowest_to_inf = (f32_max + f32_limit) / 2;
+    ASSERT_EQ(lowest_to_inf, 0x1.ffffffp127);
+
+    const std::pair<double, float> test_cases[] = {
+        // demote(+-0) = +-0
+        {0.0, 0.0f},
+        {-0.0, -0.0f},
+
+        {1.0, 1.0f},
+        {-1.0, -1.0f},
+        {double{FP32::Limits::lowest()}, FP32::Limits::lowest()},
+        {double{FP32::Limits::max()}, FP32::Limits::max()},
+        {double{FP32::Limits::min()}, FP32::Limits::min()},
+        {double{-FP32::Limits::min()}, -FP32::Limits::min()},
+        {double{FP32::Limits::denorm_min()}, FP32::Limits::denorm_min()},
+        {double{-FP32::Limits::denorm_min()}, -FP32::Limits::denorm_min()},
+
+        // Some special f64 values.
+        {FP64::Limits::lowest(), -FP32::Limits::infinity()},
+        {FP64::Limits::max(), FP32::Limits::infinity()},
+        {FP64::Limits::min(), 0.0f},
+        {-FP64::Limits::min(), -0.0f},
+        {FP64::Limits::denorm_min(), 0.0f},
+        {-FP64::Limits::denorm_min(), -0.0f},
+
+        // Out of range values rounded to max/lowest.
+        {std::nextafter(f32_max, FP64::Limits::infinity()), FP32::Limits::max()},
+        {std::nextafter(double{FP32::Limits::lowest()}, -FP64::Limits::infinity()),
+            FP32::Limits::lowest()},
+
+        {std::nextafter(lowest_to_inf, 0.0), FP32::Limits::max()},
+        {std::nextafter(-lowest_to_inf, 0.0), FP32::Limits::lowest()},
+
+        // The smallest of range values rounded to infinity.
+        {lowest_to_inf, FP32::Limits::infinity()},
+        {-lowest_to_inf, -FP32::Limits::infinity()},
+
+        {std::nextafter(lowest_to_inf, FP64::Limits::infinity()), FP32::Limits::infinity()},
+        {std::nextafter(-lowest_to_inf, -FP64::Limits::infinity()), -FP32::Limits::infinity()},
+
+        // float_32(r) = +inf  (if r >= +limit_32)
+        {f32_limit, FP32::Limits::infinity()},
+
+        // float_32(r) = -inf  (if r <= -limit_32)
+        {-f32_limit, -FP32::Limits::infinity()},
+
+        // demote(+-inf) = +-inf
+        {FP64::Limits::infinity(), FP32::Limits::infinity()},
+        {-FP64::Limits::infinity(), -FP32::Limits::infinity()},
+
+        // Rounding.
+        {0x1.fffffefffffffp0, 0x1.fffffep0f},  // round down
+        {0x1.fffffe0000000p0, 0x1.fffffep0f},  // exact (odd)
+        {0x1.fffffd0000001p0, 0x1.fffffep0f},  // round up
+
+        {0x1.fffff8p0, 0x1.fffff8p0f},                       // exact (even)
+        {(0x1.fffff8p0 + 0x1.fffffap0) / 2, 0x1.fffff8p0f},  // tie-to-even down
+        {0x1.fffffap0, 0x1.fffffap0f},                       // exact (odd)
+        {(0x1.fffffap0 + 0x1.fffffcp0) / 2, 0x1.fffffcp0f},  // tie-to-even up
+        {0x1.fffffcp0, 0x1.fffffcp0f},                       // exact (even)
+
+        // The canonical NaN must result in canonical NaN (only the top bit of payload set).
+        {FP32::nan(FP32::canon), FP64::nan(FP64::canon)},
+        {-FP32::nan(FP32::canon), -FP64::nan(FP64::canon)},
+    };
+
+    for (const auto& [arg, expected] : test_cases)
+    {
+        EXPECT_THAT(execute(*instance, 0, {arg}), Result(expected)) << arg << " -> " << expected;
+    }
+
+    // Any input NaN other than canonical must result in an arithmetic NaN.
+    EXPECT_THAT(execute(*instance, 0, {FP64::nan(FP64::canon + 1)}), ArithmeticNaN(float{}));
+    EXPECT_THAT(execute(*instance, 0, {-FP64::nan(FP64::canon + 1)}), ArithmeticNaN(float{}));
+    EXPECT_THAT(execute(*instance, 0, {FP64::nan(1)}), ArithmeticNaN(float{}));
+    EXPECT_THAT(execute(*instance, 0, {-FP64::nan(1)}), ArithmeticNaN(float{}));
+}
+
 
 template <typename SrcT, typename DstT>
 struct ConversionPairWasmTraits;
