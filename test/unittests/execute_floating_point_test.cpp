@@ -431,6 +431,70 @@ struct ConversionPairWasmTraits<double, uint64_t>
     static constexpr auto src_valtype = ValType::f64;
     static constexpr auto dst_valtype = ValType::i64;
 };
+template <>
+struct ConversionPairWasmTraits<int32_t, float>
+{
+    static constexpr auto opcode_name = "f32_convert_i32_s";
+    static constexpr auto opcode = Instr::f32_convert_i32_s;
+    static constexpr auto src_valtype = ValType::i32;
+    static constexpr auto dst_valtype = ValType::f32;
+};
+template <>
+struct ConversionPairWasmTraits<uint32_t, float>
+{
+    static constexpr auto opcode_name = "f32_convert_i32_u";
+    static constexpr auto opcode = Instr::f32_convert_i32_u;
+    static constexpr auto src_valtype = ValType::i32;
+    static constexpr auto dst_valtype = ValType::f32;
+};
+template <>
+struct ConversionPairWasmTraits<int64_t, float>
+{
+    static constexpr auto opcode_name = "f32_convert_i64_s";
+    static constexpr auto opcode = Instr::f32_convert_i64_s;
+    static constexpr auto src_valtype = ValType::i64;
+    static constexpr auto dst_valtype = ValType::f32;
+};
+template <>
+struct ConversionPairWasmTraits<uint64_t, float>
+{
+    static constexpr auto opcode_name = "f32_convert_i64_u";
+    static constexpr auto opcode = Instr::f32_convert_i64_u;
+    static constexpr auto src_valtype = ValType::i64;
+    static constexpr auto dst_valtype = ValType::f32;
+};
+template <>
+struct ConversionPairWasmTraits<int32_t, double>
+{
+    static constexpr auto opcode_name = "f64_convert_i32_s";
+    static constexpr auto opcode = Instr::f64_convert_i32_s;
+    static constexpr auto src_valtype = ValType::i32;
+    static constexpr auto dst_valtype = ValType::f64;
+};
+template <>
+struct ConversionPairWasmTraits<uint32_t, double>
+{
+    static constexpr auto opcode_name = "f64_convert_i32_u";
+    static constexpr auto opcode = Instr::f64_convert_i32_u;
+    static constexpr auto src_valtype = ValType::i32;
+    static constexpr auto dst_valtype = ValType::f64;
+};
+template <>
+struct ConversionPairWasmTraits<int64_t, double>
+{
+    static constexpr auto opcode_name = "f64_convert_i64_s";
+    static constexpr auto opcode = Instr::f64_convert_i64_s;
+    static constexpr auto src_valtype = ValType::i64;
+    static constexpr auto dst_valtype = ValType::f64;
+};
+template <>
+struct ConversionPairWasmTraits<uint64_t, double>
+{
+    static constexpr auto opcode_name = "f64_convert_i64_u";
+    static constexpr auto opcode = Instr::f64_convert_i64_u;
+    static constexpr auto src_valtype = ValType::i64;
+    static constexpr auto dst_valtype = ValType::f64;
+};
 
 template <typename SrcT, typename DstT>
 struct ConversionPair : ConversionPairWasmTraits<SrcT, DstT>
@@ -474,7 +538,7 @@ TYPED_TEST(execute_floating_point_trunc, trunc)
     */
     auto wasm = from_hex("0061736d0100000001060160017d017f030201000a070105002000a80b");
 
-    // Find and replace changeable values: types and the conversion instruction.
+    // Find and replace changeable values: types and the trunc instruction.
     constexpr auto param_type = static_cast<uint8_t>(ValType::f32);
     constexpr auto result_type = static_cast<uint8_t>(ValType::i32);
     constexpr auto opcode = static_cast<uint8_t>(Instr::i32_trunc_f32_s);
@@ -571,6 +635,71 @@ TYPED_TEST(execute_floating_point_trunc, trunc)
         EXPECT_EQ(result.value.template as<IntT>(), FloatT{-1});
     }
 }
+
+
+template <typename T>
+class execute_floating_point_convert : public testing::Test
+{
+};
+
+using ConvertPairs = testing::Types<ConversionPair<int32_t, float>, ConversionPair<uint32_t, float>,
+    ConversionPair<int64_t, float>, ConversionPair<uint64_t, float>,
+    ConversionPair<int32_t, double>, ConversionPair<uint32_t, double>,
+    ConversionPair<int64_t, double>, ConversionPair<uint64_t, double>>;
+TYPED_TEST_SUITE(execute_floating_point_convert, ConvertPairs, ConversionName);
+
+TYPED_TEST(execute_floating_point_convert, convert)
+{
+    using IntT = typename TypeParam::src_type;
+    using FloatT = typename TypeParam::dst_type;
+    using IntLimits = std::numeric_limits<IntT>;
+    using FloatLimits = std::numeric_limits<FloatT>;
+
+    /* wat2wasm
+    (func (param i32) (result f32)
+      local.get 0
+      f32.convert_i32_s
+    )
+    */
+    auto wasm = from_hex("0061736d0100000001060160017f017d030201000a070105002000b20b");
+
+    // Find and replace changeable values: types and the convert instruction.
+    constexpr auto param_type = static_cast<uint8_t>(ValType::i32);
+    constexpr auto result_type = static_cast<uint8_t>(ValType::f32);
+    constexpr auto opcode = static_cast<uint8_t>(Instr::f32_convert_i32_s);
+    ASSERT_EQ(std::count(wasm.begin(), wasm.end(), param_type), 1);
+    ASSERT_EQ(std::count(wasm.begin(), wasm.end(), result_type), 1);
+    ASSERT_EQ(std::count(wasm.begin(), wasm.end(), opcode), 1);
+    *std::find(wasm.begin(), wasm.end(), param_type) = static_cast<uint8_t>(TypeParam::src_valtype);
+    *std::find(wasm.begin(), wasm.end(), result_type) =
+        static_cast<uint8_t>(TypeParam::dst_valtype);
+    *std::find(wasm.begin(), wasm.end(), opcode) = static_cast<uint8_t>(TypeParam::opcode);
+
+    auto instance = instantiate(parse(wasm));
+
+    EXPECT_THAT(execute(*instance, 0, {IntT{0}}), Result(FloatT{0}));
+    EXPECT_THAT(execute(*instance, 0, {IntT{1}}), Result(FloatT{1}));
+
+    // Max integer value: 2^N - 1.
+    constexpr auto max = IntLimits::max();
+    // Can the FloatT represent all values of IntT?
+    constexpr auto exact = IntLimits::digits < FloatLimits::digits;
+    // For "exact" the result is just 2^N - 1, for "not exact" the nearest to 2^N - 1 is 2^N.
+    const auto max_expected = std::pow(FloatT{2}, FloatT{IntLimits::digits}) - FloatT{exact};
+    EXPECT_THAT(execute(*instance, 0, {max}), Result(max_expected));
+
+    if constexpr (IntLimits::is_signed)
+    {
+        EXPECT_THAT(execute(*instance, 0, {-IntT{1}}), Result(-FloatT{1}));
+
+        static_assert(std::is_same_v<decltype(-max), IntT>);
+        EXPECT_THAT(execute(*instance, 0, {-max}), Result(-max_expected));
+
+        const auto min_expected = -std::pow(FloatT{2}, FloatT{IntLimits::digits});
+        EXPECT_THAT(execute(*instance, 0, {IntLimits::min()}), Result(min_expected));
+    }
+}
+
 
 TEST(execute_floating_point, f32_load)
 {
