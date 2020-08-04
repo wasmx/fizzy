@@ -58,7 +58,7 @@ struct ExternalMemory
 
 struct ExternalGlobal
 {
-    uint64_t* value = nullptr;
+    Value* value = nullptr;
     bool is_mutable = false;
 };
 
@@ -77,12 +77,12 @@ struct Instance
     // For these cases unique_ptr would either have a normal deleter or noop deleter respectively.
     table_ptr table = {nullptr, [](table_elements*) {}};
     Limits table_limits;
-    std::vector<uint64_t> globals;
+    std::vector<Value> globals;
     std::vector<ExternalFunction> imported_functions;
     std::vector<ExternalGlobal> imported_globals;
 
     Instance(Module _module, bytes_ptr _memory, Limits _memory_limits, table_ptr _table,
-        Limits _table_limits, std::vector<uint64_t> _globals,
+        Limits _table_limits, std::vector<Value> _globals,
         std::vector<ExternalFunction> _imported_functions,
         std::vector<ExternalGlobal> _imported_globals)
       : module(std::move(_module)),

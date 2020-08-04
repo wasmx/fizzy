@@ -174,17 +174,13 @@ inline parser_result<ConstantExpression> parse_constant_expression(
         break;
     }
     case Instr::f32_const:
-        // TODO: support this once floating points are implemented
         result.kind = ConstantExpression::Kind::Constant;
-        result.value.constant = 0;
-        pos = skip(4, pos, end);
+        std::tie(result.value.constant, pos) = parse_value<uint32_t>(pos, end);
         constant_actual_type = ValType::f32;
         break;
     case Instr::f64_const:
-        // TODO: support this once floating points are implemented
         result.kind = ConstantExpression::Kind::Constant;
-        result.value.constant = 0;
-        pos = skip(8, pos, end);
+        std::tie(result.value.constant, pos) = parse_value<uint64_t>(pos, end);
         constant_actual_type = ValType::f64;
         break;
     }

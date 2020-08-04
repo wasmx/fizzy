@@ -214,8 +214,8 @@ std::tuple<bytes_ptr, Limits> allocate_memory(const std::vector<Memory>& module_
     }
 }
 
-uint64_t eval_constant_expression(ConstantExpression expr,
-    const std::vector<ExternalGlobal>& imported_globals, const std::vector<uint64_t>& globals)
+Value eval_constant_expression(ConstantExpression expr,
+    const std::vector<ExternalGlobal>& imported_globals, const std::vector<Value>& globals)
 {
     if (expr.kind == ConstantExpression::Kind::Constant)
         return expr.value.constant;
@@ -486,7 +486,7 @@ std::unique_ptr<Instance> instantiate(Module module,
     match_imported_globals(module.imported_global_types, imported_globals);
 
     // Init globals
-    std::vector<uint64_t> globals;
+    std::vector<Value> globals;
     globals.reserve(module.globalsec.size());
     for (auto const& global : module.globalsec)
     {

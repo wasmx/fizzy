@@ -140,7 +140,7 @@ TEST(execute, global_get_imported)
         "0061736d010000000105016000017e020d01036d6f6404676c6f62037e00030201000a0601040023000b");
     const auto module = parse(wasm);
 
-    uint64_t global_value = 42;
+    Value global_value = 42;
     auto instance = instantiate(module, {}, {}, {}, {ExternalGlobal{&global_value, false}});
 
     EXPECT_THAT(execute(*instance, 0, {}), Result(42));
@@ -171,8 +171,8 @@ TEST(execute, global_get_imported_and_internal)
         "00060b027f00412a0b7f00412b0b0a1504040023000b040023010b040023020b040023030b");
     const auto module = parse(wasm);
 
-    uint64_t g1 = 40;
-    uint64_t g2 = 41;
+    Value g1 = 40;
+    Value g2 = 41;
     auto instance =
         instantiate(module, {}, {}, {}, {ExternalGlobal{&g1, false}, ExternalGlobal{&g2, false}});
 
@@ -233,7 +233,7 @@ TEST(execute, global_set_imported)
     const auto wasm = from_hex(
         "0061736d01000000010401600000020d01036d6f6404676c6f62037f01030201000a08010600412a24000b");
 
-    uint64_t global_value = 41;
+    Value global_value = 41;
     auto instance = instantiate(parse(wasm), {}, {}, {}, {ExternalGlobal{&global_value, true}});
     EXPECT_THAT(execute(*instance, 0, {}), Result());
     EXPECT_EQ(global_value, 42);

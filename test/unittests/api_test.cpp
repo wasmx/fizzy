@@ -93,7 +93,7 @@ TEST(api, resolve_imported_functions)
 
     EXPECT_EQ(external_functions.size(), 4);
 
-    uint64_t global = 0;
+    Value global = 0;
     const std::vector<ExternalGlobal> external_globals{{&global, false}};
     auto instance = instantiate(
         module, external_functions, {}, {}, std::vector<ExternalGlobal>(external_globals));
@@ -351,7 +351,7 @@ TEST(api, find_exported_global)
         "0061736d01000000010401600000020c010474657374026732037f000302010004040170000005030100000606"
         "017f0141010b071b050267310300026732030103746162010001660000036d656d02000a05010300010b");
 
-    uint64_t g1 = 42;
+    Value g1 = 42;
     auto instance_reexported_global =
         instantiate(parse(wasm_reexported_global), {}, {}, {}, {ExternalGlobal{&g1, false}});
 
