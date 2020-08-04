@@ -800,7 +800,7 @@ TEST(execute_floating_point, f64_promote_f32)
       f64.promote_f32
     )
     */
-    auto wasm = from_hex("0061736d0100000001060160017d017c030201000a070105002000bb0b");
+    const auto wasm = from_hex("0061736d0100000001060160017d017c030201000a070105002000bb0b");
     auto instance = instantiate(parse(wasm));
 
     const std::pair<float, double> test_cases[] = {

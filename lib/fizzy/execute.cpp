@@ -541,6 +541,15 @@ inline constexpr T fmax(T a, T b) noexcept
     return a < b ? b : a;
 }
 
+__attribute__((no_sanitize("float-cast-overflow"))) inline constexpr float demote(
+    double value) noexcept
+{
+    // The float-cast-overflow UBSan check disabled for this conversion. In older clang versions
+    // (up to 8.0) it reports a failure when non-infinity f64 value is converted to f32 infinity.
+    // Such behavior is expected.
+    return static_cast<float>(value);
+}
+
 std::optional<uint32_t> find_export(const Module& module, ExternalKind kind, std::string_view name)
 {
     const auto it = std::find_if(module.exportsec.begin(), module.exportsec.end(),
@@ -1759,6 +1768,11 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             convert<uint64_t, float>(stack);
             break;
         }
+        case Instr::f32_demote_f64:
+        {
+            stack.top() = demote(stack.top().f64);
+            break;
+        }
         case Instr::f64_convert_i32_s:
         {
             convert<int32_t, double>(stack);
@@ -1795,7 +1809,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f64_trunc:
         case Instr::f64_nearest:
         case Instr::f64_sub:
-        case Instr::f32_demote_f64:
         case Instr::i32_reinterpret_f32:
         case Instr::i64_reinterpret_f64:
         case Instr::f32_reinterpret_i32:
