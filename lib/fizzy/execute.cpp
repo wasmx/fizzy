@@ -357,6 +357,20 @@ inline void convert(OperandStack& stack) noexcept
     stack.top() = static_cast<DstT>(stack.top().as<SrcT>());
 }
 
+/// Performs a bit_cast from SrcT type to DstT type.
+///
+/// This should be optimized to empty function in assembly. Except for f32 -> i32 where pushing
+/// the result i32 value to the stack requires zero-extension to 64-bit.
+template <typename SrcT, typename DstT>
+inline void reinterpret(OperandStack& stack) noexcept
+{
+    static_assert(sizeof(SrcT) == sizeof(DstT));
+    const auto src = stack.top().as<SrcT>();
+    DstT dst;
+    __builtin_memcpy(&dst, &src, sizeof(dst));
+    stack.top() = dst;
+}
+
 template <typename DstT, typename SrcT = DstT>
 inline bool load_from_memory(
     bytes_view memory, OperandStack& stack, const uint8_t*& immediates) noexcept
@@ -1798,6 +1812,26 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             stack.top() = double{stack.top().f32};
             break;
         }
+        case Instr::i32_reinterpret_f32:
+        {
+            reinterpret<float, uint32_t>(stack);
+            break;
+        }
+        case Instr::i64_reinterpret_f64:
+        {
+            reinterpret<double, uint64_t>(stack);
+            break;
+        }
+        case Instr::f32_reinterpret_i32:
+        {
+            reinterpret<uint32_t, float>(stack);
+            break;
+        }
+        case Instr::f64_reinterpret_i64:
+        {
+            reinterpret<uint64_t, double>(stack);
+            break;
+        }
 
         case Instr::f32_ceil:
         case Instr::f32_floor:
@@ -1809,10 +1843,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f64_trunc:
         case Instr::f64_nearest:
         case Instr::f64_sub:
-        case Instr::i32_reinterpret_f32:
-        case Instr::i64_reinterpret_f64:
-        case Instr::f32_reinterpret_i32:
-        case Instr::f64_reinterpret_i64:
             throw unsupported_feature("Floating point instruction.");
         default:
             assert(false);
