@@ -28,7 +28,7 @@ MATCHER_P(Result, value, "")  // NOLINT(readability-redundant-string-init)
     else if constexpr (std::is_same_v<value_type, double>)
         return arg.value.f64 == value;
     else  // always check 64 bit of result for all integers, including 32-bit results
-        return arg.value.template as<uint64_t>() == static_cast<uint64_t>(value);
+        return arg.value.i64 == static_cast<std::make_unsigned_t<value_type>>(value);
 }
 
 #define EXPECT_THROW_MESSAGE(stmt, ex_type, expected)                                        \

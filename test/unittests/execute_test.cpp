@@ -560,10 +560,10 @@ TEST(execute, memory_grow)
     EXPECT_THAT(execute(module, 0, {4095}), Result(1));
 
     // >256MB memory.
-    EXPECT_THAT(execute(module, 0, {4096}), Result(uint32_t(-1)));
+    EXPECT_THAT(execute(module, 0, {4096}), Result(-1));
 
     // Way too high (but still within bounds)
-    EXPECT_THAT(execute(module, 0, {0xffffffe}), Result(uint32_t(-1)));
+    EXPECT_THAT(execute(module, 0, {0xffffffe}), Result(-1));
 }
 
 TEST(execute, start_section)
