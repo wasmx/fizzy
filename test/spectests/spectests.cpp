@@ -5,6 +5,7 @@
 #include "execute.hpp"
 #include "parser.hpp"
 #include <nlohmann/json.hpp>
+#include <test/utils/floating_point_utils.hpp>
 #include <test/utils/hex.hpp>
 #include <filesystem>
 #include <fstream>
@@ -404,16 +405,22 @@ private:
 
     std::optional<fizzy::Value> read_value(const json& v)
     {
-        const auto arg_type = v.at("type").get<std::string>();
-        if (arg_type != "i32" && arg_type != "i64" && arg_type != "f32" && arg_type != "f64")
+        const auto type = v.at("type").get<std::string>();
+
+        // JSON tests have all values including floats serialized as 64-bit unsigned integers
+        const uint64_t uint_value = std::stoull(v.at("value").get<std::string>());
+
+        if (type == "i32" || type == "i64")
+            return uint_value;
+        else if (type == "f32")
+            return fizzy::test::FP32{static_cast<uint32_t>(uint_value)}.value;
+        else if (type == "f64")
+            return fizzy::test::FP64{uint_value}.value;
+        else
         {
-            skip("Unsupported value type '" + arg_type + "'.");
+            skip("Unsupported value type '" + type + "'.");
             return std::nullopt;
         }
-
-        // Values of all types are serialized to JSON as integers.
-        // Value type will handle correct conversions.
-        return std::stoull(v.at("value").get<std::string>());
     }
 
     std::optional<fizzy::ExecutionResult> invoke(const json& action)
@@ -453,16 +460,29 @@ private:
 
     bool check_result(fizzy::Value actual_value, const json& expected)
     {
+        const auto value_type = expected.at("type").get<std::string>();
+
         const auto expected_value = read_value(expected);
         if (!expected_value.has_value())
             return false;
 
-        if (*expected_value != actual_value)
+        bool is_equal = false;
+        if (value_type == "i32" || value_type == "i64")
+            is_equal = expected_value->i64 == actual_value.i64;
+        else if (value_type == "f32")
+            is_equal = fizzy::test::FP{expected_value->f32} == actual_value.f32;
+        else if (value_type == "f64")
+            is_equal = fizzy::test::FP{expected_value->f64} == actual_value.f64;
+        else
+            assert(false);  // assuming type is already checked in read_value
+
+        if (!is_equal)
         {
             std::stringstream message;
-            message << "Incorrect returned value. Expected: " << *expected_value << " (0x"
-                    << std::hex << *expected_value << ") Actual: " << std::dec << actual_value
-                    << " (0x" << std::hex << actual_value << std::dec << ")";
+            message << "Incorrect returned value. Expected: " << expected_value->i64 << " (0x"
+                    << std::hex << expected_value->i64 << ") Actual: " << std::dec
+                    << actual_value.i64 << " (0x" << std::hex << actual_value.i64 << std::dec
+                    << ")";
             fail(message.str());
             return false;
         }
