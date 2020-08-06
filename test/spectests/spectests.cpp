@@ -59,6 +59,23 @@ fizzy::bytes load_wasm_file(const fs::path& json_file_path, std::string_view fil
         std::istreambuf_iterator<char>{wasm_file}, std::istreambuf_iterator<char>{});
 }
 
+std::ostream& operator<<(std::ostream& out, std::pair<fizzy::Value, std::string> value_and_type)
+{
+    const auto& [value, type] = value_and_type;
+
+    if (type == "i32" || type == "i64")
+        out << value.i64 << " (0x" << std::hex << value.i64 << ")";
+    else if (type == "f32")
+        out << value.f32 << " (0x" << std::hex << fizzy::test::FP{value.f32}.as_uint() << ")";
+    else if (type == "f64")
+        out << value.f64 << " (0x" << std::hex << fizzy::test::FP{value.f64}.as_uint() << ")";
+    else
+        assert(false);
+
+    out << std::dec;
+    return out;
+}
+
 struct test_settings
 {
     bool skip_validation = false;
@@ -479,10 +496,9 @@ private:
         if (!is_equal)
         {
             std::stringstream message;
-            message << "Incorrect returned value. Expected: " << expected_value->i64 << " (0x"
-                    << std::hex << expected_value->i64 << ") Actual: " << std::dec
-                    << actual_value.i64 << " (0x" << std::hex << actual_value.i64 << std::dec
-                    << ")";
+            message << "Incorrect returned value. Expected: "
+                    << std::make_pair(*expected_value, value_type)
+                    << " Actual: " << std::make_pair(actual_value, value_type);
             fail(message.str());
             return false;
         }
