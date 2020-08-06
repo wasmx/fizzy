@@ -59,7 +59,7 @@ add_test(
 set_tests_properties(
     fizzy/smoketests/spectests/failures
     PROPERTIES
-    PASS_REGULAR_EXPRESSION "PASSED 4, FAILED 18, SKIPPED 2"
+    PASS_REGULAR_EXPRESSION "PASSED 4, FAILED 21, SKIPPED 2"
 )
 
 add_test(
