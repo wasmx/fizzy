@@ -1661,6 +1661,11 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             convert<uint64_t, double>(stack);
             break;
         }
+        case Instr::f64_promote_f32:
+        {
+            stack.top() = double{stack.top().f32};
+            break;
+        }
 
         case Instr::f32_abs:
         case Instr::f32_neg:
@@ -1689,7 +1694,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f64_max:
         case Instr::f64_copysign:
         case Instr::f32_demote_f64:
-        case Instr::f64_promote_f32:
         case Instr::i32_reinterpret_f32:
         case Instr::i64_reinterpret_f64:
         case Instr::f32_reinterpret_i32:
