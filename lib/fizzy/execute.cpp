@@ -328,7 +328,7 @@ template <typename DstT, typename SrcT = DstT>
 inline bool load_from_memory(
     bytes_view memory, OperandStack& stack, const uint8_t*& immediates) noexcept
 {
-    const auto address = static_cast<uint32_t>(stack.pop());
+    const auto address = stack.pop().as<uint32_t>();
     // NOTE: alignment is dropped by the parser
     const auto offset = read<uint32_t>(immediates);
     // Addressing is 32-bit, but we keep the value as 64-bit to detect overflows.
@@ -344,8 +344,10 @@ template <typename DstT>
 inline bool store_into_memory(
     bytes& memory, OperandStack& stack, const uint8_t*& immediates) noexcept
 {
-    const auto value = static_cast<DstT>(stack.pop());
-    const auto address = static_cast<uint32_t>(stack.pop());
+    // Could use `.as<DstT>()` would we have overloads for uint8_t/uint16_t,
+    // however it does not seem to be worth it for this single occasion.
+    const auto value = static_cast<DstT>(stack.pop().i64);
+    const auto address = stack.pop().as<uint32_t>();
     // NOTE: alignment is dropped by the parser
     const auto offset = read<uint32_t>(immediates);
     // Addressing is 32-bit, but we keep the value as 64-bit to detect overflows.
@@ -377,8 +379,8 @@ inline void binary_op(OperandStack& stack, Op op) noexcept
 template <typename T, template <typename> class Op>
 inline void comparison_op(OperandStack& stack, Op<T> op) noexcept
 {
-    const auto val2 = static_cast<T>(stack.pop());
-    const auto val1 = static_cast<T>(stack.top());
+    const auto val2 = stack.pop().as<T>();
+    const auto val1 = stack.top().as<T>();
     stack.top() = uint32_t{op(val1, val2)};
 }
 
@@ -639,7 +641,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             break;
         case Instr::if_:
         {
-            if (static_cast<uint32_t>(stack.pop()) != 0)
+            if (stack.pop().as<uint32_t>() != 0)
                 immediates += 2 * sizeof(uint32_t);  // Skip the immediates for else instruction.
             else
             {
@@ -677,7 +679,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             const auto arity = read<uint32_t>(immediates);
 
             // Check condition for br_if.
-            if (instruction == Instr::br_if && static_cast<uint32_t>(stack.pop()) == 0)
+            if (instruction == Instr::br_if && stack.pop().as<uint32_t>() == 0)
             {
                 immediates += BranchImmediateSize;
                 break;
@@ -691,7 +693,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             const auto br_table_size = read<uint32_t>(immediates);
             const auto arity = read<uint32_t>(immediates);
 
-            const auto br_table_idx = stack.pop();
+            const auto br_table_idx = stack.pop().as<uint32_t>();
 
             const auto label_idx_offset = br_table_idx < br_table_size ?
                                               br_table_idx * BranchImmediateSize :
@@ -720,7 +722,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             const auto expected_type_idx = read<uint32_t>(immediates);
             assert(expected_type_idx < instance.module.typesec.size());
 
-            const auto elem_idx = stack.pop();
+            const auto elem_idx = stack.pop().as<uint32_t>();
             if (elem_idx >= instance.table->size())
             {
                 trap = true;
@@ -757,7 +759,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         }
         case Instr::select:
         {
-            const auto condition = static_cast<uint32_t>(stack.pop());
+            const auto condition = stack.pop().as<uint32_t>();
             // NOTE: these two are the same type (ensured by validation)
             const auto val2 = stack.pop();
             const auto val1 = stack.pop();
@@ -983,7 +985,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         }
         case Instr::memory_grow:
         {
-            const auto delta = static_cast<uint32_t>(stack.pop());
+            const auto delta = stack.pop().as<uint32_t>();
             const auto cur_pages = memory->size() / PageSize;
             assert(cur_pages <= size_t(std::numeric_limits<int32_t>::max()));
             const auto new_pages = cur_pages + delta;
@@ -1021,7 +1023,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         }
         case Instr::i32_eqz:
         {
-            const auto value = static_cast<uint32_t>(stack.pop());
+            const auto value = stack.pop().as<uint32_t>();
             stack.push(uint32_t{value == 0});
             break;
         }
@@ -1077,7 +1079,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         }
         case Instr::i64_eqz:
         {
-            stack.push(uint32_t{stack.pop() == 0});
+            stack.push(uint32_t{stack.pop().i64 == 0});
             break;
         }
         case Instr::i64_eq:
@@ -1162,8 +1164,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         }
         case Instr::i32_div_s:
         {
-            auto const rhs = static_cast<int32_t>(stack[0]);
-            auto const lhs = static_cast<int32_t>(stack[1]);
+            auto const rhs = stack[0].as<int32_t>();
+            auto const lhs = stack[1].as<int32_t>();
             if (rhs == 0 || (lhs == std::numeric_limits<int32_t>::min() && rhs == -1))
             {
                 trap = true;
@@ -1174,7 +1176,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         }
         case Instr::i32_div_u:
         {
-            auto const rhs = static_cast<uint32_t>(stack.top());
+            auto const rhs = stack.top().as<uint32_t>();
             if (rhs == 0)
             {
                 trap = true;
@@ -1185,13 +1187,13 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         }
         case Instr::i32_rem_s:
         {
-            auto const rhs = static_cast<int32_t>(stack.top());
+            auto const rhs = stack.top().as<int32_t>();
             if (rhs == 0)
             {
                 trap = true;
                 goto end;
             }
-            auto const lhs = static_cast<int32_t>(stack[1]);
+            auto const lhs = stack[1].as<int32_t>();
             if (lhs == std::numeric_limits<int32_t>::min() && rhs == -1)
             {
                 stack.pop();
@@ -1203,7 +1205,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         }
         case Instr::i32_rem_u:
         {
-            auto const rhs = static_cast<uint32_t>(stack.top());
+            auto const rhs = stack.top().as<uint32_t>();
             if (rhs == 0)
             {
                 trap = true;
@@ -1284,8 +1286,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         }
         case Instr::i64_div_s:
         {
-            auto const rhs = static_cast<int64_t>(stack[0]);
-            auto const lhs = static_cast<int64_t>(stack[1]);
+            auto const rhs = stack[0].as<int64_t>();
+            auto const lhs = stack[1].as<int64_t>();
             if (rhs == 0 || (lhs == std::numeric_limits<int64_t>::min() && rhs == -1))
             {
                 trap = true;
@@ -1296,7 +1298,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         }
         case Instr::i64_div_u:
         {
-            auto const rhs = static_cast<uint64_t>(stack.top());
+            auto const rhs = stack.top().i64;
             if (rhs == 0)
             {
                 trap = true;
@@ -1307,13 +1309,13 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         }
         case Instr::i64_rem_s:
         {
-            auto const rhs = static_cast<int64_t>(stack.top());
+            auto const rhs = stack.top().as<int64_t>();
             if (rhs == 0)
             {
                 trap = true;
                 goto end;
             }
-            auto const lhs = static_cast<int64_t>(stack[1]);
+            auto const lhs = stack[1].as<int64_t>();
             if (lhs == std::numeric_limits<int64_t>::min() && rhs == -1)
             {
                 stack.pop();
@@ -1325,7 +1327,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         }
         case Instr::i64_rem_u:
         {
-            auto const rhs = static_cast<uint64_t>(stack.top());
+            auto const rhs = stack.top().i64;
             if (rhs == 0)
             {
                 trap = true;
@@ -1376,13 +1378,13 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         }
         case Instr::i32_wrap_i64:
         {
-            stack.push(static_cast<uint32_t>(stack.pop()));
+            stack.push(stack.pop().as<uint32_t>());
             break;
         }
         case Instr::i64_extend_i32_s:
         {
-            const auto value = static_cast<int32_t>(stack.pop());
-            stack.push(static_cast<uint64_t>(int64_t{value}));
+            const auto value = stack.pop().as<int32_t>();
+            stack.push(int64_t{value});
             break;
         }
         case Instr::i64_extend_i32_u:
