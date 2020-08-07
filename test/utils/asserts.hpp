@@ -6,6 +6,7 @@
 
 #include "execute.hpp"
 #include <gmock/gmock.h>
+#include <test/utils/floating_point_utils.hpp>
 #include <iosfwd>
 
 MATCHER(Traps, "")  // NOLINT(readability-redundant-string-init)
@@ -23,10 +24,8 @@ MATCHER_P(Result, value, "")  // NOLINT(readability-redundant-string-init)
     if (arg.trapped || !arg.has_value)
         return false;
 
-    if constexpr (std::is_same_v<value_type, float>)
-        return arg.value.f32 == value;
-    else if constexpr (std::is_same_v<value_type, double>)
-        return arg.value.f64 == value;
+    if constexpr (std::is_floating_point_v<value_type>)
+        return arg.value.template as<value_type>() == fizzy::test::FP{value};
     else  // always check 64 bit of result for all integers, including 32-bit results
         return arg.value.i64 == static_cast<std::make_unsigned_t<value_type>>(value);
 }
