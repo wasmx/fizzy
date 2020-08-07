@@ -631,6 +631,47 @@ TEST(parser, global_multi_const_inited)
     EXPECT_EQ(module.globalsec[1].expression.value.constant, uint32_t(-1));
 }
 
+TEST(parser, global_float)
+{
+    /* wat2wasm
+      (global (import "m" "g1") (mut f32))
+      (global (import "m" "g2") f64)
+      (global f32 (f32.const 1.2))
+      (global (mut f64) (f64.const 3.4))
+      (global f64 (global.get 1))
+    */
+    const auto bin = from_hex(
+        "0061736d01000000021102016d026731037d01016d026732037c00061a037d00439a99993f0b7c014433333333"
+        "33330b400b7c0023010b");
+
+    const auto module = parse(bin);
+    ASSERT_EQ(module.importsec.size(), 2);
+    EXPECT_EQ(module.importsec[0].kind, ExternalKind::Global);
+    EXPECT_EQ(module.importsec[0].module, "m");
+    EXPECT_EQ(module.importsec[0].name, "g1");
+    EXPECT_TRUE(module.importsec[0].desc.global.is_mutable);
+    EXPECT_EQ(module.importsec[0].desc.global.value_type, ValType::f32);
+    EXPECT_EQ(module.importsec[1].kind, ExternalKind::Global);
+    EXPECT_EQ(module.importsec[1].module, "m");
+    EXPECT_EQ(module.importsec[1].name, "g2");
+    EXPECT_FALSE(module.importsec[1].desc.global.is_mutable);
+    EXPECT_EQ(module.importsec[1].desc.global.value_type, ValType::f64);
+
+    ASSERT_EQ(module.globalsec.size(), 3);
+    EXPECT_FALSE(module.globalsec[0].type.is_mutable);
+    EXPECT_EQ(module.globalsec[0].type.value_type, ValType::f32);
+    EXPECT_EQ(module.globalsec[0].expression.kind, ConstantExpression::Kind::Constant);
+    EXPECT_EQ(Value(module.globalsec[0].expression.value.constant).f32, 1.2f);
+    EXPECT_TRUE(module.globalsec[1].type.is_mutable);
+    EXPECT_EQ(module.globalsec[1].type.value_type, ValType::f64);
+    EXPECT_EQ(module.globalsec[1].expression.kind, ConstantExpression::Kind::Constant);
+    EXPECT_EQ(Value(module.globalsec[1].expression.value.constant).f64, 3.4);
+    EXPECT_FALSE(module.globalsec[2].type.is_mutable);
+    EXPECT_EQ(module.globalsec[2].type.value_type, ValType::f64);
+    EXPECT_EQ(module.globalsec[2].expression.kind, ConstantExpression::Kind::GlobalGet);
+    EXPECT_EQ(module.globalsec[2].expression.value.constant, 1);
+}
+
 TEST(parser, global_invalid_mutability)
 {
     const auto wasm = bytes{wasm_prefix} + make_section(6, make_vec({"7f02"_bytes}));

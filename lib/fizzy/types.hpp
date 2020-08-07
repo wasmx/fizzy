@@ -5,6 +5,7 @@
 #pragma once
 
 #include "bytes.hpp"
+#include "value.hpp"
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -293,7 +294,7 @@ struct ConstantExpression
     Kind kind = Kind::Constant;
     union
     {
-        uint64_t constant = 0;
+        Value constant = 0;
         uint32_t global_index;
     } value;
 };

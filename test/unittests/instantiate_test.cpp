@@ -310,7 +310,7 @@ TEST(instantiate, imported_globals)
     const auto bin = from_hex("0061736d01000000020a01036d6f640167037f01");
     const auto module = parse(bin);
 
-    uint64_t global_value = 42;
+    Value global_value = 42;
     ExternalGlobal g{&global_value, true};
     auto instance = instantiate(module, {}, {}, {}, {g});
 
@@ -329,9 +329,9 @@ TEST(instantiate, imported_globals_multiple)
     const auto bin = from_hex("0061736d01000000021502036d6f64026731037f01036d6f64026732037f00");
     const auto module = parse(bin);
 
-    uint64_t global_value1 = 42;
+    Value global_value1 = 42;
     ExternalGlobal g1{&global_value1, true};
-    uint64_t global_value2 = 43;
+    Value global_value2 = 43;
     ExternalGlobal g2{&global_value2, false};
     auto instance = instantiate(module, {}, {}, {}, {g1, g2});
 
@@ -352,7 +352,7 @@ TEST(instantiate, imported_globals_mismatched_count)
     const auto bin = from_hex("0061736d01000000021502036d6f64026731037f01036d6f64026732037f00");
     const auto module = parse(bin);
 
-    uint64_t global_value = 42;
+    Value global_value = 42;
     ExternalGlobal g{&global_value, true};
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {g}), instantiate_error,
         "module requires 2 imported globals, 1 provided");
@@ -367,9 +367,9 @@ TEST(instantiate, imported_globals_mismatched_mutability)
     const auto bin = from_hex("0061736d01000000021502036d6f64026731037f01036d6f64026732037f00");
     const auto module = parse(bin);
 
-    uint64_t global_value1 = 42;
+    Value global_value1 = 42;
     ExternalGlobal g1{&global_value1, false};
-    uint64_t global_value2 = 42;
+    Value global_value2 = 42;
     ExternalGlobal g2{&global_value2, true};
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {g1, g2}), instantiate_error,
         "global 0 mutability doesn't match module's global mutability");
@@ -525,7 +525,7 @@ TEST(instantiate, element_section_offset_from_imported_global)
         "0061736d010000000105016000017f020a01036d6f640167037f0003030200000404017000040908010023000b"
         "0200010a0b02040041010b040041020b");
 
-    uint64_t global_value = 1;
+    Value global_value = 1;
     ExternalGlobal g{&global_value, false};
 
     auto instance = instantiate(parse(bin), {}, {}, {}, {g});
@@ -648,7 +648,7 @@ TEST(instantiate, data_section_offset_from_imported_global)
         from_hex("0061736d01000000020a01036d6f640167037f000504010101010b08010023000b02aaff");
     const auto module = parse(bin);
 
-    uint64_t global_value = 42;
+    Value global_value = 42;
     ExternalGlobal g{&global_value, false};
 
     auto instance = instantiate(module, {}, {}, {}, {g});
@@ -794,7 +794,7 @@ TEST(instantiate, globals_with_imported)
         from_hex("0061736d01000000020b01036d6f64026731037f01060b027f01412a0b7f00412b0b");
     const auto module = parse(bin);
 
-    uint64_t global_value = 41;
+    Value global_value = 41;
     ExternalGlobal g{&global_value, true};
 
     auto instance = instantiate(module, {}, {}, {}, {g});
@@ -816,13 +816,45 @@ TEST(instantiate, globals_initialized_from_imported)
     const auto bin = from_hex("0061736d01000000020b01036d6f64026731037f000606017f0123000b");
     const auto module = parse(bin);
 
-    uint64_t global_value = 42;
+    Value global_value = 42;
     ExternalGlobal g{&global_value, false};
 
     auto instance = instantiate(module, {}, {}, {}, {g});
 
     ASSERT_EQ(instance->globals.size(), 1);
     EXPECT_EQ(instance->globals[0], 42);
+}
+
+TEST(instantiate, globals_float)
+{
+    /* wat2wasm
+      (global (import "m" "g1") (mut f32))
+      (global (import "m" "g2") f64)
+      (global f32 (f32.const 1.2))
+      (global (mut f64) (f64.const 3.4))
+      (global f64 (global.get 1))
+    */
+    const auto bin = from_hex(
+        "0061736d01000000021102016d026731037d01016d026732037c00061a037d00439a99993f0b7c014433333333"
+        "33330b400b7c0023010b");
+    const auto module = parse(bin);
+
+    Value global_value1 = 5.6f;
+    ExternalGlobal g1{&global_value1, true};
+    Value global_value2 = 7.8;
+    ExternalGlobal g2{&global_value2, false};
+
+    auto instance = instantiate(module, {}, {}, {}, {g1, g2});
+
+    ASSERT_EQ(instance->imported_globals.size(), 2);
+    EXPECT_EQ(instance->imported_globals[0].value->f32, 5.6f);
+    EXPECT_EQ(instance->imported_globals[0].is_mutable, true);
+    EXPECT_EQ(instance->imported_globals[1].value->f64, 7.8);
+    EXPECT_EQ(instance->imported_globals[1].is_mutable, false);
+    ASSERT_EQ(instance->globals.size(), 3);
+    EXPECT_EQ(instance->globals[0].f32, 1.2f);
+    EXPECT_EQ(instance->globals[1].f64, 3.4);
+    EXPECT_EQ(instance->globals[2].f64, 7.8);
 }
 
 TEST(instantiate, start_unreachable)
