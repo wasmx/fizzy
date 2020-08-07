@@ -40,9 +40,15 @@
 ;; invalid result
 (module
     (func (export "foo.i32") (result i32) (i32.const 1))
+    (func (export "foo.i64") (result i64) (i64.const 1))
+    (func (export "foo.f32") (result f32) (f32.const 1.234))
+    (func (export "foo.f64") (result f64) (f64.const 1.234))
     (func (export "trap") (result i32) (unreachable))
 )
 (assert_return (invoke "foo.i32") (i32.const 2))
+(assert_return (invoke "foo.i64") (i64.const 2))
+(assert_return (invoke "foo.f32") (f32.const 2.456))
+(assert_return (invoke "foo.f64") (f64.const 2.456))
 (assert_return (invoke "trap") (i32.const 2))
 (assert_return (invoke "foo.i32"))
 (assert_trap (invoke "foo.i32") "error")
