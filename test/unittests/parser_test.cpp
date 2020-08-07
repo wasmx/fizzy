@@ -591,7 +591,7 @@ TEST(parser, global_single_mutable_const_inited)
     EXPECT_TRUE(module.globalsec[0].type.is_mutable);
     EXPECT_EQ(module.globalsec[0].type.value_type, ValType::i32);
     EXPECT_EQ(module.globalsec[0].expression.kind, ConstantExpression::Kind::Constant);
-    EXPECT_EQ(module.globalsec[0].expression.value.constant, 0x10);
+    EXPECT_EQ(as_uint32(module.globalsec[0].expression.value.constant), 0x10);
 }
 
 TEST(parser, global_multi_global_inited)
@@ -624,11 +624,11 @@ TEST(parser, global_multi_const_inited)
     EXPECT_FALSE(module.globalsec[0].type.is_mutable);
     EXPECT_EQ(module.globalsec[0].type.value_type, ValType::i32);
     EXPECT_EQ(module.globalsec[0].expression.kind, ConstantExpression::Kind::Constant);
-    EXPECT_EQ(module.globalsec[0].expression.value.constant, 0x01);
+    EXPECT_EQ(as_uint32(module.globalsec[0].expression.value.constant), 1);
     EXPECT_TRUE(module.globalsec[1].type.is_mutable);
     EXPECT_EQ(module.globalsec[1].type.value_type, ValType::i32);
     EXPECT_EQ(module.globalsec[1].expression.kind, ConstantExpression::Kind::Constant);
-    EXPECT_EQ(module.globalsec[1].expression.value.constant, uint32_t(-1));
+    EXPECT_EQ(as_uint32(module.globalsec[1].expression.value.constant), uint32_t(-1));
 }
 
 TEST(parser, global_float)
@@ -661,11 +661,11 @@ TEST(parser, global_float)
     EXPECT_FALSE(module.globalsec[0].type.is_mutable);
     EXPECT_EQ(module.globalsec[0].type.value_type, ValType::f32);
     EXPECT_EQ(module.globalsec[0].expression.kind, ConstantExpression::Kind::Constant);
-    EXPECT_EQ(Value(module.globalsec[0].expression.value.constant).f32, 1.2f);
+    EXPECT_EQ(module.globalsec[0].expression.value.constant.f32, 1.2f);
     EXPECT_TRUE(module.globalsec[1].type.is_mutable);
     EXPECT_EQ(module.globalsec[1].type.value_type, ValType::f64);
     EXPECT_EQ(module.globalsec[1].expression.kind, ConstantExpression::Kind::Constant);
-    EXPECT_EQ(Value(module.globalsec[1].expression.value.constant).f64, 3.4);
+    EXPECT_EQ(module.globalsec[1].expression.value.constant.f64, 3.4);
     EXPECT_FALSE(module.globalsec[2].type.is_mutable);
     EXPECT_EQ(module.globalsec[2].type.value_type, ValType::f64);
     EXPECT_EQ(module.globalsec[2].expression.kind, ConstantExpression::Kind::GlobalGet);
@@ -908,12 +908,12 @@ TEST(parser, element_section)
 
     ASSERT_EQ(module.elementsec.size(), 3);
     EXPECT_EQ(module.elementsec[0].offset.kind, ConstantExpression::Kind::Constant);
-    EXPECT_EQ(module.elementsec[0].offset.value.constant, 1);
+    EXPECT_EQ(as_uint32(module.elementsec[0].offset.value.constant), 1);
     ASSERT_EQ(module.elementsec[0].init.size(), 2);
     EXPECT_EQ(module.elementsec[0].init[0], 0);
     EXPECT_EQ(module.elementsec[0].init[1], 1);
     EXPECT_EQ(module.elementsec[1].offset.kind, ConstantExpression::Kind::Constant);
-    EXPECT_EQ(module.elementsec[1].offset.value.constant, 2);
+    EXPECT_EQ(as_uint32(module.elementsec[1].offset.value.constant), 2);
     ASSERT_EQ(module.elementsec[1].init.size(), 2);
     EXPECT_EQ(module.elementsec[1].init[0], 2);
     EXPECT_EQ(module.elementsec[1].init[1], 3);
@@ -1329,10 +1329,10 @@ TEST(parser, data_section)
 
     ASSERT_EQ(module.datasec.size(), 3);
     EXPECT_EQ(module.datasec[0].offset.kind, ConstantExpression::Kind::Constant);
-    EXPECT_EQ(module.datasec[0].offset.value.constant, 1);
+    EXPECT_EQ(as_uint32(module.datasec[0].offset.value.constant), 1);
     EXPECT_EQ(module.datasec[0].init, "aaff"_bytes);
     EXPECT_EQ(module.datasec[1].offset.kind, ConstantExpression::Kind::Constant);
-    EXPECT_EQ(module.datasec[1].offset.value.constant, 2);
+    EXPECT_EQ(as_uint32(module.datasec[1].offset.value.constant), 2);
     EXPECT_EQ(module.datasec[1].init, "5555"_bytes);
     EXPECT_EQ(module.datasec[2].offset.kind, ConstantExpression::Kind::GlobalGet);
     EXPECT_EQ(module.datasec[2].offset.value.global_index, 0);

@@ -183,21 +183,21 @@ TEST(operand_stack, top)
 
     stack.push(1);
     EXPECT_EQ(stack.size(), 1);
-    EXPECT_EQ(stack.top(), 1);
-    EXPECT_EQ(stack[0], 1);
+    EXPECT_EQ(stack.top().i64, 1);
+    EXPECT_EQ(stack[0].i64, 1);
 
     stack.top() = 101;
     EXPECT_EQ(stack.size(), 1);
-    EXPECT_EQ(stack.top(), 101);
-    EXPECT_EQ(stack[0], 101);
+    EXPECT_EQ(stack.top().i64, 101);
+    EXPECT_EQ(stack[0].i64, 101);
 
     stack.shrink(0);
     EXPECT_EQ(stack.size(), 0);
 
     stack.push(2);
     EXPECT_EQ(stack.size(), 1);
-    EXPECT_EQ(stack.top(), 2);
-    EXPECT_EQ(stack[0], 2);
+    EXPECT_EQ(stack.top().i64, 2);
+    EXPECT_EQ(stack[0].i64, 2);
 }
 
 TEST(operand_stack, small)
@@ -209,23 +209,23 @@ TEST(operand_stack, small)
     stack.push(2);
     stack.push(3);
     EXPECT_EQ(stack.size(), 3);
-    EXPECT_EQ(stack.top(), 3);
-    EXPECT_EQ(stack[0], 3);
-    EXPECT_EQ(stack[1], 2);
-    EXPECT_EQ(stack[2], 1);
+    EXPECT_EQ(stack.top().i64, 3);
+    EXPECT_EQ(stack[0].i64, 3);
+    EXPECT_EQ(stack[1].i64, 2);
+    EXPECT_EQ(stack[2].i64, 1);
 
     stack[0] = 13;
     stack[1] = 12;
     stack[2] = 11;
     EXPECT_EQ(stack.size(), 3);
-    EXPECT_EQ(stack.top(), 13);
-    EXPECT_EQ(stack[0], 13);
-    EXPECT_EQ(stack[1], 12);
-    EXPECT_EQ(stack[2], 11);
+    EXPECT_EQ(stack.top().i64, 13);
+    EXPECT_EQ(stack[0].i64, 13);
+    EXPECT_EQ(stack[1].i64, 12);
+    EXPECT_EQ(stack[2].i64, 11);
 
-    EXPECT_EQ(stack.pop(), 13);
+    EXPECT_EQ(stack.pop().i64, 13);
     EXPECT_EQ(stack.size(), 2);
-    EXPECT_EQ(stack.top(), 12);
+    EXPECT_EQ(stack.top().i64, 12);
 }
 
 TEST(operand_stack, large)
@@ -238,7 +238,7 @@ TEST(operand_stack, large)
 
     EXPECT_EQ(stack.size(), max_height);
     for (int expected = max_height - 1; expected >= 0; --expected)
-        EXPECT_EQ(stack.pop(), expected);
+        EXPECT_EQ(stack.pop().i64, expected);
     EXPECT_EQ(stack.size(), 0);
 }
 
@@ -254,9 +254,9 @@ TEST(operand_stack, shrink)
     constexpr auto new_height = max_height / 3;
     stack.shrink(new_height);
     EXPECT_EQ(stack.size(), new_height);
-    EXPECT_EQ(stack.top(), new_height - 1);
-    EXPECT_EQ(stack[0], new_height - 1);
-    EXPECT_EQ(stack[new_height - 1], 0);
+    EXPECT_EQ(stack.top().i64, new_height - 1);
+    EXPECT_EQ(stack[0].i64, new_height - 1);
+    EXPECT_EQ(stack[new_height - 1].i64, 0);
 }
 
 TEST(operand_stack, rbegin_rend)
@@ -268,8 +268,8 @@ TEST(operand_stack, rbegin_rend)
     stack.push(2);
     stack.push(3);
     EXPECT_LT(stack.rbegin(), stack.rend());
-    EXPECT_EQ(*stack.rbegin(), 1);
-    EXPECT_EQ(*(stack.rend() - 1), 3);
+    EXPECT_EQ(stack.rbegin()->i64, 1);
+    EXPECT_EQ((stack.rend() - 1)->i64, 3);
 }
 
 TEST(operand_stack, to_vector)
@@ -281,7 +281,11 @@ TEST(operand_stack, to_vector)
     stack.push(2);
     stack.push(3);
 
-    EXPECT_THAT(std::vector(stack.rbegin(), stack.rend()), ElementsAre(1, 2, 3));
+    auto const result = std::vector(stack.rbegin(), stack.rend());
+    EXPECT_EQ(result.size(), 3);
+    EXPECT_EQ(result[0].i64, 1);
+    EXPECT_EQ(result[1].i64, 2);
+    EXPECT_EQ(result[2].i64, 3);
 }
 
 TEST(stack, struct_item)

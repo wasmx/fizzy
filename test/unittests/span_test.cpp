@@ -59,11 +59,11 @@ TEST(span, stack)
     constexpr auto num_items = 2;
     span<const Value> s(stack.rend() - num_items, num_items);
     EXPECT_EQ(s.size(), 2);
-    EXPECT_EQ(s[0], 12);
-    EXPECT_EQ(s[1], 13);
+    EXPECT_EQ(s[0].i64, 12);
+    EXPECT_EQ(s[1].i64, 13);
 
     stack[0] = 0;
-    EXPECT_EQ(s[1], 0);
+    EXPECT_EQ(s[1].i64, 0);
 }
 
 TEST(span, initializer_list)
