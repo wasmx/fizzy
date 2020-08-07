@@ -1273,6 +1273,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             binary_op(stack, rotr<uint32_t>);
             break;
         }
+
         case Instr::i64_clz:
         {
             unary_op(stack, clz64);
@@ -1395,6 +1396,19 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             binary_op(stack, rotr<uint64_t>);
             break;
         }
+
+        case Instr::f32_add:
+        {
+            binary_op(stack, std::plus<float>{});
+            break;
+        }
+
+        case Instr::f64_add:
+        {
+            binary_op(stack, std::plus<double>{});
+            break;
+        }
+
         case Instr::i32_wrap_i64:
         {
             stack.push(stack.pop().as<uint32_t>());
@@ -1481,16 +1495,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
                 trap = true;
                 goto end;
             }
-            break;
-        }
-        case Instr::f32_add:
-        {
-            binary_op(stack, std::plus<float>{});
-            break;
-        }
-        case Instr::f64_add:
-        {
-            binary_op(stack, std::plus<double>{});
             break;
         }
 
