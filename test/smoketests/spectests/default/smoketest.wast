@@ -87,12 +87,16 @@
   (func (export "foo.f32") (result f32) (f32.const 1.23))
   (func (export "foo.f64") (result f64) (f64.const 4.56))
   (func (export "param.f64") (param f64) (drop (local.get 0)))
+  (func (export "f32.NaN") (result f32) (f32.const nan))
+  (func (export "f64.NaN") (result f64) (f64.const nan))
   (global (export "glob.f32") f32 (f32.const 5.5))
 )
 
 (assert_return (invoke "foo.f32") (f32.const 1.23))
 (assert_return (invoke "foo.f64") (f64.const 4.56))
 (invoke "param.f64" (f64.const 1))
+(assert_return (invoke "f32.NaN") (f32.const nan))
+(assert_return (invoke "f64.NaN") (f64.const nan))
 (assert_return (get "glob.f32") (f32.const 5.5))
 
 ;; cases that will be skipped
