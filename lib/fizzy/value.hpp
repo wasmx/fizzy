@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdint>
+#include <limits>
 
 namespace fizzy
 {
@@ -13,6 +14,9 @@ union Value
     uint64_t i64;
     float f32;
     double f64;
+
+    static_assert(std::numeric_limits<decltype(f32)>::is_iec559);
+    static_assert(std::numeric_limits<decltype(f64)>::is_iec559);
 
     Value() = default;
 
