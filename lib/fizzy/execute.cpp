@@ -6,9 +6,11 @@
 #include "limits.hpp"
 #include "module.hpp"
 #include "stack.hpp"
+#include "trunc_boundaries.hpp"
 #include "types.hpp"
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <cstring>
 #include <stack>
 
@@ -322,6 +324,23 @@ inline DstT extend(SrcT in) noexcept
     }
     else
         return DstT{in};
+}
+
+template <typename SrcT, typename DstT>
+inline bool trunc(OperandStack& stack) noexcept
+{
+    using boundaries = trunc_boundaries<SrcT, DstT>;
+
+    const auto input = stack.top().as<SrcT>();
+    if (input > boundaries::lower && input < boundaries::upper)
+    {
+        assert(!std::isnan(input));
+        assert(input != std::numeric_limits<SrcT>::infinity());
+        assert(input != -std::numeric_limits<SrcT>::infinity());
+        stack.top() = static_cast<DstT>(input);
+        return true;
+    }
+    return false;
 }
 
 template <typename DstT, typename SrcT = DstT>
@@ -1254,6 +1273,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             binary_op(stack, rotr<uint32_t>);
             break;
         }
+
         case Instr::i64_clz:
         {
             unary_op(stack, clz64);
@@ -1376,9 +1396,58 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             binary_op(stack, rotr<uint64_t>);
             break;
         }
+
+        case Instr::f32_add:
+        {
+            binary_op(stack, std::plus<float>{});
+            break;
+        }
+
+        case Instr::f64_add:
+        {
+            binary_op(stack, std::plus<double>{});
+            break;
+        }
+
         case Instr::i32_wrap_i64:
         {
             stack.push(stack.pop().as<uint32_t>());
+            break;
+        }
+        case Instr::i32_trunc_f32_s:
+        {
+            if (!trunc<float, int32_t>(stack))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
+        case Instr::i32_trunc_f32_u:
+        {
+            if (!trunc<float, uint32_t>(stack))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
+        case Instr::i32_trunc_f64_s:
+        {
+            if (!trunc<double, int32_t>(stack))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
+        case Instr::i32_trunc_f64_u:
+        {
+            if (!trunc<double, uint32_t>(stack))
+            {
+                trap = true;
+                goto end;
+            }
             break;
         }
         case Instr::i64_extend_i32_s:
@@ -1392,14 +1461,40 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             // effectively no-op
             break;
         }
-        case Instr::f32_add:
+        case Instr::i64_trunc_f32_s:
         {
-            binary_op(stack, std::plus<float>{});
+            if (!trunc<float, int64_t>(stack))
+            {
+                trap = true;
+                goto end;
+            }
             break;
         }
-        case Instr::f64_add:
+        case Instr::i64_trunc_f32_u:
         {
-            binary_op(stack, std::plus<double>{});
+            if (!trunc<float, uint64_t>(stack))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
+        case Instr::i64_trunc_f64_s:
+        {
+            if (!trunc<double, int64_t>(stack))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
+        case Instr::i64_trunc_f64_u:
+        {
+            if (!trunc<double, uint64_t>(stack))
+            {
+                trap = true;
+                goto end;
+            }
             break;
         }
 
@@ -1445,14 +1540,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f64_min:
         case Instr::f64_max:
         case Instr::f64_copysign:
-        case Instr::i32_trunc_f32_s:
-        case Instr::i32_trunc_f32_u:
-        case Instr::i32_trunc_f64_s:
-        case Instr::i32_trunc_f64_u:
-        case Instr::i64_trunc_f32_s:
-        case Instr::i64_trunc_f32_u:
-        case Instr::i64_trunc_f64_s:
-        case Instr::i64_trunc_f64_u:
         case Instr::f32_convert_i32_s:
         case Instr::f32_convert_i32_u:
         case Instr::f32_convert_i64_s:

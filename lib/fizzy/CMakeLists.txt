@@ -21,6 +21,7 @@ target_sources(
     parser_expr.cpp
     span.hpp
     stack.hpp
+    trunc_boundaries.hpp
     types.hpp
     utf8.cpp
     utf8.hpp
