@@ -99,7 +99,7 @@ public:
     OperandStack& operator=(const OperandStack&) = delete;
 
     /// The current number of items on the stack (aka stack height).
-    size_t size() noexcept { return static_cast<size_t>(m_top + 1 - bottom()); }
+    size_t size() const noexcept { return static_cast<size_t>(m_top + 1 - bottom()); }
 
     /// Returns the reference to the top item.
     /// Requires non-empty stack.
