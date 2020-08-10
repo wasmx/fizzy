@@ -510,6 +510,13 @@ inline uint64_t popcnt64(uint64_t value) noexcept
     return static_cast<uint64_t>(__builtin_popcountll(value));
 }
 
+template <typename T>
+__attribute__((no_sanitize("float-divide-by-zero"))) inline constexpr T fdiv(T a, T b) noexcept
+{
+    static_assert(std::numeric_limits<T>::is_iec559);
+    return a / b;  // For IEC 559 (IEEE 754) floating-point types division by 0 is defined.
+}
+
 std::optional<uint32_t> find_export(const Module& module, ExternalKind kind, std::string_view name)
 {
     const auto it = std::find_if(module.exportsec.begin(), module.exportsec.end(),
@@ -1533,6 +1540,11 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             binary_op(stack, std::plus<float>{});
             break;
         }
+        case Instr::f32_div:
+        {
+            binary_op(stack, fdiv<float>);
+            break;
+        }
 
         case Instr::f64_abs:
         {
@@ -1544,6 +1556,11 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f64_add:
         {
             binary_op(stack, std::plus<double>{});
+            break;
+        }
+        case Instr::f64_div:
+        {
+            binary_op(stack, fdiv<double>);
             break;
         }
 
@@ -1689,7 +1706,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f32_sqrt:
         case Instr::f32_sub:
         case Instr::f32_mul:
-        case Instr::f32_div:
         case Instr::f32_min:
         case Instr::f32_max:
         case Instr::f32_copysign:
@@ -1701,7 +1717,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f64_sqrt:
         case Instr::f64_sub:
         case Instr::f64_mul:
-        case Instr::f64_div:
         case Instr::f64_min:
         case Instr::f64_max:
         case Instr::f64_copysign:
