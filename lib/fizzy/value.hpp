@@ -71,13 +71,13 @@ constexpr int32_t Value::as<int32_t>() const noexcept
 }
 
 template <>
-constexpr float Value::as() const noexcept
+constexpr float Value::as<float>() const noexcept
 {
     return f32;
 }
 
 template <>
-constexpr double Value::as() const noexcept
+constexpr double Value::as<double>() const noexcept
 {
     return f64;
 }
