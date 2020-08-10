@@ -19,8 +19,7 @@ static_assert(MemoryPagesValidationLimit == 65536);
 // The default hard limit of the memory size (256MB) as number of pages.
 constexpr uint32_t DefaultMemoryPagesLimit = (256 * 1024 * 1024ULL) / PageSize;
 
-// Call depth limit is set to default limit in wabt.
-// https://github.com/WebAssembly/wabt/blob/ae2140ddc6969ef53599fe2fab81818de65db875/src/interp/interp.h#L1007
-// TODO: review this
-constexpr int CallStackLimit = 2048;
+// The call depth limit. The value is low enough to allow executions with sanitizer
+// instrumentations.
+constexpr int CallStackLimit = 512;
 }  // namespace fizzy
