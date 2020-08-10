@@ -9,6 +9,7 @@
 #include <test/utils/asserts.hpp>
 #include <test/utils/floating_point_utils.hpp>
 #include <test/utils/hex.hpp>
+#include <array>
 #include <cmath>
 
 using namespace fizzy;
@@ -61,36 +62,6 @@ TEST(execute_floating_point, f64_const)
     EXPECT_THAT(execute(*instance, 0, {}), Result(8589934592.1));
 }
 
-TEST(execute_floating_point, f32_add)
-{
-    /* wat2wasm
-    (func (param f32 f32) (result f32)
-      local.get 0
-      local.get 1
-      f32.add
-    )
-    */
-    const auto wasm = from_hex("0061736d0100000001070160027d7d017d030201000a0901070020002001920b");
-
-    auto instance = instantiate(parse(wasm));
-    EXPECT_THAT(execute(*instance, 0, {1.001f, 6.006f}), Result(7.007f));
-}
-
-TEST(execute_floating_point, f64_add)
-{
-    /* wat2wasm
-    (func (param f64 f64) (result f64)
-      local.get 0
-      local.get 1
-      f64.add
-    )
-    */
-    const auto wasm = from_hex("0061736d0100000001070160027c7c017c030201000a0901070020002001a00b");
-
-    auto instance = instantiate(parse(wasm));
-    EXPECT_THAT(execute(*instance, 0, {1.0011, 6.0066}), Result(7.0077));
-}
-
 /// Compile-time information about a Wasm type.
 template <typename T>
 struct WasmTypeTraits;
@@ -121,6 +92,18 @@ template <typename T>
 class execute_floating_point_types : public testing::Test
 {
 protected:
+    using L = typename FP<T>::Limits;
+
+    // The list of positive floating-point values without zeros, infinities and NaNs.
+    inline static const std::array positive_special_values{
+        L::denorm_min(),
+        L::min(),
+        std::nextafter(T{1.0}, T{0.0}),
+        T{1.0},
+        std::nextafter(T{1.0}, L::infinity()),
+        L::max(),
+    };
+
     /// Creates a wasm module with a single function for the given instructions opcode.
     /// The opcode is converted to match the type, e.g. f32_add -> f64_add.
     static bytes get_binop_code(Instr opcode)
@@ -310,6 +293,76 @@ TYPED_TEST(execute_floating_point_types, compare)
     EXPECT_THAT(execute(*inst, gt, {TypeParam{-0.0}, TypeParam{0.0}}), Result(0));
     EXPECT_THAT(execute(*inst, le, {TypeParam{-0.0}, TypeParam{0.0}}), Result(1));
     EXPECT_THAT(execute(*inst, ge, {TypeParam{-0.0}, TypeParam{0.0}}), Result(1));
+}
+
+TYPED_TEST(execute_floating_point_types, add)
+{
+    using FP = FP<TypeParam>;
+    using Limits = typename FP::Limits;
+
+    auto instance = instantiate(parse(this->get_binop_code(Instr::f32_add)));
+    const auto exec = [&](auto arg1, auto arg2) { return execute(*instance, 0, {arg1, arg2}); };
+
+    // fadd(+-inf, -+inf) = nan:canonical
+    EXPECT_THAT(exec(Limits::infinity(), -Limits::infinity()), CanonicalNaN(TypeParam{}));
+    EXPECT_THAT(exec(-Limits::infinity(), Limits::infinity()), CanonicalNaN(TypeParam{}));
+
+    // fadd(+-inf, +-inf) = +-inf
+    EXPECT_THAT(exec(Limits::infinity(), Limits::infinity()), Result(Limits::infinity()));
+    EXPECT_THAT(exec(-Limits::infinity(), -Limits::infinity()), Result(-Limits::infinity()));
+
+    // fadd(+-O, -+0) = +0
+    EXPECT_THAT(exec(TypeParam{0.0}, -TypeParam{0.0}), Result(TypeParam{0.0}));
+    EXPECT_THAT(exec(-TypeParam{0.0}, TypeParam{0.0}), Result(TypeParam{0.0}));
+
+    // fadd(+-0, +-0) = +-0
+    EXPECT_THAT(exec(TypeParam{0.0}, TypeParam{0.0}), Result(TypeParam{0.0}));
+    EXPECT_THAT(exec(-TypeParam{0.0}, -TypeParam{0.0}), Result(-TypeParam{0.0}));
+
+    // fadd(z1, +-0) = z1  (for z1 = +-inf)
+    EXPECT_THAT(exec(Limits::infinity(), TypeParam{0.0}), Result(Limits::infinity()));
+    EXPECT_THAT(exec(Limits::infinity(), -TypeParam{0.0}), Result(Limits::infinity()));
+    EXPECT_THAT(exec(-Limits::infinity(), TypeParam{0.0}), Result(-Limits::infinity()));
+    EXPECT_THAT(exec(-Limits::infinity(), -TypeParam{0.0}), Result(-Limits::infinity()));
+
+    // fadd(+-0, z2) = z2  (for z2 = +-inf)
+    EXPECT_THAT(exec(TypeParam{0.0}, Limits::infinity()), Result(Limits::infinity()));
+    EXPECT_THAT(exec(TypeParam{0.0}, -Limits::infinity()), Result(-Limits::infinity()));
+    EXPECT_THAT(exec(-TypeParam{0.0}, Limits::infinity()), Result(Limits::infinity()));
+    EXPECT_THAT(exec(-TypeParam{0.0}, -Limits::infinity()), Result(-Limits::infinity()));
+
+    for (const auto q : this->positive_special_values)
+    {
+        // fadd(z1, +-inf) = +-inf  (for z1 = +-q)
+        EXPECT_THAT(exec(q, Limits::infinity()), Result(Limits::infinity()));
+        EXPECT_THAT(exec(q, -Limits::infinity()), Result(-Limits::infinity()));
+        EXPECT_THAT(exec(-q, Limits::infinity()), Result(Limits::infinity()));
+        EXPECT_THAT(exec(-q, -Limits::infinity()), Result(-Limits::infinity()));
+
+        // fadd(+-inf, z2) = +-inf  (for z2 = +-q)
+        EXPECT_THAT(exec(Limits::infinity(), q), Result(Limits::infinity()));
+        EXPECT_THAT(exec(-Limits::infinity(), q), Result(-Limits::infinity()));
+        EXPECT_THAT(exec(Limits::infinity(), -q), Result(Limits::infinity()));
+        EXPECT_THAT(exec(-Limits::infinity(), -q), Result(-Limits::infinity()));
+
+        // fadd(z1, +-0) = z1  (for z1 = +-q)
+        EXPECT_THAT(exec(q, TypeParam{0.0}), Result(q));
+        EXPECT_THAT(exec(q, -TypeParam{0.0}), Result(q));
+        EXPECT_THAT(exec(-q, TypeParam{0.0}), Result(-q));
+        EXPECT_THAT(exec(-q, -TypeParam{0.0}), Result(-q));
+
+        // fadd(+-0, z2) = z2  (for z2 = +-q)
+        EXPECT_THAT(exec(TypeParam{0.0}, q), Result(q));
+        EXPECT_THAT(exec(-TypeParam{0.0}, q), Result(q));
+        EXPECT_THAT(exec(TypeParam{0.0}, -q), Result(-q));
+        EXPECT_THAT(exec(-TypeParam{0.0}, -q), Result(-q));
+
+        // fadd(+-q, -+q) = +0
+        EXPECT_THAT(exec(q, -q), Result(TypeParam{0.0}));
+        EXPECT_THAT(exec(-q, q), Result(TypeParam{0.0}));
+    }
+
+    EXPECT_THAT(exec(TypeParam{0x0.287p2}, TypeParam{0x1.FFp4}), Result(TypeParam{0x1.048Ep5}));
 }
 
 
