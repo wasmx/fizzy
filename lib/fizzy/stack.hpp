@@ -75,9 +75,9 @@ class OperandStack
     /// The unbounded storage for items.
     std::unique_ptr<Value[]> m_large_storage;
 
-    Value* bottom() { return m_large_storage ? m_large_storage.get() : m_small_storage; }
+    Value* bottom() noexcept { return m_large_storage ? m_large_storage.get() : m_small_storage; }
 
-    const Value* bottom() const
+    const Value* bottom() const noexcept
     {
         return m_large_storage ? m_large_storage.get() : m_small_storage;
     }
