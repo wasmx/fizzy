@@ -71,6 +71,144 @@ TEST(execute_floating_point, f64_add)
     EXPECT_THAT(execute(*instance, 0, {1.0011, 6.0066}), Result(7.0077));
 }
 
+template <typename T>
+class execute_floating_point_types : public testing::Test
+{
+};
+
+/// Compile-time information about a Wasm type.
+template <typename T>
+struct WasmTypeTraits;
+
+template <>
+struct WasmTypeTraits<float>
+{
+    static constexpr auto name = "f32";
+};
+template <>
+struct WasmTypeTraits<double>
+{
+    static constexpr auto name = "f64";
+};
+
+struct WasmTypeName
+{
+    template <typename T>
+    static std::string GetName(int)
+    {
+        return WasmTypeTraits<T>::name;
+    }
+};
+
+using FloatingPointTypes = testing::Types<float, double>;
+TYPED_TEST_SUITE(execute_floating_point_types, FloatingPointTypes, WasmTypeName);
+
+TYPED_TEST(execute_floating_point_types, compare)
+{
+    using Limits = typename FP<TypeParam>::Limits;
+
+    /* wat2wasm
+    (func (param f32 f32) (result i32) (f32.eq (local.get 0) (local.get 1)))
+    (func (param f32 f32) (result i32) (f32.ne (local.get 0) (local.get 1)))
+    (func (param f32 f32) (result i32) (f32.lt (local.get 0) (local.get 1)))
+    (func (param f32 f32) (result i32) (f32.gt (local.get 0) (local.get 1)))
+    (func (param f32 f32) (result i32) (f32.le (local.get 0) (local.get 1)))
+    (func (param f32 f32) (result i32) (f32.ge (local.get 0) (local.get 1)))
+    (func (param f64 f64) (result i32) (f64.eq (local.get 0) (local.get 1)))
+    (func (param f64 f64) (result i32) (f64.ne (local.get 0) (local.get 1)))
+    (func (param f64 f64) (result i32) (f64.lt (local.get 0) (local.get 1)))
+    (func (param f64 f64) (result i32) (f64.gt (local.get 0) (local.get 1)))
+    (func (param f64 f64) (result i32) (f64.le (local.get 0) (local.get 1)))
+    (func (param f64 f64) (result i32) (f64.ge (local.get 0) (local.get 1)))
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010d0260027d7d017f60027c7c017f030d0c0000000000000101010101010a610c07002000"
+        "20015b0b0700200020015c0b0700200020015d0b0700200020015e0b0700200020015f0b070020002001600b07"
+        "0020002001610b070020002001620b070020002001630b070020002001640b070020002001650b070020002001"
+        "660b");
+    auto inst = instantiate(parse(wasm));
+
+    constexpr FuncIdx func_offset = std::is_same_v<TypeParam, float> ? 0 : 6;
+    constexpr auto eq = func_offset + 0;
+    constexpr auto ne = func_offset + 1;
+    constexpr auto lt = func_offset + 2;
+    constexpr auto gt = func_offset + 3;
+    constexpr auto le = func_offset + 4;
+    constexpr auto ge = func_offset + 5;
+
+    // The values to be used as test cases.
+    // They must be strictly ordered (ordered_values[i] < ordered_values[j] for i<j) or NaNs.
+    // This allows determining the relation of any pair of values only knowing values' position
+    // in the array.
+    const TypeParam ordered_values[] = {
+        -Limits::infinity(),
+        -Limits::max(),
+        std::nextafter(-Limits::max(), TypeParam{0}),
+        std::nextafter(-TypeParam{1.0}, -Limits::infinity()),
+        -TypeParam{1.0},
+        std::nextafter(-TypeParam{1.0}, TypeParam{0}),
+        std::nextafter(-Limits::min(), -Limits::infinity()),
+        -Limits::min(),
+        std::nextafter(-Limits::min(), TypeParam{0}),
+        std::nextafter(-Limits::denorm_min(), -Limits::infinity()),
+        -Limits::denorm_min(),
+        TypeParam{0},
+        Limits::denorm_min(),
+        std::nextafter(Limits::denorm_min(), Limits::infinity()),
+        std::nextafter(Limits::min(), TypeParam{0}),
+        Limits::min(),
+        std::nextafter(Limits::min(), Limits::infinity()),
+        std::nextafter(TypeParam{1.0}, TypeParam{0}),
+        TypeParam{1.0},
+        std::nextafter(TypeParam{1.0}, Limits::infinity()),
+        std::nextafter(Limits::max(), TypeParam{0}),
+        Limits::max(),
+        Limits::infinity(),
+
+        // NaNs.
+        FP<TypeParam>::nan(FP<TypeParam>::canon),
+        FP<TypeParam>::nan(FP<TypeParam>::canon + 1),
+        FP<TypeParam>::nan(1),
+    };
+
+    // Check every pair from cartesian product of ordered_values.
+    for (size_t i = 0; i < std::size(ordered_values); ++i)
+    {
+        for (size_t j = 0; j < std::size(ordered_values); ++j)
+        {
+            const auto a = ordered_values[i];
+            const auto b = ordered_values[j];
+            if (std::isnan(a) || std::isnan(b))
+            {
+                EXPECT_THAT(execute(*inst, eq, {a, b}), Result(0)) << a << "==" << b;
+                EXPECT_THAT(execute(*inst, ne, {a, b}), Result(1)) << a << "!=" << b;
+                EXPECT_THAT(execute(*inst, lt, {a, b}), Result(0)) << a << "<" << b;
+                EXPECT_THAT(execute(*inst, gt, {a, b}), Result(0)) << a << ">" << b;
+                EXPECT_THAT(execute(*inst, le, {a, b}), Result(0)) << a << "<=" << b;
+                EXPECT_THAT(execute(*inst, ge, {a, b}), Result(0)) << a << ">=" << b;
+            }
+            else
+            {
+                EXPECT_THAT(execute(*inst, eq, {a, b}), Result(uint32_t{i == j})) << a << "==" << b;
+                EXPECT_THAT(execute(*inst, ne, {a, b}), Result(uint32_t{i != j})) << a << "!=" << b;
+                EXPECT_THAT(execute(*inst, lt, {a, b}), Result(uint32_t{i < j})) << a << "<" << b;
+                EXPECT_THAT(execute(*inst, gt, {a, b}), Result(uint32_t{i > j})) << a << ">" << b;
+                EXPECT_THAT(execute(*inst, le, {a, b}), Result(uint32_t{i <= j})) << a << "<=" << b;
+                EXPECT_THAT(execute(*inst, ge, {a, b}), Result(uint32_t{i >= j})) << a << ">=" << b;
+            }
+        }
+    }
+
+    // Negative zero. This is separate set of checks because -0.0 cannot be placed
+    // in the ordered_values array as -0.0 == 0.0.
+    EXPECT_THAT(execute(*inst, eq, {TypeParam{-0.0}, TypeParam{0.0}}), Result(1));
+    EXPECT_THAT(execute(*inst, ne, {TypeParam{-0.0}, TypeParam{0.0}}), Result(0));
+    EXPECT_THAT(execute(*inst, lt, {TypeParam{-0.0}, TypeParam{0.0}}), Result(0));
+    EXPECT_THAT(execute(*inst, gt, {TypeParam{-0.0}, TypeParam{0.0}}), Result(0));
+    EXPECT_THAT(execute(*inst, le, {TypeParam{-0.0}, TypeParam{0.0}}), Result(1));
+    EXPECT_THAT(execute(*inst, ge, {TypeParam{-0.0}, TypeParam{0.0}}), Result(1));
+}
+
 
 template <typename SrcT, typename DstT>
 struct ConversionPairWasmTraits;
