@@ -669,7 +669,7 @@ TEST(parser, global_float)
     EXPECT_FALSE(module.globalsec[2].type.is_mutable);
     EXPECT_EQ(module.globalsec[2].type.value_type, ValType::f64);
     EXPECT_EQ(module.globalsec[2].expression.kind, ConstantExpression::Kind::GlobalGet);
-    EXPECT_EQ(module.globalsec[2].expression.value.constant, 1);
+    EXPECT_EQ(module.globalsec[2].expression.value.global_index, 1);
 }
 
 TEST(parser, global_invalid_mutability)
