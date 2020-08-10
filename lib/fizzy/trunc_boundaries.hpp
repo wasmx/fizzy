@@ -21,16 +21,15 @@ template <>
 struct trunc_boundaries<float, int32_t>
 {
     /// The first representable value lower than theoretical -2147483649.
-    static constexpr float lower = -2147483904.0;
-
-    static constexpr float upper = 2147483648.0;
+    static constexpr float lower = -2147483904.0f;
+    static constexpr float upper = 2147483648.0f;
 };
 
 template <>
 struct trunc_boundaries<float, uint32_t>
 {
-    static constexpr float lower = -1.0;
-    static constexpr float upper = 4294967296.0;
+    static constexpr float lower = -1.0f;
+    static constexpr float upper = 4294967296.0f;
 };
 
 template <>
@@ -51,16 +50,15 @@ template <>
 struct trunc_boundaries<float, int64_t>
 {
     /// The first representable value lower than theoretical -9223372036854775809.
-    static constexpr float lower = -9223373136366403584.0;
-
-    static constexpr float upper = 9223372036854775808.0;
+    static constexpr float lower = -9223373136366403584.0f;
+    static constexpr float upper = 9223372036854775808.0f;
 };
 
 template <>
 struct trunc_boundaries<float, uint64_t>
 {
-    static constexpr float lower = -1.0;
-    static constexpr float upper = 18446744073709551616.0;
+    static constexpr float lower = -1.0f;
+    static constexpr float upper = 18446744073709551616.0f;
 };
 
 template <>
@@ -68,7 +66,6 @@ struct trunc_boundaries<double, int64_t>
 {
     /// The first representable value lower than theoretical -9223372036854775809.
     static constexpr double lower = -9223372036854777856.0;
-
     static constexpr double upper = 9223372036854775808.0;
 };
 
