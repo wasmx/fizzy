@@ -14,6 +14,26 @@
 using namespace fizzy;
 using namespace fizzy::test;
 
+MATCHER_P(CanonicalNaN, value, "result with a canonical NaN")
+{
+    (void)value;
+    if (arg.trapped || !arg.has_value)
+        return false;
+
+    const auto result_value = arg.value.template as<value_type>();
+    return FP<value_type>{result_value}.nan_payload() == FP<value_type>::canon;
+}
+
+MATCHER_P(ArithmeticNaN, value, "result with an arithmetic NaN")
+{
+    (void)value;
+    if (arg.trapped || !arg.has_value)
+        return false;
+
+    const auto result_value = arg.value.template as<value_type>();
+    return FP<value_type>{result_value}.nan_payload() >= FP<value_type>::canon;
+}
+
 TEST(execute_floating_point, f32_const)
 {
     /* wat2wasm
@@ -71,11 +91,6 @@ TEST(execute_floating_point, f64_add)
     EXPECT_THAT(execute(*instance, 0, {1.0011, 6.0066}), Result(7.0077));
 }
 
-template <typename T>
-class execute_floating_point_types : public testing::Test
-{
-};
-
 /// Compile-time information about a Wasm type.
 template <typename T>
 struct WasmTypeTraits;
@@ -84,11 +99,13 @@ template <>
 struct WasmTypeTraits<float>
 {
     static constexpr auto name = "f32";
+    static constexpr auto valtype = ValType::f32;
 };
 template <>
 struct WasmTypeTraits<double>
 {
     static constexpr auto name = "f64";
+    static constexpr auto valtype = ValType::f64;
 };
 
 struct WasmTypeName
@@ -100,8 +117,94 @@ struct WasmTypeName
     }
 };
 
+template <typename T>
+class execute_floating_point_types : public testing::Test
+{
+protected:
+    /// Creates a wasm module with a single function for the given instructions opcode.
+    /// The opcode is converted to match the type, e.g. f32_add -> f64_add.
+    static bytes get_binop_code(Instr opcode)
+    {
+        constexpr auto f64_variant_offset =
+            static_cast<uint8_t>(Instr::f64_add) - static_cast<uint8_t>(Instr::f32_add);
+
+        // Convert to f64 variant if needed.
+        const auto typed_opcode =
+            std::is_same_v<T, double> ?
+                static_cast<uint8_t>(static_cast<uint8_t>(opcode) + f64_variant_offset) :
+                static_cast<uint8_t>(opcode);
+
+        /* wat2wasm
+        (func (param f32 f32) (result f32)
+          (f32.add (local.get 0) (local.get 1))
+        )
+        */
+        auto wasm = from_hex("0061736d0100000001070160027d7d017d030201000a0901070020002001920b");
+        constexpr auto template_type = static_cast<uint8_t>(ValType::f32);
+        constexpr auto template_opcode = static_cast<uint8_t>(Instr::f32_add);
+        EXPECT_EQ(std::count(wasm.begin(), wasm.end(), template_type), 3);
+        EXPECT_EQ(std::count(wasm.begin(), wasm.end(), template_opcode), 1);
+        std::replace(wasm.begin(), wasm.end(), template_type,
+            static_cast<uint8_t>(WasmTypeTraits<T>::valtype));
+        std::replace(wasm.begin(), wasm.end(), template_opcode, typed_opcode);
+        return wasm;
+    }
+};
+
 using FloatingPointTypes = testing::Types<float, double>;
 TYPED_TEST_SUITE(execute_floating_point_types, FloatingPointTypes, WasmTypeName);
+
+TYPED_TEST(execute_floating_point_types, nan_matchers)
+{
+    using testing::Not;
+    using FP = FP<TypeParam>;
+
+    EXPECT_THAT(Void, Not(CanonicalNaN(TypeParam{})));
+    EXPECT_THAT(Trap, Not(CanonicalNaN(TypeParam{})));
+    EXPECT_THAT(ExecutionResult{Value{TypeParam{}}}, Not(CanonicalNaN(TypeParam{})));
+    EXPECT_THAT(ExecutionResult{Value{FP::nan(FP::canon)}}, CanonicalNaN(TypeParam{}));
+    EXPECT_THAT(ExecutionResult{Value{FP::nan(FP::canon + 1)}}, Not(CanonicalNaN(TypeParam{})));
+    EXPECT_THAT(ExecutionResult{Value{FP::nan(1)}}, Not(CanonicalNaN(TypeParam{})));
+
+    EXPECT_THAT(Void, Not(ArithmeticNaN(TypeParam{})));
+    EXPECT_THAT(Trap, Not(ArithmeticNaN(TypeParam{})));
+    EXPECT_THAT(ExecutionResult{Value{TypeParam{}}}, Not(ArithmeticNaN(TypeParam{})));
+    EXPECT_THAT(ExecutionResult{Value{FP::nan(FP::canon)}}, ArithmeticNaN(TypeParam{}));
+    EXPECT_THAT(ExecutionResult{Value{FP::nan(FP::canon + 1)}}, ArithmeticNaN(TypeParam{}));
+    EXPECT_THAT(ExecutionResult{Value{FP::nan(1)}}, Not(ArithmeticNaN(TypeParam{})));
+}
+
+TYPED_TEST(execute_floating_point_types, binop_nan_propagation)
+{
+    // Tests NaN propagation in binary instructions (binop).
+    // If all NaN inputs are canonical the result must be the canonical NaN.
+    // Otherwise, the result must be an arithmetic NaN.
+
+    // The list of instructions to be tested.
+    // Only f32 variants, but f64 variants are going to be covered as well.
+    constexpr Instr opcodes[] = {
+        Instr::f32_add,
+    };
+
+    for (const auto op : opcodes)
+    {
+        auto instance = instantiate(parse(this->get_binop_code(op)));
+
+        constexpr auto q = TypeParam{1.0};
+        const auto cnan = FP<TypeParam>::nan(FP<TypeParam>::canon);
+        const auto anan = FP<TypeParam>::nan(FP<TypeParam>::canon + 1);
+
+        EXPECT_THAT(execute(*instance, 0, {q, cnan}), CanonicalNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {cnan, q}), CanonicalNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {cnan, cnan}), CanonicalNaN(TypeParam{}));
+
+        EXPECT_THAT(execute(*instance, 0, {q, anan}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {anan, q}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {anan, anan}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {anan, cnan}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {cnan, anan}), ArithmeticNaN(TypeParam{}));
+    }
+}
 
 TYPED_TEST(execute_floating_point_types, compare)
 {
