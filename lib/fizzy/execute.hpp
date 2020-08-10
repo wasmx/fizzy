@@ -20,7 +20,7 @@ struct ExecutionResult
 {
     const bool trapped = false;
     const bool has_value = false;
-    const Value value = 0;
+    const Value value{};
 
     /// Constructs result with a value.
     constexpr ExecutionResult(Value _value) noexcept : has_value{true}, value{_value} {}
