@@ -104,6 +104,41 @@ protected:
         L::max(),
     };
 
+    // The list of floating-point values, including infinities and NaNs.
+    // They must be strictly ordered (ordered_values[i] < ordered_values[j] for i<j) or NaNs.
+    // Therefore -0 is omitted. This allows determining the relation of any pair of values only
+    // knowing values' position in the array.
+    inline static const std::array ordered_special_values = {
+        -L::infinity(),
+        -L::max(),
+        std::nextafter(-L::max(), T{0}),
+        std::nextafter(-T{1.0}, -L::infinity()),
+        -T{1.0},
+        std::nextafter(-T{1.0}, T{0}),
+        std::nextafter(-L::min(), -L::infinity()),
+        -L::min(),
+        std::nextafter(-L::min(), T{0}),
+        std::nextafter(-L::denorm_min(), -L::infinity()),
+        -L::denorm_min(),
+        T{0},
+        L::denorm_min(),
+        std::nextafter(L::denorm_min(), L::infinity()),
+        std::nextafter(L::min(), T{0}),
+        L::min(),
+        std::nextafter(L::min(), L::infinity()),
+        std::nextafter(T{1.0}, T{0}),
+        T{1.0},
+        std::nextafter(T{1.0}, L::infinity()),
+        std::nextafter(L::max(), T{0}),
+        L::max(),
+        L::infinity(),
+
+        // NaNs.
+        FP<T>::nan(FP<T>::canon),
+        FP<T>::nan(FP<T>::canon + 1),
+        FP<T>::nan(1),
+    };
+
     /// Creates a wasm module with a single function for the given instructions opcode.
     /// The opcode is converted to match the type, e.g. f32_add -> f64_add.
     static bytes get_binop_code(Instr opcode)
@@ -191,8 +226,6 @@ TYPED_TEST(execute_floating_point_types, binop_nan_propagation)
 
 TYPED_TEST(execute_floating_point_types, compare)
 {
-    using Limits = typename FP<TypeParam>::Limits;
-
     /* wat2wasm
     (func (param f32 f32) (result i32) (f32.eq (local.get 0) (local.get 1)))
     (func (param f32 f32) (result i32) (f32.ne (local.get 0) (local.get 1)))
@@ -222,48 +255,13 @@ TYPED_TEST(execute_floating_point_types, compare)
     constexpr auto le = func_offset + 4;
     constexpr auto ge = func_offset + 5;
 
-    // The values to be used as test cases.
-    // They must be strictly ordered (ordered_values[i] < ordered_values[j] for i<j) or NaNs.
-    // This allows determining the relation of any pair of values only knowing values' position
-    // in the array.
-    const TypeParam ordered_values[] = {
-        -Limits::infinity(),
-        -Limits::max(),
-        std::nextafter(-Limits::max(), TypeParam{0}),
-        std::nextafter(-TypeParam{1.0}, -Limits::infinity()),
-        -TypeParam{1.0},
-        std::nextafter(-TypeParam{1.0}, TypeParam{0}),
-        std::nextafter(-Limits::min(), -Limits::infinity()),
-        -Limits::min(),
-        std::nextafter(-Limits::min(), TypeParam{0}),
-        std::nextafter(-Limits::denorm_min(), -Limits::infinity()),
-        -Limits::denorm_min(),
-        TypeParam{0},
-        Limits::denorm_min(),
-        std::nextafter(Limits::denorm_min(), Limits::infinity()),
-        std::nextafter(Limits::min(), TypeParam{0}),
-        Limits::min(),
-        std::nextafter(Limits::min(), Limits::infinity()),
-        std::nextafter(TypeParam{1.0}, TypeParam{0}),
-        TypeParam{1.0},
-        std::nextafter(TypeParam{1.0}, Limits::infinity()),
-        std::nextafter(Limits::max(), TypeParam{0}),
-        Limits::max(),
-        Limits::infinity(),
-
-        // NaNs.
-        FP<TypeParam>::nan(FP<TypeParam>::canon),
-        FP<TypeParam>::nan(FP<TypeParam>::canon + 1),
-        FP<TypeParam>::nan(1),
-    };
-
     // Check every pair from cartesian product of ordered_values.
-    for (size_t i = 0; i < std::size(ordered_values); ++i)
+    for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
     {
-        for (size_t j = 0; j < std::size(ordered_values); ++j)
+        for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
         {
-            const auto a = ordered_values[i];
-            const auto b = ordered_values[j];
+            const auto a = this->ordered_special_values[i];
+            const auto b = this->ordered_special_values[j];
             if (std::isnan(a) || std::isnan(b))
             {
                 EXPECT_THAT(execute(*inst, eq, {a, b}), Result(0)) << a << "==" << b;
