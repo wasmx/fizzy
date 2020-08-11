@@ -417,3 +417,291 @@ TYPED_TEST(execute_floating_point_trunc, trunc)
         EXPECT_EQ(result.value.template as<IntT>(), FloatT{-1});
     }
 }
+
+TEST(execute_floating_point, f32_load)
+{
+    /* wat2wasm
+    (memory 1 1)
+    (func (param i32) (result f32)
+      (f32.load (local.get 0))
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d0100000001060160017f017d030201000504010101010a0901070020002a02000b");
+
+    auto instance = instantiate(parse(wasm));
+
+    const std::tuple<bytes, float> test_cases[]{
+        {"00000000"_bytes, 0.0f},
+        {"00000080"_bytes, -0.0f},
+        {"b6f39d3f"_bytes, 1.234f},
+        {"b6f39dbf"_bytes, -1.234f},
+        {"0000807f"_bytes, FP32::Limits::infinity()},
+        {"000080ff"_bytes, -FP32::Limits::infinity()},
+        {"ffff7f7f"_bytes, FP32::Limits::max()},
+        {"ffff7fff"_bytes, -FP32::Limits::max()},
+        {"00008000"_bytes, FP32::Limits::min()},
+        {"00008080"_bytes, -FP32::Limits::min()},
+        {"01000000"_bytes, FP32::Limits::denorm_min()},
+        {"01000080"_bytes, -FP32::Limits::denorm_min()},
+        {"0000803f"_bytes, 1.0f},
+        {"000080bf"_bytes, -1.0f},
+        {"ffff7f3f"_bytes, std::nextafter(1.0f, 0.0f)},
+        {"ffff7fbf"_bytes, std::nextafter(-1.0f, 0.0f)},
+        {"0000c07f"_bytes, FP32::nan(FP32::canon)},
+        {"0100c07f"_bytes, FP32::nan(FP32::canon + 1)},
+        {"0100807f"_bytes, FP32::nan(1)},
+    };
+
+    uint32_t address = 0;
+    for (const auto& [memory_fill, expected] : test_cases)
+    {
+        std::copy(memory_fill.begin(), memory_fill.end(), instance->memory->data() + address);
+
+        EXPECT_THAT(execute(*instance, 0, {address}), Result(expected));
+        address += static_cast<uint32_t>(memory_fill.size());
+    }
+
+    EXPECT_THAT(execute(*instance, 0, {65534}), Traps());
+    EXPECT_THAT(execute(*instance, 0, {65537}), Traps());
+}
+
+TEST(execute_floating_point, f32_load_overflow)
+{
+    /* wat2wasm
+    (memory 1 1)
+    (func (param i32) (result f32)
+      get_local 0
+      f32.load offset=0x7fffffff
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017d030201000504010101010a0d010b0020002a02ffffffff070b");
+
+    auto instance = instantiate(parse(wasm));
+
+    // Offset is 0x7fffffff + 0 => 0x7fffffff
+    EXPECT_THAT(execute(*instance, 0, {0}), Traps());
+    // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
+    EXPECT_THAT(execute(*instance, 0, {0x80000000}), Traps());
+    // Offset is 0x7fffffff + 0x80000001 => 0x100000000
+    EXPECT_THAT(execute(*instance, 0, {0x80000001}), Traps());
+}
+
+TEST(execute_floating_point, f64_load)
+{
+    /* wat2wasm
+    (memory 1 1)
+    (func (param i32) (result f64)
+      (f64.load (local.get 0))
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d0100000001060160017f017c030201000504010101010a0901070020002b03000b");
+
+    auto instance = instantiate(parse(wasm));
+
+    const std::tuple<bytes, double> test_cases[]{
+        {"0000000000000000"_bytes, 0.0},
+        {"0000000000000080"_bytes, -0.0},
+        {"5839b4c876bef33f"_bytes, 1.234},
+        {"5839b4c876bef3bf"_bytes, -1.234},
+        {"000000000000f07f"_bytes, FP64::Limits::infinity()},
+        {"000000000000f0ff"_bytes, -FP64::Limits::infinity()},
+        {"ffffffffffffef7f"_bytes, FP64::Limits::max()},
+        {"ffffffffffffefff"_bytes, -FP64::Limits::max()},
+        {"0000000000001000"_bytes, FP64::Limits::min()},
+        {"0000000000001080"_bytes, -FP64::Limits::min()},
+        {"0100000000000000"_bytes, FP64::Limits::denorm_min()},
+        {"0100000000000080"_bytes, -FP64::Limits::denorm_min()},
+        {"000000000000f03f"_bytes, 1.0},
+        {"000000000000f0bf"_bytes, -1.0},
+        {"ffffffffffffef3f"_bytes, std::nextafter(1.0, 0.0)},
+        {"ffffffffffffefbf"_bytes, std::nextafter(-1.0, 0.0)},
+        {"000000000000f87f"_bytes, FP64::nan(FP64::canon)},
+        {"010000000000f87f"_bytes, FP64::nan(FP64::canon + 1)},
+        {"010000000000f07f"_bytes, FP64::nan(1)},
+    };
+
+    uint32_t address = 0;
+    for (const auto& [memory_fill, expected] : test_cases)
+    {
+        std::copy(memory_fill.begin(), memory_fill.end(), instance->memory->data() + address);
+
+        EXPECT_THAT(execute(*instance, 0, {address}), Result(expected));
+        address += static_cast<uint32_t>(memory_fill.size());
+    }
+
+    EXPECT_THAT(execute(*instance, 0, {65534}), Traps());
+    EXPECT_THAT(execute(*instance, 0, {65537}), Traps());
+}
+
+TEST(execute_floating_point, f64_load_overflow)
+{
+    /* wat2wasm
+    (memory 1 1)
+    (func (param i32) (result f64)
+      get_local 0
+      f64.load offset=0x7fffffff
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017c030201000504010101010a0d010b0020002b03ffffffff070b");
+
+    auto instance = instantiate(parse(wasm));
+
+    // Offset is 0x7fffffff + 0 => 0x7fffffff
+    EXPECT_THAT(execute(*instance, 0, {0}), Traps());
+    // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
+    EXPECT_THAT(execute(*instance, 0, {0x80000000}), Traps());
+    // Offset is 0x7fffffff + 0x80000001 => 0x100000000
+    EXPECT_THAT(execute(*instance, 0, {0x80000001}), Traps());
+}
+
+TEST(execute_floating_point, f32_store)
+{
+    /* wat2wasm
+    (memory 1 1)
+    (data (i32.const 0)  "\cc\cc\cc\cc\cc\cc")
+    (func (param f32 i32)
+      get_local 1
+      get_local 0
+      f32.store
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160027d7f00030201000504010101010a0b010900200120003802000b0b0c01004100"
+        "0b06cccccccccccc");
+    const auto module = parse(wasm);
+
+    const std::tuple<float, bytes> test_cases[]{
+        {0.0f, "cc00000000cc"_bytes},
+        {-0.0f, "cc00000080cc"_bytes},
+        {1.234f, "ccb6f39d3fcc"_bytes},
+        {-1.234f, "ccb6f39dbfcc"_bytes},
+        {FP32::Limits::infinity(), "cc0000807fcc"_bytes},
+        {-FP32::Limits::infinity(), "cc000080ffcc"_bytes},
+        {FP32::Limits::max(), "ccffff7f7fcc"_bytes},
+        {-FP32::Limits::max(), "ccffff7fffcc"_bytes},
+        {FP32::Limits::min(), "cc00008000cc"_bytes},
+        {-FP32::Limits::min(), "cc00008080cc"_bytes},
+        {FP32::Limits::denorm_min(), "cc01000000cc"_bytes},
+        {-FP32::Limits::denorm_min(), "cc01000080cc"_bytes},
+        {1.0f, "cc0000803fcc"_bytes},
+        {-1.0f, "cc000080bfcc"_bytes},
+        {std::nextafter(1.0f, 0.0f), "ccffff7f3fcc"_bytes},
+        {std::nextafter(-1.0f, 0.0f), "ccffff7fbfcc"_bytes},
+        {FP32::nan(FP32::canon), "cc0000c07fcc"_bytes},
+        {FP32::nan(FP32::canon + 1), "cc0100c07fcc"_bytes},
+        {FP32::nan(1), "cc0100807fcc"_bytes},
+    };
+
+    for (const auto& [arg, expected] : test_cases)
+    {
+        auto instance = instantiate(module);
+
+        EXPECT_THAT(execute(*instance, 0, {arg, 1}), Result());
+        EXPECT_EQ(instance->memory->substr(0, 6), expected);
+
+        EXPECT_THAT(execute(*instance, 0, {arg, 65534}), Traps());
+        EXPECT_THAT(execute(*instance, 0, {arg, 65537}), Traps());
+    }
+}
+
+TEST(execute_floating_point, f32_store_overflow)
+{
+    /* wat2wasm
+    (memory 1 1)
+    (func (param i32)
+      get_local 0
+      f32.const 1.234
+      f32.store offset=0x7fffffff
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001050160017f00030201000504010101010a12011000200043b6f39d3f3802ffffffff070"
+        "b");
+
+    auto instance = instantiate(parse(wasm));
+
+    // Offset is 0x7fffffff + 0 => 0x7fffffff
+    EXPECT_THAT(execute(*instance, 0, {0}), Traps());
+    // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
+    EXPECT_THAT(execute(*instance, 0, {0x80000000}), Traps());
+    // Offset is 0x7fffffff + 0x80000001 => 0x100000000
+    EXPECT_THAT(execute(*instance, 0, {0x80000001}), Traps());
+}
+
+TEST(execute_floating_point, f64_store)
+{
+    /* wat2wasm
+    (memory 1 1)
+    (data (i32.const 0)  "\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc")
+    (func (param f64 i32)
+      get_local 1
+      get_local 0
+      f64.store
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160027c7f00030201000504010101010a0b010900200120003903000b0b1201004100"
+        "0b0ccccccccccccccccccccccccc");
+    const auto module = parse(wasm);
+
+    const std::tuple<double, bytes> test_cases[]{
+        {0.0, "cc0000000000000000cc"_bytes},
+        {-0.0, "cc0000000000000080cc"_bytes},
+        {1.234, "cc5839b4c876bef33fcc"_bytes},
+        {-1.234, "cc5839b4c876bef3bfcc"_bytes},
+        {FP64::Limits::infinity(), "cc000000000000f07fcc"_bytes},
+        {-FP64::Limits::infinity(), "cc000000000000f0ffcc"_bytes},
+        {FP64::Limits::max(), "ccffffffffffffef7fcc"_bytes},
+        {-FP64::Limits::max(), "ccffffffffffffefffcc"_bytes},
+        {FP64::Limits::min(), "cc0000000000001000cc"_bytes},
+        {-FP64::Limits::min(), "cc0000000000001080cc"_bytes},
+        {FP64::Limits::denorm_min(), "cc0100000000000000cc"_bytes},
+        {-FP64::Limits::denorm_min(), "cc0100000000000080cc"_bytes},
+        {1.0, "cc000000000000f03fcc"_bytes},
+        {-1.0, "cc000000000000f0bfcc"_bytes},
+        {std::nextafter(1.0, 0.0), "ccffffffffffffef3fcc"_bytes},
+        {std::nextafter(-1.0, 0.0), "ccffffffffffffefbfcc"_bytes},
+        {FP64::nan(FP64::canon), "cc000000000000f87fcc"_bytes},
+        {FP64::nan(FP64::canon + 1), "cc010000000000f87fcc"_bytes},
+        {FP64::nan(1), "cc010000000000f07fcc"_bytes},
+    };
+
+    for (const auto& [arg, expected] : test_cases)
+    {
+        auto instance = instantiate(module);
+
+        EXPECT_THAT(execute(*instance, 0, {arg, 1}), Result());
+        EXPECT_EQ(instance->memory->substr(0, 10), expected);
+
+        EXPECT_THAT(execute(*instance, 0, {arg, 65534}), Traps());
+        EXPECT_THAT(execute(*instance, 0, {arg, 65537}), Traps());
+    }
+}
+
+TEST(execute_floating_point, f64_store_overflow)
+{
+    /* wat2wasm
+    (memory 1 1)
+    (func (param i32)
+      get_local 0
+      f64.const 1.234
+      f64.store offset=0x7fffffff
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001050160017f00030201000504010101010a160114002000445839b4c876bef33f3903ffff"
+        "ffff070b");
+
+    auto instance = instantiate(parse(wasm));
+
+    // Offset is 0x7fffffff + 0 => 0x7fffffff
+    EXPECT_THAT(execute(*instance, 0, {0}), Traps());
+    // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
+    EXPECT_THAT(execute(*instance, 0, {0x80000000}), Traps());
+    // Offset is 0x7fffffff + 0x80000001 => 0x100000000
+    EXPECT_THAT(execute(*instance, 0, {0x80000001}), Traps());
+}
