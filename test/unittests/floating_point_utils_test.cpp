@@ -190,3 +190,16 @@ TEST(floating_point_utils, compare_double)
     EXPECT_NE(FP{cnan}, snan);
     EXPECT_NE(cnan, FP{snan});
 }
+
+TEST(floating_point_utils, compare_zero)
+{
+    EXPECT_EQ(FP{0.0}, FP{0.0});
+    EXPECT_EQ(FP{-0.0}, FP{-0.0});
+    EXPECT_EQ(FP{0.0f}, FP{0.0f});
+    EXPECT_EQ(FP{-0.0f}, FP{-0.0f});
+
+    EXPECT_NE(FP{-0.0}, FP{0.0});
+    EXPECT_NE(FP{0.0}, FP{-0.0});
+    EXPECT_NE(FP{-0.0f}, FP{0.0f});
+    EXPECT_NE(FP{0.0f}, FP{-0.0f});
+}

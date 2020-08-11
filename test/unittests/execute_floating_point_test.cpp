@@ -9,10 +9,31 @@
 #include <test/utils/asserts.hpp>
 #include <test/utils/floating_point_utils.hpp>
 #include <test/utils/hex.hpp>
+#include <array>
 #include <cmath>
 
 using namespace fizzy;
 using namespace fizzy::test;
+
+MATCHER_P(CanonicalNaN, value, "result with a canonical NaN")
+{
+    (void)value;
+    if (arg.trapped || !arg.has_value)
+        return false;
+
+    const auto result_value = arg.value.template as<value_type>();
+    return FP<value_type>{result_value}.nan_payload() == FP<value_type>::canon;
+}
+
+MATCHER_P(ArithmeticNaN, value, "result with an arithmetic NaN")
+{
+    (void)value;
+    if (arg.trapped || !arg.has_value)
+        return false;
+
+    const auto result_value = arg.value.template as<value_type>();
+    return FP<value_type>{result_value}.nan_payload() >= FP<value_type>::canon;
+}
 
 TEST(execute_floating_point, f32_const)
 {
@@ -41,41 +62,6 @@ TEST(execute_floating_point, f64_const)
     EXPECT_THAT(execute(*instance, 0, {}), Result(8589934592.1));
 }
 
-TEST(execute_floating_point, f32_add)
-{
-    /* wat2wasm
-    (func (param f32 f32) (result f32)
-      local.get 0
-      local.get 1
-      f32.add
-    )
-    */
-    const auto wasm = from_hex("0061736d0100000001070160027d7d017d030201000a0901070020002001920b");
-
-    auto instance = instantiate(parse(wasm));
-    EXPECT_THAT(execute(*instance, 0, {1.001f, 6.006f}), Result(7.007f));
-}
-
-TEST(execute_floating_point, f64_add)
-{
-    /* wat2wasm
-    (func (param f64 f64) (result f64)
-      local.get 0
-      local.get 1
-      f64.add
-    )
-    */
-    const auto wasm = from_hex("0061736d0100000001070160027c7c017c030201000a0901070020002001a00b");
-
-    auto instance = instantiate(parse(wasm));
-    EXPECT_THAT(execute(*instance, 0, {1.0011, 6.0066}), Result(7.0077));
-}
-
-template <typename T>
-class execute_floating_point_types : public testing::Test
-{
-};
-
 /// Compile-time information about a Wasm type.
 template <typename T>
 struct WasmTypeTraits;
@@ -84,11 +70,13 @@ template <>
 struct WasmTypeTraits<float>
 {
     static constexpr auto name = "f32";
+    static constexpr auto valtype = ValType::f32;
 };
 template <>
 struct WasmTypeTraits<double>
 {
     static constexpr auto name = "f64";
+    static constexpr auto valtype = ValType::f64;
 };
 
 struct WasmTypeName
@@ -100,13 +88,144 @@ struct WasmTypeName
     }
 };
 
+template <typename T>
+class execute_floating_point_types : public testing::Test
+{
+protected:
+    using L = typename FP<T>::Limits;
+
+    // The list of positive floating-point values without zeros, infinities and NaNs.
+    inline static const std::array positive_special_values{
+        L::denorm_min(),
+        L::min(),
+        std::nextafter(T{1.0}, T{0.0}),
+        T{1.0},
+        std::nextafter(T{1.0}, L::infinity()),
+        L::max(),
+    };
+
+    // The list of floating-point values, including infinities and NaNs.
+    // They must be strictly ordered (ordered_values[i] < ordered_values[j] for i<j) or NaNs.
+    // Therefore -0 is omitted. This allows determining the relation of any pair of values only
+    // knowing values' position in the array.
+    inline static const std::array ordered_special_values = {
+        -L::infinity(),
+        -L::max(),
+        std::nextafter(-L::max(), T{0}),
+        std::nextafter(-T{1.0}, -L::infinity()),
+        -T{1.0},
+        std::nextafter(-T{1.0}, T{0}),
+        std::nextafter(-L::min(), -L::infinity()),
+        -L::min(),
+        std::nextafter(-L::min(), T{0}),
+        std::nextafter(-L::denorm_min(), -L::infinity()),
+        -L::denorm_min(),
+        T{0},
+        L::denorm_min(),
+        std::nextafter(L::denorm_min(), L::infinity()),
+        std::nextafter(L::min(), T{0}),
+        L::min(),
+        std::nextafter(L::min(), L::infinity()),
+        std::nextafter(T{1.0}, T{0}),
+        T{1.0},
+        std::nextafter(T{1.0}, L::infinity()),
+        std::nextafter(L::max(), T{0}),
+        L::max(),
+        L::infinity(),
+
+        // NaNs.
+        FP<T>::nan(FP<T>::canon),
+        FP<T>::nan(FP<T>::canon + 1),
+        FP<T>::nan(1),
+    };
+
+    /// Creates a wasm module with a single function for the given instructions opcode.
+    /// The opcode is converted to match the type, e.g. f32_add -> f64_add.
+    static bytes get_binop_code(Instr opcode)
+    {
+        constexpr auto f64_variant_offset =
+            static_cast<uint8_t>(Instr::f64_add) - static_cast<uint8_t>(Instr::f32_add);
+
+        // Convert to f64 variant if needed.
+        const auto typed_opcode =
+            std::is_same_v<T, double> ?
+                static_cast<uint8_t>(static_cast<uint8_t>(opcode) + f64_variant_offset) :
+                static_cast<uint8_t>(opcode);
+
+        /* wat2wasm
+        (func (param f32 f32) (result f32)
+          (f32.add (local.get 0) (local.get 1))
+        )
+        */
+        auto wasm = from_hex("0061736d0100000001070160027d7d017d030201000a0901070020002001920b");
+        constexpr auto template_type = static_cast<uint8_t>(ValType::f32);
+        constexpr auto template_opcode = static_cast<uint8_t>(Instr::f32_add);
+        EXPECT_EQ(std::count(wasm.begin(), wasm.end(), template_type), 3);
+        EXPECT_EQ(std::count(wasm.begin(), wasm.end(), template_opcode), 1);
+        std::replace(wasm.begin(), wasm.end(), template_type,
+            static_cast<uint8_t>(WasmTypeTraits<T>::valtype));
+        std::replace(wasm.begin(), wasm.end(), template_opcode, typed_opcode);
+        return wasm;
+    }
+};
+
 using FloatingPointTypes = testing::Types<float, double>;
 TYPED_TEST_SUITE(execute_floating_point_types, FloatingPointTypes, WasmTypeName);
 
+TYPED_TEST(execute_floating_point_types, nan_matchers)
+{
+    using testing::Not;
+    using FP = FP<TypeParam>;
+
+    EXPECT_THAT(Void, Not(CanonicalNaN(TypeParam{})));
+    EXPECT_THAT(Trap, Not(CanonicalNaN(TypeParam{})));
+    EXPECT_THAT(ExecutionResult{Value{TypeParam{}}}, Not(CanonicalNaN(TypeParam{})));
+    EXPECT_THAT(ExecutionResult{Value{FP::nan(FP::canon)}}, CanonicalNaN(TypeParam{}));
+    EXPECT_THAT(ExecutionResult{Value{FP::nan(FP::canon + 1)}}, Not(CanonicalNaN(TypeParam{})));
+    EXPECT_THAT(ExecutionResult{Value{FP::nan(1)}}, Not(CanonicalNaN(TypeParam{})));
+
+    EXPECT_THAT(Void, Not(ArithmeticNaN(TypeParam{})));
+    EXPECT_THAT(Trap, Not(ArithmeticNaN(TypeParam{})));
+    EXPECT_THAT(ExecutionResult{Value{TypeParam{}}}, Not(ArithmeticNaN(TypeParam{})));
+    EXPECT_THAT(ExecutionResult{Value{FP::nan(FP::canon)}}, ArithmeticNaN(TypeParam{}));
+    EXPECT_THAT(ExecutionResult{Value{FP::nan(FP::canon + 1)}}, ArithmeticNaN(TypeParam{}));
+    EXPECT_THAT(ExecutionResult{Value{FP::nan(1)}}, Not(ArithmeticNaN(TypeParam{})));
+}
+
+TYPED_TEST(execute_floating_point_types, binop_nan_propagation)
+{
+    // Tests NaN propagation in binary instructions (binop).
+    // If all NaN inputs are canonical the result must be the canonical NaN.
+    // Otherwise, the result must be an arithmetic NaN.
+
+    // The list of instructions to be tested.
+    // Only f32 variants, but f64 variants are going to be covered as well.
+    constexpr Instr opcodes[] = {
+        Instr::f32_add,
+    };
+
+    for (const auto op : opcodes)
+    {
+        auto instance = instantiate(parse(this->get_binop_code(op)));
+
+        constexpr auto q = TypeParam{1.0};
+        const auto cnan = FP<TypeParam>::nan(FP<TypeParam>::canon);
+        const auto anan = FP<TypeParam>::nan(FP<TypeParam>::canon + 1);
+
+        EXPECT_THAT(execute(*instance, 0, {q, cnan}), CanonicalNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {cnan, q}), CanonicalNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {cnan, cnan}), CanonicalNaN(TypeParam{}));
+
+        EXPECT_THAT(execute(*instance, 0, {q, anan}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {anan, q}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {anan, anan}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {anan, cnan}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {cnan, anan}), ArithmeticNaN(TypeParam{}));
+    }
+}
+
 TYPED_TEST(execute_floating_point_types, compare)
 {
-    using Limits = typename FP<TypeParam>::Limits;
-
     /* wat2wasm
     (func (param f32 f32) (result i32) (f32.eq (local.get 0) (local.get 1)))
     (func (param f32 f32) (result i32) (f32.ne (local.get 0) (local.get 1)))
@@ -136,48 +255,13 @@ TYPED_TEST(execute_floating_point_types, compare)
     constexpr auto le = func_offset + 4;
     constexpr auto ge = func_offset + 5;
 
-    // The values to be used as test cases.
-    // They must be strictly ordered (ordered_values[i] < ordered_values[j] for i<j) or NaNs.
-    // This allows determining the relation of any pair of values only knowing values' position
-    // in the array.
-    const TypeParam ordered_values[] = {
-        -Limits::infinity(),
-        -Limits::max(),
-        std::nextafter(-Limits::max(), TypeParam{0}),
-        std::nextafter(-TypeParam{1.0}, -Limits::infinity()),
-        -TypeParam{1.0},
-        std::nextafter(-TypeParam{1.0}, TypeParam{0}),
-        std::nextafter(-Limits::min(), -Limits::infinity()),
-        -Limits::min(),
-        std::nextafter(-Limits::min(), TypeParam{0}),
-        std::nextafter(-Limits::denorm_min(), -Limits::infinity()),
-        -Limits::denorm_min(),
-        TypeParam{0},
-        Limits::denorm_min(),
-        std::nextafter(Limits::denorm_min(), Limits::infinity()),
-        std::nextafter(Limits::min(), TypeParam{0}),
-        Limits::min(),
-        std::nextafter(Limits::min(), Limits::infinity()),
-        std::nextafter(TypeParam{1.0}, TypeParam{0}),
-        TypeParam{1.0},
-        std::nextafter(TypeParam{1.0}, Limits::infinity()),
-        std::nextafter(Limits::max(), TypeParam{0}),
-        Limits::max(),
-        Limits::infinity(),
-
-        // NaNs.
-        FP<TypeParam>::nan(FP<TypeParam>::canon),
-        FP<TypeParam>::nan(FP<TypeParam>::canon + 1),
-        FP<TypeParam>::nan(1),
-    };
-
     // Check every pair from cartesian product of ordered_values.
-    for (size_t i = 0; i < std::size(ordered_values); ++i)
+    for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
     {
-        for (size_t j = 0; j < std::size(ordered_values); ++j)
+        for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
         {
-            const auto a = ordered_values[i];
-            const auto b = ordered_values[j];
+            const auto a = this->ordered_special_values[i];
+            const auto b = this->ordered_special_values[j];
             if (std::isnan(a) || std::isnan(b))
             {
                 EXPECT_THAT(execute(*inst, eq, {a, b}), Result(0)) << a << "==" << b;
@@ -207,6 +291,76 @@ TYPED_TEST(execute_floating_point_types, compare)
     EXPECT_THAT(execute(*inst, gt, {TypeParam{-0.0}, TypeParam{0.0}}), Result(0));
     EXPECT_THAT(execute(*inst, le, {TypeParam{-0.0}, TypeParam{0.0}}), Result(1));
     EXPECT_THAT(execute(*inst, ge, {TypeParam{-0.0}, TypeParam{0.0}}), Result(1));
+}
+
+TYPED_TEST(execute_floating_point_types, add)
+{
+    using FP = FP<TypeParam>;
+    using Limits = typename FP::Limits;
+
+    auto instance = instantiate(parse(this->get_binop_code(Instr::f32_add)));
+    const auto exec = [&](auto arg1, auto arg2) { return execute(*instance, 0, {arg1, arg2}); };
+
+    // fadd(+-inf, -+inf) = nan:canonical
+    EXPECT_THAT(exec(Limits::infinity(), -Limits::infinity()), CanonicalNaN(TypeParam{}));
+    EXPECT_THAT(exec(-Limits::infinity(), Limits::infinity()), CanonicalNaN(TypeParam{}));
+
+    // fadd(+-inf, +-inf) = +-inf
+    EXPECT_THAT(exec(Limits::infinity(), Limits::infinity()), Result(Limits::infinity()));
+    EXPECT_THAT(exec(-Limits::infinity(), -Limits::infinity()), Result(-Limits::infinity()));
+
+    // fadd(+-O, -+0) = +0
+    EXPECT_THAT(exec(TypeParam{0.0}, -TypeParam{0.0}), Result(TypeParam{0.0}));
+    EXPECT_THAT(exec(-TypeParam{0.0}, TypeParam{0.0}), Result(TypeParam{0.0}));
+
+    // fadd(+-0, +-0) = +-0
+    EXPECT_THAT(exec(TypeParam{0.0}, TypeParam{0.0}), Result(TypeParam{0.0}));
+    EXPECT_THAT(exec(-TypeParam{0.0}, -TypeParam{0.0}), Result(-TypeParam{0.0}));
+
+    // fadd(z1, +-0) = z1  (for z1 = +-inf)
+    EXPECT_THAT(exec(Limits::infinity(), TypeParam{0.0}), Result(Limits::infinity()));
+    EXPECT_THAT(exec(Limits::infinity(), -TypeParam{0.0}), Result(Limits::infinity()));
+    EXPECT_THAT(exec(-Limits::infinity(), TypeParam{0.0}), Result(-Limits::infinity()));
+    EXPECT_THAT(exec(-Limits::infinity(), -TypeParam{0.0}), Result(-Limits::infinity()));
+
+    // fadd(+-0, z2) = z2  (for z2 = +-inf)
+    EXPECT_THAT(exec(TypeParam{0.0}, Limits::infinity()), Result(Limits::infinity()));
+    EXPECT_THAT(exec(TypeParam{0.0}, -Limits::infinity()), Result(-Limits::infinity()));
+    EXPECT_THAT(exec(-TypeParam{0.0}, Limits::infinity()), Result(Limits::infinity()));
+    EXPECT_THAT(exec(-TypeParam{0.0}, -Limits::infinity()), Result(-Limits::infinity()));
+
+    for (const auto q : this->positive_special_values)
+    {
+        // fadd(z1, +-inf) = +-inf  (for z1 = +-q)
+        EXPECT_THAT(exec(q, Limits::infinity()), Result(Limits::infinity()));
+        EXPECT_THAT(exec(q, -Limits::infinity()), Result(-Limits::infinity()));
+        EXPECT_THAT(exec(-q, Limits::infinity()), Result(Limits::infinity()));
+        EXPECT_THAT(exec(-q, -Limits::infinity()), Result(-Limits::infinity()));
+
+        // fadd(+-inf, z2) = +-inf  (for z2 = +-q)
+        EXPECT_THAT(exec(Limits::infinity(), q), Result(Limits::infinity()));
+        EXPECT_THAT(exec(-Limits::infinity(), q), Result(-Limits::infinity()));
+        EXPECT_THAT(exec(Limits::infinity(), -q), Result(Limits::infinity()));
+        EXPECT_THAT(exec(-Limits::infinity(), -q), Result(-Limits::infinity()));
+
+        // fadd(z1, +-0) = z1  (for z1 = +-q)
+        EXPECT_THAT(exec(q, TypeParam{0.0}), Result(q));
+        EXPECT_THAT(exec(q, -TypeParam{0.0}), Result(q));
+        EXPECT_THAT(exec(-q, TypeParam{0.0}), Result(-q));
+        EXPECT_THAT(exec(-q, -TypeParam{0.0}), Result(-q));
+
+        // fadd(+-0, z2) = z2  (for z2 = +-q)
+        EXPECT_THAT(exec(TypeParam{0.0}, q), Result(q));
+        EXPECT_THAT(exec(-TypeParam{0.0}, q), Result(q));
+        EXPECT_THAT(exec(TypeParam{0.0}, -q), Result(-q));
+        EXPECT_THAT(exec(-TypeParam{0.0}, -q), Result(-q));
+
+        // fadd(+-q, -+q) = +0
+        EXPECT_THAT(exec(q, -q), Result(TypeParam{0.0}));
+        EXPECT_THAT(exec(-q, q), Result(TypeParam{0.0}));
+    }
+
+    EXPECT_THAT(exec(TypeParam{0x0.287p2}, TypeParam{0x1.FFp4}), Result(TypeParam{0x1.048Ep5}));
 }
 
 
