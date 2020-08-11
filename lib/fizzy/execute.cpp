@@ -328,9 +328,12 @@ inline DstT extend(SrcT in) noexcept
         return DstT{in};
 }
 
+/// Converts the top stack item by truncating a float value to an integer value.
 template <typename SrcT, typename DstT>
 inline bool trunc(OperandStack& stack) noexcept
 {
+    static_assert(std::is_floating_point_v<SrcT>);
+    static_assert(std::is_integral_v<DstT>);
     using boundaries = trunc_boundaries<SrcT, DstT>;
 
     const auto input = stack.top().as<SrcT>();
@@ -343,6 +346,15 @@ inline bool trunc(OperandStack& stack) noexcept
         return true;
     }
     return false;
+}
+
+/// Converts the top stack item from an integer value to a float value.
+template <typename SrcT, typename DstT>
+inline void convert(OperandStack& stack) noexcept
+{
+    static_assert(std::is_integral_v<SrcT>);
+    static_assert(std::is_floating_point_v<DstT>);
+    stack.top() = static_cast<DstT>(stack.top().as<SrcT>());
 }
 
 template <typename DstT, typename SrcT = DstT>
@@ -1609,6 +1621,46 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             }
             break;
         }
+        case Instr::f32_convert_i32_s:
+        {
+            convert<int32_t, float>(stack);
+            break;
+        }
+        case Instr::f32_convert_i32_u:
+        {
+            convert<uint32_t, float>(stack);
+            break;
+        }
+        case Instr::f32_convert_i64_s:
+        {
+            convert<int64_t, float>(stack);
+            break;
+        }
+        case Instr::f32_convert_i64_u:
+        {
+            convert<uint64_t, float>(stack);
+            break;
+        }
+        case Instr::f64_convert_i32_s:
+        {
+            convert<int32_t, double>(stack);
+            break;
+        }
+        case Instr::f64_convert_i32_u:
+        {
+            convert<uint32_t, double>(stack);
+            break;
+        }
+        case Instr::f64_convert_i64_s:
+        {
+            convert<int64_t, double>(stack);
+            break;
+        }
+        case Instr::f64_convert_i64_u:
+        {
+            convert<uint64_t, double>(stack);
+            break;
+        }
 
         case Instr::f32_abs:
         case Instr::f32_neg:
@@ -1636,15 +1688,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f64_min:
         case Instr::f64_max:
         case Instr::f64_copysign:
-        case Instr::f32_convert_i32_s:
-        case Instr::f32_convert_i32_u:
-        case Instr::f32_convert_i64_s:
-        case Instr::f32_convert_i64_u:
         case Instr::f32_demote_f64:
-        case Instr::f64_convert_i32_s:
-        case Instr::f64_convert_i32_u:
-        case Instr::f64_convert_i64_s:
-        case Instr::f64_convert_i64_u:
         case Instr::f64_promote_f32:
         case Instr::i32_reinterpret_f32:
         case Instr::i64_reinterpret_f64:
