@@ -1551,6 +1551,16 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             binary_op(stack, fdiv<float>);
             break;
         }
+        case Instr::f32_copysign:
+        {
+            // TODO: This is not optimal implementation. The std::copysign() is inlined, but
+            //       it affects the compiler to still use SSE vectors (probably due to C++ ABI)
+            //       while this can be implemented with just generic registers and integer
+            //       instructions: (a & ABS_MASK) | (b & SIGN_MASK).
+            //       https://godbolt.org/z/aPqvfo
+            binary_op(stack, static_cast<float (*)(float, float)>(std::copysign));
+            break;
+        }
 
         case Instr::f64_abs:
         {
@@ -1573,6 +1583,11 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f64_div:
         {
             binary_op(stack, fdiv<double>);
+            break;
+        }
+        case Instr::f64_copysign:
+        {
+            binary_op(stack, static_cast<double (*)(double, double)>(std::copysign));
             break;
         }
 
@@ -1719,7 +1734,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f32_mul:
         case Instr::f32_min:
         case Instr::f32_max:
-        case Instr::f32_copysign:
         case Instr::f64_ceil:
         case Instr::f64_floor:
         case Instr::f64_trunc:
@@ -1729,7 +1743,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f64_mul:
         case Instr::f64_min:
         case Instr::f64_max:
-        case Instr::f64_copysign:
         case Instr::f32_demote_f64:
         case Instr::i32_reinterpret_f32:
         case Instr::i64_reinterpret_f64:
