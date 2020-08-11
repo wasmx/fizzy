@@ -317,7 +317,9 @@ inline T load(bytes_view input, size_t offset) noexcept
 template <typename DstT, typename SrcT>
 inline DstT extend(SrcT in) noexcept
 {
-    if constexpr (std::is_signed<SrcT>::value)
+    if constexpr (std::is_same_v<SrcT, DstT>)
+        return in;
+    else if constexpr (std::is_signed<SrcT>::value)
     {
         using SignedDstT = typename std::make_signed<DstT>::type;
         return static_cast<DstT>(SignedDstT{in});
@@ -360,12 +362,23 @@ inline bool load_from_memory(
 }
 
 template <typename DstT>
+inline DstT shrink(Value value) noexcept
+{
+    if constexpr (std::is_floating_point_v<DstT>)
+        return value.as<DstT>();
+    else
+    {
+        // Could use `.as<DstT>()` would we have overloads for uint8_t/uint16_t,
+        // however it does not seem to be worth it for this single occasion.
+        return static_cast<DstT>(value.i64);
+    }
+}
+
+template <typename DstT>
 inline bool store_into_memory(
     bytes& memory, OperandStack& stack, const uint8_t*& immediates) noexcept
 {
-    // Could use `.as<DstT>()` would we have overloads for uint8_t/uint16_t,
-    // however it does not seem to be worth it for this single occasion.
-    const auto value = static_cast<DstT>(stack.pop().i64);
+    const auto value = shrink<DstT>(stack.pop());
     const auto address = stack.pop().as<uint32_t>();
     // NOTE: alignment is dropped by the parser
     const auto offset = read<uint32_t>(immediates);
@@ -860,6 +873,24 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             }
             break;
         }
+        case Instr::f32_load:
+        {
+            if (!load_from_memory<float>(*memory, stack, immediates))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
+        case Instr::f64_load:
+        {
+            if (!load_from_memory<double>(*memory, stack, immediates))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
         case Instr::i32_load8_s:
         {
             if (!load_from_memory<uint32_t, int8_t>(*memory, stack, immediates))
@@ -962,6 +993,24 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::i64_store:
         {
             if (!store_into_memory<uint64_t>(*memory, stack, immediates))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
+        case Instr::f32_store:
+        {
+            if (!store_into_memory<float>(*memory, stack, immediates))
+            {
+                trap = true;
+                goto end;
+            }
+            break;
+        }
+        case Instr::f64_store:
+        {
+            if (!store_into_memory<double>(*memory, stack, immediates))
             {
                 trap = true;
                 goto end;
@@ -1561,10 +1610,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             break;
         }
 
-        case Instr::f32_load:
-        case Instr::f64_load:
-        case Instr::f32_store:
-        case Instr::f64_store:
         case Instr::f32_abs:
         case Instr::f32_neg:
         case Instr::f32_ceil:
