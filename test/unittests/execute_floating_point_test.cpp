@@ -225,6 +225,7 @@ TYPED_TEST(execute_floating_point_types, binop_nan_propagation)
     constexpr Instr opcodes[] = {
         Instr::f32_add,
         Instr::f32_div,
+        Instr::f32_min,
     };
 
     for (const auto op : opcodes)
@@ -490,6 +491,30 @@ TYPED_TEST(execute_floating_point_types, div)
     }
 
     EXPECT_THAT(exec(TypeParam{0xABCD.01p7}, TypeParam{4}), Result(TypeParam{0x1.579A02p20}));
+}
+
+TYPED_TEST(execute_floating_point_types, min)
+{
+    auto instance = instantiate(parse(this->get_binop_code(Instr::f32_min)));
+
+    // Check every pair from cartesian product of the list of values.
+    for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
+    {
+        for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
+        {
+            const auto a = this->ordered_special_values[i];
+            const auto b = this->ordered_special_values[j];
+            if (!std::isnan(a) && !std::isnan(b))
+            {
+                EXPECT_THAT(execute(*instance, 0, {a, b}), Result(i < j ? a : b)) << a << ", " << b;
+            }
+        }
+    }
+
+    // fmin(+-0, -+0) = -O
+    EXPECT_THAT(execute(*instance, 0, {TypeParam{0}, -TypeParam{0}}), Result(-TypeParam{0}));
+    EXPECT_THAT(execute(*instance, 0, {-TypeParam{0}, TypeParam{0}}), Result(-TypeParam{0}));
+    EXPECT_THAT(execute(*instance, 0, {-TypeParam{0}, -TypeParam{0}}), Result(-TypeParam{0}));
 }
 
 TYPED_TEST(execute_floating_point_types, copysign)
