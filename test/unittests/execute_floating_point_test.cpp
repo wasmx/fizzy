@@ -224,6 +224,7 @@ TYPED_TEST(execute_floating_point_types, binop_nan_propagation)
     // Only f32 variants, but f64 variants are going to be covered as well.
     constexpr Instr opcodes[] = {
         Instr::f32_add,
+        Instr::f32_mul,
         Instr::f32_div,
         Instr::f32_min,
         Instr::f32_max,
@@ -430,6 +431,74 @@ TYPED_TEST(execute_floating_point_types, add)
     }
 
     EXPECT_THAT(exec(TypeParam{0x0.287p2}, TypeParam{0x1.FFp4}), Result(TypeParam{0x1.048Ep5}));
+}
+
+TYPED_TEST(execute_floating_point_types, mul)
+{
+    using FP = FP<TypeParam>;
+    using Limits = typename FP::Limits;
+
+    auto instance = instantiate(parse(this->get_binop_code(Instr::f32_mul)));
+    const auto exec = [&](auto arg1, auto arg2) { return execute(*instance, 0, {arg1, arg2}); };
+
+    // fmul(+-inf, +-0) = nan:canonical
+    EXPECT_THAT(exec(Limits::infinity(), TypeParam{0.0}), CanonicalNaN(TypeParam{}));
+    EXPECT_THAT(exec(-Limits::infinity(), -TypeParam{0.0}), CanonicalNaN(TypeParam{}));
+
+    // fmul(+-inf, -+0) = nan:canonical
+    EXPECT_THAT(exec(Limits::infinity(), -TypeParam{0.0}), CanonicalNaN(TypeParam{}));
+    EXPECT_THAT(exec(-Limits::infinity(), TypeParam{0.0}), CanonicalNaN(TypeParam{}));
+
+    // fmul(+-0, +-inf) = nan:canonical
+    EXPECT_THAT(exec(TypeParam{0.0}, Limits::infinity()), CanonicalNaN(TypeParam{}));
+    EXPECT_THAT(exec(-TypeParam{0.0}, -Limits::infinity()), CanonicalNaN(TypeParam{}));
+
+    // fmul(+-0, -+inf) = nan:canonical
+    EXPECT_THAT(exec(TypeParam{0.0}, -Limits::infinity()), CanonicalNaN(TypeParam{}));
+    EXPECT_THAT(exec(-TypeParam{0.0}, Limits::infinity()), CanonicalNaN(TypeParam{}));
+
+    // fmul(+-inf, +-inf) = +inf
+    EXPECT_THAT(exec(Limits::infinity(), Limits::infinity()), Result(Limits::infinity()));
+    EXPECT_THAT(exec(-Limits::infinity(), -Limits::infinity()), Result(Limits::infinity()));
+
+    // fmul(+-inf, -+inf) = -inf
+    EXPECT_THAT(exec(Limits::infinity(), -Limits::infinity()), Result(-Limits::infinity()));
+    EXPECT_THAT(exec(-Limits::infinity(), Limits::infinity()), Result(-Limits::infinity()));
+
+    // fmul(+-0, +-0) = +0
+    EXPECT_THAT(exec(TypeParam{0.0}, TypeParam{0.0}), Result(TypeParam{0.0}));
+    EXPECT_THAT(exec(-TypeParam{0.0}, -TypeParam{0.0}), Result(TypeParam{0.0}));
+
+    // fmul(+-0, -+0) = -0
+    EXPECT_THAT(exec(TypeParam{0.0}, -TypeParam{0.0}), Result(-TypeParam{0.0}));
+    EXPECT_THAT(exec(-TypeParam{0.0}, TypeParam{0.0}), Result(-TypeParam{0.0}));
+
+    for (const auto q : this->positive_special_values)
+    {
+        // fmul(+-q1, +-inf) = +inf
+        EXPECT_THAT(exec(q, Limits::infinity()), Result(Limits::infinity()));
+        EXPECT_THAT(exec(-q, -Limits::infinity()), Result(Limits::infinity()));
+
+        // fmul(+-q1, -+inf) = -inf
+        EXPECT_THAT(exec(q, -Limits::infinity()), Result(-Limits::infinity()));
+        EXPECT_THAT(exec(-q, Limits::infinity()), Result(-Limits::infinity()));
+
+        // fmul(+-inf, +-q2) = +inf
+        EXPECT_THAT(exec(Limits::infinity(), q), Result(Limits::infinity()));
+        EXPECT_THAT(exec(-Limits::infinity(), -q), Result(Limits::infinity()));
+
+        // fmul(+-inf, -+q2) = -inf
+        EXPECT_THAT(exec(-Limits::infinity(), q), Result(-Limits::infinity()));
+        EXPECT_THAT(exec(Limits::infinity(), -q), Result(-Limits::infinity()));
+    }
+
+    EXPECT_THAT(exec(TypeParam{0x0.287p2}, TypeParam{0x1.FFp4}), Result(TypeParam{0x1.42DE4p4}));
+
+    const auto _1p = std::nextafter(TypeParam{1.0}, Limits::max());
+    EXPECT_THAT(exec(Limits::max(), _1p), Result(Limits::infinity()));
+    EXPECT_THAT(exec(-Limits::max(), -_1p), Result(Limits::infinity()));
+    EXPECT_THAT(exec(Limits::max(), -_1p), Result(-Limits::infinity()));
+    EXPECT_THAT(exec(-Limits::max(), _1p), Result(-Limits::infinity()));
 }
 
 TYPED_TEST(execute_floating_point_types, div)

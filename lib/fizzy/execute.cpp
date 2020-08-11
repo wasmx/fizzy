@@ -1574,6 +1574,11 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             binary_op(stack, std::plus<float>{});
             break;
         }
+        case Instr::f32_mul:
+        {
+            binary_op(stack, std::multiplies<float>{});
+            break;
+        }
         case Instr::f32_div:
         {
             binary_op(stack, fdiv<float>);
@@ -1616,6 +1621,11 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f64_add:
         {
             binary_op(stack, std::plus<double>{});
+            break;
+        }
+        case Instr::f64_mul:
+        {
+            binary_op(stack, std::multiplies<double>{});
             break;
         }
         case Instr::f64_div:
@@ -1779,14 +1789,12 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f32_nearest:
         case Instr::f32_sqrt:
         case Instr::f32_sub:
-        case Instr::f32_mul:
         case Instr::f64_ceil:
         case Instr::f64_floor:
         case Instr::f64_trunc:
         case Instr::f64_nearest:
         case Instr::f64_sqrt:
         case Instr::f64_sub:
-        case Instr::f64_mul:
         case Instr::f32_demote_f64:
         case Instr::i32_reinterpret_f32:
         case Instr::i64_reinterpret_f64:
