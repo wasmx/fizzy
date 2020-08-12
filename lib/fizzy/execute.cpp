@@ -1521,9 +1521,23 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             break;
         }
 
+        case Instr::f32_abs:
+        {
+            // TODO: This can be optimized https://godbolt.org/z/aPqvfo
+            unary_op(stack, static_cast<float (*)(float)>(std::fabs));
+            break;
+        }
+
         case Instr::f32_add:
         {
             binary_op(stack, std::plus<float>{});
+            break;
+        }
+
+        case Instr::f64_abs:
+        {
+            // TODO: This can be optimized https://godbolt.org/z/aPqvfo
+            unary_op(stack, static_cast<double (*)(double)>(std::fabs));
             break;
         }
 
@@ -1667,7 +1681,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             break;
         }
 
-        case Instr::f32_abs:
         case Instr::f32_neg:
         case Instr::f32_ceil:
         case Instr::f32_floor:
@@ -1680,7 +1693,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f32_min:
         case Instr::f32_max:
         case Instr::f32_copysign:
-        case Instr::f64_abs:
         case Instr::f64_neg:
         case Instr::f64_ceil:
         case Instr::f64_floor:
