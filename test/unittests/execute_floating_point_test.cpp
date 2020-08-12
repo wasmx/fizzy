@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "execute.hpp"
+#include "instructions.hpp"
 #include "parser.hpp"
 #include "trunc_boundaries.hpp"
 #include <gtest/gtest.h>
@@ -141,7 +142,8 @@ protected:
 
     /// Creates a wasm module with a single function for the given instructions opcode.
     /// The opcode is converted to match the type, e.g. f32_add -> f64_add.
-    static bytes get_binop_code(Instr opcode)
+    static bytes get_numeric_instruction_code(
+        bytes_view template_code, Instr template_opcode, Instr opcode)
     {
         constexpr auto f64_variant_offset =
             static_cast<uint8_t>(Instr::f64_add) - static_cast<uint8_t>(Instr::f32_add);
@@ -152,20 +154,40 @@ protected:
                 static_cast<uint8_t>(static_cast<uint8_t>(opcode) + f64_variant_offset) :
                 static_cast<uint8_t>(opcode);
 
+        bytes wasm{template_code};
+        constexpr auto template_type = static_cast<uint8_t>(ValType::f32);
+        const auto template_opcode_byte = static_cast<uint8_t>(template_opcode);
+        const auto opcode_arity = get_instruction_type_table()[template_opcode_byte].inputs.size();
+
+        EXPECT_EQ(std::count(wasm.begin(), wasm.end(), template_type), opcode_arity + 1);
+        EXPECT_EQ(std::count(wasm.begin(), wasm.end(), template_opcode_byte), 1);
+
+        std::replace(wasm.begin(), wasm.end(), template_type,
+            static_cast<uint8_t>(WasmTypeTraits<T>::valtype));
+        std::replace(wasm.begin(), wasm.end(), template_opcode_byte, typed_opcode);
+        return wasm;
+    }
+
+    static bytes get_unop_code(Instr opcode)
+    {
+        /* wat2wasm
+        (func (param f32) (result f32)
+          (f32.abs (local.get 0))
+        )
+        */
+        auto wasm = from_hex("0061736d0100000001060160017d017d030201000a0701050020008b0b");
+        return get_numeric_instruction_code(wasm, Instr::f32_abs, opcode);
+    }
+
+    static bytes get_binop_code(Instr opcode)
+    {
         /* wat2wasm
         (func (param f32 f32) (result f32)
           (f32.add (local.get 0) (local.get 1))
         )
         */
         auto wasm = from_hex("0061736d0100000001070160027d7d017d030201000a0901070020002001920b");
-        constexpr auto template_type = static_cast<uint8_t>(ValType::f32);
-        constexpr auto template_opcode = static_cast<uint8_t>(Instr::f32_add);
-        EXPECT_EQ(std::count(wasm.begin(), wasm.end(), template_type), 3);
-        EXPECT_EQ(std::count(wasm.begin(), wasm.end(), template_opcode), 1);
-        std::replace(wasm.begin(), wasm.end(), template_type,
-            static_cast<uint8_t>(WasmTypeTraits<T>::valtype));
-        std::replace(wasm.begin(), wasm.end(), template_opcode, typed_opcode);
-        return wasm;
+        return get_numeric_instruction_code(wasm, Instr::f32_add, opcode);
     }
 };
 
