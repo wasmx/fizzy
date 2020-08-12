@@ -224,6 +224,7 @@ TYPED_TEST(execute_floating_point_types, binop_nan_propagation)
     // Only f32 variants, but f64 variants are going to be covered as well.
     constexpr Instr opcodes[] = {
         Instr::f32_add,
+        Instr::f32_div,
     };
 
     for (const auto op : opcodes)
@@ -406,6 +407,69 @@ TYPED_TEST(execute_floating_point_types, add)
 
     EXPECT_THAT(exec(TypeParam{0x0.287p2}, TypeParam{0x1.FFp4}), Result(TypeParam{0x1.048Ep5}));
 }
+
+TYPED_TEST(execute_floating_point_types, div)
+{
+    using FP = FP<TypeParam>;
+    using Limits = typename FP::Limits;
+
+    auto instance = instantiate(parse(this->get_binop_code(Instr::f32_div)));
+    const auto exec = [&](auto arg1, auto arg2) { return execute(*instance, 0, {arg1, arg2}); };
+
+    // fdiv(+-inf, +-inf) = nan:canonical
+    EXPECT_THAT(exec(Limits::infinity(), Limits::infinity()), CanonicalNaN(TypeParam{}));
+    EXPECT_THAT(exec(-Limits::infinity(), -Limits::infinity()), CanonicalNaN(TypeParam{}));
+
+    // fdiv(+-inf, -+inf) = nan:canonical
+    EXPECT_THAT(exec(Limits::infinity(), -Limits::infinity()), CanonicalNaN(TypeParam{}));
+    EXPECT_THAT(exec(-Limits::infinity(), Limits::infinity()), CanonicalNaN(TypeParam{}));
+
+    // fdiv(+-0, +-0) = nan:canonical
+    EXPECT_THAT(exec(TypeParam{0.0}, TypeParam{0.0}), CanonicalNaN(TypeParam{}));
+    EXPECT_THAT(exec(-TypeParam{0.0}, -TypeParam{0.0}), CanonicalNaN(TypeParam{}));
+
+    // fdiv(+-0, -+0) = nan:canonical
+    EXPECT_THAT(exec(TypeParam{0.0}, -TypeParam{0.0}), CanonicalNaN(TypeParam{}));
+    EXPECT_THAT(exec(-TypeParam{0.0}, TypeParam{0.0}), CanonicalNaN(TypeParam{}));
+
+    for (const auto q : this->positive_special_values)
+    {
+        // fdiv(+-inf, +-q2) = +inf
+        EXPECT_THAT(exec(Limits::infinity(), q), Result(Limits::infinity()));
+        EXPECT_THAT(exec(-Limits::infinity(), -q), Result(Limits::infinity()));
+
+        // fdiv(+-inf, -+q2) = -inf
+        EXPECT_THAT(exec(Limits::infinity(), -q), Result(-Limits::infinity()));
+        EXPECT_THAT(exec(-Limits::infinity(), q), Result(-Limits::infinity()));
+
+        // fdiv(+-q1 +-inf) = +0
+        EXPECT_THAT(exec(q, Limits::infinity()), Result(TypeParam{0.0}));
+        EXPECT_THAT(exec(-q, -Limits::infinity()), Result(TypeParam{0.0}));
+
+        // fdiv(+-q1 -+inf) = -0
+        EXPECT_THAT(exec(-q, Limits::infinity()), Result(-TypeParam{0.0}));
+        EXPECT_THAT(exec(q, -Limits::infinity()), Result(-TypeParam{0.0}));
+
+        // fdiv(+-0, +-q2) = +0
+        EXPECT_THAT(exec(TypeParam{0.0}, q), Result(TypeParam{0.0}));
+        EXPECT_THAT(exec(-TypeParam{0.0}, -q), Result(TypeParam{0.0}));
+
+        // fdiv(+-0, -+q2) = -0
+        EXPECT_THAT(exec(-TypeParam{0.0}, q), Result(-TypeParam{0.0}));
+        EXPECT_THAT(exec(TypeParam{0.0}, -q), Result(-TypeParam{0.0}));
+
+        // fdiv(+-q1, +-0) = +inf
+        EXPECT_THAT(exec(q, TypeParam{0.0}), Result(Limits::infinity()));
+        EXPECT_THAT(exec(-q, -TypeParam{0.0}), Result(Limits::infinity()));
+
+        // fdiv(+-q1, -+0) = -inf
+        EXPECT_THAT(exec(q, -TypeParam{0.0}), Result(-Limits::infinity()));
+        EXPECT_THAT(exec(-q, TypeParam{0.0}), Result(-Limits::infinity()));
+    }
+
+    EXPECT_THAT(exec(TypeParam{0xABCD.01p7}, TypeParam{4}), Result(TypeParam{0x1.579A02p20}));
+}
+
 
 TEST(execute_floating_point, f64_promote_f32)
 {
