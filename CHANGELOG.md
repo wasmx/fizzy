@@ -5,6 +5,67 @@ Documentation of all notable changes to the **Fizzy** project.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
+## [0.4.0] — Unreleased
+
+This release introduces complete floating-point support.
+
+With that in place, Fizzy passes all(*) of the [official test suite (spectest 1.0)]:
+  - 18896 of 18899 binary parser and execution tests,
+  - 989 of 989 validation tests,
+  - 477 skipped due to testing text format parser.
+
+(*) The three failures are caused by, in our opinion, two bugs in the test cases, and the last one
+because we restrict memory to 256 Mb maximum during instantiation, while the test expects 4 Gb to succeed.
+
+Luckily this does not come with a measurable speed penalty.
+
+### Added
+
+- `f32.const`, `f64.const`, `f32.add`, `f64.add` instructions. [#424](https://github.com/wasmx/fizzy/pull/424) 
+  [#467](https://github.com/wasmx/fizzy/pull/467)
+- `f32.sub`, `f64.sub` instructions. [#474](https://github.com/wasmx/fizzy/pull/474)
+- `f32.mul`, `f64.mul` instructions. [#473](https://github.com/wasmx/fizzy/pull/473)
+- `f32.div`, `f64.div` instructions. [#468](https://github.com/wasmx/fizzy/pull/468)
+- `f32.sqrt`, `f64.sqrt` instructions. [#480](https://github.com/wasmx/fizzy/pull/480)
+- `f32.copysign`, `f64.copysign` instructions. [#471](https://github.com/wasmx/fizzy/pull/471)
+- `f32.abs`, `f64.abs` instructions. [#476](https://github.com/wasmx/fizzy/pull/476)
+- `f32.neg`, `f64.neg` instructions. [#477](https://github.com/wasmx/fizzy/pull/477)
+- Floating-point comparison instructions: `f32.eq`, `f32.ne`, `f32.lt`, `f32.gt`, `f32.le`, `f64.ge`, `f64.eq`, 
+   `f64.ne`, `f64.lt`, `f64.gt`, `f64.le`, `f64.ge`. [#449](https://github.com/wasmx/fizzy/pull/449)
+- `f32.min`, `f32.max`, `f64.min`, `f64.max` instructions. [#472](https://github.com/wasmx/fizzy/pull/472)
+- `f32.ceil`, `f32.floor`, `f32.trunc`, `f64.ceil`, `f64.floor`, `f64.trunc` instructions. 
+  [#481](https://github.com/wasmx/fizzy/pull/481)
+- `f32.nearest`, `f64.nearest` instructions. [#486](https://github.com/wasmx/fizzy/pull/486)
+- Floating-point to integer truncation instructions: `i32.trunc_f32_s`, `i32.trunc_f32_u`, `i32.trunc_f64_s`, `i32.trunc_f64_u`, `i64.trunc_f32_s`, `i64.trunc_f32_u`, 
+  `i64.trunc_f64_s`, `i64.trunc_f64_u`. [#447](https://github.com/wasmx/fizzy/pull/447)
+- Integer to floating-point conversion instructions: `f32.convert_i32_s`, `f32.convert_i32_u`, `f32.convert_i64_s`, `f32.convert_i64_u`, 
+  `f64.convert_i32_s`, `f64.convert_i32_u`, `f64.convert_i64_s`, `f64.convert_i64_u`. 
+  [#455](https://github.com/wasmx/fizzy/pull/455)
+- `f64.promote_f32` instruction. [#457](https://github.com/wasmx/fizzy/pull/457)
+- `f32.demote_f64` instruction. [#458](https://github.com/wasmx/fizzy/pull/458)
+- Reinterpret instructions: `i32.reinterpret_f32`, `i64.reinterpret_f64`, `f32.reinterpret_i32`, `f64.reinterpret_i64`. 
+  [#459](https://github.com/wasmx/fizzy/pull/459)
+- Floating-point memory instructions: `f32.load`, `f64.load`, `f32.store`, `f64.store`. [#456](https://github.com/wasmx/fizzy/pull/456)
+- Floating-point globals support. [#446](https://github.com/wasmx/fizzy/pull/446)
+- `fizzy-spectests` support for floating-point tests. [#445](https://github.com/wasmx/fizzy/pull/445)
+  [#460](https://github.com/wasmx/fizzy/pull/460) [#484](https://github.com/wasmx/fizzy/pull/484)
+- Comprehensive tests for all NaNs and all rounding directions. [#475](https://github.com/wasmx/fizzy/pull/475)
+  [#487](https://github.com/wasmx/fizzy/pull/487) [#488](https://github.com/wasmx/fizzy/pull/488)
+  [#500](https://github.com/wasmx/fizzy/pull/500)
+- A single-precision floating-point benchmark approximating pi using Taylor's series. [#482](https://github.com/wasmx/fizzy/pull/482)
+- A double-precision floating-point benchmark approximating pi using Ramanujan's algorithm. [#483](https://github.com/wasmx/fizzy/pull/483)
+
+### Changed
+- Execution API now uses union-based `Value` type instead of `uint64_t `to represent values of all supported types. 
+  [#419](https://github.com/wasmx/fizzy/pull/419) [#423](https://github.com/wasmx/fizzy/pull/423) 
+  [#448](https://github.com/wasmx/fizzy/pull/448) [#462](https://github.com/wasmx/fizzy/pull/462)
+  [#464](https://github.com/wasmx/fizzy/pull/464)
+- `fizzy-spectests` output can be configured for various verbosity. [#453](https://github.com/wasmx/fizzy/pull/453)
+- `ExternalGlobal` now includes type of value, which is checked against module definition for imported globals. 
+  [#493](https://github.com/wasmx/fizzy/pull/493) 
+- Mark `execute()` completely exception free (`noexcept`). [#438](https://github.com/wasmx/fizzy/pull/438)
+
+
 ## [0.3.0] — 2020-07-29
 
 This main focus for this release is to implement every WebAssembly validation rule from the specification.
