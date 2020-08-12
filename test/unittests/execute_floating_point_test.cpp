@@ -363,6 +363,64 @@ TYPED_TEST(execute_floating_point_types, add)
     EXPECT_THAT(exec(TypeParam{0x0.287p2}, TypeParam{0x1.FFp4}), Result(TypeParam{0x1.048Ep5}));
 }
 
+TEST(execute_floating_point, f64_promote_f32)
+{
+    /* wat2wasm
+    (func (param f32) (result f64)
+      local.get 0
+      f64.promote_f32
+    )
+    */
+    auto wasm = from_hex("0061736d0100000001060160017d017c030201000a070105002000bb0b");
+    auto instance = instantiate(parse(wasm));
+
+    const std::pair<float, double> test_cases[] = {
+        {0.0f, 0.0},
+        {-0.0f, -0.0},
+        {1.0f, 1.0},
+        {-1.0f, -1.0},
+        {FP32::Limits::lowest(), double{FP32::Limits::lowest()}},
+        {FP32::Limits::max(), double{FP32::Limits::max()}},
+        {FP32::Limits::min(), double{FP32::Limits::min()}},
+        {FP32::Limits::denorm_min(), double{FP32::Limits::denorm_min()}},
+        {FP32::Limits::infinity(), FP64::Limits::infinity()},
+        {-FP32::Limits::infinity(), -FP64::Limits::infinity()},
+
+        // The canonical NaN must result in canonical NaN (only the top bit set).
+        {FP32::nan(FP32::canon), FP64::nan(FP64::canon)},
+        {-FP32::nan(FP32::canon), -FP64::nan(FP64::canon)},
+    };
+
+    for (const auto& [arg, expected] : test_cases)
+    {
+        EXPECT_THAT(execute(*instance, 0, {arg}), Result(expected)) << arg << " -> " << expected;
+    }
+
+    // Check arithmetic NaNs (payload >= canonical payload).
+    // The following check expect arithmetic NaNs. Canonical NaNs are arithmetic NaNs
+    // and are allowed by the spec in these situations, but our checks are more restrictive
+
+    // An arithmetic NaN must result in any arithmetic NaN.
+    const auto res1 = execute(*instance, 0, {FP32::nan(FP32::canon + 1)});
+    ASSERT_TRUE(!res1.trapped && res1.has_value);
+    EXPECT_EQ(std::signbit(res1.value.f64), 0);
+    EXPECT_GT(FP{res1.value.f64}.nan_payload(), FP64::canon);
+    const auto res2 = execute(*instance, 0, {-FP32::nan(FP32::canon + 1)});
+    ASSERT_TRUE(!res2.trapped && res2.has_value);
+    EXPECT_EQ(std::signbit(res2.value.f64), 1);
+    EXPECT_GT(FP{res2.value.f64}.nan_payload(), FP64::canon);
+
+    // Other NaN must also result in arithmetic NaN.
+    const auto res3 = execute(*instance, 0, {FP32::nan(1)});
+    ASSERT_TRUE(!res3.trapped && res3.has_value);
+    EXPECT_EQ(std::signbit(res3.value.f64), 0);
+    EXPECT_GT(FP{res3.value.f64}.nan_payload(), FP64::canon);
+    const auto res4 = execute(*instance, 0, {-FP32::nan(1)});
+    ASSERT_TRUE(!res4.trapped && res4.has_value);
+    EXPECT_EQ(std::signbit(res4.value.f64), 1);
+    EXPECT_GT(FP{res4.value.f64}.nan_payload(), FP64::canon);
+}
+
 
 template <typename SrcT, typename DstT>
 struct ConversionPairWasmTraits;
