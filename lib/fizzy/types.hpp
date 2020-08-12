@@ -294,7 +294,7 @@ struct ConstantExpression
     Kind kind = Kind::Constant;
     union
     {
-        Value constant = 0;
+        Value constant{};
         uint32_t global_index;
     } value;
 };
