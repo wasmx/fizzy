@@ -338,6 +338,28 @@ TYPED_TEST(execute_floating_point_types, abs)
     }
 }
 
+TYPED_TEST(execute_floating_point_types, neg)
+{
+    using FP = FP<TypeParam>;
+    using Limits = typename FP::Limits;
+
+    auto instance = instantiate(parse(this->get_unop_code(Instr::f32_neg)));
+    const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
+
+    std::vector p_values(
+        std::begin(this->positive_special_values), std::end(this->positive_special_values));
+    for (const auto x :
+        {TypeParam{0}, Limits::infinity(), FP::nan(FP::canon), FP::nan(FP::canon + 1), FP::nan(1)})
+        p_values.push_back(x);
+
+    for (const auto p : p_values)
+    {
+        // fneg(+-p) = -+p
+        EXPECT_THAT(exec(p), Result(-p));
+        EXPECT_THAT(exec(-p), Result(p));
+    }
+}
+
 TYPED_TEST(execute_floating_point_types, add)
 {
     using FP = FP<TypeParam>;
