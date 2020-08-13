@@ -364,6 +364,85 @@ TYPED_TEST(execute_floating_point_types, neg)
     }
 }
 
+
+template <typename T>
+struct rounding_test_cases
+{
+    using Limits = typename FP<T>::Limits;
+
+    // The "int only" is the range of the floating-point type of only consecutive integer values.
+    inline static const auto int_only_begin = std::pow(T{2}, T{Limits::digits - 1});
+    inline static const auto int_only_end = std::pow(T{2}, T{Limits::digits});
+
+    // The list of rounding test cases as pairs (input, expected_trunc) with only positive inputs.
+    inline static const std::pair<T, T> tests[]{
+        {0, 0},
+        {Limits::denorm_min(), 0},
+        {Limits::min(), 0},
+        {std::nextafter(T{1}, T{0}), T{0}},
+        {T{1}, T{1}},
+        {std::nextafter(T{1}, T{2}), T{1}},
+        {std::nextafter(T{2}, T{1}), T{1}},
+        {T{2}, T{2}},
+        {int_only_begin - T{1}, int_only_begin - T{1}},
+        {int_only_begin - T{0.5}, int_only_begin - T{1}},
+        {int_only_begin, int_only_begin},
+        {int_only_begin + T{1}, int_only_begin + T{1}},
+        {int_only_end - T{1}, int_only_end - T{1}},
+        {int_only_end, int_only_end},
+        {int_only_end + T{2}, int_only_end + T{2}},
+        {Limits::max(), Limits::max()},
+        {Limits::infinity(), Limits::infinity()},
+    };
+};
+
+TYPED_TEST(execute_floating_point_types, ceil)
+{
+    auto instance = instantiate(parse(this->get_unop_code(Instr::f32_ceil)));
+    const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
+
+    for (const auto& [arg, expected_trunc] : rounding_test_cases<TypeParam>::tests)
+    {
+        // For positive values, the ceil() is trunc() + 1, unless the input is already an integer.
+        const auto expected_pos =
+            (arg == expected_trunc) ? expected_trunc : expected_trunc + TypeParam{1};
+        EXPECT_THAT(exec(arg), Result(expected_pos)) << arg << ": " << expected_pos;
+
+        // For negative values, the ceil() is trunc().
+        EXPECT_THAT(exec(-arg), Result(-expected_trunc)) << -arg << ": " << -expected_trunc;
+    }
+}
+
+TYPED_TEST(execute_floating_point_types, floor)
+{
+    auto instance = instantiate(parse(this->get_unop_code(Instr::f32_floor)));
+    const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
+
+    for (const auto& [arg, expected_trunc] : rounding_test_cases<TypeParam>::tests)
+    {
+        // For positive values, the floor() is trunc().
+        EXPECT_THAT(exec(arg), Result(expected_trunc)) << arg << ": " << expected_trunc;
+
+        // For negative values, the floor() is trunc() - 1, unless the input is already an integer.
+        const auto expected_neg =
+            (arg == expected_trunc) ? -expected_trunc : -expected_trunc - TypeParam{1};
+        EXPECT_THAT(exec(-arg), Result(expected_neg)) << -arg << ": " << expected_neg;
+    }
+}
+
+TYPED_TEST(execute_floating_point_types, trunc)
+{
+    auto instance = instantiate(parse(this->get_unop_code(Instr::f32_trunc)));
+    const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
+
+    for (const auto& [arg, expected] : rounding_test_cases<TypeParam>::tests)
+    {
+        EXPECT_THAT(exec(arg), Result(expected)) << arg << ": " << expected;
+        EXPECT_THAT(exec(-arg), Result(-expected)) << -arg << ": " << -expected;
+    }
+}
+
+
 TYPED_TEST(execute_floating_point_types, add)
 {
     using FP = FP<TypeParam>;
