@@ -390,6 +390,35 @@ TYPED_TEST(execute_floating_point_types, neg)
     }
 }
 
+TYPED_TEST(execute_floating_point_types, sqrt)
+{
+    using FP = FP<TypeParam>;
+    using Limits = typename FP::Limits;
+
+    auto instance = instantiate(parse(this->get_unop_code(Instr::f32_sqrt)));
+    const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
+
+    // fsqrt(-inf) = nan:canonical
+    EXPECT_THAT(exec(-Limits::infinity()), CanonicalNaN(TypeParam{}));
+
+    // fsqrt(+inf) = +inf
+    EXPECT_THAT(exec(Limits::infinity()), Result(Limits::infinity()));
+
+    // fsqrt(+-0) = +-0
+    EXPECT_THAT(exec(TypeParam{0.0}), Result(TypeParam{0.0}));
+    EXPECT_THAT(exec(-TypeParam{0.0}), Result(-TypeParam{0.0}));
+
+    for (const auto p : this->positive_special_values)
+    {
+        // fsqrt(-p) = nan:canonical
+        EXPECT_THAT(exec(-p), CanonicalNaN(TypeParam{}));
+    }
+
+    EXPECT_THAT(exec(TypeParam{1}), Result(TypeParam{1}));
+    EXPECT_THAT(exec(TypeParam{4}), Result(TypeParam{2}));
+    EXPECT_THAT(exec(TypeParam{0x1.21p6}), Result(TypeParam{0x1.1p3}));
+}
+
 TYPED_TEST(execute_floating_point_types, add)
 {
     using FP = FP<TypeParam>;
