@@ -271,9 +271,9 @@ jobs:
       - benchmark:
           min_time: "0.01"
       - spectest:
-          expected_passed: 10639
+          expected_passed: 10641
           expected_failed: 3
-          expected_skipped: 1171
+          expected_skipped: 1169
 
   sanitizers-macos:
     executor: macos
@@ -289,9 +289,9 @@ jobs:
       - benchmark:
           min_time: "0.01"
       - spectest:
-          expected_passed: 10639
+          expected_passed: 10641
           expected_failed: 3
-          expected_skipped: 1171
+          expected_skipped: 1169
 
   benchmark:
     machine:
@@ -397,13 +397,13 @@ jobs:
           at: ~/build
       - spectest:
           skip_validation: true
-          expected_passed: 9697
+          expected_passed: 9699
           expected_failed: 3
-          expected_skipped: 2113
+          expected_skipped: 2111
       - spectest:
-          expected_passed: 10639
+          expected_passed: 10641
           expected_failed: 3
-          expected_skipped: 1171
+          expected_skipped: 1169
       - collect_coverage_data
 
 workflows:
