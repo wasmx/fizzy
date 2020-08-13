@@ -1562,10 +1562,24 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             unary_op(stack, static_cast<float (*)(float)>(std::fabs));
             break;
         }
-
         case Instr::f32_neg:
         {
             unary_op(stack, std::negate<float>{});
+            break;
+        }
+        case Instr::f32_ceil:
+        {
+            unary_op(stack, static_cast<float (*)(float)>(std::ceil));
+            break;
+        }
+        case Instr::f32_floor:
+        {
+            unary_op(stack, static_cast<float (*)(float)>(std::floor));
+            break;
+        }
+        case Instr::f32_trunc:
+        {
+            unary_op(stack, static_cast<float (*)(float)>(std::trunc));
             break;
         }
 
@@ -1616,10 +1630,24 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             unary_op(stack, static_cast<double (*)(double)>(std::fabs));
             break;
         }
-
         case Instr::f64_neg:
         {
             unary_op(stack, std::negate<double>{});
+            break;
+        }
+        case Instr::f64_ceil:
+        {
+            unary_op(stack, static_cast<double (*)(double)>(std::ceil));
+            break;
+        }
+        case Instr::f64_floor:
+        {
+            unary_op(stack, static_cast<double (*)(double)>(std::floor));
+            break;
+        }
+        case Instr::f64_trunc:
+        {
+            unary_op(stack, static_cast<double (*)(double)>(std::trunc));
             break;
         }
 
@@ -1793,14 +1821,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             break;
         }
 
-        case Instr::f32_ceil:
-        case Instr::f32_floor:
-        case Instr::f32_trunc:
         case Instr::f32_nearest:
         case Instr::f32_sqrt:
-        case Instr::f64_ceil:
-        case Instr::f64_floor:
-        case Instr::f64_trunc:
         case Instr::f64_nearest:
         case Instr::f64_sqrt:
         case Instr::f32_demote_f64:
