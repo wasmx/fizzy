@@ -312,6 +312,7 @@ TYPED_TEST(execute_floating_point_types, unop_nan_propagation)
         Instr::f32_ceil,
         Instr::f32_floor,
         Instr::f32_trunc,
+        Instr::f32_nearest,
         Instr::f32_sqrt,
     };
 
@@ -517,6 +518,7 @@ TYPED_TEST(execute_floating_point_types, ceil)
     for (const auto rounding_direction : this->all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
+        SCOPED_TRACE(rounding_direction);
 
         // fceil(-q) = -0  (if -1 < -q < 0)
         // (also included in positive_trunc_tests, here for explicitness).
@@ -580,6 +582,7 @@ TYPED_TEST(execute_floating_point_types, trunc)
     for (const auto rounding_direction : this->all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
+        SCOPED_TRACE(rounding_direction);
 
         // ftrunc(+q) = +0  (if 0 < +q < 1)
         // (also included in positive_trunc_tests, here for explicitness).
@@ -594,6 +597,66 @@ TYPED_TEST(execute_floating_point_types, trunc)
         for (const auto& [arg, expected] :
             execute_floating_point_types<TypeParam>::positive_trunc_tests)
         {
+            EXPECT_THAT(exec(arg), Result(expected)) << arg << ": " << expected;
+            EXPECT_THAT(exec(-arg), Result(-expected)) << -arg << ": " << -expected;
+        }
+    }
+    ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
+}
+
+TYPED_TEST(execute_floating_point_types, nearest)
+{
+    auto instance = instantiate(parse(this->get_unop_code(Instr::f32_nearest)));
+    const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
+
+    ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+    for (const auto rounding_direction : this->all_rounding_directions)
+    {
+        ASSERT_EQ(std::fesetround(rounding_direction), 0);
+        SCOPED_TRACE(rounding_direction);
+
+        // fnearest(+q) = +0  (if 0 < +q <= 0.5)
+        // (also included in positive_trunc_tests, here for explicitness).
+        EXPECT_THAT(exec(FP<TypeParam>::Limits::denorm_min()), Result(TypeParam{0}));
+        EXPECT_THAT(exec(std::nextafter(TypeParam{0.5}, TypeParam{0})), Result(TypeParam{0}));
+        EXPECT_THAT(exec(TypeParam{0.5}), Result(TypeParam{0}));
+
+        // fnearest(-q) = -0  (if -0.5 <= -q < 0)
+        // (also included in positive_trunc_tests, here for explicitness).
+        EXPECT_THAT(exec(-TypeParam{0.5}), Result(-TypeParam{0}));
+        EXPECT_THAT(exec(std::nextafter(-TypeParam{0.5}, TypeParam{0})), Result(-TypeParam{0}));
+        EXPECT_THAT(exec(-FP<TypeParam>::Limits::denorm_min()), Result(-TypeParam{0}));
+
+        // This checks all other specification-driven test cases, including:
+        // fnearest(+-inf) = +-inf
+        // fnearest(+-0) = +-0
+        for (const auto& [arg, expected_trunc] : this->positive_trunc_tests)
+        {
+            ASSERT_EQ(expected_trunc, std::trunc(expected_trunc));
+            const auto is_even = std::fmod(expected_trunc, TypeParam{2}) == TypeParam{0};
+
+            // Computing "expected" is expanded to individual cases to check code coverage.
+            TypeParam expected;
+            if (arg == expected_trunc)
+            {
+                expected = expected_trunc;
+            }
+            else
+            {
+                const auto diff = arg - expected_trunc;
+                ASSERT_LT(diff, TypeParam{1});
+                ASSERT_GT(diff, TypeParam{0});
+
+                if (diff < TypeParam{0.5})
+                    expected = expected_trunc;  // NOLINT(bugprone-branch-clone)
+                else if (diff > TypeParam{0.5})
+                    expected = expected_trunc + TypeParam{1};  // NOLINT(bugprone-branch-clone)
+                else if (is_even)
+                    expected = expected_trunc;
+                else
+                    expected = expected_trunc + TypeParam{1};
+            }
+
             EXPECT_THAT(exec(arg), Result(expected)) << arg << ": " << expected;
             EXPECT_THAT(exec(-arg), Result(-expected)) << -arg << ": " << -expected;
         }
