@@ -11,7 +11,13 @@
 #include <test/utils/floating_point_utils.hpp>
 #include <test/utils/hex.hpp>
 #include <array>
+#include <cfenv>
 #include <cmath>
+
+// Enables access and modification of the floating-point environment.
+// Here we use it to change rounding direction in tests.
+// Although required by the C standard, neither GCC nor Clang supports it.
+#pragma STDC FENV_ACCESS ON
 
 using namespace fizzy;
 using namespace fizzy::test;
@@ -95,6 +101,9 @@ class execute_floating_point_types : public testing::Test
 public:
     using L = typename FP<T>::Limits;
 
+    static constexpr auto all_rounding_directions = {
+        FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO};
+
     // The list of positive floating-point values without zeros, infinities and NaNs.
     inline static const std::array positive_special_values{
         L::denorm_min(),
@@ -153,6 +162,62 @@ public:
         FP<T>::nan(FP<T>::canon >> 1),  // "Standard" signaling NaN.
         FP<T>::nan(2),
         FP<T>::nan(1),
+    };
+
+    // The [int_only_begin; int_only_end) is the range of floating-point numbers, where each
+    // representable number is an integer and there are no fractional numbers between them.
+    // These numbers are represented as mantissa [0x1.00..0; 0x1.ff..f]
+    // and exponent 2**(mantissa digits without implicit leading 1).
+    // The main point of using int_only_begin is to tests nearest() as for int_only_begin - 0.5 and
+    // int_only_begin - 1.5 we have equal distance to nearby integer values.
+    // (Integer shift is used instead of std::pow() because of the clang compiler bug).
+    static constexpr auto int_only_begin = T{uint64_t{1} << (L::digits - 1)};
+    static constexpr auto int_only_end = T{uint64_t{1} << L::digits};
+
+    // The list of rounding test cases as pairs (input, expected_trunc) with only positive inputs.
+    inline static const std::pair<T, T> positive_trunc_tests[] = {
+
+        // Checks the following rule common for all rounding instructions:
+        // f(+-0) = +-0
+        {0, 0},
+
+        {L::denorm_min(), 0},
+        {L::min(), 0},
+
+        {T{0.1f}, T{0}},
+
+        {std::nextafter(T{0.5}, T{0}), T{0}},
+        {T{0.5}, T{0}},
+        {std::nextafter(T{0.5}, T{1}), T{0}},
+
+        {std::nextafter(T{1}, T{0}), T{0}},
+        {T{1}, T{1}},
+        {std::nextafter(T{1}, T{2}), T{1}},
+
+        {std::nextafter(T{1.5}, T{1}), T{1}},
+        {T{1.5}, T{1}},
+        {std::nextafter(T{1.5}, T{2}), T{1}},
+
+        {std::nextafter(T{2}, T{1}), T{1}},
+        {T{2}, T{2}},
+        {std::nextafter(T{2}, T{3}), T{2}},
+
+        {int_only_begin - T{2}, int_only_begin - T{2}},
+        {int_only_begin - T{1.5}, int_only_begin - T{2}},
+        {int_only_begin - T{1}, int_only_begin - T{1}},
+        {int_only_begin - T{0.5}, int_only_begin - T{1}},
+        {int_only_begin, int_only_begin},
+        {int_only_begin + T{1}, int_only_begin + T{1}},
+
+        {int_only_end - T{1}, int_only_end - T{1}},
+        {int_only_end, int_only_end},
+        {int_only_end + T{2}, int_only_end + T{2}},
+
+        {L::max(), L::max()},
+
+        // Checks the following rule common for all rounding instructions:
+        // f(+-inf) = +-inf
+        {L::infinity(), L::infinity()},
     };
 
     /// Creates a wasm module with a single function for the given instructions opcode.
@@ -244,6 +309,9 @@ TYPED_TEST(execute_floating_point_types, unop_nan_propagation)
     // The list of instructions to be tested.
     // Only f32 variants, but f64 variants are going to be covered as well.
     constexpr Instr opcodes[] = {
+        Instr::f32_ceil,
+        Instr::f32_floor,
+        Instr::f32_trunc,
         Instr::f32_sqrt,
     };
 
@@ -439,6 +507,100 @@ TYPED_TEST(execute_floating_point_types, neg)
         EXPECT_THAT(exec(-p), Result(p));
     }
 }
+
+TYPED_TEST(execute_floating_point_types, ceil)
+{
+    auto instance = instantiate(parse(this->get_unop_code(Instr::f32_ceil)));
+    const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
+
+    ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+    for (const auto rounding_direction : this->all_rounding_directions)
+    {
+        ASSERT_EQ(std::fesetround(rounding_direction), 0);
+
+        // fceil(-q) = -0  (if -1 < -q < 0)
+        // (also included in positive_trunc_tests, here for explicitness).
+        EXPECT_THAT(exec(std::nextafter(-TypeParam{1}, TypeParam{0})), Result(-TypeParam{0}));
+        EXPECT_THAT(exec(-FP<TypeParam>::Limits::denorm_min()), Result(-TypeParam{0}));
+
+        for (const auto& [arg, expected_trunc] :
+            execute_floating_point_types<TypeParam>::positive_trunc_tests)
+        {
+            // For positive values, the ceil() is trunc() + 1,
+            // unless the input is already an integer.
+            const auto expected_positive =
+                (arg == expected_trunc) ? expected_trunc : expected_trunc + TypeParam{1};
+            EXPECT_THAT(exec(arg), Result(expected_positive)) << arg << ": " << expected_positive;
+
+            // For negative values, the ceil() is trunc().
+            EXPECT_THAT(exec(-arg), Result(-expected_trunc)) << -arg << ": " << -expected_trunc;
+        }
+    }
+    ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
+}
+
+TYPED_TEST(execute_floating_point_types, floor)
+{
+    auto instance = instantiate(parse(this->get_unop_code(Instr::f32_floor)));
+    const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
+
+    ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+    for (const auto rounding_direction : this->all_rounding_directions)
+    {
+        ASSERT_EQ(std::fesetround(rounding_direction), 0);
+        SCOPED_TRACE(rounding_direction);
+
+        // ffloor(+q) = +0  (if 0 < +q < 1)
+        // (also included in positive_trunc_tests, here for explicitness).
+        EXPECT_THAT(exec(FP<TypeParam>::Limits::denorm_min()), Result(TypeParam{0}));
+        EXPECT_THAT(exec(std::nextafter(TypeParam{1}, TypeParam{0})), Result(TypeParam{0}));
+
+        for (const auto& [arg, expected_trunc] :
+            execute_floating_point_types<TypeParam>::positive_trunc_tests)
+        {
+            // For positive values, the floor() is trunc().
+            EXPECT_THAT(exec(arg), Result(expected_trunc)) << arg << ": " << expected_trunc;
+
+            // For negative values, the floor() is trunc() - 1, unless the input is already an
+            // integer.
+            const auto expected_negative =
+                (arg == expected_trunc) ? -expected_trunc : -expected_trunc - TypeParam{1};
+            EXPECT_THAT(exec(-arg), Result(expected_negative)) << -arg << ": " << expected_negative;
+        }
+    }
+    ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
+}
+
+TYPED_TEST(execute_floating_point_types, trunc)
+{
+    auto instance = instantiate(parse(this->get_unop_code(Instr::f32_trunc)));
+    const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
+
+    ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+    for (const auto rounding_direction : this->all_rounding_directions)
+    {
+        ASSERT_EQ(std::fesetround(rounding_direction), 0);
+
+        // ftrunc(+q) = +0  (if 0 < +q < 1)
+        // (also included in positive_trunc_tests, here for explicitness).
+        EXPECT_THAT(exec(FP<TypeParam>::Limits::denorm_min()), Result(TypeParam{0}));
+        EXPECT_THAT(exec(std::nextafter(TypeParam{1}, TypeParam{0})), Result(TypeParam{0}));
+
+        // ftrunc(-q) = -0  (if -1 < -q < 0)
+        // (also included in positive_trunc_tests, here for explicitness).
+        EXPECT_THAT(exec(std::nextafter(-TypeParam{1}, TypeParam{0})), Result(-TypeParam{0}));
+        EXPECT_THAT(exec(-FP<TypeParam>::Limits::denorm_min()), Result(-TypeParam{0}));
+
+        for (const auto& [arg, expected] :
+            execute_floating_point_types<TypeParam>::positive_trunc_tests)
+        {
+            EXPECT_THAT(exec(arg), Result(expected)) << arg << ": " << expected;
+            EXPECT_THAT(exec(-arg), Result(-expected)) << -arg << ": " << -expected;
+        }
+    }
+    ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
+}
+
 
 TYPED_TEST(execute_floating_point_types, sqrt)
 {
