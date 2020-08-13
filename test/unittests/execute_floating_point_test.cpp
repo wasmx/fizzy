@@ -581,6 +581,35 @@ TYPED_TEST(execute_floating_point_types, div)
     EXPECT_THAT(exec(TypeParam{0xABCD.01p7}, TypeParam{4}), Result(TypeParam{0x1.579A02p20}));
 }
 
+TYPED_TEST(execute_floating_point_types, copysign)
+{
+    using FP = FP<TypeParam>;
+    using Limits = typename FP::Limits;
+
+    auto instance = instantiate(parse(this->get_binop_code(Instr::f32_copysign)));
+    const auto exec = [&](auto arg1, auto arg2) { return execute(*instance, 0, {arg1, arg2}); };
+
+    std::vector p_values(
+        std::begin(this->positive_special_values), std::end(this->positive_special_values));
+    for (const auto x :
+        {TypeParam{0}, Limits::infinity(), FP::nan(FP::canon), FP::nan(FP::canon + 1), FP::nan(1)})
+        p_values.push_back(x);
+
+    for (const auto p1 : p_values)
+    {
+        for (const auto p2 : p_values)
+        {
+            // fcopysign(+-p1, +-p2) = +-p1
+            EXPECT_THAT(exec(p1, p2), Result(p1));
+            EXPECT_THAT(exec(-p1, -p2), Result(-p1));
+
+            // fcopysign(+-p1, -+p2) = -+p1
+            EXPECT_THAT(exec(p1, -p2), Result(-p1));
+            EXPECT_THAT(exec(-p1, p2), Result(p1));
+        }
+    }
+}
+
 
 TEST(execute_floating_point, f64_promote_f32)
 {
