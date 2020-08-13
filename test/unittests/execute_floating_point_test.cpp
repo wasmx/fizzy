@@ -136,8 +136,11 @@ protected:
 
         // NaNs.
         FP<T>::nan(FP<T>::canon),
+        -FP<T>::nan(FP<T>::canon),
         FP<T>::nan(FP<T>::canon + 1),
+        -FP<T>::nan(FP<T>::canon + 1),
         FP<T>::nan(1),
+        -FP<T>::nan(1),
     };
 
     /// Creates a wasm module with a single function for the given instructions opcode.
@@ -203,15 +206,21 @@ TYPED_TEST(execute_floating_point_types, nan_matchers)
     EXPECT_THAT(Trap, Not(CanonicalNaN(TypeParam{})));
     EXPECT_THAT(ExecutionResult{Value{TypeParam{}}}, Not(CanonicalNaN(TypeParam{})));
     EXPECT_THAT(ExecutionResult{Value{FP::nan(FP::canon)}}, CanonicalNaN(TypeParam{}));
+    EXPECT_THAT(ExecutionResult{Value{-FP::nan(FP::canon)}}, CanonicalNaN(TypeParam{}));
     EXPECT_THAT(ExecutionResult{Value{FP::nan(FP::canon + 1)}}, Not(CanonicalNaN(TypeParam{})));
+    EXPECT_THAT(ExecutionResult{Value{-FP::nan(FP::canon + 1)}}, Not(CanonicalNaN(TypeParam{})));
     EXPECT_THAT(ExecutionResult{Value{FP::nan(1)}}, Not(CanonicalNaN(TypeParam{})));
+    EXPECT_THAT(ExecutionResult{Value{-FP::nan(1)}}, Not(CanonicalNaN(TypeParam{})));
 
     EXPECT_THAT(Void, Not(ArithmeticNaN(TypeParam{})));
     EXPECT_THAT(Trap, Not(ArithmeticNaN(TypeParam{})));
     EXPECT_THAT(ExecutionResult{Value{TypeParam{}}}, Not(ArithmeticNaN(TypeParam{})));
     EXPECT_THAT(ExecutionResult{Value{FP::nan(FP::canon)}}, ArithmeticNaN(TypeParam{}));
+    EXPECT_THAT(ExecutionResult{Value{-FP::nan(FP::canon)}}, ArithmeticNaN(TypeParam{}));
     EXPECT_THAT(ExecutionResult{Value{FP::nan(FP::canon + 1)}}, ArithmeticNaN(TypeParam{}));
+    EXPECT_THAT(ExecutionResult{Value{-FP::nan(FP::canon + 1)}}, ArithmeticNaN(TypeParam{}));
     EXPECT_THAT(ExecutionResult{Value{FP::nan(1)}}, Not(ArithmeticNaN(TypeParam{})));
+    EXPECT_THAT(ExecutionResult{Value{-FP::nan(1)}}, Not(ArithmeticNaN(TypeParam{})));
 }
 
 TYPED_TEST(execute_floating_point_types, binop_nan_propagation)
@@ -235,15 +244,36 @@ TYPED_TEST(execute_floating_point_types, binop_nan_propagation)
         const auto cnan = FP<TypeParam>::nan(FP<TypeParam>::canon);
         const auto anan = FP<TypeParam>::nan(FP<TypeParam>::canon + 1);
 
+        // TODO: Consider more restrictive tests where the sign of NaN values is also checked.
+
         EXPECT_THAT(execute(*instance, 0, {q, cnan}), CanonicalNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {q, -cnan}), CanonicalNaN(TypeParam{}));
         EXPECT_THAT(execute(*instance, 0, {cnan, q}), CanonicalNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {-cnan, q}), CanonicalNaN(TypeParam{}));
         EXPECT_THAT(execute(*instance, 0, {cnan, cnan}), CanonicalNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {cnan, -cnan}), CanonicalNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {-cnan, cnan}), CanonicalNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {-cnan, -cnan}), CanonicalNaN(TypeParam{}));
 
         EXPECT_THAT(execute(*instance, 0, {q, anan}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {q, -anan}), ArithmeticNaN(TypeParam{}));
         EXPECT_THAT(execute(*instance, 0, {anan, q}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {-anan, q}), ArithmeticNaN(TypeParam{}));
+
         EXPECT_THAT(execute(*instance, 0, {anan, anan}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {anan, -anan}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {-anan, anan}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {-anan, -anan}), ArithmeticNaN(TypeParam{}));
+
         EXPECT_THAT(execute(*instance, 0, {anan, cnan}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {anan, -cnan}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {-anan, cnan}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {-anan, -cnan}), ArithmeticNaN(TypeParam{}));
+
         EXPECT_THAT(execute(*instance, 0, {cnan, anan}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {cnan, -anan}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {-cnan, anan}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {-cnan, -anan}), ArithmeticNaN(TypeParam{}));
     }
 }
 
@@ -920,8 +950,11 @@ TEST(execute_floating_point, f32_load)
         {"ffff7f3f"_bytes, std::nextafter(1.0f, 0.0f)},
         {"ffff7fbf"_bytes, std::nextafter(-1.0f, 0.0f)},
         {"0000c07f"_bytes, FP32::nan(FP32::canon)},
+        {"0000c0ff"_bytes, -FP32::nan(FP32::canon)},
         {"0100c07f"_bytes, FP32::nan(FP32::canon + 1)},
+        {"0100c0ff"_bytes, -FP32::nan(FP32::canon + 1)},
         {"0100807f"_bytes, FP32::nan(1)},
+        {"010080ff"_bytes, -FP32::nan(1)},
     };
 
     uint32_t address = 0;
@@ -990,8 +1023,11 @@ TEST(execute_floating_point, f64_load)
         {"ffffffffffffef3f"_bytes, std::nextafter(1.0, 0.0)},
         {"ffffffffffffefbf"_bytes, std::nextafter(-1.0, 0.0)},
         {"000000000000f87f"_bytes, FP64::nan(FP64::canon)},
+        {"000000000000f8ff"_bytes, -FP64::nan(FP64::canon)},
         {"010000000000f87f"_bytes, FP64::nan(FP64::canon + 1)},
+        {"010000000000f8ff"_bytes, -FP64::nan(FP64::canon + 1)},
         {"010000000000f07f"_bytes, FP64::nan(1)},
+        {"010000000000f0ff"_bytes, -FP64::nan(1)},
     };
 
     uint32_t address = 0;
@@ -1063,8 +1099,11 @@ TEST(execute_floating_point, f32_store)
         {std::nextafter(1.0f, 0.0f), "ccffff7f3fcc"_bytes},
         {std::nextafter(-1.0f, 0.0f), "ccffff7fbfcc"_bytes},
         {FP32::nan(FP32::canon), "cc0000c07fcc"_bytes},
+        {-FP32::nan(FP32::canon), "cc0000c0ffcc"_bytes},
         {FP32::nan(FP32::canon + 1), "cc0100c07fcc"_bytes},
+        {-FP32::nan(FP32::canon + 1), "cc0100c0ffcc"_bytes},
         {FP32::nan(1), "cc0100807fcc"_bytes},
+        {-FP32::nan(1), "cc010080ffcc"_bytes},
     };
 
     for (const auto& [arg, expected] : test_cases)
@@ -1137,8 +1176,11 @@ TEST(execute_floating_point, f64_store)
         {std::nextafter(1.0, 0.0), "ccffffffffffffef3fcc"_bytes},
         {std::nextafter(-1.0, 0.0), "ccffffffffffffefbfcc"_bytes},
         {FP64::nan(FP64::canon), "cc000000000000f87fcc"_bytes},
+        {-FP64::nan(FP64::canon), "cc000000000000f8ffcc"_bytes},
         {FP64::nan(FP64::canon + 1), "cc010000000000f87fcc"_bytes},
+        {-FP64::nan(FP64::canon + 1), "cc010000000000f8ffcc"_bytes},
         {FP64::nan(1), "cc010000000000f07fcc"_bytes},
+        {-FP64::nan(1), "cc010000000000f0ffcc"_bytes},
     };
 
     for (const auto& [arg, expected] : test_cases)
