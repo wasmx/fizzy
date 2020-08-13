@@ -223,6 +223,36 @@ TYPED_TEST(execute_floating_point_types, nan_matchers)
     EXPECT_THAT(ExecutionResult{Value{-FP::nan(1)}}, Not(ArithmeticNaN(TypeParam{})));
 }
 
+TYPED_TEST(execute_floating_point_types, unop_nan_propagation)
+{
+    // Tests NaN propagation in unary instructions (unop).
+    // If NaN input is canonical NN, the result must be the canonical NaN.
+    // Otherwise, the result must be an arithmetic NaN.
+
+    // The list of instructions to be tested.
+    // Only f32 variants, but f64 variants are going to be covered as well.
+    constexpr Instr opcodes[] = {
+        Instr::f32_sqrt,
+    };
+
+    for (const auto op : opcodes)
+    {
+        auto instance = instantiate(parse(this->get_unop_code(op)));
+
+        const auto cnan = FP<TypeParam>::nan(FP<TypeParam>::canon);
+        EXPECT_THAT(execute(*instance, 0, {cnan}), CanonicalNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {-cnan}), CanonicalNaN(TypeParam{}));
+
+        const auto anan = FP<TypeParam>::nan(FP<TypeParam>::canon + 1);
+        EXPECT_THAT(execute(*instance, 0, {anan}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {-anan}), ArithmeticNaN(TypeParam{}));
+
+        const auto snan = FP<TypeParam>::nan(1);
+        EXPECT_THAT(execute(*instance, 0, {snan}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {-snan}), ArithmeticNaN(TypeParam{}));
+    }
+}
+
 TYPED_TEST(execute_floating_point_types, binop_nan_propagation)
 {
     // Tests NaN propagation in binary instructions (binop).
