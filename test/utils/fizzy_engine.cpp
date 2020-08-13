@@ -34,6 +34,10 @@ ValType translate_valtype(char input)
         return fizzy::ValType::i32;
     else if (input == 'I')
         return fizzy::ValType::i64;
+    else if (input == 'f')
+        return fizzy::ValType::f32;
+    else if (input == 'F')
+        return fizzy::ValType::f64;
     else
         throw std::runtime_error{"invalid type"};
 }
