@@ -223,6 +223,36 @@ TYPED_TEST(execute_floating_point_types, nan_matchers)
     EXPECT_THAT(ExecutionResult{Value{-FP::nan(1)}}, Not(ArithmeticNaN(TypeParam{})));
 }
 
+TYPED_TEST(execute_floating_point_types, unop_nan_propagation)
+{
+    // Tests NaN propagation in unary instructions (unop).
+    // If NaN input is canonical NN, the result must be the canonical NaN.
+    // Otherwise, the result must be an arithmetic NaN.
+
+    // The list of instructions to be tested.
+    // Only f32 variants, but f64 variants are going to be covered as well.
+    constexpr Instr opcodes[] = {
+        Instr::f32_sqrt,
+    };
+
+    for (const auto op : opcodes)
+    {
+        auto instance = instantiate(parse(this->get_unop_code(op)));
+
+        const auto cnan = FP<TypeParam>::nan(FP<TypeParam>::canon);
+        EXPECT_THAT(execute(*instance, 0, {cnan}), CanonicalNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {-cnan}), CanonicalNaN(TypeParam{}));
+
+        const auto anan = FP<TypeParam>::nan(FP<TypeParam>::canon + 1);
+        EXPECT_THAT(execute(*instance, 0, {anan}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {-anan}), ArithmeticNaN(TypeParam{}));
+
+        const auto snan = FP<TypeParam>::nan(1);
+        EXPECT_THAT(execute(*instance, 0, {snan}), ArithmeticNaN(TypeParam{}));
+        EXPECT_THAT(execute(*instance, 0, {-snan}), ArithmeticNaN(TypeParam{}));
+    }
+}
+
 TYPED_TEST(execute_floating_point_types, binop_nan_propagation)
 {
     // Tests NaN propagation in binary instructions (binop).
@@ -388,6 +418,35 @@ TYPED_TEST(execute_floating_point_types, neg)
         EXPECT_THAT(exec(p), Result(-p));
         EXPECT_THAT(exec(-p), Result(p));
     }
+}
+
+TYPED_TEST(execute_floating_point_types, sqrt)
+{
+    using FP = FP<TypeParam>;
+    using Limits = typename FP::Limits;
+
+    auto instance = instantiate(parse(this->get_unop_code(Instr::f32_sqrt)));
+    const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
+
+    // fsqrt(-inf) = nan:canonical
+    EXPECT_THAT(exec(-Limits::infinity()), CanonicalNaN(TypeParam{}));
+
+    // fsqrt(+inf) = +inf
+    EXPECT_THAT(exec(Limits::infinity()), Result(Limits::infinity()));
+
+    // fsqrt(+-0) = +-0
+    EXPECT_THAT(exec(TypeParam{0.0}), Result(TypeParam{0.0}));
+    EXPECT_THAT(exec(-TypeParam{0.0}), Result(-TypeParam{0.0}));
+
+    for (const auto p : this->positive_special_values)
+    {
+        // fsqrt(-p) = nan:canonical
+        EXPECT_THAT(exec(-p), CanonicalNaN(TypeParam{}));
+    }
+
+    EXPECT_THAT(exec(TypeParam{1}), Result(TypeParam{1}));
+    EXPECT_THAT(exec(TypeParam{4}), Result(TypeParam{2}));
+    EXPECT_THAT(exec(TypeParam{0x1.21p6}), Result(TypeParam{0x1.1p3}));
 }
 
 TYPED_TEST(execute_floating_point_types, add)
