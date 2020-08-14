@@ -958,6 +958,29 @@ TEST(execute_floating_point, f32_demote_f64)
     }
 }
 
+TYPED_TEST(execute_floating_point_types, reinterpret)
+{
+    /* wat2wasm
+    (func (param f32) (result i32) (i32.reinterpret_f32 (local.get 0)))
+    (func (param f64) (result i64) (i64.reinterpret_f64 (local.get 0)))
+    (func (param i32) (result f32) (f32.reinterpret_i32 (local.get 0)))
+    (func (param i64) (result f64) (f64.reinterpret_i64 (local.get 0)))
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001150460017d017f60017c017e60017f017d60017e017c030504000102030a190405002000"
+        "bc0b05002000bd0b05002000be0b05002000bf0b");
+    auto instance = instantiate(parse(wasm));
+    const auto func_float_to_int = std::is_same_v<TypeParam, float> ? 0 : 1;
+    const auto func_int_to_float = std::is_same_v<TypeParam, float> ? 2 : 3;
+
+    for (const auto float_value : this->ordered_special_values)
+    {
+        const auto uint_value = FP<TypeParam>{float_value}.as_uint();
+        EXPECT_THAT(execute(*instance, func_float_to_int, {float_value}), Result(uint_value));
+        EXPECT_THAT(execute(*instance, func_int_to_float, {uint_value}), Result(float_value));
+    }
+}
+
 
 template <typename SrcT, typename DstT>
 struct ConversionPairWasmTraits;
