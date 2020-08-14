@@ -92,7 +92,7 @@ struct WasmTypeName
 template <typename T>
 class execute_floating_point_types : public testing::Test
 {
-protected:
+public:
     using L = typename FP<T>::Limits;
 
     // The list of positive floating-point values without zeros, infinities and NaNs.
@@ -848,6 +848,13 @@ TEST(execute_floating_point, f64_promote_f32)
     ASSERT_TRUE(!res4.trapped && res4.has_value);
     EXPECT_EQ(std::signbit(res4.value.f64), 1);
     EXPECT_GT(FP{res4.value.f64}.nan_payload(), FP64::canon);
+
+    // Any input NaN other than canonical must result in an arithmetic NaN.
+    for (const auto nan : execute_floating_point_types<float>::positive_noncanonical_nans)
+    {
+        EXPECT_THAT(execute(*instance, 0, {nan}), ArithmeticNaN(double{}));
+        EXPECT_THAT(execute(*instance, 0, {-nan}), ArithmeticNaN(double{}));
+    }
 }
 
 TEST(execute_floating_point, f32_demote_f64)
@@ -944,10 +951,11 @@ TEST(execute_floating_point, f32_demote_f64)
     }
 
     // Any input NaN other than canonical must result in an arithmetic NaN.
-    EXPECT_THAT(execute(*instance, 0, {FP64::nan(FP64::canon + 1)}), ArithmeticNaN(float{}));
-    EXPECT_THAT(execute(*instance, 0, {-FP64::nan(FP64::canon + 1)}), ArithmeticNaN(float{}));
-    EXPECT_THAT(execute(*instance, 0, {FP64::nan(1)}), ArithmeticNaN(float{}));
-    EXPECT_THAT(execute(*instance, 0, {-FP64::nan(1)}), ArithmeticNaN(float{}));
+    for (const auto nan : execute_floating_point_types<double>::positive_noncanonical_nans)
+    {
+        EXPECT_THAT(execute(*instance, 0, {nan}), ArithmeticNaN(float{}));
+        EXPECT_THAT(execute(*instance, 0, {-nan}), ArithmeticNaN(float{}));
+    }
 }
 
 
