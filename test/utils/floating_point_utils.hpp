@@ -66,6 +66,10 @@ struct FP
         return std::isnan(value) ? (as_uint() & mantissa_mask) : 0;
     }
 
+    bool is_canonical_nan() const noexcept { return nan_payload() == canon; }
+
+    bool is_arithmetic_nan() const noexcept { return nan_payload() >= canon; }
+
     /// Build the NaN value with the given payload.
     ///
     /// The NaN values have any sign, all exponent bits set, and non-zero mantissa (otherwise they

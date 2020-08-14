@@ -23,7 +23,7 @@ MATCHER_P(CanonicalNaN, value, "result with a canonical NaN")
         return false;
 
     const auto result_value = arg.value.template as<value_type>();
-    return FP<value_type>{result_value}.nan_payload() == FP<value_type>::canon;
+    return FP<value_type>{result_value}.is_canonical_nan();
 }
 
 MATCHER_P(ArithmeticNaN, value, "result with an arithmetic NaN")
@@ -33,7 +33,7 @@ MATCHER_P(ArithmeticNaN, value, "result with an arithmetic NaN")
         return false;
 
     const auto result_value = arg.value.template as<value_type>();
-    return FP<value_type>{result_value}.nan_payload() >= FP<value_type>::canon;
+    return FP<value_type>{result_value}.is_arithmetic_nan();
 }
 
 TEST(execute_floating_point, f32_const)
