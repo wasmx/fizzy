@@ -605,6 +605,64 @@ TYPED_TEST(execute_floating_point_types, sub)
     EXPECT_THAT(exec(TypeParam{0x1.048Ep5}, TypeParam{0x1.FFp4}), Result(TypeParam{0x0.287p2}));
 }
 
+TYPED_TEST(execute_floating_point_types, add_sub_neg_relation)
+{
+    // Checks the note from the Wasm spec:
+    // > Up to the non-determinism regarding NaNs, it always holds that
+    // > fsub(z1, z2) = fadd(z1, fneg(z2)).
+
+    using FP = FP<TypeParam>;
+
+    /* wat2wasm
+    (func (param f32 f32) (result f32) (f32.sub (local.get 0) (local.get 1)))
+    (func (param f32 f32) (result f32) (f32.add (local.get 0) (f32.neg(local.get 1))))
+
+    (func (param f64 f64) (result f64) (f64.sub (local.get 0) (local.get 1)))
+    (func (param f64 f64) (result f64) (f64.add (local.get 0) (f64.neg(local.get 1))))
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010d0260027d7d017d60027c7c017c030504000001010a2304070020002001930b08002000"
+        "20018c920b070020002001a10b0800200020019aa00b");
+
+    auto module = parse(wasm);
+    constexpr auto fn_offset = std::is_same_v<TypeParam, float> ? 0 : 2;
+    constexpr auto sub_fn_idx = 0 + fn_offset;
+    constexpr auto addneg_fn_idx = 1 + fn_offset;
+
+    auto instance = instantiate(std::move(module));
+    const auto sub = [&](auto a, auto b) { return execute(*instance, sub_fn_idx, {a, b}); };
+    const auto addneg = [&](auto a, auto b) { return execute(*instance, addneg_fn_idx, {a, b}); };
+
+    for (const auto z1 : this->ordered_special_values)
+    {
+        for (const auto z2 : this->ordered_special_values)
+        {
+            const auto sub_result = sub(z1, z2);
+            ASSERT_TRUE(sub_result.has_value);
+            const auto addneg_result = addneg(z1, z2);
+            ASSERT_TRUE(addneg_result.has_value);
+
+            if (std::isnan(z1) || std::isnan(z2))
+            {
+                if (FP{z1}.nan_payload() == FP::canon && FP{z2}.nan_payload() == FP::canon)
+                {
+                    EXPECT_THAT(sub_result, CanonicalNaN(TypeParam{}));
+                    EXPECT_THAT(addneg_result, CanonicalNaN(TypeParam{}));
+                }
+                else
+                {
+                    EXPECT_THAT(sub_result, ArithmeticNaN(TypeParam{}));
+                    EXPECT_THAT(addneg_result, ArithmeticNaN(TypeParam{}));
+                }
+            }
+            else
+            {
+                EXPECT_THAT(addneg_result, Result(sub_result.value.template as<TypeParam>()));
+            }
+        }
+    }
+}
+
 TYPED_TEST(execute_floating_point_types, mul)
 {
     using FP = FP<TypeParam>;
