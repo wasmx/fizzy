@@ -517,6 +517,30 @@ __attribute__((no_sanitize("float-divide-by-zero"))) inline constexpr T fdiv(T a
     return a / b;  // For IEC 559 (IEEE 754) floating-point types division by 0 is defined.
 }
 
+template <typename T>
+inline constexpr T fmin(T a, T b) noexcept
+{
+    if (std::isnan(a) || std::isnan(b))
+        return std::numeric_limits<T>::quiet_NaN();
+
+    if (a == 0 && b == 0 && (std::signbit(a) == 1 || std::signbit(b) == 1))
+        return -T{0};
+
+    return b < a ? b : a;
+}
+
+template <typename T>
+inline constexpr T fmax(T a, T b) noexcept
+{
+    if (std::isnan(a) || std::isnan(b))
+        return std::numeric_limits<T>::quiet_NaN();
+
+    if (a == 0 && b == 0 && (std::signbit(a) == 0 || std::signbit(b) == 0))
+        return T{0};
+
+    return a < b ? b : a;
+}
+
 std::optional<uint32_t> find_export(const Module& module, ExternalKind kind, std::string_view name)
 {
     const auto it = std::find_if(module.exportsec.begin(), module.exportsec.end(),
@@ -1554,6 +1578,16 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             binary_op(stack, fdiv<float>);
             break;
         }
+        case Instr::f32_min:
+        {
+            binary_op(stack, fmin<float>);
+            break;
+        }
+        case Instr::f32_max:
+        {
+            binary_op(stack, fmax<float>);
+            break;
+        }
         case Instr::f32_copysign:
         {
             // TODO: This is not optimal implementation. The std::copysign() is inlined, but
@@ -1589,6 +1623,16 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f64_div:
         {
             binary_op(stack, fdiv<double>);
+            break;
+        }
+        case Instr::f64_min:
+        {
+            binary_op(stack, fmin<double>);
+            break;
+        }
+        case Instr::f64_max:
+        {
+            binary_op(stack, fmax<double>);
             break;
         }
         case Instr::f64_copysign:
@@ -1737,16 +1781,12 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f32_nearest:
         case Instr::f32_sub:
         case Instr::f32_mul:
-        case Instr::f32_min:
-        case Instr::f32_max:
         case Instr::f64_ceil:
         case Instr::f64_floor:
         case Instr::f64_trunc:
         case Instr::f64_nearest:
         case Instr::f64_sub:
         case Instr::f64_mul:
-        case Instr::f64_min:
-        case Instr::f64_max:
         case Instr::f32_demote_f64:
         case Instr::i32_reinterpret_f32:
         case Instr::i64_reinterpret_f64:

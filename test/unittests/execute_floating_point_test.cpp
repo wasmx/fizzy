@@ -278,6 +278,8 @@ TYPED_TEST(execute_floating_point_types, binop_nan_propagation)
     constexpr Instr opcodes[] = {
         Instr::f32_add,
         Instr::f32_div,
+        Instr::f32_min,
+        Instr::f32_max,
     };
 
     for (const auto op : opcodes)
@@ -481,7 +483,7 @@ TYPED_TEST(execute_floating_point_types, add)
     EXPECT_THAT(exec(Limits::infinity(), Limits::infinity()), Result(Limits::infinity()));
     EXPECT_THAT(exec(-Limits::infinity(), -Limits::infinity()), Result(-Limits::infinity()));
 
-    // fadd(+-O, -+0) = +0
+    // fadd(+-0, -+0) = +0
     EXPECT_THAT(exec(TypeParam{0.0}, -TypeParam{0.0}), Result(TypeParam{0.0}));
     EXPECT_THAT(exec(-TypeParam{0.0}, TypeParam{0.0}), Result(TypeParam{0.0}));
 
@@ -595,6 +597,100 @@ TYPED_TEST(execute_floating_point_types, div)
     }
 
     EXPECT_THAT(exec(TypeParam{0xABCD.01p7}, TypeParam{4}), Result(TypeParam{0x1.579A02p20}));
+}
+
+TYPED_TEST(execute_floating_point_types, min)
+{
+    using Limits = typename FP<TypeParam>::Limits;
+
+    auto instance = instantiate(parse(this->get_binop_code(Instr::f32_min)));
+    const auto exec = [&](auto arg1, auto arg2) { return execute(*instance, 0, {arg1, arg2}); };
+
+    for (const auto z : this->ordered_special_values)
+    {
+        if (std::isnan(z))
+            continue;
+
+        // fmin(+inf, z2) = z2
+        EXPECT_THAT(exec(Limits::infinity(), z), Result(z));
+
+        // fmin(-inf, z2) = -inf
+        EXPECT_THAT(exec(-Limits::infinity(), z), Result(-Limits::infinity()));
+
+        // fmin(z1, +inf) = z1
+        EXPECT_THAT(exec(z, Limits::infinity()), Result(z));
+
+        // fmin(z1, -inf) = -inf
+        EXPECT_THAT(exec(z, -Limits::infinity()), Result(-Limits::infinity()));
+    }
+
+    // fmin(+-0, -+0) = -0
+    EXPECT_THAT(exec(TypeParam{0}, -TypeParam{0}), Result(-TypeParam{0}));
+    EXPECT_THAT(exec(-TypeParam{0}, TypeParam{0}), Result(-TypeParam{0}));
+    EXPECT_THAT(exec(-TypeParam{0}, -TypeParam{0}), Result(-TypeParam{0}));
+
+    // Check every pair from cartesian product of the list of values.
+    // fmin(z1, z2) = z1  (if z1 <= z2)
+    // fmin(z1, z2) = z2  (if z2 <= z1)
+    for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
+    {
+        for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
+        {
+            const auto a = this->ordered_special_values[i];
+            const auto b = this->ordered_special_values[j];
+            if (!std::isnan(a) && !std::isnan(b))
+            {
+                EXPECT_THAT(exec(a, b), Result(i < j ? a : b)) << a << ", " << b;
+            }
+        }
+    }
+}
+
+TYPED_TEST(execute_floating_point_types, max)
+{
+    using Limits = typename FP<TypeParam>::Limits;
+
+    auto instance = instantiate(parse(this->get_binop_code(Instr::f32_max)));
+    const auto exec = [&](auto arg1, auto arg2) { return execute(*instance, 0, {arg1, arg2}); };
+
+    for (const auto z : this->ordered_special_values)
+    {
+        if (std::isnan(z))
+            continue;
+
+        // fmax(+inf, z2) = +inf
+        EXPECT_THAT(exec(Limits::infinity(), z), Result(Limits::infinity()));
+
+        // fmax(-inf, z2) = z2
+        EXPECT_THAT(exec(-Limits::infinity(), z), Result(z));
+
+        // fmax(z1, +inf) = +inf
+        EXPECT_THAT(exec(z, Limits::infinity()), Result(Limits::infinity()));
+
+        // fmax(z1, -inf) = z1
+        EXPECT_THAT(exec(z, -Limits::infinity()), Result(z));
+    }
+
+    // fmax(+-0, -+0) = +0
+    EXPECT_THAT(execute(*instance, 0, {TypeParam{0}, -TypeParam{0}}), Result(TypeParam{0}));
+    EXPECT_THAT(execute(*instance, 0, {-TypeParam{0}, TypeParam{0}}), Result(TypeParam{0}));
+    EXPECT_THAT(execute(*instance, 0, {-TypeParam{0}, -TypeParam{0}}), Result(-TypeParam{0}));
+
+    // Check every pair from cartesian product of the list of values.
+    // fmax(z1, z2) = z1  (if z1 >= z2)
+    // fmax(z1, z2) = z2  (if z2 >= z1)
+    for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
+    {
+        for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
+        {
+            const auto a = this->ordered_special_values[i];
+            const auto b = this->ordered_special_values[j];
+            if (!std::isnan(a) && !std::isnan(b))
+            {
+                EXPECT_THAT(execute(*instance, 0, {a, b}), Result(i > j ? a : b)) << a << ", " << b;
+            }
+        }
+    }
 }
 
 TYPED_TEST(execute_floating_point_types, copysign)
