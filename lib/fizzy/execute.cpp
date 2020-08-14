@@ -1596,6 +1596,11 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             binary_op(stack, std::plus<float>{});
             break;
         }
+        case Instr::f32_sub:
+        {
+            binary_op(stack, std::minus<float>{});
+            break;
+        }
         case Instr::f32_mul:
         {
             binary_op(stack, std::multiplies<float>{});
@@ -1646,6 +1651,11 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f64_add:
         {
             binary_op(stack, std::plus<double>{});
+            break;
+        }
+        case Instr::f64_sub:
+        {
+            binary_op(stack, std::minus<double>{});
             break;
         }
         case Instr::f64_mul:
@@ -1837,12 +1847,10 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f32_floor:
         case Instr::f32_trunc:
         case Instr::f32_nearest:
-        case Instr::f32_sub:
         case Instr::f64_ceil:
         case Instr::f64_floor:
         case Instr::f64_trunc:
         case Instr::f64_nearest:
-        case Instr::f64_sub:
             throw unsupported_feature("Floating point instruction.");
         default:
             assert(false);
