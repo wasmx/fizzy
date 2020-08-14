@@ -143,6 +143,18 @@ protected:
         -FP<T>::nan(1),
     };
 
+    inline static const std::array positive_noncanonical_nans = {
+        // Arithmetic:
+        FP<T>::nan((FP<T>::canon << 1) - 1),             // All bits set.
+        FP<T>::nan(FP<T>::canon | (FP<T>::canon >> 1)),  // Two top bits set.
+        FP<T>::nan(FP<T>::canon + 1),
+
+        // Signaling (not arithmetic):
+        FP<T>::nan(FP<T>::canon >> 1),  // "Standard" signaling NaN.
+        FP<T>::nan(2),
+        FP<T>::nan(1),
+    };
+
     /// Creates a wasm module with a single function for the given instructions opcode.
     /// The opcode is converted to match the type, e.g. f32_add -> f64_add.
     static bytes get_numeric_instruction_code(
@@ -243,13 +255,15 @@ TYPED_TEST(execute_floating_point_types, unop_nan_propagation)
         EXPECT_THAT(execute(*instance, 0, {cnan}), CanonicalNaN(TypeParam{}));
         EXPECT_THAT(execute(*instance, 0, {-cnan}), CanonicalNaN(TypeParam{}));
 
-        const auto anan = FP<TypeParam>::nan(FP<TypeParam>::canon + 1);
-        EXPECT_THAT(execute(*instance, 0, {anan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-anan}), ArithmeticNaN(TypeParam{}));
-
-        const auto snan = FP<TypeParam>::nan(1);
-        EXPECT_THAT(execute(*instance, 0, {snan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-snan}), ArithmeticNaN(TypeParam{}));
+        for (const auto nan : this->positive_noncanonical_nans)
+        {
+            const auto res1 = execute(*instance, 0, {nan});
+            EXPECT_THAT(res1, ArithmeticNaN(TypeParam{}))
+                << std::hex << FP<TypeParam>{res1.value.template as<TypeParam>()}.nan_payload();
+            const auto res2 = execute(*instance, 0, {-nan});
+            EXPECT_THAT(res2, ArithmeticNaN(TypeParam{}))
+                << std::hex << FP<TypeParam>{res2.value.template as<TypeParam>()}.nan_payload();
+        }
     }
 }
 
@@ -272,8 +286,6 @@ TYPED_TEST(execute_floating_point_types, binop_nan_propagation)
 
         constexpr auto q = TypeParam{1.0};
         const auto cnan = FP<TypeParam>::nan(FP<TypeParam>::canon);
-        const auto anan = FP<TypeParam>::nan(FP<TypeParam>::canon + 1);
-        const auto snan = FP<TypeParam>::nan(1);
 
         // TODO: Consider more restrictive tests where the sign of NaN values is also checked.
 
@@ -286,55 +298,28 @@ TYPED_TEST(execute_floating_point_types, binop_nan_propagation)
         EXPECT_THAT(execute(*instance, 0, {-cnan, cnan}), CanonicalNaN(TypeParam{}));
         EXPECT_THAT(execute(*instance, 0, {-cnan, -cnan}), CanonicalNaN(TypeParam{}));
 
-        EXPECT_THAT(execute(*instance, 0, {q, anan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {q, -anan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {anan, q}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-anan, q}), ArithmeticNaN(TypeParam{}));
+        for (const auto nan : this->positive_noncanonical_nans)
+        {
+            EXPECT_THAT(execute(*instance, 0, {q, nan}), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(execute(*instance, 0, {q, -nan}), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(execute(*instance, 0, {nan, q}), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(execute(*instance, 0, {-nan, q}), ArithmeticNaN(TypeParam{}));
 
-        EXPECT_THAT(execute(*instance, 0, {anan, anan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {anan, -anan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-anan, anan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-anan, -anan}), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(execute(*instance, 0, {nan, nan}), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(execute(*instance, 0, {nan, -nan}), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(execute(*instance, 0, {-nan, nan}), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(execute(*instance, 0, {-nan, -nan}), ArithmeticNaN(TypeParam{}));
 
-        EXPECT_THAT(execute(*instance, 0, {anan, cnan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {anan, -cnan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-anan, cnan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-anan, -cnan}), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(execute(*instance, 0, {nan, cnan}), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(execute(*instance, 0, {nan, -cnan}), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(execute(*instance, 0, {-nan, cnan}), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(execute(*instance, 0, {-nan, -cnan}), ArithmeticNaN(TypeParam{}));
 
-        EXPECT_THAT(execute(*instance, 0, {cnan, anan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {cnan, -anan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-cnan, anan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-cnan, -anan}), ArithmeticNaN(TypeParam{}));
-
-        EXPECT_THAT(execute(*instance, 0, {q, snan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {q, -snan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {snan, q}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-snan, q}), ArithmeticNaN(TypeParam{}));
-
-        EXPECT_THAT(execute(*instance, 0, {snan, snan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {snan, -snan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-snan, snan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-snan, -snan}), ArithmeticNaN(TypeParam{}));
-
-        EXPECT_THAT(execute(*instance, 0, {snan, cnan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {snan, -cnan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-snan, cnan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-snan, -cnan}), ArithmeticNaN(TypeParam{}));
-
-        EXPECT_THAT(execute(*instance, 0, {cnan, snan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {cnan, -snan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-cnan, snan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-cnan, -snan}), ArithmeticNaN(TypeParam{}));
-
-        EXPECT_THAT(execute(*instance, 0, {snan, anan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {snan, -anan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-snan, anan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-snan, -anan}), ArithmeticNaN(TypeParam{}));
-
-        EXPECT_THAT(execute(*instance, 0, {anan, snan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {anan, -snan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-anan, snan}), ArithmeticNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-anan, -snan}), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(execute(*instance, 0, {cnan, nan}), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(execute(*instance, 0, {cnan, -nan}), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(execute(*instance, 0, {-cnan, nan}), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(execute(*instance, 0, {-cnan, -nan}), ArithmeticNaN(TypeParam{}));
+        }
     }
 }
 
