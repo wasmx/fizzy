@@ -315,7 +315,8 @@ TEST(instantiate, imported_globals)
     auto instance = instantiate(module, {}, {}, {}, {g});
 
     ASSERT_EQ(instance->imported_globals.size(), 1);
-    EXPECT_EQ(instance->imported_globals[0].type.is_mutable, true);
+    EXPECT_EQ(instance->imported_globals[0].type.value_type, ValType::i32);
+    EXPECT_TRUE(instance->imported_globals[0].type.is_mutable);
     EXPECT_EQ(*instance->imported_globals[0].value, 42);
     ASSERT_EQ(instance->globals.size(), 0);
 }
@@ -336,8 +337,10 @@ TEST(instantiate, imported_globals_multiple)
     auto instance = instantiate(module, {}, {}, {}, {g1, g2});
 
     ASSERT_EQ(instance->imported_globals.size(), 2);
-    EXPECT_EQ(instance->imported_globals[0].type.is_mutable, true);
-    EXPECT_EQ(instance->imported_globals[1].type.is_mutable, false);
+    EXPECT_EQ(instance->imported_globals[0].type.value_type, ValType::i32);
+    EXPECT_TRUE(instance->imported_globals[0].type.is_mutable);
+    EXPECT_EQ(instance->imported_globals[1].type.value_type, ValType::i32);
+    EXPECT_FALSE(instance->imported_globals[1].type.is_mutable);
     EXPECT_EQ(*instance->imported_globals[0].value, 42);
     EXPECT_EQ(*instance->imported_globals[1].value, 43);
     ASSERT_EQ(instance->globals.size(), 0);
@@ -848,9 +851,11 @@ TEST(instantiate, globals_float)
 
     ASSERT_EQ(instance->imported_globals.size(), 2);
     EXPECT_EQ(instance->imported_globals[0].value->f32, 5.6f);
-    EXPECT_EQ(instance->imported_globals[0].type.is_mutable, true);
+    EXPECT_EQ(instance->imported_globals[0].type.value_type, ValType::f32);
+    EXPECT_TRUE(instance->imported_globals[0].type.is_mutable);
     EXPECT_EQ(instance->imported_globals[1].value->f64, 7.8);
-    EXPECT_EQ(instance->imported_globals[1].type.is_mutable, false);
+    EXPECT_EQ(instance->imported_globals[1].type.value_type, ValType::f64);
+    EXPECT_FALSE(instance->imported_globals[1].type.is_mutable);
     ASSERT_EQ(instance->globals.size(), 3);
     EXPECT_EQ(instance->globals[0].f32, 1.2f);
     EXPECT_EQ(instance->globals[1].f64, 3.4);
