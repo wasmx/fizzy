@@ -11,6 +11,7 @@
 #include <test/utils/floating_point_utils.hpp>
 #include <test/utils/hex.hpp>
 #include <array>
+#include <cfenv>
 #include <cmath>
 
 using namespace fizzy;
@@ -1072,7 +1073,15 @@ TEST(execute_floating_point, f32_demote_f64)
 
     for (const auto& [arg, expected] : test_cases)
     {
-        EXPECT_THAT(execute(*instance, 0, {arg}), Result(expected)) << arg << " -> " << expected;
+#pragma STDC FENV_ACCESS ON
+        const auto current_rounding_mode = std::fegetround();
+        for (const auto rounding_mode : {FE_DOWNWARD, FE_TONEAREST, FE_TOWARDZERO, FE_UPWARD})
+        {
+            ASSERT_EQ(std::fesetround(rounding_mode), 0);
+            EXPECT_THAT(execute(*instance, 0, {arg}), Result(expected))
+                << arg << " -> " << expected;
+        }
+        ASSERT_EQ(std::fesetround(current_rounding_mode), 0);
     }
 
     // Any input NaN other than canonical must result in an arithmetic NaN.
