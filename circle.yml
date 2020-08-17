@@ -396,11 +396,6 @@ jobs:
       - attach_workspace:
           at: ~/build
       - spectest:
-          skip_validation: true
-          expected_passed: 10467
-          expected_failed: 3
-          expected_skipped: 1343
-      - spectest:
           expected_passed: 11409
           expected_failed: 3
           expected_skipped: 401
