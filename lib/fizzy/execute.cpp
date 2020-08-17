@@ -135,8 +135,11 @@ void match_imported_globals(const std::vector<GlobalType>& module_imported_globa
 
     for (size_t i = 0; i < imported_globals.size(); ++i)
     {
-        // TODO: match value type
-
+        if (imported_globals[i].type.value_type != module_imported_globals[i].value_type)
+        {
+            throw instantiate_error{
+                "global " + std::to_string(i) + " value type doesn't match module's global type"};
+        }
         if (imported_globals[i].type.is_mutable != module_imported_globals[i].is_mutable)
         {
             throw instantiate_error{"global " + std::to_string(i) +

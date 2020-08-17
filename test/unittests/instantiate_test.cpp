@@ -378,7 +378,7 @@ TEST(instantiate, imported_globals_mismatched_mutability)
         "global 0 mutability doesn't match module's global mutability");
 }
 
-TEST(instantiate, DISABLED_imported_globals_mismatched_type)
+TEST(instantiate, imported_globals_mismatched_type)
 {
     /* wat2wasm
       (global (export "g1") i64 (i64.const 0))
@@ -395,8 +395,8 @@ TEST(instantiate, DISABLED_imported_globals_mismatched_type)
     const auto bin2 = from_hex("0061736d01000000020b01036d6f64026731037f00");
     const auto module2 = parse(bin2);
 
-    EXPECT_THROW_MESSAGE(
-        instantiate(module2, {}, {}, {}, {*g}), instantiate_error, "type mismatch");
+    EXPECT_THROW_MESSAGE(instantiate(module2, {}, {}, {}, {*g}), instantiate_error,
+        "global 0 value type doesn't match module's global type");
 }
 
 TEST(instantiate, imported_globals_nullptr)
