@@ -381,6 +381,31 @@ TEST(instantiate, imported_globals_mismatched_mutability)
 TEST(instantiate, imported_globals_mismatched_type)
 {
     /* wat2wasm
+      (global (import "mod" "g1") i32)
+    */
+    const auto bin1 = from_hex("0061736d01000000020b01036d6f64026731037f00");
+    const auto module1 = parse(bin1);
+
+    Value global_value = 42;
+    ExternalGlobal g{&global_value, {ValType::i64, false}};
+
+    EXPECT_THROW_MESSAGE(instantiate(module1, {}, {}, {}, {g}), instantiate_error,
+        "global 0 value type doesn't match module's global type");
+
+    /* wat2wasm
+      (global (import "mod" "g1") i64)
+      (global (import "mod" "g2") i32)
+    */
+    const auto bin2 = from_hex("0061736d01000000021502036d6f64026731037e00036d6f64026732037f00");
+    const auto module2 = parse(bin2);
+
+    EXPECT_THROW_MESSAGE(instantiate(module2, {}, {}, {}, {g, g}), instantiate_error,
+        "global 1 value type doesn't match module's global type");
+}
+
+TEST(instantiate, imported_global_from_another_module_mismatched_type)
+{
+    /* wat2wasm
       (global (export "g1") i64 (i64.const 0))
     */
     const auto bin1 = from_hex("0061736d010000000606017e0042000b0706010267310300");
