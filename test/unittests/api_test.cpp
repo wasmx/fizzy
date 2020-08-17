@@ -94,7 +94,7 @@ TEST(api, resolve_imported_functions)
     EXPECT_EQ(external_functions.size(), 4);
 
     Value global = 0;
-    const std::vector<ExternalGlobal> external_globals{{&global, false}};
+    const std::vector<ExternalGlobal> external_globals{{&global, {ValType::i32, false}}};
     auto instance = instantiate(
         module, external_functions, {}, {}, std::vector<ExternalGlobal>(external_globals));
 
@@ -316,22 +316,22 @@ TEST(api, find_exported_global)
     auto opt_global = find_exported_global(*instance, "g1");
     ASSERT_TRUE(opt_global);
     EXPECT_EQ(*opt_global->value, 0);
-    EXPECT_TRUE(opt_global->is_mutable);
+    EXPECT_TRUE(opt_global->type.is_mutable);
 
     opt_global = find_exported_global(*instance, "g2");
     ASSERT_TRUE(opt_global);
     EXPECT_EQ(*opt_global->value, 1);
-    EXPECT_FALSE(opt_global->is_mutable);
+    EXPECT_FALSE(opt_global->type.is_mutable);
 
     opt_global = find_exported_global(*instance, "g3");
     ASSERT_TRUE(opt_global);
     EXPECT_EQ(*opt_global->value, 2);
-    EXPECT_TRUE(opt_global->is_mutable);
+    EXPECT_TRUE(opt_global->type.is_mutable);
 
     opt_global = find_exported_global(*instance, "g4");
     ASSERT_TRUE(opt_global);
     EXPECT_EQ(*opt_global->value, 3);
-    EXPECT_FALSE(opt_global->is_mutable);
+    EXPECT_FALSE(opt_global->type.is_mutable);
 
     EXPECT_FALSE(find_exported_global(*instance, "g5"));
     EXPECT_FALSE(find_exported_global(*instance, "f"));
@@ -352,18 +352,18 @@ TEST(api, find_exported_global)
         "017f0141010b071b050267310300026732030103746162010001660000036d656d02000a05010300010b");
 
     Value g1 = 42;
-    auto instance_reexported_global =
-        instantiate(parse(wasm_reexported_global), {}, {}, {}, {ExternalGlobal{&g1, false}});
+    auto instance_reexported_global = instantiate(
+        parse(wasm_reexported_global), {}, {}, {}, {ExternalGlobal{&g1, {ValType::i32, false}}});
 
     opt_global = find_exported_global(*instance_reexported_global, "g1");
     ASSERT_TRUE(opt_global);
     EXPECT_EQ(opt_global->value, &g1);
-    EXPECT_FALSE(opt_global->is_mutable);
+    EXPECT_FALSE(opt_global->type.is_mutable);
 
     opt_global = find_exported_global(*instance_reexported_global, "g2");
     ASSERT_TRUE(opt_global);
     EXPECT_EQ(*opt_global->value, 1);
-    EXPECT_TRUE(opt_global->is_mutable);
+    EXPECT_TRUE(opt_global->type.is_mutable);
 
     EXPECT_FALSE(find_exported_global(*instance_reexported_global, "g3").has_value());
 

@@ -311,11 +311,11 @@ TEST(instantiate, imported_globals)
     const auto module = parse(bin);
 
     Value global_value = 42;
-    ExternalGlobal g{&global_value, true};
+    ExternalGlobal g{&global_value, {ValType::i32, true}};
     auto instance = instantiate(module, {}, {}, {}, {g});
 
     ASSERT_EQ(instance->imported_globals.size(), 1);
-    EXPECT_EQ(instance->imported_globals[0].is_mutable, true);
+    EXPECT_EQ(instance->imported_globals[0].type.is_mutable, true);
     EXPECT_EQ(*instance->imported_globals[0].value, 42);
     ASSERT_EQ(instance->globals.size(), 0);
 }
@@ -330,14 +330,14 @@ TEST(instantiate, imported_globals_multiple)
     const auto module = parse(bin);
 
     Value global_value1 = 42;
-    ExternalGlobal g1{&global_value1, true};
+    ExternalGlobal g1{&global_value1, {ValType::i32, true}};
     Value global_value2 = 43;
-    ExternalGlobal g2{&global_value2, false};
+    ExternalGlobal g2{&global_value2, {ValType::i32, false}};
     auto instance = instantiate(module, {}, {}, {}, {g1, g2});
 
     ASSERT_EQ(instance->imported_globals.size(), 2);
-    EXPECT_EQ(instance->imported_globals[0].is_mutable, true);
-    EXPECT_EQ(instance->imported_globals[1].is_mutable, false);
+    EXPECT_EQ(instance->imported_globals[0].type.is_mutable, true);
+    EXPECT_EQ(instance->imported_globals[1].type.is_mutable, false);
     EXPECT_EQ(*instance->imported_globals[0].value, 42);
     EXPECT_EQ(*instance->imported_globals[1].value, 43);
     ASSERT_EQ(instance->globals.size(), 0);
@@ -353,7 +353,7 @@ TEST(instantiate, imported_globals_mismatched_count)
     const auto module = parse(bin);
 
     Value global_value = 42;
-    ExternalGlobal g{&global_value, true};
+    ExternalGlobal g{&global_value, {ValType::i32, true}};
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {g}), instantiate_error,
         "module requires 2 imported globals, 1 provided");
 }
@@ -368,9 +368,9 @@ TEST(instantiate, imported_globals_mismatched_mutability)
     const auto module = parse(bin);
 
     Value global_value1 = 42;
-    ExternalGlobal g1{&global_value1, false};
+    ExternalGlobal g1{&global_value1, {ValType::i32, false}};
     Value global_value2 = 42;
-    ExternalGlobal g2{&global_value2, true};
+    ExternalGlobal g2{&global_value2, {ValType::i32, true}};
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {g1, g2}), instantiate_error,
         "global 0 mutability doesn't match module's global mutability");
 }
@@ -405,7 +405,7 @@ TEST(instantiate, imported_globals_nullptr)
     const auto bin = from_hex("0061736d01000000021502036d6f64026731037f00036d6f64026732037f00");
     const auto module = parse(bin);
 
-    ExternalGlobal g{nullptr, false};
+    ExternalGlobal g{nullptr, {ValType::i32, false}};
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {g, g}), instantiate_error,
         "global 0 has a null pointer to value");
 }
@@ -526,7 +526,7 @@ TEST(instantiate, element_section_offset_from_imported_global)
         "0200010a0b02040041010b040041020b");
 
     Value global_value = 1;
-    ExternalGlobal g{&global_value, false};
+    ExternalGlobal g{&global_value, {ValType::i32, false}};
 
     auto instance = instantiate(parse(bin), {}, {}, {}, {g});
 
@@ -649,7 +649,7 @@ TEST(instantiate, data_section_offset_from_imported_global)
     const auto module = parse(bin);
 
     Value global_value = 42;
-    ExternalGlobal g{&global_value, false};
+    ExternalGlobal g{&global_value, {ValType::i32, false}};
 
     auto instance = instantiate(module, {}, {}, {}, {g});
 
@@ -795,13 +795,13 @@ TEST(instantiate, globals_with_imported)
     const auto module = parse(bin);
 
     Value global_value = 41;
-    ExternalGlobal g{&global_value, true};
+    ExternalGlobal g{&global_value, {ValType::i32, true}};
 
     auto instance = instantiate(module, {}, {}, {}, {g});
 
     ASSERT_EQ(instance->imported_globals.size(), 1);
     EXPECT_EQ(*instance->imported_globals[0].value, 41);
-    EXPECT_EQ(instance->imported_globals[0].is_mutable, true);
+    EXPECT_EQ(instance->imported_globals[0].type.is_mutable, true);
     ASSERT_EQ(instance->globals.size(), 2);
     EXPECT_EQ(instance->globals[0], 42);
     EXPECT_EQ(instance->globals[1], 43);
@@ -817,7 +817,7 @@ TEST(instantiate, globals_initialized_from_imported)
     const auto module = parse(bin);
 
     Value global_value = 42;
-    ExternalGlobal g{&global_value, false};
+    ExternalGlobal g{&global_value, {ValType::i32, false}};
 
     auto instance = instantiate(module, {}, {}, {}, {g});
 
@@ -840,17 +840,17 @@ TEST(instantiate, globals_float)
     const auto module = parse(bin);
 
     Value global_value1 = 5.6f;
-    ExternalGlobal g1{&global_value1, true};
+    ExternalGlobal g1{&global_value1, {ValType::f32, true}};
     Value global_value2 = 7.8;
-    ExternalGlobal g2{&global_value2, false};
+    ExternalGlobal g2{&global_value2, {ValType::f64, false}};
 
     auto instance = instantiate(module, {}, {}, {}, {g1, g2});
 
     ASSERT_EQ(instance->imported_globals.size(), 2);
     EXPECT_EQ(instance->imported_globals[0].value->f32, 5.6f);
-    EXPECT_EQ(instance->imported_globals[0].is_mutable, true);
+    EXPECT_EQ(instance->imported_globals[0].type.is_mutable, true);
     EXPECT_EQ(instance->imported_globals[1].value->f64, 7.8);
-    EXPECT_EQ(instance->imported_globals[1].is_mutable, false);
+    EXPECT_EQ(instance->imported_globals[1].type.is_mutable, false);
     ASSERT_EQ(instance->globals.size(), 3);
     EXPECT_EQ(instance->globals[0].f32, 1.2f);
     EXPECT_EQ(instance->globals[1].f64, 3.4);

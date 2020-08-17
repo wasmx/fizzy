@@ -59,7 +59,7 @@ struct ExternalMemory
 struct ExternalGlobal
 {
     Value* value = nullptr;
-    bool is_mutable = false;
+    GlobalType type;
 };
 
 using bytes_ptr = std::unique_ptr<bytes, void (*)(bytes*)>;
