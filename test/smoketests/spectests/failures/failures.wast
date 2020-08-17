@@ -49,6 +49,7 @@
 (assert_return (invoke "foo.i64") (i64.const 2))
 (assert_return (invoke "foo.f32") (f32.const 2.456))
 (assert_return (invoke "foo.f64") (f64.const 2.456))
+(assert_return (invoke "foo.f32") (f32.const nan:canonical))
 (assert_return (invoke "trap") (i32.const 2))
 (assert_return (invoke "foo.i32"))
 (assert_trap (invoke "foo.i32") "error")

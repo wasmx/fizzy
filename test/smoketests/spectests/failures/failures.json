@@ -22,8 +22,9 @@
   {"type": "assert_return", "line": 49, "action": {"type": "invoke", "field": "foo.i64", "args": []}, "expected": [{"type": "i64", "value": "2"}]}, 
   {"type": "assert_return", "line": 50, "action": {"type": "invoke", "field": "foo.f32", "args": []}, "expected": [{"type": "f32", "value": "1075654427"}]}, 
   {"type": "assert_return", "line": 51, "action": {"type": "invoke", "field": "foo.f64", "args": []}, "expected": [{"type": "f64", "value": "4612712839142428377"}]}, 
-  {"type": "assert_return", "line": 52, "action": {"type": "invoke", "field": "trap", "args": []}, "expected": [{"type": "i32", "value": "2"}]}, 
-  {"type": "assert_return", "line": 53, "action": {"type": "invoke", "field": "foo.i32", "args": []}, "expected": []}, 
-  {"type": "assert_trap", "line": 54, "action": {"type": "invoke", "field": "foo.i32", "args": []}, "text": "error", "expected": [{"type": "i32"}]}, 
-  {"type": "assert_return", "line": 57, "action": {"type": "invoke", "field": "foo.unknown", "args": []}, "expected": [{"type": "i32", "value": "2"}]}, 
-  {"type": "assert_return", "line": 59, "action": {"type": "get", "field": "glob"}, "expected": [{"type": "i32", "value": "55"}]}]}
+  {"type": "assert_return", "line": 52, "action": {"type": "invoke", "field": "foo.f32", "args": []}, "expected": [{"type": "f32", "value": "nan:canonical"}]}, 
+  {"type": "assert_return", "line": 53, "action": {"type": "invoke", "field": "trap", "args": []}, "expected": [{"type": "i32", "value": "2"}]}, 
+  {"type": "assert_return", "line": 54, "action": {"type": "invoke", "field": "foo.i32", "args": []}, "expected": []}, 
+  {"type": "assert_trap", "line": 55, "action": {"type": "invoke", "field": "foo.i32", "args": []}, "text": "error", "expected": [{"type": "i32"}]}, 
+  {"type": "assert_return", "line": 58, "action": {"type": "invoke", "field": "foo.unknown", "args": []}, "expected": [{"type": "i32", "value": "2"}]}, 
+  {"type": "assert_return", "line": 60, "action": {"type": "get", "field": "glob"}, "expected": [{"type": "i32", "value": "55"}]}]}
