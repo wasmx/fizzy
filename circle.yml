@@ -140,12 +140,13 @@ commands:
         default: false
       expected_passed:
         type: integer
+        default: 11409
       expected_failed:
         type: integer
-        default: 0
+        default: 3
       expected_skipped:
         type: integer
-        default: 0
+        default: 401
 
     steps:
       - run:
@@ -270,10 +271,7 @@ jobs:
       - test
       - benchmark:
           min_time: "0.01"
-      - spectest:
-          expected_passed: 11409
-          expected_failed: 3
-          expected_skipped: 401
+      - spectest
 
   sanitizers-macos:
     executor: macos
@@ -288,10 +286,7 @@ jobs:
       - test
       - benchmark:
           min_time: "0.01"
-      - spectest:
-          expected_passed: 11409
-          expected_failed: 3
-          expected_skipped: 401
+      - spectest
 
   benchmark:
     machine:
@@ -395,10 +390,7 @@ jobs:
       - checkout
       - attach_workspace:
           at: ~/build
-      - spectest:
-          expected_passed: 11409
-          expected_failed: 3
-          expected_skipped: 401
+      - spectest
       - collect_coverage_data
 
 workflows:
