@@ -59,23 +59,6 @@ fizzy::bytes load_wasm_file(const fs::path& json_file_path, std::string_view fil
         std::istreambuf_iterator<char>{wasm_file}, std::istreambuf_iterator<char>{});
 }
 
-std::ostream& operator<<(std::ostream& out, std::pair<fizzy::Value, std::string> value_and_type)
-{
-    const auto& [value, type] = value_and_type;
-
-    if (type == "i32" || type == "i64")
-        out << value.i64 << " (0x" << std::hex << value.i64 << ")";
-    else if (type == "f32")
-        out << value.f32 << " (0x" << std::hex << fizzy::test::FP{value.f32}.as_uint() << ")";
-    else if (type == "f64")
-        out << value.f64 << " (0x" << std::hex << fizzy::test::FP{value.f64}.as_uint() << ")";
-    else
-        assert(false);
-
-    out << std::dec;
-    return out;
-}
-
 struct test_settings
 {
     bool skip_validation = false;
@@ -420,24 +403,55 @@ private:
         return it_instance->second.get();
     }
 
+
+    static fizzy::Value read_integer_value(const json& v)
+    {
+        assert(
+            v.at("type").get<std::string>() == "i32" || v.at("type").get<std::string>() == "i64");
+
+        // JSON tests have all values including floats serialized as 64-bit unsigned integers
+        return std::stoull(v.at("value").get<std::string>());
+    }
+
+    template <typename T>
+    static fizzy::Value read_floating_point_value(const json& v)
+    {
+        assert(
+            v.at("type").get<std::string>() == "f32" || v.at("type").get<std::string>() == "f64");
+        assert(!is_canonical_nan(v) && !is_arithmetic_nan(v));
+
+        // JSON tests have all values including floats serialized as 64-bit unsigned integers.
+        const uint64_t uint_value = std::stoull(v.at("value").get<std::string>());
+        /// The unsigned integer type matching the size of this floating-point type.
+        using UintType = typename fizzy::test::FP<T>::UintType;
+        return fizzy::test::FP<T>{static_cast<UintType>(uint_value)}.value;
+    }
+
     std::optional<fizzy::Value> read_value(const json& v)
     {
         const auto type = v.at("type").get<std::string>();
 
-        // JSON tests have all values including floats serialized as 64-bit unsigned integers
-        const uint64_t uint_value = std::stoull(v.at("value").get<std::string>());
-
         if (type == "i32" || type == "i64")
-            return uint_value;
+            return read_integer_value(v);
         else if (type == "f32")
-            return fizzy::test::FP32{static_cast<uint32_t>(uint_value)}.value;
+            return read_floating_point_value<float>(v);
         else if (type == "f64")
-            return fizzy::test::FP64{uint_value}.value;
+            return read_floating_point_value<double>(v);
         else
         {
             skip("Unsupported value type '" + type + "'.");
             return std::nullopt;
         }
+    }
+
+    static bool is_canonical_nan(const json& v)
+    {
+        return v.at("value").get<std::string>() == "nan:canonical";
+    }
+
+    static bool is_arithmetic_nan(const json& v)
+    {
+        return v.at("value").get<std::string>() == "nan:arithmetic";
     }
 
     std::optional<fizzy::ExecutionResult> invoke(const json& action)
@@ -475,34 +489,76 @@ private:
         }
     }
 
-    bool check_result(fizzy::Value actual_value, const json& expected)
+    bool check_integer_result(fizzy::Value actual_value, const json& expected)
     {
-        const auto value_type = expected.at("type").get<std::string>();
+        const auto expected_value = read_integer_value(expected);
 
-        const auto expected_value = read_value(expected);
-        if (!expected_value.has_value())
-            return false;
-
-        bool is_equal = false;
-        if (value_type == "i32" || value_type == "i64")
-            is_equal = expected_value->i64 == actual_value.i64;
-        else if (value_type == "f32")
-            is_equal = fizzy::test::FP{expected_value->f32} == actual_value.f32;
-        else if (value_type == "f64")
-            is_equal = fizzy::test::FP{expected_value->f64} == actual_value.f64;
-        else
-            assert(false);  // assuming type is already checked in read_value
-
-        if (!is_equal)
+        if (expected_value.i64 != actual_value.i64)
         {
             std::stringstream message;
-            message << "Incorrect returned value. Expected: "
-                    << std::make_pair(*expected_value, value_type)
-                    << " Actual: " << std::make_pair(actual_value, value_type);
+            message << "Incorrect returned value. Expected: " << expected_value.i64 << " (0x"
+                    << std::hex << expected_value.i64 << ")"
+                    << " Actual: " << actual_value.i64 << " (0x" << std::hex << actual_value.i64
+                    << ")";
             fail(message.str());
             return false;
         }
         return true;
+    }
+
+    template <typename T>
+    bool check_floating_point_result(fizzy::Value actual_value, const json& expected)
+    {
+        const auto fp_actual = fizzy::test::FP{actual_value.as<T>()};
+
+        const bool is_canonical_nan_expected = is_canonical_nan(expected);
+        if (is_canonical_nan_expected && fp_actual.is_canonical_nan())
+            return true;
+        const bool is_arithmetic_nan_expected = is_arithmetic_nan(expected);
+        if (is_arithmetic_nan_expected && fp_actual.is_arithmetic_nan())
+            return true;
+
+        if (is_canonical_nan_expected || is_arithmetic_nan_expected)
+        {
+            std::stringstream message;
+            message << "Incorrect returned value. Expected: "
+                    << expected.at("value").get<std::string>()
+                    << " Actual: " << actual_value.as<T>() << " (" << std::hexfloat
+                    << actual_value.as<T>() << ")";
+            fail(message.str());
+            return false;
+        }
+
+        const auto expected_value = read_floating_point_value<T>(expected);
+
+        if (expected_value.template as<T>() != fp_actual)
+        {
+            std::stringstream message;
+            message << "Incorrect returned value. Expected: " << expected_value.template as<T>()
+                    << " (" << std::hexfloat << expected_value.template as<T>() << ")"
+                    << " Actual: " << std::defaultfloat << actual_value.as<T>() << " ("
+                    << std::hexfloat << actual_value.as<T>() << ")";
+            fail(message.str());
+            return false;
+        }
+        return true;
+    }
+
+    bool check_result(fizzy::Value actual_value, const json& expected)
+    {
+        const auto type = expected.at("type").get<std::string>();
+
+        if (type == "i32" || type == "i64")
+            return check_integer_result(actual_value, expected);
+        else if (type == "f32")
+            return check_floating_point_result<float>(actual_value, expected);
+        else if (type == "f64")
+            return check_floating_point_result<double>(actual_value, expected);
+        else
+        {
+            skip("Unsupported value type '" + type + "'.");
+            return false;
+        }
     }
 
     std::pair<imports, std::string> create_imports(const fizzy::Module& module)

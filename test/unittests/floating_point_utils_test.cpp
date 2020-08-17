@@ -203,3 +203,123 @@ TEST(floating_point_utils, compare_zero)
     EXPECT_NE(FP{-0.0f}, FP{0.0f});
     EXPECT_NE(FP{0.0f}, FP{-0.0f});
 }
+
+TEST(floating_point_utils, double_is_canonical_nan)
+{
+    // canonical
+    EXPECT_TRUE(FP64{FP64::nan(FP64::canon)}.is_canonical_nan());
+    EXPECT_TRUE(FP64{-FP64::nan(FP64::canon)}.is_canonical_nan());
+
+    // arithmetic
+    EXPECT_FALSE(FP64{FP64::nan(FP64::canon + 1)}.is_canonical_nan());
+    EXPECT_FALSE(FP64{-FP64::nan(FP64::canon + 1)}.is_canonical_nan());
+    EXPECT_FALSE(FP64{FP64::nan(FP64::canon + 0xDEADBEEF)}.is_canonical_nan());
+    EXPECT_FALSE(FP64{-FP64::nan(FP64::canon + 0xDEADBEEF)}.is_canonical_nan());
+    EXPECT_FALSE(FP64{FP64::nan(FP64::mantissa_mask)}.is_canonical_nan());
+    EXPECT_FALSE(FP64{-FP64::nan(FP64::mantissa_mask)}.is_canonical_nan());
+
+    // non-arithmetic
+    EXPECT_FALSE(FP64{FP64::nan(1)}.is_canonical_nan());
+    EXPECT_FALSE(FP64{-FP64::nan(1)}.is_canonical_nan());
+    EXPECT_FALSE(FP64{FP64::nan(0xDEADBEEF)}.is_canonical_nan());
+    EXPECT_FALSE(FP64{-FP64::nan(0xDEADBEEF)}.is_canonical_nan());
+    EXPECT_FALSE(FP64{FP64::nan(0x0DEADBEEFBEEF)}.is_canonical_nan());
+    EXPECT_FALSE(FP64{-FP64::nan(0x0DEADBEEFBEEF)}.is_canonical_nan());
+
+    // not NaN
+    EXPECT_FALSE(FP64{0.0}.is_canonical_nan());
+    EXPECT_FALSE(FP64{-0.0}.is_canonical_nan());
+    EXPECT_FALSE(FP64{1.234}.is_canonical_nan());
+    EXPECT_FALSE(FP64{-1.234}.is_canonical_nan());
+    EXPECT_FALSE(FP64{FP64::Limits::infinity()}.is_canonical_nan());
+    EXPECT_FALSE(FP64{-FP64::Limits::infinity()}.is_canonical_nan());
+}
+
+TEST(floating_point_utils, double_is_arithmetic_nan)
+{
+    // canonical
+    EXPECT_TRUE(FP64{FP64::nan(FP64::canon)}.is_arithmetic_nan());
+    EXPECT_TRUE(FP64{-FP64::nan(FP64::canon)}.is_arithmetic_nan());
+
+    // arithmetic
+    EXPECT_TRUE(FP64{FP64::nan(FP64::canon + 1)}.is_arithmetic_nan());
+    EXPECT_TRUE(FP64{-FP64::nan(FP64::canon + 1)}.is_arithmetic_nan());
+    EXPECT_TRUE(FP64{FP64::nan(FP64::canon + 0xDEADBEEF)}.is_arithmetic_nan());
+    EXPECT_TRUE(FP64{-FP64::nan(FP64::canon + 0xDEADBEEF)}.is_arithmetic_nan());
+    EXPECT_TRUE(FP64{FP64::nan(FP64::mantissa_mask)}.is_arithmetic_nan());
+    EXPECT_TRUE(FP64{-FP64::nan(FP64::mantissa_mask)}.is_arithmetic_nan());
+
+    // non-arithmetic
+    EXPECT_FALSE(FP64{FP64::nan(1)}.is_arithmetic_nan());
+    EXPECT_FALSE(FP64{-FP64::nan(1)}.is_arithmetic_nan());
+    EXPECT_FALSE(FP64{FP64::nan(0xDEADBEEF)}.is_arithmetic_nan());
+    EXPECT_FALSE(FP64{-FP64::nan(0xDEADBEEF)}.is_arithmetic_nan());
+    EXPECT_FALSE(FP64{FP64::nan(0x0DEADBEEFBEEF)}.is_arithmetic_nan());
+    EXPECT_FALSE(FP64{-FP64::nan(0x0DEADBEEFBEEF)}.is_arithmetic_nan());
+
+    // not NaN
+    EXPECT_FALSE(FP64{0.0}.is_arithmetic_nan());
+    EXPECT_FALSE(FP64{-0.0}.is_arithmetic_nan());
+    EXPECT_FALSE(FP64{1.234}.is_arithmetic_nan());
+    EXPECT_FALSE(FP64{-1.234}.is_arithmetic_nan());
+    EXPECT_FALSE(FP64{FP64::Limits::infinity()}.is_arithmetic_nan());
+    EXPECT_FALSE(FP64{-FP64::Limits::infinity()}.is_arithmetic_nan());
+}
+
+TEST(floating_point_utils, float_is_canonical_nan)
+{
+    // canonical
+    EXPECT_TRUE(FP32{FP32::nan(FP32::canon)}.is_canonical_nan());
+    EXPECT_TRUE(FP32{-FP32::nan(FP32::canon)}.is_canonical_nan());
+
+    // arithmetic
+    EXPECT_FALSE(FP32{FP32::nan(FP32::canon + 1)}.is_canonical_nan());
+    EXPECT_FALSE(FP32{-FP32::nan(FP32::canon + 1)}.is_canonical_nan());
+    EXPECT_FALSE(FP32{FP32::nan(FP32::canon + 0xDEADBEEF)}.is_canonical_nan());
+    EXPECT_FALSE(FP32{-FP32::nan(FP32::canon + 0xDEADBEEF)}.is_canonical_nan());
+    EXPECT_FALSE(FP32{FP32::nan(FP32::mantissa_mask)}.is_canonical_nan());
+    EXPECT_FALSE(FP32{-FP32::nan(FP32::mantissa_mask)}.is_canonical_nan());
+
+    // non-arithmetic
+    EXPECT_FALSE(FP32{FP32::nan(1)}.is_canonical_nan());
+    EXPECT_FALSE(FP32{-FP32::nan(1)}.is_canonical_nan());
+    EXPECT_FALSE(FP32{FP32::nan(0xDEADBEEF)}.is_canonical_nan());
+    EXPECT_FALSE(FP32{-FP32::nan(0xDEADBEEF)}.is_canonical_nan());
+
+    // not NaN
+    EXPECT_FALSE(FP32{0.0f}.is_canonical_nan());
+    EXPECT_FALSE(FP32{-0.0f}.is_canonical_nan());
+    EXPECT_FALSE(FP32{1.234f}.is_canonical_nan());
+    EXPECT_FALSE(FP32{-1.234f}.is_canonical_nan());
+    EXPECT_FALSE(FP32{FP32::Limits::infinity()}.is_canonical_nan());
+    EXPECT_FALSE(FP32{-FP32::Limits::infinity()}.is_canonical_nan());
+}
+
+TEST(floating_point_utils, float_is_arithmetic_nan)
+{
+    // canonical
+    EXPECT_TRUE(FP32{FP32::nan(FP32::canon)}.is_arithmetic_nan());
+    EXPECT_TRUE(FP32{-FP32::nan(FP32::canon)}.is_arithmetic_nan());
+
+    // arithmetic
+    EXPECT_TRUE(FP32{FP32::nan(FP32::canon + 1)}.is_arithmetic_nan());
+    EXPECT_TRUE(FP32{-FP32::nan(FP32::canon + 1)}.is_arithmetic_nan());
+    EXPECT_TRUE(FP32{FP32::nan(FP32::canon + 0xDEADBEEF)}.is_arithmetic_nan());
+    EXPECT_TRUE(FP32{-FP32::nan(FP32::canon + 0xDEADBEEF)}.is_arithmetic_nan());
+    EXPECT_TRUE(FP32{FP32::nan(FP32::mantissa_mask)}.is_arithmetic_nan());
+    EXPECT_TRUE(FP32{-FP32::nan(FP32::mantissa_mask)}.is_arithmetic_nan());
+
+    // non-arithmetic
+    EXPECT_FALSE(FP32{FP32::nan(1)}.is_arithmetic_nan());
+    EXPECT_FALSE(FP32{-FP32::nan(1)}.is_arithmetic_nan());
+    EXPECT_FALSE(FP32{FP32::nan(0xDEADBEEF)}.is_arithmetic_nan());
+    EXPECT_FALSE(FP32{-FP32::nan(0xDEADBEEF)}.is_arithmetic_nan());
+
+    // not NaN
+    EXPECT_FALSE(FP32{0.0f}.is_arithmetic_nan());
+    EXPECT_FALSE(FP32{-0.0f}.is_arithmetic_nan());
+    EXPECT_FALSE(FP32{1.234f}.is_arithmetic_nan());
+    EXPECT_FALSE(FP32{-1.234f}.is_arithmetic_nan());
+    EXPECT_FALSE(FP32{FP32::Limits::infinity()}.is_arithmetic_nan());
+    EXPECT_FALSE(FP32{-FP32::Limits::infinity()}.is_arithmetic_nan());
+}
