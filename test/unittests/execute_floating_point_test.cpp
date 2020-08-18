@@ -454,25 +454,35 @@ TYPED_TEST(execute_floating_point_types, sqrt)
     auto instance = instantiate(parse(this->get_unop_code(Instr::f32_sqrt)));
     const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
 
-    // fsqrt(-inf) = nan:canonical
-    EXPECT_THAT(exec(-Limits::infinity()), CanonicalNaN(TypeParam{}));
-
-    // fsqrt(+inf) = +inf
-    EXPECT_THAT(exec(Limits::infinity()), Result(Limits::infinity()));
-
-    // fsqrt(+-0) = +-0
-    EXPECT_THAT(exec(TypeParam{0.0}), Result(TypeParam{0.0}));
-    EXPECT_THAT(exec(-TypeParam{0.0}), Result(-TypeParam{0.0}));
-
-    for (const auto p : this->positive_special_values)
+    ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+    for (const auto rounding_direction : this->all_rounding_directions)
     {
-        // fsqrt(-p) = nan:canonical
-        EXPECT_THAT(exec(-p), CanonicalNaN(TypeParam{}));
-    }
+        ASSERT_EQ(std::fesetround(rounding_direction), 0);
+        SCOPED_TRACE(rounding_direction);
 
-    EXPECT_THAT(exec(TypeParam{1}), Result(TypeParam{1}));
-    EXPECT_THAT(exec(TypeParam{4}), Result(TypeParam{2}));
-    EXPECT_THAT(exec(TypeParam{0x1.21p6}), Result(TypeParam{0x1.1p3}));
+        // fsqrt(-inf) = nan:canonical
+        EXPECT_THAT(exec(-Limits::infinity()), CanonicalNaN(TypeParam{}));
+
+        // fsqrt(+inf) = +inf
+        EXPECT_THAT(exec(Limits::infinity()), Result(Limits::infinity()));
+
+        // fsqrt(+-0) = +-0
+        EXPECT_THAT(exec(TypeParam{0.0}), Result(TypeParam{0.0}));
+        EXPECT_THAT(exec(-TypeParam{0.0}), Result(-TypeParam{0.0}));
+
+        for (const auto p : this->positive_special_values)
+        {
+            // fsqrt(-p) = nan:canonical
+            EXPECT_THAT(exec(-p), CanonicalNaN(TypeParam{}));
+        }
+
+        EXPECT_THAT(exec(TypeParam{1}), Result(TypeParam{1}));
+        EXPECT_THAT(exec(TypeParam{4}), Result(TypeParam{2}));
+        EXPECT_THAT(exec(TypeParam{0x1.21p6}), Result(TypeParam{0x1.1p3}));  // exact
+        EXPECT_THAT(exec(std::nextafter(TypeParam{0x1.21p6}, TypeParam{0})),
+            Result(TypeParam{0x1.1p3}));  // rounded up
+    }
+    ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
 }
 
 TYPED_TEST(execute_floating_point_types, add)
