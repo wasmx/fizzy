@@ -10,6 +10,7 @@
 #include "types.hpp"
 #include <algorithm>
 #include <cassert>
+#include <cfenv>
 #include <cmath>
 #include <cstring>
 #include <stack>
@@ -555,13 +556,33 @@ inline constexpr T fmax(T a, T b) noexcept
     return a < b ? b : a;
 }
 
-__attribute__((no_sanitize("float-cast-overflow"))) inline constexpr float demote(
-    double value) noexcept
+__attribute__((no_sanitize("float-cast-overflow"))) inline float demote(double value) noexcept
 {
+    // Save current rounding mode.
+    // Negative value denote error. On architectures without rounding mode support glibc always
+    // returns FE_TONEAREST, but there are C standard library implementations that return
+    // error code, e.g. -ENOTSUP.
+    const auto current_rounding_mode = std::fegetround();
+
+    // Fast path if the rounding more is the desired or could not be determined.
+    if (current_rounding_mode == FE_TONEAREST || current_rounding_mode < 0)
+        return static_cast<float>(value);
+
+    // Change rounding mode to "round to nearest tie-to-even" (the default IEEE 754 mode).
+    // The returned status code is ignored because it means the input value is invalid (unlikely)
+    // or the target architecture does not support changing rounding mode.
+    std::fesetround(FE_TONEAREST);
+
     // The float-cast-overflow UBSan check disabled for this conversion. In older clang versions
     // (up to 8.0) it reports a failure when non-infinity f64 value is converted to f32 infinity.
     // Such behavior is expected.
-    return static_cast<float>(value);
+    // The result is volatile to enforce it being computed before the ending std::fesetround().
+    const volatile auto result = static_cast<float>(value);
+
+    // Restore rounding mode. The returned status code also ignored.
+    std::fesetround(current_rounding_mode);
+
+    return result;
 }
 
 std::optional<uint32_t> find_export(const Module& module, ExternalKind kind, std::string_view name)
