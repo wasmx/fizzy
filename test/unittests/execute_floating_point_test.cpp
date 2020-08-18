@@ -11,7 +11,10 @@
 #include <test/utils/floating_point_utils.hpp>
 #include <test/utils/hex.hpp>
 #include <array>
+#include <cfenv>
 #include <cmath>
+
+#pragma STDC FENV_ACCESS ON
 
 using namespace fizzy;
 using namespace fizzy::test;
@@ -94,6 +97,9 @@ class execute_floating_point_types : public testing::Test
 {
 public:
     using L = typename FP<T>::Limits;
+
+    static constexpr auto all_rounding_directions = {
+        FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO};
 
     // The list of positive floating-point values without zeros, infinities and NaNs.
     inline static const std::array positive_special_values{
