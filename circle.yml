@@ -140,13 +140,13 @@ commands:
         default: false
       expected_passed:
         type: integer
-        default: 11409
+        default: 18695
       expected_failed:
         type: integer
         default: 3
       expected_skipped:
         type: integer
-        default: 401
+        default: 681
 
     steps:
       - run:
