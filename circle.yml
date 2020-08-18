@@ -20,7 +20,7 @@ executors:
       - image: ethereum/cpp-build-env:14-clang-10
   macos:
     macos:
-      xcode: 11.5.0
+      xcode: 11.6.0
 
 commands:
   description: "Install macOS system dependencies"
@@ -216,10 +216,31 @@ jobs:
       - build
       - test
 
+  release-native-linux:
+    executor: linux-gcc-latest
+    environment:
+      BUILD_TYPE: Release
+      CMAKE_OPTIONS: -DNATIVE=ON
+    steps:
+      - checkout
+      - build
+      - test
+
   release-macos:
     executor: macos
     environment:
       BUILD_TYPE: Release
+    steps:
+      - install_macos_deps
+      - checkout
+      - build
+      - test
+
+  release-native-macos:
+    executor: macos
+    environment:
+      BUILD_TYPE: Release
+      CMAKE_OPTIONS: -DNATIVE=ON
     steps:
       - install_macos_deps
       - checkout
@@ -401,7 +422,9 @@ workflows:
     jobs:
       - lint
       - release-linux
+      - release-native-linux
       - release-macos
+      - release-native-macos
       - coverage
       - cxx20
       - sanitizers
