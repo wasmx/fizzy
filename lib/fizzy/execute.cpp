@@ -543,7 +543,15 @@ inline T ffloor(T value) noexcept
         return std::numeric_limits<T>::quiet_NaN();  // Positive canonical NaN.
 
     // The FE_INEXACT error is ignored (whenever the implementation reports it at all).
-    return std::floor(value);
+    const auto result = std::floor(value);
+
+    // TODO: GCC BUG WORKAROUND:
+    // GCC implements std::floor() with  __builtin_floor().
+    // When rounding direction is set to FE_DOWNWARD
+    // the __builtin_floor() outputs -0 where it should +0.
+    // The following workarounds the issue by using the fact that the sign of
+    // the output must always match the sign of the input value.
+    return std::copysign(result, value);
 }
 
 template <typename T>
