@@ -565,8 +565,8 @@ __attribute__((no_sanitize("float-cast-overflow"))) inline float demote(double v
     const auto current_rounding_mode = std::fegetround();
 
     // Fast path if the rounding more is the desired or could not be determined.
-    if (current_rounding_mode == FE_TONEAREST || current_rounding_mode < 0)
-        return static_cast<float>(value);
+    //    if (current_rounding_mode == FE_TONEAREST || current_rounding_mode < 0)
+    //        return static_cast<float>(value);
 
     // Change rounding mode to "round to nearest tie-to-even" (the default IEEE 754 mode).
     // The returned status code is ignored because it means the input value is invalid (unlikely)
