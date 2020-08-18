@@ -406,7 +406,7 @@ TEST(validation, load_alignment)
         {Instr::f64_load, 3},
     };
 
-    for (const auto test_case : test_cases)
+    for (const auto& test_case : test_cases)
     {
         const auto instr = test_case.first;
         const auto max_align = test_case.second;
