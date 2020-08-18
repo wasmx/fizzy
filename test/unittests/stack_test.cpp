@@ -19,6 +19,7 @@ TEST(stack, push_and_pop)
     stack.push('b');
     stack.push('c');
 
+    EXPECT_FALSE(stack.empty());
     EXPECT_EQ(stack.size(), 3);
 
     EXPECT_EQ(stack.pop(), 'c');
@@ -40,6 +41,7 @@ TEST(stack, emplace)
     stack.emplace('b');
     stack.emplace('c');
 
+    EXPECT_FALSE(stack.empty());
     EXPECT_EQ(stack.size(), 3);
 
     EXPECT_EQ(stack.pop(), 'c');
@@ -50,123 +52,66 @@ TEST(stack, emplace)
     EXPECT_TRUE(stack.empty());
 }
 
-TEST(stack, drop_and_peek)
-{
-    Stack<char> stack;
-    stack.push('w');
-    stack.push('x');
-    stack.push('y');
-    stack.push('z');
-
-    EXPECT_FALSE(stack.empty());
-    EXPECT_EQ(stack.size(), 4);
-    EXPECT_EQ(stack.top(), 'z');
-    EXPECT_EQ(stack[0], 'z');
-    EXPECT_EQ(stack[1], 'y');
-    EXPECT_EQ(stack[2], 'x');
-    EXPECT_EQ(stack[3], 'w');
-    EXPECT_EQ(stack.size(), 4);
-
-    stack.drop();
-    EXPECT_EQ(stack.size(), 3);
-    EXPECT_EQ(stack.top(), 'y');
-
-    stack.drop(2);
-    EXPECT_EQ(stack.size(), 1);
-    EXPECT_EQ(stack.top(), 'w');
-
-    stack.drop();
-    EXPECT_EQ(stack.size(), 0);
-    EXPECT_TRUE(stack.empty());
-}
-
-TEST(stack, clear)
-{
-    Stack<char> stack;
-    stack.push('a');
-    stack.push('b');
-
-    EXPECT_FALSE(stack.empty());
-    EXPECT_EQ(stack.size(), 2);
-
-    stack.drop(0);
-    EXPECT_FALSE(stack.empty());
-    EXPECT_EQ(stack.size(), 2);
-
-    stack.clear();
-    EXPECT_TRUE(stack.empty());
-    EXPECT_EQ(stack.size(), 0);
-}
-
-TEST(stack, resize)
-{
-    Stack<char> stack;
-    stack.push('a');
-    stack.push('b');
-
-    EXPECT_FALSE(stack.empty());
-    EXPECT_EQ(stack.size(), 2);
-
-    // grow stack
-    stack.resize(4);
-    EXPECT_FALSE(stack.empty());
-    EXPECT_EQ(stack.top(), 0);
-    EXPECT_EQ(stack[1], 0);
-    EXPECT_EQ(stack[2], 'b');
-    EXPECT_EQ(stack[3], 'a');
-    EXPECT_EQ(stack.size(), 4);
-
-    stack.drop();
-    EXPECT_FALSE(stack.empty());
-    EXPECT_EQ(stack.size(), 3);
-
-    // shrink stack
-    stack.resize(1);
-    EXPECT_FALSE(stack.empty());
-    EXPECT_EQ(stack.size(), 1);
-
-    stack.clear();
-    EXPECT_TRUE(stack.empty());
-    EXPECT_EQ(stack.size(), 0);
-
-    // resize and shrink
-    stack.resize(4);
-    EXPECT_EQ(stack.size(), 4);
-    stack.shrink(2);
-    EXPECT_EQ(stack.size(), 2);
-    stack.shrink(0);
-    EXPECT_TRUE(stack.empty());
-    EXPECT_EQ(stack.size(), 0);
-}
-
-TEST(stack, iterator)
+TEST(stack, shrink)
 {
     Stack<char> stack;
     stack.push('a');
     stack.push('b');
     stack.push('c');
+    stack.push('d');
+    EXPECT_EQ(stack.top(), 'd');
+    EXPECT_EQ(stack.size(), 4);
 
-    EXPECT_FALSE(stack.empty());
+    stack.shrink(4);
+    EXPECT_EQ(stack.top(), 'd');
+    EXPECT_EQ(stack.size(), 4);
+
+    stack.shrink(2);
+    EXPECT_EQ(stack.top(), 'b');
+    EXPECT_EQ(stack.size(), 2);
+
+    stack.shrink(0);
+    EXPECT_TRUE(stack.empty());
+    EXPECT_EQ(stack.size(), 0);
+}
+
+TEST(stack, struct_item)
+{
+    struct StackItem
+    {
+        char a, b, c;
+        StackItem() = default;  // required for drop() (which calls resize())
+        StackItem(char _a, char _b, char _c) : a(_a), b(_b), c(_c) {}
+    };
+
+    Stack<StackItem> stack;
+
+    stack.emplace('a', 'b', 'c');
+    stack.emplace('d', 'e', 'f');
+    stack.emplace('g', 'h', 'i');
+
     EXPECT_EQ(stack.size(), 3);
 
-    auto bottom_item = stack.begin();
-    EXPECT_EQ(*bottom_item, 'a');
+    EXPECT_EQ(stack.top().a, 'g');
+    EXPECT_EQ(stack.top().b, 'h');
+    EXPECT_EQ(stack.top().c, 'i');
+    EXPECT_EQ(stack[1].a, 'd');
+    EXPECT_EQ(stack[1].b, 'e');
+    EXPECT_EQ(stack[1].c, 'f');
+    EXPECT_EQ(stack[2].a, 'a');
+    EXPECT_EQ(stack[2].b, 'b');
+    EXPECT_EQ(stack[2].c, 'c');
 
-    auto top_item = stack.end() - 1;
-    EXPECT_EQ(*top_item, 'c');
+    EXPECT_EQ(stack.pop().a, 'g');
 
-    for (auto it = stack.begin(); it < stack.end(); it++)
-        *it = 'x';
-
-    for (unsigned item = 0; item < stack.size(); item++)
-        EXPECT_EQ(stack[item], 'x');
+    EXPECT_EQ(stack.top().a, 'd');
+    EXPECT_EQ(stack.top().b, 'e');
+    EXPECT_EQ(stack.top().c, 'f');
+    EXPECT_EQ(stack[1].a, 'a');
+    EXPECT_EQ(stack[1].b, 'b');
+    EXPECT_EQ(stack[1].c, 'c');
 }
 
-TEST(stack, clear_on_empty)
-{
-    Stack<char> stack;
-    stack.clear();
-}
 
 TEST(operand_stack, construct)
 {
@@ -286,47 +231,4 @@ TEST(operand_stack, to_vector)
     EXPECT_EQ(result[0].i64, 1);
     EXPECT_EQ(result[1].i64, 2);
     EXPECT_EQ(result[2].i64, 3);
-}
-
-TEST(stack, struct_item)
-{
-    struct StackItem
-    {
-        char a, b, c;
-        StackItem() = default;  // required for drop() (which calls resize())
-        StackItem(char _a, char _b, char _c) : a(_a), b(_b), c(_c) {}
-    };
-
-    Stack<StackItem> stack;
-
-    stack.emplace('a', 'b', 'c');
-    stack.emplace('d', 'e', 'f');
-    stack.emplace('g', 'h', 'i');
-
-    EXPECT_EQ(stack.size(), 3);
-
-    EXPECT_EQ(stack.top().a, 'g');
-    EXPECT_EQ(stack.top().b, 'h');
-    EXPECT_EQ(stack.top().c, 'i');
-    EXPECT_EQ(stack[1].a, 'd');
-    EXPECT_EQ(stack[1].b, 'e');
-    EXPECT_EQ(stack[1].c, 'f');
-    EXPECT_EQ(stack[2].a, 'a');
-    EXPECT_EQ(stack[2].b, 'b');
-    EXPECT_EQ(stack[2].c, 'c');
-
-    EXPECT_EQ(stack.pop().a, 'g');
-
-    EXPECT_EQ(stack.top().a, 'd');
-    EXPECT_EQ(stack.top().b, 'e');
-    EXPECT_EQ(stack.top().c, 'f');
-    EXPECT_EQ(stack[1].a, 'a');
-    EXPECT_EQ(stack[1].b, 'b');
-    EXPECT_EQ(stack[1].c, 'c');
-
-    stack.drop();
-
-    EXPECT_EQ(stack.top().a, 'a');
-    EXPECT_EQ(stack.top().b, 'b');
-    EXPECT_EQ(stack.top().c, 'c');
 }
