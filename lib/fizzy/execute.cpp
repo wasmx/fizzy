@@ -15,6 +15,8 @@
 #include <cstring>
 #include <stack>
 
+#include <iostream>
+
 namespace fizzy
 {
 namespace
@@ -564,14 +566,20 @@ __attribute__((no_sanitize("float-cast-overflow"))) inline float demote(double v
     // error code, e.g. -ENOTSUP.
     const auto current_rounding_mode = std::fegetround();
 
+    std::cerr << "current rounding mode: " << current_rounding_mode << "\n";
+
     // Fast path if the rounding more is the desired or could not be determined.
     if (current_rounding_mode == FE_TONEAREST)
+    {
+        std::cerr << "fast path\n";
         return static_cast<float>(value);
+    }
 
     // Change rounding mode to "round to nearest tie-to-even" (the default IEEE 754 mode).
     // The returned status code is ignored because it means the input value is invalid (unlikely)
     // or the target architecture does not support changing rounding mode.
-    std::fesetround(FE_TONEAREST);
+    const auto status_code = std::fesetround(FE_TONEAREST);
+    std::cerr << "fesetround: " << status_code << "\n";
 
     // The float-cast-overflow UBSan check disabled for this conversion. In older clang versions
     // (up to 8.0) it reports a failure when non-infinity f64 value is converted to f32 infinity.
@@ -580,7 +588,8 @@ __attribute__((no_sanitize("float-cast-overflow"))) inline float demote(double v
     const volatile auto result = static_cast<float>(value);
 
     // Restore rounding mode. The returned status code also ignored.
-    std::fesetround(current_rounding_mode);
+    const auto status_code2 = std::fesetround(current_rounding_mode);
+    std::cerr << "fesetround2: " << status_code2 << "\n";
 
     return result;
 }
