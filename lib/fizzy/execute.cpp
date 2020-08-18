@@ -560,6 +560,8 @@ inline constexpr T fmax(T a, T b) noexcept
 
 __attribute__((no_sanitize("float-cast-overflow"))) inline float demote(double value) noexcept
 {
+#pragma STDC FENV_ACCESS ON
+
     // Save current rounding mode.
     // Negative value denote error. On architectures without rounding mode support glibc always
     // returns FE_TONEAREST, but there are C standard library implementations that return
@@ -581,11 +583,18 @@ __attribute__((no_sanitize("float-cast-overflow"))) inline float demote(double v
     const auto status_code = std::fesetround(FE_TONEAREST);
     std::cerr << "fesetround: " << status_code << "\n";
 
+
+    std::cerr << "rounding mode check: " << std::fegetround() << "\n";
+
     // The float-cast-overflow UBSan check disabled for this conversion. In older clang versions
     // (up to 8.0) it reports a failure when non-infinity f64 value is converted to f32 infinity.
     // Such behavior is expected.
     // The result is volatile to enforce it being computed before the ending std::fesetround().
     const volatile auto result = static_cast<float>(value);
+
+
+    std::cerr << "result: " << result << "\n";
+    std::cerr << "rounding mode check2: " << std::fegetround() << "\n";
 
     // Restore rounding mode. The returned status code also ignored.
     const auto status_code2 = std::fesetround(current_rounding_mode);
