@@ -1078,8 +1078,9 @@ TEST(execute_floating_point, f32_demote_f64)
         for (const auto rounding_mode : {FE_DOWNWARD, FE_TONEAREST, FE_TOWARDZERO, FE_UPWARD})
         {
             ASSERT_EQ(std::fesetround(rounding_mode), 0);
-            EXPECT_THAT(execute(*instance, 0, {arg}), Result(expected))
-                << arg << " -> " << expected;
+            const auto result = execute(*instance, 0, {arg});
+            EXPECT_THAT(result, Result(expected)) << int{rounding_mode} << ": " << arg << " -> "
+                                                  << result.value.f32 << ", expected: " << expected;
         }
         ASSERT_EQ(std::fesetround(current_rounding_mode), 0);
     }
