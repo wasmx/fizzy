@@ -141,7 +141,8 @@ TEST(execute, global_get_imported)
     const auto module = parse(wasm);
 
     Value global_value = 42;
-    auto instance = instantiate(module, {}, {}, {}, {ExternalGlobal{&global_value, false}});
+    auto instance =
+        instantiate(module, {}, {}, {}, {ExternalGlobal{&global_value, {ValType::i64, false}}});
 
     EXPECT_THAT(execute(*instance, 0, {}), Result(42));
 
@@ -173,8 +174,8 @@ TEST(execute, global_get_imported_and_internal)
 
     Value g1 = 40;
     Value g2 = 41;
-    auto instance =
-        instantiate(module, {}, {}, {}, {ExternalGlobal{&g1, false}, ExternalGlobal{&g2, false}});
+    auto instance = instantiate(module, {}, {}, {},
+        {ExternalGlobal{&g1, {ValType::i32, false}}, ExternalGlobal{&g2, {ValType::i32, false}}});
 
     EXPECT_THAT(execute(*instance, 0, {}), Result(40));
     EXPECT_THAT(execute(*instance, 1, {}), Result(41));
@@ -204,8 +205,8 @@ TEST(execute, global_get_float)
 
     Value g1 = 5.6f;
     Value g2 = 7.8;
-    auto instance = instantiate(
-        parse(wasm), {}, {}, {}, {ExternalGlobal{&g1, true}, ExternalGlobal{&g2, false}});
+    auto instance = instantiate(parse(wasm), {}, {}, {},
+        {ExternalGlobal{&g1, {ValType::f32, true}}, ExternalGlobal{&g2, {ValType::f64, false}}});
 
     EXPECT_THAT(execute(*instance, 0, {}), Result(5.6f));
     EXPECT_THAT(execute(*instance, 1, {}), Result(7.8));
@@ -266,7 +267,8 @@ TEST(execute, global_set_imported)
         "0061736d01000000010401600000020d01036d6f6404676c6f62037f01030201000a08010600412a24000b");
 
     Value global_value = 41;
-    auto instance = instantiate(parse(wasm), {}, {}, {}, {ExternalGlobal{&global_value, true}});
+    auto instance =
+        instantiate(parse(wasm), {}, {}, {}, {ExternalGlobal{&global_value, {ValType::i32, true}}});
     EXPECT_THAT(execute(*instance, 0, {}), Result());
     EXPECT_EQ(global_value, 42);
 }
@@ -291,8 +293,8 @@ TEST(execute, global_set_float)
 
     Value g1 = 5.6f;
     Value g2 = 7.8;
-    auto instance = instantiate(
-        parse(wasm), {}, {}, {}, {ExternalGlobal{&g1, true}, ExternalGlobal{&g2, true}});
+    auto instance = instantiate(parse(wasm), {}, {}, {},
+        {ExternalGlobal{&g1, {ValType::f32, true}}, ExternalGlobal{&g2, {ValType::f64, true}}});
 
     EXPECT_THAT(execute(*instance, 0, {}), Result());
     EXPECT_EQ(g1.f32, 11.22f);

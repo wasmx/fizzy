@@ -135,9 +135,12 @@ void match_imported_globals(const std::vector<GlobalType>& module_imported_globa
 
     for (size_t i = 0; i < imported_globals.size(); ++i)
     {
-        // TODO: match value type
-
-        if (imported_globals[i].is_mutable != module_imported_globals[i].is_mutable)
+        if (imported_globals[i].type.value_type != module_imported_globals[i].value_type)
+        {
+            throw instantiate_error{
+                "global " + std::to_string(i) + " value type doesn't match module's global type"};
+        }
+        if (imported_globals[i].type.is_mutable != module_imported_globals[i].is_mutable)
         {
             throw instantiate_error{"global " + std::to_string(i) +
                                     " mutability doesn't match module's global mutability"};
@@ -950,7 +953,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             const auto idx = read<uint32_t>(immediates);
             if (idx < instance.imported_globals.size())
             {
-                assert(instance.imported_globals[idx].is_mutable);
+                assert(instance.imported_globals[idx].type.is_mutable);
                 *instance.imported_globals[idx].value = stack.pop();
             }
             else
@@ -2011,14 +2014,14 @@ std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::stri
     {
         // imported global is reexported
         return ExternalGlobal{instance.imported_globals[global_idx].value,
-            instance.imported_globals[global_idx].is_mutable};
+            instance.imported_globals[global_idx].type};
     }
     else
     {
         // global owned by instance
         const auto module_global_idx = global_idx - instance.imported_globals.size();
         return ExternalGlobal{&instance.globals[module_global_idx],
-            instance.module.globalsec[module_global_idx].type.is_mutable};
+            instance.module.globalsec[module_global_idx].type};
     }
 }
 
