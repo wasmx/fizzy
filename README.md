@@ -8,7 +8,7 @@
 [![codecov badge]][codecov]
 [![license badge]][Apache License, Version 2.0]
 
-Fizzy aims to be a fast integer-only WebAssembly interpreter written in C++.
+Fizzy aims to be a fast, deterministic, and pedantic WebAssembly interpreter written in C++.
 
 ## Goals
 
@@ -17,14 +17,17 @@ I) Code quality
 - [ ] Easily embeddable (*and take part of the standardisation of the "C/C++ embedding API"*)
 
 II) Simplicity
+- [x] Only implement WebAssembly 1.0 (and none of the proposals)
 - [x] Interpreter only
-- [x] Provide no support for floating point operations (initially)
 - [x] Support only WebAssembly binary encoding as an input (no support for the text format (`.wat`/`.wast`))
 
 III) Conformance
-- [ ] Should pass the official WebAssembly test suite
+- [x] Should have 99+% unit test coverage
+- [x] Should pass the official WebAssembly test suite
+- [x] Should have stricter tests than the official test suite
 
 IV) First class support for determistic applications (*blockchain*)
+- [ ] Support canonical handling of floating point (i.e. NaNs stricter than in the spec)
 - [ ] Support an efficient big integer API (256-bit and perhaps 384-bit)
 - [ ] Support optional runtime metering in the interpreter
 - [ ] Support enforcing a call depth bound
