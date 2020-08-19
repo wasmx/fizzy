@@ -69,6 +69,38 @@ Follow [this guide](./test/spectests/README.md) for using the tool.
 
 This is the unit tests suite of Fizzy.
 
+## Special notes about floating point
+
+### Exceptions
+
+Certain floating point operations can emit *exceptions* as defined by the IEEE 754 standard.
+(Here is a [summary from the GNU C Library](https://www.gnu.org/software/libc/manual/html_node/FP-Exceptions.html)).
+It is however up to the language how these manifest, and in C/C++ depending on the settings they can result in
+a) setting of a flag; b) or in *traps*, such as the `SIGFPE` signal.
+
+Fizzy does not manipulate this setting, but expects it to be left at option a) of above, which is the default.
+In the GNU C Library this can be controlled via the [`feenableexcept` and `fedisableexcept` functions](https://www.gnu.org/savannah-checkouts/gnu/libc/manual/html_node/Control-Functions.html).
+
+The user of the Fizzy library has to ensure this is not set to *trap* mode.
+The behavior with traps enabled is unpredictable and correct behaviour is not guaranteed, thus we strongly advise against using them.
+
+### Rounding
+
+The IEEE 754 standard defines four rounding directions (or modes):
+- to nearest, tie to even (default),
+- toward -∞ (rounding down),
+- toward +∞ (rounding up),
+- toward  0 (truncation).
+
+The WebAssembly specification expects the default, "to nearest", rounding mode for instructions
+whose result can be influenced by rounding.
+
+Fizzy does not manipulate this setting, and expects the same rounding mode as WebAssembly,
+otherwise the result of some instructions may be different.
+In the GNU C Library the rounding mode can be controlled via the [`fesetround` and `fegetround` functions](https://www.gnu.org/software/libc/manual/html_node/Rounding.html).
+
+If strict compliance is sought with WebAssembly, then the user of Fizzy must ensure to keep the default rounding mode.
+
 ## Releases
 
 For a list of releases and changelog see the [CHANGELOG file](./CHANGELOG.md).
