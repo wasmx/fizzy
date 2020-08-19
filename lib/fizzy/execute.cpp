@@ -525,6 +525,47 @@ inline uint64_t popcnt64(uint64_t value) noexcept
 }
 
 template <typename T>
+inline T fceil(T value) noexcept
+{
+    static_assert(std::is_floating_point_v<T>);
+    if (std::isnan(value))
+        return std::numeric_limits<T>::quiet_NaN();  // Positive canonical NaN.
+
+    // The FE_INEXACT error is ignored (whenever the implementation reports it at all).
+    return std::ceil(value);
+}
+
+template <typename T>
+inline T ffloor(T value) noexcept
+{
+    static_assert(std::is_floating_point_v<T>);
+    if (std::isnan(value))
+        return std::numeric_limits<T>::quiet_NaN();  // Positive canonical NaN.
+
+    // The FE_INEXACT error is ignored (whenever the implementation reports it at all).
+    const auto result = std::floor(value);
+
+    // TODO: GCC BUG WORKAROUND:
+    // GCC implements std::floor() with  __builtin_floor().
+    // When rounding direction is set to FE_DOWNWARD
+    // the __builtin_floor() outputs -0 where it should +0.
+    // The following workarounds the issue by using the fact that the sign of
+    // the output must always match the sign of the input value.
+    return std::copysign(result, value);
+}
+
+template <typename T>
+inline T ftrunc(T value) noexcept
+{
+    static_assert(std::is_floating_point_v<T>);
+    if (std::isnan(value))
+        return std::numeric_limits<T>::quiet_NaN();  // Positive canonical NaN.
+
+    // The FE_INEXACT error is ignored (whenever the implementation reports it at all).
+    return std::trunc(value);
+}
+
+template <typename T>
 __attribute__((no_sanitize("float-divide-by-zero"))) inline constexpr T fdiv(T a, T b) noexcept
 {
     static_assert(std::numeric_limits<T>::is_iec559);
@@ -535,7 +576,7 @@ template <typename T>
 inline constexpr T fmin(T a, T b) noexcept
 {
     if (std::isnan(a) || std::isnan(b))
-        return std::numeric_limits<T>::quiet_NaN();
+        return std::numeric_limits<T>::quiet_NaN();  // Positive canonical NaN.
 
     if (a == 0 && b == 0 && (std::signbit(a) == 1 || std::signbit(b) == 1))
         return -T{0};
@@ -547,7 +588,7 @@ template <typename T>
 inline constexpr T fmax(T a, T b) noexcept
 {
     if (std::isnan(a) || std::isnan(b))
-        return std::numeric_limits<T>::quiet_NaN();
+        return std::numeric_limits<T>::quiet_NaN();  // Positive canonical NaN.
 
     if (a == 0 && b == 0 && (std::signbit(a) == 0 || std::signbit(b) == 0))
         return T{0};
@@ -1586,11 +1627,27 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             unary_op(stack, std::negate<float>{});
             break;
         }
+        case Instr::f32_ceil:
+        {
+            unary_op(stack, fceil<float>);
+            break;
+        }
+        case Instr::f32_floor:
+        {
+            unary_op(stack, ffloor<float>);
+            break;
+        }
+        case Instr::f32_trunc:
+        {
+            unary_op(stack, ftrunc<float>);
+            break;
+        }
         case Instr::f32_sqrt:
         {
             unary_op(stack, static_cast<float (*)(float)>(std::sqrt));
             break;
         }
+
         case Instr::f32_add:
         {
             binary_op(stack, std::plus<float>{});
@@ -1643,11 +1700,27 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             unary_op(stack, std::negate<double>{});
             break;
         }
+        case Instr::f64_ceil:
+        {
+            unary_op(stack, fceil<double>);
+            break;
+        }
+        case Instr::f64_floor:
+        {
+            unary_op(stack, ffloor<double>);
+            break;
+        }
+        case Instr::f64_trunc:
+        {
+            unary_op(stack, ftrunc<double>);
+            break;
+        }
         case Instr::f64_sqrt:
         {
             unary_op(stack, static_cast<double (*)(double)>(std::sqrt));
             break;
         }
+
         case Instr::f64_add:
         {
             binary_op(stack, std::plus<double>{});
@@ -1843,13 +1916,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             break;
         }
 
-        case Instr::f32_ceil:
-        case Instr::f32_floor:
-        case Instr::f32_trunc:
         case Instr::f32_nearest:
-        case Instr::f64_ceil:
-        case Instr::f64_floor:
-        case Instr::f64_trunc:
         case Instr::f64_nearest:
             throw unsupported_feature("Floating point instruction.");
         default:
