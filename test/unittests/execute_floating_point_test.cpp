@@ -1224,41 +1224,51 @@ TEST(execute_floating_point, f64_promote_f32)
         {-FP32::nan(FP32::canon), -FP64::nan(FP64::canon)},
     };
 
-    for (const auto& [arg, expected] : test_cases)
+    ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+    for (const auto rounding_direction :
+        execute_floating_point_types<float>::all_rounding_directions)
     {
-        EXPECT_THAT(execute(*instance, 0, {arg}), Result(expected)) << arg << " -> " << expected;
+        ASSERT_EQ(std::fesetround(rounding_direction), 0);
+        SCOPED_TRACE(rounding_direction);
+
+        for (const auto& [arg, expected] : test_cases)
+        {
+            EXPECT_THAT(execute(*instance, 0, {arg}), Result(expected))
+                << arg << " -> " << expected;
+        }
+
+        // Check arithmetic NaNs (payload >= canonical payload).
+        // The following check expect arithmetic NaNs. Canonical NaNs are arithmetic NaNs
+        // and are allowed by the spec in these situations, but our checks are more restrictive
+
+        // An arithmetic NaN must result in any arithmetic NaN.
+        const auto res1 = execute(*instance, 0, {FP32::nan(FP32::canon + 1)});
+        ASSERT_TRUE(!res1.trapped && res1.has_value);
+        EXPECT_EQ(std::signbit(res1.value.f64), 0);
+        EXPECT_GT(FP{res1.value.f64}.nan_payload(), FP64::canon);
+        const auto res2 = execute(*instance, 0, {-FP32::nan(FP32::canon + 1)});
+        ASSERT_TRUE(!res2.trapped && res2.has_value);
+        EXPECT_EQ(std::signbit(res2.value.f64), 1);
+        EXPECT_GT(FP{res2.value.f64}.nan_payload(), FP64::canon);
+
+        // Other NaN must also result in arithmetic NaN.
+        const auto res3 = execute(*instance, 0, {FP32::nan(1)});
+        ASSERT_TRUE(!res3.trapped && res3.has_value);
+        EXPECT_EQ(std::signbit(res3.value.f64), 0);
+        EXPECT_GT(FP{res3.value.f64}.nan_payload(), FP64::canon);
+        const auto res4 = execute(*instance, 0, {-FP32::nan(1)});
+        ASSERT_TRUE(!res4.trapped && res4.has_value);
+        EXPECT_EQ(std::signbit(res4.value.f64), 1);
+        EXPECT_GT(FP{res4.value.f64}.nan_payload(), FP64::canon);
+
+        // Any input NaN other than canonical must result in an arithmetic NaN.
+        for (const auto nan : execute_floating_point_types<float>::positive_noncanonical_nans)
+        {
+            EXPECT_THAT(execute(*instance, 0, {nan}), ArithmeticNaN(double{}));
+            EXPECT_THAT(execute(*instance, 0, {-nan}), ArithmeticNaN(double{}));
+        }
     }
-
-    // Check arithmetic NaNs (payload >= canonical payload).
-    // The following check expect arithmetic NaNs. Canonical NaNs are arithmetic NaNs
-    // and are allowed by the spec in these situations, but our checks are more restrictive
-
-    // An arithmetic NaN must result in any arithmetic NaN.
-    const auto res1 = execute(*instance, 0, {FP32::nan(FP32::canon + 1)});
-    ASSERT_TRUE(!res1.trapped && res1.has_value);
-    EXPECT_EQ(std::signbit(res1.value.f64), 0);
-    EXPECT_GT(FP{res1.value.f64}.nan_payload(), FP64::canon);
-    const auto res2 = execute(*instance, 0, {-FP32::nan(FP32::canon + 1)});
-    ASSERT_TRUE(!res2.trapped && res2.has_value);
-    EXPECT_EQ(std::signbit(res2.value.f64), 1);
-    EXPECT_GT(FP{res2.value.f64}.nan_payload(), FP64::canon);
-
-    // Other NaN must also result in arithmetic NaN.
-    const auto res3 = execute(*instance, 0, {FP32::nan(1)});
-    ASSERT_TRUE(!res3.trapped && res3.has_value);
-    EXPECT_EQ(std::signbit(res3.value.f64), 0);
-    EXPECT_GT(FP{res3.value.f64}.nan_payload(), FP64::canon);
-    const auto res4 = execute(*instance, 0, {-FP32::nan(1)});
-    ASSERT_TRUE(!res4.trapped && res4.has_value);
-    EXPECT_EQ(std::signbit(res4.value.f64), 1);
-    EXPECT_GT(FP{res4.value.f64}.nan_payload(), FP64::canon);
-
-    // Any input NaN other than canonical must result in an arithmetic NaN.
-    for (const auto nan : execute_floating_point_types<float>::positive_noncanonical_nans)
-    {
-        EXPECT_THAT(execute(*instance, 0, {nan}), ArithmeticNaN(double{}));
-        EXPECT_THAT(execute(*instance, 0, {-nan}), ArithmeticNaN(double{}));
-    }
+    ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
 }
 
 TEST(execute_floating_point, f32_demote_f64)
