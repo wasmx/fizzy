@@ -10,6 +10,7 @@
 #include "types.hpp"
 #include <algorithm>
 #include <cassert>
+#include <cfenv>
 #include <cmath>
 #include <cstring>
 #include <stack>
@@ -577,6 +578,46 @@ inline T ftrunc(T value) noexcept
 
     // The FE_INEXACT error is ignored (whenever the implementation reports it at all).
     return std::trunc(value);
+}
+
+template <typename T>
+T fnearest(T value) noexcept
+{
+    static_assert(std::is_floating_point_v<T>);
+
+    // This seems not to be needed for the tested implementations of std::nearbyint(),
+    // but C/C++ specification for this function does not guarantee returning arithmetic NaN.
+    if (std::isnan(value))
+        return std::numeric_limits<T>::quiet_NaN();  // Positive canonical NaN.
+
+    // This implementation uses std::nearbyint() which rounds to integer using current rounding
+    // direction. The rounding direction is temporarily set to "to nearest" for the case when
+    // the current rounding direction is different.
+
+    // The future C standard has roundeven() function which is much better for the job.
+    // But not generally available yet. Glibc has it already. GCC 10 has __builtin_roundeven().
+    // The LLVM has @llvm.roundeven intrinsic, but seems not to be exposed in Clang yet.
+
+    // Save the current rounding direction. This may be invalid negative value meaning a failure
+    // (probably due to changing rounding direction not being supported on the platform).
+    // volatile is used to prevent calls reordering by the compiler.
+    const volatile auto current_rounding_direction = std::fegetround();
+
+    // Temporarily change the rounding direction to "to nearest" if needed.
+    if (current_rounding_direction != FE_TONEAREST)
+    {
+        [[maybe_unused]] const auto set_succeeded = std::fesetround(FE_TONEAREST);
+        assert(set_succeeded == 0);
+    }
+
+    // volatile is used to prevent compiler from moving the last std::fesetround() before.
+    const volatile auto result = std::nearbyint(value);
+
+    // Reset the rounding direction if we know the previous value and it was actually modified.
+    if (current_rounding_direction >= 0 && current_rounding_direction != FE_TONEAREST)
+        std::fesetround(current_rounding_direction);
+
+    return result;
 }
 
 template <typename T>
@@ -1661,6 +1702,11 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             unary_op(stack, ftrunc<float>);
             break;
         }
+        case Instr::f32_nearest:
+        {
+            unary_op(stack, fnearest<float>);
+            break;
+        }
         case Instr::f32_sqrt:
         {
             unary_op(stack, static_cast<float (*)(float)>(std::sqrt));
@@ -1732,6 +1778,11 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
         case Instr::f64_trunc:
         {
             unary_op(stack, ftrunc<double>);
+            break;
+        }
+        case Instr::f64_nearest:
+        {
+            unary_op(stack, fnearest<double>);
             break;
         }
         case Instr::f64_sqrt:
@@ -1935,9 +1986,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             break;
         }
 
-        case Instr::f32_nearest:
-        case Instr::f64_nearest:
-            throw unsupported_feature("Floating point instruction.");
         default:
             assert(false);
             break;
