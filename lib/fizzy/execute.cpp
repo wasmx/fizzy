@@ -367,6 +367,8 @@ inline void convert(OperandStack& stack) noexcept
 template <typename SrcT, typename DstT>
 inline void reinterpret(OperandStack& stack) noexcept
 {
+    static_assert(std::is_integral_v<SrcT> == std::is_floating_point_v<DstT> ||
+                  std::is_floating_point_v<SrcT> == std::is_integral_v<DstT>);
     static_assert(sizeof(SrcT) == sizeof(DstT));
     const auto src = stack.top().as<SrcT>();
     DstT dst;
@@ -397,6 +399,7 @@ inline DstT shrink(Value value) noexcept
         return value.as<DstT>();
     else
     {
+        static_assert(std::is_integral_v<DstT>);
         // Could use `.as<DstT>()` would we have overloads for uint8_t/uint16_t,
         // however it does not seem to be worth it for this single occasion.
         return static_cast<DstT>(value.i64);
@@ -448,6 +451,8 @@ inline void comparison_op(OperandStack& stack, Op<T> op) noexcept
 template <typename T>
 inline T shift_left(T lhs, T rhs) noexcept
 {
+    static_assert(std::is_integral_v<T>);
+
     constexpr T num_bits{sizeof(T) * 8};
     const auto k = rhs & (num_bits - 1);
     return lhs << k;
@@ -456,6 +461,8 @@ inline T shift_left(T lhs, T rhs) noexcept
 template <typename T>
 inline T shift_right(T lhs, T rhs) noexcept
 {
+    static_assert(std::is_integral_v<T>);
+
     constexpr T num_bits{sizeof(T) * 8};
     const auto k = rhs & (num_bits - 1);
     return lhs >> k;
@@ -464,6 +471,8 @@ inline T shift_right(T lhs, T rhs) noexcept
 template <typename T>
 inline T rotl(T lhs, T rhs) noexcept
 {
+    static_assert(std::is_integral_v<T>);
+
     constexpr T num_bits{sizeof(T) * 8};
     const auto k = rhs & (num_bits - 1);
 
@@ -476,6 +485,8 @@ inline T rotl(T lhs, T rhs) noexcept
 template <typename T>
 inline T rotr(T lhs, T rhs) noexcept
 {
+    static_assert(std::is_integral_v<T>);
+
     constexpr T num_bits{sizeof(T) * 8};
     const auto k = rhs & (num_bits - 1);
 
@@ -571,6 +582,7 @@ inline T ftrunc(T value) noexcept
 template <typename T>
 __attribute__((no_sanitize("float-divide-by-zero"))) inline constexpr T fdiv(T a, T b) noexcept
 {
+    static_assert(std::is_floating_point_v<T>);
     static_assert(std::numeric_limits<T>::is_iec559);
     return a / b;  // For IEC 559 (IEEE 754) floating-point types division by 0 is defined.
 }
@@ -578,6 +590,8 @@ __attribute__((no_sanitize("float-divide-by-zero"))) inline constexpr T fdiv(T a
 template <typename T>
 inline constexpr T fmin(T a, T b) noexcept
 {
+    static_assert(std::is_floating_point_v<T>);
+
     if (std::isnan(a) || std::isnan(b))
         return std::numeric_limits<T>::quiet_NaN();  // Positive canonical NaN.
 
@@ -590,6 +604,8 @@ inline constexpr T fmin(T a, T b) noexcept
 template <typename T>
 inline constexpr T fmax(T a, T b) noexcept
 {
+    static_assert(std::is_floating_point_v<T>);
+
     if (std::isnan(a) || std::isnan(b))
         return std::numeric_limits<T>::quiet_NaN();  // Positive canonical NaN.
 
