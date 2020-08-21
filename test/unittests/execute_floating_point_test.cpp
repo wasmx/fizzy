@@ -427,52 +427,60 @@ TYPED_TEST(execute_floating_point_types, compare)
         "20015b0b0700200020015c0b0700200020015d0b0700200020015e0b0700200020015f0b070020002001600b07"
         "0020002001610b070020002001620b070020002001630b070020002001640b070020002001650b070020002001"
         "660b");
-    auto inst = instantiate(parse(wasm));
+    auto instance = instantiate(parse(wasm));
 
     constexpr FuncIdx func_offset = std::is_same_v<TypeParam, float> ? 0 : 6;
-    constexpr auto eq = func_offset + 0;
-    constexpr auto ne = func_offset + 1;
-    constexpr auto lt = func_offset + 2;
-    constexpr auto gt = func_offset + 3;
-    constexpr auto le = func_offset + 4;
-    constexpr auto ge = func_offset + 5;
+    const auto eq = [&](auto a, auto b) { return execute(*instance, func_offset + 0, {a, b}); };
+    const auto ne = [&](auto a, auto b) { return execute(*instance, func_offset + 1, {a, b}); };
+    const auto lt = [&](auto a, auto b) { return execute(*instance, func_offset + 2, {a, b}); };
+    const auto gt = [&](auto a, auto b) { return execute(*instance, func_offset + 3, {a, b}); };
+    const auto le = [&](auto a, auto b) { return execute(*instance, func_offset + 4, {a, b}); };
+    const auto ge = [&](auto a, auto b) { return execute(*instance, func_offset + 5, {a, b}); };
 
-    // Check every pair from cartesian product of ordered_values.
-    for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
+    ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+    for (const auto rounding_direction : this->all_rounding_directions)
     {
-        for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
+        ASSERT_EQ(std::fesetround(rounding_direction), 0);
+        SCOPED_TRACE(rounding_direction);
+
+        // Check every pair from cartesian product of ordered_values.
+        for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
         {
-            const auto a = this->ordered_special_values[i];
-            const auto b = this->ordered_special_values[j];
-            if (std::isnan(a) || std::isnan(b))
+            for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
             {
-                EXPECT_THAT(execute(*inst, eq, {a, b}), Result(0)) << a << "==" << b;
-                EXPECT_THAT(execute(*inst, ne, {a, b}), Result(1)) << a << "!=" << b;
-                EXPECT_THAT(execute(*inst, lt, {a, b}), Result(0)) << a << "<" << b;
-                EXPECT_THAT(execute(*inst, gt, {a, b}), Result(0)) << a << ">" << b;
-                EXPECT_THAT(execute(*inst, le, {a, b}), Result(0)) << a << "<=" << b;
-                EXPECT_THAT(execute(*inst, ge, {a, b}), Result(0)) << a << ">=" << b;
-            }
-            else
-            {
-                EXPECT_THAT(execute(*inst, eq, {a, b}), Result(uint32_t{i == j})) << a << "==" << b;
-                EXPECT_THAT(execute(*inst, ne, {a, b}), Result(uint32_t{i != j})) << a << "!=" << b;
-                EXPECT_THAT(execute(*inst, lt, {a, b}), Result(uint32_t{i < j})) << a << "<" << b;
-                EXPECT_THAT(execute(*inst, gt, {a, b}), Result(uint32_t{i > j})) << a << ">" << b;
-                EXPECT_THAT(execute(*inst, le, {a, b}), Result(uint32_t{i <= j})) << a << "<=" << b;
-                EXPECT_THAT(execute(*inst, ge, {a, b}), Result(uint32_t{i >= j})) << a << ">=" << b;
+                const auto a = this->ordered_special_values[i];
+                const auto b = this->ordered_special_values[j];
+                if (std::isnan(a) || std::isnan(b))
+                {
+                    EXPECT_THAT(eq(a, b), Result(0)) << a << "==" << b;
+                    EXPECT_THAT(ne(a, b), Result(1)) << a << "!=" << b;
+                    EXPECT_THAT(lt(a, b), Result(0)) << a << "<" << b;
+                    EXPECT_THAT(gt(a, b), Result(0)) << a << ">" << b;
+                    EXPECT_THAT(le(a, b), Result(0)) << a << "<=" << b;
+                    EXPECT_THAT(ge(a, b), Result(0)) << a << ">=" << b;
+                }
+                else
+                {
+                    EXPECT_THAT(eq(a, b), Result(uint32_t{i == j})) << a << "==" << b;
+                    EXPECT_THAT(ne(a, b), Result(uint32_t{i != j})) << a << "!=" << b;
+                    EXPECT_THAT(lt(a, b), Result(uint32_t{i < j})) << a << "<" << b;
+                    EXPECT_THAT(gt(a, b), Result(uint32_t{i > j})) << a << ">" << b;
+                    EXPECT_THAT(le(a, b), Result(uint32_t{i <= j})) << a << "<=" << b;
+                    EXPECT_THAT(ge(a, b), Result(uint32_t{i >= j})) << a << ">=" << b;
+                }
             }
         }
-    }
 
-    // Negative zero. This is separate set of checks because -0.0 cannot be placed
-    // in the ordered_values array as -0.0 == 0.0.
-    EXPECT_THAT(execute(*inst, eq, {TypeParam{-0.0}, TypeParam{0.0}}), Result(1));
-    EXPECT_THAT(execute(*inst, ne, {TypeParam{-0.0}, TypeParam{0.0}}), Result(0));
-    EXPECT_THAT(execute(*inst, lt, {TypeParam{-0.0}, TypeParam{0.0}}), Result(0));
-    EXPECT_THAT(execute(*inst, gt, {TypeParam{-0.0}, TypeParam{0.0}}), Result(0));
-    EXPECT_THAT(execute(*inst, le, {TypeParam{-0.0}, TypeParam{0.0}}), Result(1));
-    EXPECT_THAT(execute(*inst, ge, {TypeParam{-0.0}, TypeParam{0.0}}), Result(1));
+        // Negative zero. This is separate set of checks because -0.0 cannot be placed
+        // in the ordered_values array as -0.0 == 0.0.
+        EXPECT_THAT(eq(TypeParam{-0.0}, TypeParam{0.0}), Result(1));
+        EXPECT_THAT(ne(TypeParam{-0.0}, TypeParam{0.0}), Result(0));
+        EXPECT_THAT(lt(TypeParam{-0.0}, TypeParam{0.0}), Result(0));
+        EXPECT_THAT(gt(TypeParam{-0.0}, TypeParam{0.0}), Result(0));
+        EXPECT_THAT(le(TypeParam{-0.0}, TypeParam{0.0}), Result(1));
+        EXPECT_THAT(ge(TypeParam{-0.0}, TypeParam{0.0}), Result(1));
+    }
+    ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
 }
 
 TYPED_TEST(execute_floating_point_types, abs)
