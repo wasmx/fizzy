@@ -497,12 +497,20 @@ TYPED_TEST(execute_floating_point_types, abs)
         {TypeParam{0}, Limits::infinity(), FP::nan(FP::canon), FP::nan(FP::canon + 1), FP::nan(1)})
         p_values.push_back(x);
 
-    for (const auto p : p_values)
+    ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+    for (const auto rounding_direction : this->all_rounding_directions)
     {
-        // fabs(+-p) = +p
-        EXPECT_THAT(exec(p), Result(p));
-        EXPECT_THAT(exec(-p), Result(p));
+        ASSERT_EQ(std::fesetround(rounding_direction), 0);
+        SCOPED_TRACE(rounding_direction);
+
+        for (const auto p : p_values)
+        {
+            // fabs(+-p) = +p
+            EXPECT_THAT(exec(p), Result(p));
+            EXPECT_THAT(exec(-p), Result(p));
+        }
     }
+    ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
 }
 
 TYPED_TEST(execute_floating_point_types, neg)
@@ -519,12 +527,19 @@ TYPED_TEST(execute_floating_point_types, neg)
         {TypeParam{0}, Limits::infinity(), FP::nan(FP::canon), FP::nan(FP::canon + 1), FP::nan(1)})
         p_values.push_back(x);
 
-    for (const auto p : p_values)
+    ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+    for (const auto rounding_direction : this->all_rounding_directions)
     {
-        // fneg(+-p) = -+p
-        EXPECT_THAT(exec(p), Result(-p));
-        EXPECT_THAT(exec(-p), Result(p));
+        ASSERT_EQ(std::fesetround(rounding_direction), 0);
+        SCOPED_TRACE(rounding_direction);
+        for (const auto p : p_values)
+        {
+            // fneg(+-p) = -+p
+            EXPECT_THAT(exec(p), Result(-p));
+            EXPECT_THAT(exec(-p), Result(p));
+        }
     }
+    ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
 }
 
 TYPED_TEST(execute_floating_point_types, ceil)
