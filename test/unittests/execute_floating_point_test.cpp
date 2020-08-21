@@ -1387,12 +1387,20 @@ TYPED_TEST(execute_floating_point_types, reinterpret)
     const auto func_float_to_int = std::is_same_v<TypeParam, float> ? 0 : 1;
     const auto func_int_to_float = std::is_same_v<TypeParam, float> ? 2 : 3;
 
-    for (const auto float_value : this->ordered_special_values)
+    ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+    for (const auto rounding_direction : this->all_rounding_directions)
     {
-        const auto uint_value = FP<TypeParam>{float_value}.as_uint();
-        EXPECT_THAT(execute(*instance, func_float_to_int, {float_value}), Result(uint_value));
-        EXPECT_THAT(execute(*instance, func_int_to_float, {uint_value}), Result(float_value));
+        ASSERT_EQ(std::fesetround(rounding_direction), 0);
+        SCOPED_TRACE(rounding_direction);
+
+        for (const auto float_value : this->ordered_special_values)
+        {
+            const auto uint_value = FP<TypeParam>{float_value}.as_uint();
+            EXPECT_THAT(execute(*instance, func_float_to_int, {float_value}), Result(uint_value));
+            EXPECT_THAT(execute(*instance, func_int_to_float, {uint_value}), Result(float_value));
+        }
     }
+    ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
 }
 
 
