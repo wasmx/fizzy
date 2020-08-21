@@ -1058,44 +1058,52 @@ TYPED_TEST(execute_floating_point_types, min)
     auto instance = instantiate(parse(this->get_binop_code(Instr::f32_min)));
     const auto exec = [&](auto arg1, auto arg2) { return execute(*instance, 0, {arg1, arg2}); };
 
-    for (const auto z : this->ordered_special_values)
+    ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+    for (const auto rounding_direction : this->all_rounding_directions)
     {
-        if (std::isnan(z))
-            continue;
+        ASSERT_EQ(std::fesetround(rounding_direction), 0);
+        SCOPED_TRACE(rounding_direction);
 
-        // fmin(+inf, z2) = z2
-        EXPECT_THAT(exec(Limits::infinity(), z), Result(z));
-
-        // fmin(-inf, z2) = -inf
-        EXPECT_THAT(exec(-Limits::infinity(), z), Result(-Limits::infinity()));
-
-        // fmin(z1, +inf) = z1
-        EXPECT_THAT(exec(z, Limits::infinity()), Result(z));
-
-        // fmin(z1, -inf) = -inf
-        EXPECT_THAT(exec(z, -Limits::infinity()), Result(-Limits::infinity()));
-    }
-
-    // fmin(+-0, -+0) = -0
-    EXPECT_THAT(exec(TypeParam{0}, -TypeParam{0}), Result(-TypeParam{0}));
-    EXPECT_THAT(exec(-TypeParam{0}, TypeParam{0}), Result(-TypeParam{0}));
-    EXPECT_THAT(exec(-TypeParam{0}, -TypeParam{0}), Result(-TypeParam{0}));
-
-    // Check every pair from cartesian product of the list of values.
-    // fmin(z1, z2) = z1  (if z1 <= z2)
-    // fmin(z1, z2) = z2  (if z2 <= z1)
-    for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
-    {
-        for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
+        for (const auto z : this->ordered_special_values)
         {
-            const auto a = this->ordered_special_values[i];
-            const auto b = this->ordered_special_values[j];
-            if (!std::isnan(a) && !std::isnan(b))
+            if (std::isnan(z))
+                continue;
+
+            // fmin(+inf, z2) = z2
+            EXPECT_THAT(exec(Limits::infinity(), z), Result(z));
+
+            // fmin(-inf, z2) = -inf
+            EXPECT_THAT(exec(-Limits::infinity(), z), Result(-Limits::infinity()));
+
+            // fmin(z1, +inf) = z1
+            EXPECT_THAT(exec(z, Limits::infinity()), Result(z));
+
+            // fmin(z1, -inf) = -inf
+            EXPECT_THAT(exec(z, -Limits::infinity()), Result(-Limits::infinity()));
+        }
+
+        // fmin(+-0, -+0) = -0
+        EXPECT_THAT(exec(TypeParam{0}, -TypeParam{0}), Result(-TypeParam{0}));
+        EXPECT_THAT(exec(-TypeParam{0}, TypeParam{0}), Result(-TypeParam{0}));
+        EXPECT_THAT(exec(-TypeParam{0}, -TypeParam{0}), Result(-TypeParam{0}));
+
+        // Check every pair from cartesian product of the list of values.
+        // fmin(z1, z2) = z1  (if z1 <= z2)
+        // fmin(z1, z2) = z2  (if z2 <= z1)
+        for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
+        {
+            for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
             {
-                EXPECT_THAT(exec(a, b), Result(i < j ? a : b)) << a << ", " << b;
+                const auto a = this->ordered_special_values[i];
+                const auto b = this->ordered_special_values[j];
+                if (!std::isnan(a) && !std::isnan(b))
+                {
+                    EXPECT_THAT(exec(a, b), Result(i < j ? a : b)) << a << ", " << b;
+                }
             }
         }
     }
+    ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
 }
 
 TYPED_TEST(execute_floating_point_types, max)
@@ -1104,45 +1112,52 @@ TYPED_TEST(execute_floating_point_types, max)
 
     auto instance = instantiate(parse(this->get_binop_code(Instr::f32_max)));
     const auto exec = [&](auto arg1, auto arg2) { return execute(*instance, 0, {arg1, arg2}); };
-
-    for (const auto z : this->ordered_special_values)
+    ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+    for (const auto rounding_direction : this->all_rounding_directions)
     {
-        if (std::isnan(z))
-            continue;
-
-        // fmax(+inf, z2) = +inf
-        EXPECT_THAT(exec(Limits::infinity(), z), Result(Limits::infinity()));
-
-        // fmax(-inf, z2) = z2
-        EXPECT_THAT(exec(-Limits::infinity(), z), Result(z));
-
-        // fmax(z1, +inf) = +inf
-        EXPECT_THAT(exec(z, Limits::infinity()), Result(Limits::infinity()));
-
-        // fmax(z1, -inf) = z1
-        EXPECT_THAT(exec(z, -Limits::infinity()), Result(z));
-    }
-
-    // fmax(+-0, -+0) = +0
-    EXPECT_THAT(execute(*instance, 0, {TypeParam{0}, -TypeParam{0}}), Result(TypeParam{0}));
-    EXPECT_THAT(execute(*instance, 0, {-TypeParam{0}, TypeParam{0}}), Result(TypeParam{0}));
-    EXPECT_THAT(execute(*instance, 0, {-TypeParam{0}, -TypeParam{0}}), Result(-TypeParam{0}));
-
-    // Check every pair from cartesian product of the list of values.
-    // fmax(z1, z2) = z1  (if z1 >= z2)
-    // fmax(z1, z2) = z2  (if z2 >= z1)
-    for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
-    {
-        for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
+        ASSERT_EQ(std::fesetround(rounding_direction), 0);
+        SCOPED_TRACE(rounding_direction);
+        for (const auto z : this->ordered_special_values)
         {
-            const auto a = this->ordered_special_values[i];
-            const auto b = this->ordered_special_values[j];
-            if (!std::isnan(a) && !std::isnan(b))
+            if (std::isnan(z))
+                continue;
+
+            // fmax(+inf, z2) = +inf
+            EXPECT_THAT(exec(Limits::infinity(), z), Result(Limits::infinity()));
+
+            // fmax(-inf, z2) = z2
+            EXPECT_THAT(exec(-Limits::infinity(), z), Result(z));
+
+            // fmax(z1, +inf) = +inf
+            EXPECT_THAT(exec(z, Limits::infinity()), Result(Limits::infinity()));
+
+            // fmax(z1, -inf) = z1
+            EXPECT_THAT(exec(z, -Limits::infinity()), Result(z));
+        }
+
+        // fmax(+-0, -+0) = +0
+        EXPECT_THAT(execute(*instance, 0, {TypeParam{0}, -TypeParam{0}}), Result(TypeParam{0}));
+        EXPECT_THAT(execute(*instance, 0, {-TypeParam{0}, TypeParam{0}}), Result(TypeParam{0}));
+        EXPECT_THAT(execute(*instance, 0, {-TypeParam{0}, -TypeParam{0}}), Result(-TypeParam{0}));
+
+        // Check every pair from cartesian product of the list of values.
+        // fmax(z1, z2) = z1  (if z1 >= z2)
+        // fmax(z1, z2) = z2  (if z2 >= z1)
+        for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
+        {
+            for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
             {
-                EXPECT_THAT(execute(*instance, 0, {a, b}), Result(i > j ? a : b)) << a << ", " << b;
+                const auto a = this->ordered_special_values[i];
+                const auto b = this->ordered_special_values[j];
+                if (!std::isnan(a) && !std::isnan(b))
+                {
+                    EXPECT_THAT(execute(*instance, 0, {a, b}), Result(i > j ? a : b))
+                        << a << ", " << b;
+                }
             }
         }
     }
+    ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
 }
 
 TYPED_TEST(execute_floating_point_types, copysign)
@@ -1152,26 +1167,32 @@ TYPED_TEST(execute_floating_point_types, copysign)
 
     auto instance = instantiate(parse(this->get_binop_code(Instr::f32_copysign)));
     const auto exec = [&](auto arg1, auto arg2) { return execute(*instance, 0, {arg1, arg2}); };
-
-    std::vector p_values(
-        std::begin(this->positive_special_values), std::end(this->positive_special_values));
-    for (const auto x :
-        {TypeParam{0}, Limits::infinity(), FP::nan(FP::canon), FP::nan(FP::canon + 1), FP::nan(1)})
-        p_values.push_back(x);
-
-    for (const auto p1 : p_values)
+    ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+    for (const auto rounding_direction : this->all_rounding_directions)
     {
-        for (const auto p2 : p_values)
-        {
-            // fcopysign(+-p1, +-p2) = +-p1
-            EXPECT_THAT(exec(p1, p2), Result(p1));
-            EXPECT_THAT(exec(-p1, -p2), Result(-p1));
+        ASSERT_EQ(std::fesetround(rounding_direction), 0);
+        SCOPED_TRACE(rounding_direction);
+        std::vector p_values(
+            std::begin(this->positive_special_values), std::end(this->positive_special_values));
+        for (const auto x : {TypeParam{0}, Limits::infinity(), FP::nan(FP::canon),
+                 FP::nan(FP::canon + 1), FP::nan(1)})
+            p_values.push_back(x);
 
-            // fcopysign(+-p1, -+p2) = -+p1
-            EXPECT_THAT(exec(p1, -p2), Result(-p1));
-            EXPECT_THAT(exec(-p1, p2), Result(p1));
+        for (const auto p1 : p_values)
+        {
+            for (const auto p2 : p_values)
+            {
+                // fcopysign(+-p1, +-p2) = +-p1
+                EXPECT_THAT(exec(p1, p2), Result(p1));
+                EXPECT_THAT(exec(-p1, -p2), Result(-p1));
+
+                // fcopysign(+-p1, -+p2) = -+p1
+                EXPECT_THAT(exec(p1, -p2), Result(-p1));
+                EXPECT_THAT(exec(-p1, p2), Result(p1));
+            }
         }
     }
+    ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
 }
 
 
