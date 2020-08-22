@@ -8,7 +8,7 @@
 [![codecov badge]][codecov]
 [![license badge]][Apache License, Version 2.0]
 
-Fizzy aims to be a fast integer-only WebAssembly interpreter written in C++.
+Fizzy aims to be a fast, deterministic, and pedantic WebAssembly interpreter written in C++.
 
 ## Goals
 
@@ -17,14 +17,17 @@ I) Code quality
 - [ ] Easily embeddable (*and take part of the standardisation of the "C/C++ embedding API"*)
 
 II) Simplicity
+- [x] Only implement WebAssembly 1.0 (and none of the proposals)
 - [x] Interpreter only
-- [x] Provide no support for floating point operations (initially)
 - [x] Support only WebAssembly binary encoding as an input (no support for the text format (`.wat`/`.wast`))
 
 III) Conformance
-- [ ] Should pass the official WebAssembly test suite
+- [x] Should have 99+% unit test coverage
+- [x] Should pass the official WebAssembly test suite
+- [x] Should have stricter tests than the official test suite
 
 IV) First class support for determistic applications (*blockchain*)
+- [ ] Support canonical handling of floating point (i.e. NaNs stricter than in the spec)
 - [ ] Support an efficient big integer API (256-bit and perhaps 384-bit)
 - [ ] Support optional runtime metering in the interpreter
 - [ ] Support enforcing a call depth bound
@@ -65,6 +68,38 @@ Follow [this guide](./test/spectests/README.md) for using the tool.
 ### fizzy-unittests
 
 This is the unit tests suite of Fizzy.
+
+## Special notes about floating point
+
+### Exceptions
+
+Certain floating point operations can emit *exceptions* as defined by the IEEE 754 standard.
+(Here is a [summary from the GNU C Library](https://www.gnu.org/software/libc/manual/html_node/FP-Exceptions.html)).
+It is however up to the language how these manifest, and in C/C++ depending on the settings they can result in
+a) setting of a flag; b) or in *traps*, such as the `SIGFPE` signal.
+
+Fizzy does not manipulate this setting, but expects it to be left at option a) of above, which is the default.
+In the GNU C Library this can be controlled via the [`feenableexcept` and `fedisableexcept` functions](https://www.gnu.org/savannah-checkouts/gnu/libc/manual/html_node/Control-Functions.html).
+
+The user of the Fizzy library has to ensure this is not set to *trap* mode.
+The behavior with traps enabled is unpredictable and correct behaviour is not guaranteed, thus we strongly advise against using them.
+
+### Rounding
+
+The IEEE 754 standard defines four rounding directions (or modes):
+- to nearest, tie to even (default),
+- toward -∞ (rounding down),
+- toward +∞ (rounding up),
+- toward  0 (truncation).
+
+The WebAssembly specification expects the default, "to nearest", rounding mode for instructions
+whose result can be influenced by rounding.
+
+Fizzy does not manipulate this setting, and expects the same rounding mode as WebAssembly,
+otherwise the result of some instructions may be different.
+In the GNU C Library the rounding mode can be controlled via the [`fesetround` and `fegetround` functions](https://www.gnu.org/software/libc/manual/html_node/Rounding.html).
+
+If strict compliance is sought with WebAssembly, then the user of Fizzy must ensure to keep the default rounding mode.
 
 ## Releases
 
