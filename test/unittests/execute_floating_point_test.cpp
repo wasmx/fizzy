@@ -321,18 +321,27 @@ TYPED_TEST(execute_floating_point_types, unop_nan_propagation)
         auto instance = instantiate(parse(this->get_unop_code(op)));
 
         const auto cnan = FP<TypeParam>::nan(FP<TypeParam>::canon);
-        EXPECT_THAT(execute(*instance, 0, {cnan}), CanonicalNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-cnan}), CanonicalNaN(TypeParam{}));
 
-        for (const auto nan : this->positive_noncanonical_nans)
+        ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+        for (const auto rounding_direction : this->all_rounding_directions)
         {
-            const auto res1 = execute(*instance, 0, {nan});
-            EXPECT_THAT(res1, ArithmeticNaN(TypeParam{}))
-                << std::hex << FP<TypeParam>{res1.value.template as<TypeParam>()}.nan_payload();
-            const auto res2 = execute(*instance, 0, {-nan});
-            EXPECT_THAT(res2, ArithmeticNaN(TypeParam{}))
-                << std::hex << FP<TypeParam>{res2.value.template as<TypeParam>()}.nan_payload();
+            ASSERT_EQ(std::fesetround(rounding_direction), 0);
+            SCOPED_TRACE(rounding_direction);
+
+            EXPECT_THAT(execute(*instance, 0, {cnan}), CanonicalNaN(TypeParam{}));
+            EXPECT_THAT(execute(*instance, 0, {-cnan}), CanonicalNaN(TypeParam{}));
+
+            for (const auto nan : this->positive_noncanonical_nans)
+            {
+                const auto res1 = execute(*instance, 0, {nan});
+                EXPECT_THAT(res1, ArithmeticNaN(TypeParam{}))
+                    << std::hex << FP<TypeParam>{res1.value.template as<TypeParam>()}.nan_payload();
+                const auto res2 = execute(*instance, 0, {-nan});
+                EXPECT_THAT(res2, ArithmeticNaN(TypeParam{}))
+                    << std::hex << FP<TypeParam>{res2.value.template as<TypeParam>()}.nan_payload();
+            }
         }
+        ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
     }
 }
 
@@ -356,42 +365,43 @@ TYPED_TEST(execute_floating_point_types, binop_nan_propagation)
     for (const auto op : opcodes)
     {
         auto instance = instantiate(parse(this->get_binop_code(op)));
+        const auto exec = [&](auto arg1, auto arg2) { return execute(*instance, 0, {arg1, arg2}); };
 
         constexpr auto q = TypeParam{1.0};
         const auto cnan = FP<TypeParam>::nan(FP<TypeParam>::canon);
 
         // TODO: Consider more restrictive tests where the sign of NaN values is also checked.
 
-        EXPECT_THAT(execute(*instance, 0, {q, cnan}), CanonicalNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {q, -cnan}), CanonicalNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {cnan, q}), CanonicalNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-cnan, q}), CanonicalNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {cnan, cnan}), CanonicalNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {cnan, -cnan}), CanonicalNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-cnan, cnan}), CanonicalNaN(TypeParam{}));
-        EXPECT_THAT(execute(*instance, 0, {-cnan, -cnan}), CanonicalNaN(TypeParam{}));
+        EXPECT_THAT(exec(q, cnan), CanonicalNaN(TypeParam{}));
+        EXPECT_THAT(exec(q, -cnan), CanonicalNaN(TypeParam{}));
+        EXPECT_THAT(exec(cnan, q), CanonicalNaN(TypeParam{}));
+        EXPECT_THAT(exec(-cnan, q), CanonicalNaN(TypeParam{}));
+        EXPECT_THAT(exec(cnan, cnan), CanonicalNaN(TypeParam{}));
+        EXPECT_THAT(exec(cnan, -cnan), CanonicalNaN(TypeParam{}));
+        EXPECT_THAT(exec(-cnan, cnan), CanonicalNaN(TypeParam{}));
+        EXPECT_THAT(exec(-cnan, -cnan), CanonicalNaN(TypeParam{}));
 
         for (const auto nan : this->positive_noncanonical_nans)
         {
-            EXPECT_THAT(execute(*instance, 0, {q, nan}), ArithmeticNaN(TypeParam{}));
-            EXPECT_THAT(execute(*instance, 0, {q, -nan}), ArithmeticNaN(TypeParam{}));
-            EXPECT_THAT(execute(*instance, 0, {nan, q}), ArithmeticNaN(TypeParam{}));
-            EXPECT_THAT(execute(*instance, 0, {-nan, q}), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(exec(q, nan), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(exec(q, -nan), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(exec(nan, q), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(exec(-nan, q), ArithmeticNaN(TypeParam{}));
 
-            EXPECT_THAT(execute(*instance, 0, {nan, nan}), ArithmeticNaN(TypeParam{}));
-            EXPECT_THAT(execute(*instance, 0, {nan, -nan}), ArithmeticNaN(TypeParam{}));
-            EXPECT_THAT(execute(*instance, 0, {-nan, nan}), ArithmeticNaN(TypeParam{}));
-            EXPECT_THAT(execute(*instance, 0, {-nan, -nan}), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(exec(nan, nan), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(exec(nan, -nan), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(exec(-nan, nan), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(exec(-nan, -nan), ArithmeticNaN(TypeParam{}));
 
-            EXPECT_THAT(execute(*instance, 0, {nan, cnan}), ArithmeticNaN(TypeParam{}));
-            EXPECT_THAT(execute(*instance, 0, {nan, -cnan}), ArithmeticNaN(TypeParam{}));
-            EXPECT_THAT(execute(*instance, 0, {-nan, cnan}), ArithmeticNaN(TypeParam{}));
-            EXPECT_THAT(execute(*instance, 0, {-nan, -cnan}), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(exec(nan, cnan), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(exec(nan, -cnan), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(exec(-nan, cnan), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(exec(-nan, -cnan), ArithmeticNaN(TypeParam{}));
 
-            EXPECT_THAT(execute(*instance, 0, {cnan, nan}), ArithmeticNaN(TypeParam{}));
-            EXPECT_THAT(execute(*instance, 0, {cnan, -nan}), ArithmeticNaN(TypeParam{}));
-            EXPECT_THAT(execute(*instance, 0, {-cnan, nan}), ArithmeticNaN(TypeParam{}));
-            EXPECT_THAT(execute(*instance, 0, {-cnan, -nan}), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(exec(cnan, nan), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(exec(cnan, -nan), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(exec(-cnan, nan), ArithmeticNaN(TypeParam{}));
+            EXPECT_THAT(exec(-cnan, -nan), ArithmeticNaN(TypeParam{}));
         }
     }
 }
@@ -417,52 +427,60 @@ TYPED_TEST(execute_floating_point_types, compare)
         "20015b0b0700200020015c0b0700200020015d0b0700200020015e0b0700200020015f0b070020002001600b07"
         "0020002001610b070020002001620b070020002001630b070020002001640b070020002001650b070020002001"
         "660b");
-    auto inst = instantiate(parse(wasm));
+    auto instance = instantiate(parse(wasm));
 
     constexpr FuncIdx func_offset = std::is_same_v<TypeParam, float> ? 0 : 6;
-    constexpr auto eq = func_offset + 0;
-    constexpr auto ne = func_offset + 1;
-    constexpr auto lt = func_offset + 2;
-    constexpr auto gt = func_offset + 3;
-    constexpr auto le = func_offset + 4;
-    constexpr auto ge = func_offset + 5;
+    const auto eq = [&](auto a, auto b) { return execute(*instance, func_offset + 0, {a, b}); };
+    const auto ne = [&](auto a, auto b) { return execute(*instance, func_offset + 1, {a, b}); };
+    const auto lt = [&](auto a, auto b) { return execute(*instance, func_offset + 2, {a, b}); };
+    const auto gt = [&](auto a, auto b) { return execute(*instance, func_offset + 3, {a, b}); };
+    const auto le = [&](auto a, auto b) { return execute(*instance, func_offset + 4, {a, b}); };
+    const auto ge = [&](auto a, auto b) { return execute(*instance, func_offset + 5, {a, b}); };
 
-    // Check every pair from cartesian product of ordered_values.
-    for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
+    ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+    for (const auto rounding_direction : this->all_rounding_directions)
     {
-        for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
+        ASSERT_EQ(std::fesetround(rounding_direction), 0);
+        SCOPED_TRACE(rounding_direction);
+
+        // Check every pair from cartesian product of ordered_values.
+        for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
         {
-            const auto a = this->ordered_special_values[i];
-            const auto b = this->ordered_special_values[j];
-            if (std::isnan(a) || std::isnan(b))
+            for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
             {
-                EXPECT_THAT(execute(*inst, eq, {a, b}), Result(0)) << a << "==" << b;
-                EXPECT_THAT(execute(*inst, ne, {a, b}), Result(1)) << a << "!=" << b;
-                EXPECT_THAT(execute(*inst, lt, {a, b}), Result(0)) << a << "<" << b;
-                EXPECT_THAT(execute(*inst, gt, {a, b}), Result(0)) << a << ">" << b;
-                EXPECT_THAT(execute(*inst, le, {a, b}), Result(0)) << a << "<=" << b;
-                EXPECT_THAT(execute(*inst, ge, {a, b}), Result(0)) << a << ">=" << b;
-            }
-            else
-            {
-                EXPECT_THAT(execute(*inst, eq, {a, b}), Result(uint32_t{i == j})) << a << "==" << b;
-                EXPECT_THAT(execute(*inst, ne, {a, b}), Result(uint32_t{i != j})) << a << "!=" << b;
-                EXPECT_THAT(execute(*inst, lt, {a, b}), Result(uint32_t{i < j})) << a << "<" << b;
-                EXPECT_THAT(execute(*inst, gt, {a, b}), Result(uint32_t{i > j})) << a << ">" << b;
-                EXPECT_THAT(execute(*inst, le, {a, b}), Result(uint32_t{i <= j})) << a << "<=" << b;
-                EXPECT_THAT(execute(*inst, ge, {a, b}), Result(uint32_t{i >= j})) << a << ">=" << b;
+                const auto a = this->ordered_special_values[i];
+                const auto b = this->ordered_special_values[j];
+                if (std::isnan(a) || std::isnan(b))
+                {
+                    EXPECT_THAT(eq(a, b), Result(0)) << a << "==" << b;
+                    EXPECT_THAT(ne(a, b), Result(1)) << a << "!=" << b;
+                    EXPECT_THAT(lt(a, b), Result(0)) << a << "<" << b;
+                    EXPECT_THAT(gt(a, b), Result(0)) << a << ">" << b;
+                    EXPECT_THAT(le(a, b), Result(0)) << a << "<=" << b;
+                    EXPECT_THAT(ge(a, b), Result(0)) << a << ">=" << b;
+                }
+                else
+                {
+                    EXPECT_THAT(eq(a, b), Result(uint32_t{i == j})) << a << "==" << b;
+                    EXPECT_THAT(ne(a, b), Result(uint32_t{i != j})) << a << "!=" << b;
+                    EXPECT_THAT(lt(a, b), Result(uint32_t{i < j})) << a << "<" << b;
+                    EXPECT_THAT(gt(a, b), Result(uint32_t{i > j})) << a << ">" << b;
+                    EXPECT_THAT(le(a, b), Result(uint32_t{i <= j})) << a << "<=" << b;
+                    EXPECT_THAT(ge(a, b), Result(uint32_t{i >= j})) << a << ">=" << b;
+                }
             }
         }
-    }
 
-    // Negative zero. This is separate set of checks because -0.0 cannot be placed
-    // in the ordered_values array as -0.0 == 0.0.
-    EXPECT_THAT(execute(*inst, eq, {TypeParam{-0.0}, TypeParam{0.0}}), Result(1));
-    EXPECT_THAT(execute(*inst, ne, {TypeParam{-0.0}, TypeParam{0.0}}), Result(0));
-    EXPECT_THAT(execute(*inst, lt, {TypeParam{-0.0}, TypeParam{0.0}}), Result(0));
-    EXPECT_THAT(execute(*inst, gt, {TypeParam{-0.0}, TypeParam{0.0}}), Result(0));
-    EXPECT_THAT(execute(*inst, le, {TypeParam{-0.0}, TypeParam{0.0}}), Result(1));
-    EXPECT_THAT(execute(*inst, ge, {TypeParam{-0.0}, TypeParam{0.0}}), Result(1));
+        // Negative zero. This is separate set of checks because -0.0 cannot be placed
+        // in the ordered_values array as -0.0 == 0.0.
+        EXPECT_THAT(eq(TypeParam{-0.0}, TypeParam{0.0}), Result(1));
+        EXPECT_THAT(ne(TypeParam{-0.0}, TypeParam{0.0}), Result(0));
+        EXPECT_THAT(lt(TypeParam{-0.0}, TypeParam{0.0}), Result(0));
+        EXPECT_THAT(gt(TypeParam{-0.0}, TypeParam{0.0}), Result(0));
+        EXPECT_THAT(le(TypeParam{-0.0}, TypeParam{0.0}), Result(1));
+        EXPECT_THAT(ge(TypeParam{-0.0}, TypeParam{0.0}), Result(1));
+    }
+    ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
 }
 
 TYPED_TEST(execute_floating_point_types, abs)
@@ -479,12 +497,20 @@ TYPED_TEST(execute_floating_point_types, abs)
         {TypeParam{0}, Limits::infinity(), FP::nan(FP::canon), FP::nan(FP::canon + 1), FP::nan(1)})
         p_values.push_back(x);
 
-    for (const auto p : p_values)
+    ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+    for (const auto rounding_direction : this->all_rounding_directions)
     {
-        // fabs(+-p) = +p
-        EXPECT_THAT(exec(p), Result(p));
-        EXPECT_THAT(exec(-p), Result(p));
+        ASSERT_EQ(std::fesetround(rounding_direction), 0);
+        SCOPED_TRACE(rounding_direction);
+
+        for (const auto p : p_values)
+        {
+            // fabs(+-p) = +p
+            EXPECT_THAT(exec(p), Result(p));
+            EXPECT_THAT(exec(-p), Result(p));
+        }
     }
+    ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
 }
 
 TYPED_TEST(execute_floating_point_types, neg)
@@ -501,12 +527,19 @@ TYPED_TEST(execute_floating_point_types, neg)
         {TypeParam{0}, Limits::infinity(), FP::nan(FP::canon), FP::nan(FP::canon + 1), FP::nan(1)})
         p_values.push_back(x);
 
-    for (const auto p : p_values)
+    ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+    for (const auto rounding_direction : this->all_rounding_directions)
     {
-        // fneg(+-p) = -+p
-        EXPECT_THAT(exec(p), Result(-p));
-        EXPECT_THAT(exec(-p), Result(p));
+        ASSERT_EQ(std::fesetround(rounding_direction), 0);
+        SCOPED_TRACE(rounding_direction);
+        for (const auto p : p_values)
+        {
+            // fneg(+-p) = -+p
+            EXPECT_THAT(exec(p), Result(-p));
+            EXPECT_THAT(exec(-p), Result(p));
+        }
     }
+    ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
 }
 
 TYPED_TEST(execute_floating_point_types, ceil)
@@ -1025,44 +1058,52 @@ TYPED_TEST(execute_floating_point_types, min)
     auto instance = instantiate(parse(this->get_binop_code(Instr::f32_min)));
     const auto exec = [&](auto arg1, auto arg2) { return execute(*instance, 0, {arg1, arg2}); };
 
-    for (const auto z : this->ordered_special_values)
+    ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+    for (const auto rounding_direction : this->all_rounding_directions)
     {
-        if (std::isnan(z))
-            continue;
+        ASSERT_EQ(std::fesetround(rounding_direction), 0);
+        SCOPED_TRACE(rounding_direction);
 
-        // fmin(+inf, z2) = z2
-        EXPECT_THAT(exec(Limits::infinity(), z), Result(z));
-
-        // fmin(-inf, z2) = -inf
-        EXPECT_THAT(exec(-Limits::infinity(), z), Result(-Limits::infinity()));
-
-        // fmin(z1, +inf) = z1
-        EXPECT_THAT(exec(z, Limits::infinity()), Result(z));
-
-        // fmin(z1, -inf) = -inf
-        EXPECT_THAT(exec(z, -Limits::infinity()), Result(-Limits::infinity()));
-    }
-
-    // fmin(+-0, -+0) = -0
-    EXPECT_THAT(exec(TypeParam{0}, -TypeParam{0}), Result(-TypeParam{0}));
-    EXPECT_THAT(exec(-TypeParam{0}, TypeParam{0}), Result(-TypeParam{0}));
-    EXPECT_THAT(exec(-TypeParam{0}, -TypeParam{0}), Result(-TypeParam{0}));
-
-    // Check every pair from cartesian product of the list of values.
-    // fmin(z1, z2) = z1  (if z1 <= z2)
-    // fmin(z1, z2) = z2  (if z2 <= z1)
-    for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
-    {
-        for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
+        for (const auto z : this->ordered_special_values)
         {
-            const auto a = this->ordered_special_values[i];
-            const auto b = this->ordered_special_values[j];
-            if (!std::isnan(a) && !std::isnan(b))
+            if (std::isnan(z))
+                continue;
+
+            // fmin(+inf, z2) = z2
+            EXPECT_THAT(exec(Limits::infinity(), z), Result(z));
+
+            // fmin(-inf, z2) = -inf
+            EXPECT_THAT(exec(-Limits::infinity(), z), Result(-Limits::infinity()));
+
+            // fmin(z1, +inf) = z1
+            EXPECT_THAT(exec(z, Limits::infinity()), Result(z));
+
+            // fmin(z1, -inf) = -inf
+            EXPECT_THAT(exec(z, -Limits::infinity()), Result(-Limits::infinity()));
+        }
+
+        // fmin(+-0, -+0) = -0
+        EXPECT_THAT(exec(TypeParam{0}, -TypeParam{0}), Result(-TypeParam{0}));
+        EXPECT_THAT(exec(-TypeParam{0}, TypeParam{0}), Result(-TypeParam{0}));
+        EXPECT_THAT(exec(-TypeParam{0}, -TypeParam{0}), Result(-TypeParam{0}));
+
+        // Check every pair from cartesian product of the list of values.
+        // fmin(z1, z2) = z1  (if z1 <= z2)
+        // fmin(z1, z2) = z2  (if z2 <= z1)
+        for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
+        {
+            for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
             {
-                EXPECT_THAT(exec(a, b), Result(i < j ? a : b)) << a << ", " << b;
+                const auto a = this->ordered_special_values[i];
+                const auto b = this->ordered_special_values[j];
+                if (!std::isnan(a) && !std::isnan(b))
+                {
+                    EXPECT_THAT(exec(a, b), Result(i < j ? a : b)) << a << ", " << b;
+                }
             }
         }
     }
+    ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
 }
 
 TYPED_TEST(execute_floating_point_types, max)
@@ -1071,45 +1112,52 @@ TYPED_TEST(execute_floating_point_types, max)
 
     auto instance = instantiate(parse(this->get_binop_code(Instr::f32_max)));
     const auto exec = [&](auto arg1, auto arg2) { return execute(*instance, 0, {arg1, arg2}); };
-
-    for (const auto z : this->ordered_special_values)
+    ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+    for (const auto rounding_direction : this->all_rounding_directions)
     {
-        if (std::isnan(z))
-            continue;
-
-        // fmax(+inf, z2) = +inf
-        EXPECT_THAT(exec(Limits::infinity(), z), Result(Limits::infinity()));
-
-        // fmax(-inf, z2) = z2
-        EXPECT_THAT(exec(-Limits::infinity(), z), Result(z));
-
-        // fmax(z1, +inf) = +inf
-        EXPECT_THAT(exec(z, Limits::infinity()), Result(Limits::infinity()));
-
-        // fmax(z1, -inf) = z1
-        EXPECT_THAT(exec(z, -Limits::infinity()), Result(z));
-    }
-
-    // fmax(+-0, -+0) = +0
-    EXPECT_THAT(execute(*instance, 0, {TypeParam{0}, -TypeParam{0}}), Result(TypeParam{0}));
-    EXPECT_THAT(execute(*instance, 0, {-TypeParam{0}, TypeParam{0}}), Result(TypeParam{0}));
-    EXPECT_THAT(execute(*instance, 0, {-TypeParam{0}, -TypeParam{0}}), Result(-TypeParam{0}));
-
-    // Check every pair from cartesian product of the list of values.
-    // fmax(z1, z2) = z1  (if z1 >= z2)
-    // fmax(z1, z2) = z2  (if z2 >= z1)
-    for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
-    {
-        for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
+        ASSERT_EQ(std::fesetround(rounding_direction), 0);
+        SCOPED_TRACE(rounding_direction);
+        for (const auto z : this->ordered_special_values)
         {
-            const auto a = this->ordered_special_values[i];
-            const auto b = this->ordered_special_values[j];
-            if (!std::isnan(a) && !std::isnan(b))
+            if (std::isnan(z))
+                continue;
+
+            // fmax(+inf, z2) = +inf
+            EXPECT_THAT(exec(Limits::infinity(), z), Result(Limits::infinity()));
+
+            // fmax(-inf, z2) = z2
+            EXPECT_THAT(exec(-Limits::infinity(), z), Result(z));
+
+            // fmax(z1, +inf) = +inf
+            EXPECT_THAT(exec(z, Limits::infinity()), Result(Limits::infinity()));
+
+            // fmax(z1, -inf) = z1
+            EXPECT_THAT(exec(z, -Limits::infinity()), Result(z));
+        }
+
+        // fmax(+-0, -+0) = +0
+        EXPECT_THAT(execute(*instance, 0, {TypeParam{0}, -TypeParam{0}}), Result(TypeParam{0}));
+        EXPECT_THAT(execute(*instance, 0, {-TypeParam{0}, TypeParam{0}}), Result(TypeParam{0}));
+        EXPECT_THAT(execute(*instance, 0, {-TypeParam{0}, -TypeParam{0}}), Result(-TypeParam{0}));
+
+        // Check every pair from cartesian product of the list of values.
+        // fmax(z1, z2) = z1  (if z1 >= z2)
+        // fmax(z1, z2) = z2  (if z2 >= z1)
+        for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
+        {
+            for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
             {
-                EXPECT_THAT(execute(*instance, 0, {a, b}), Result(i > j ? a : b)) << a << ", " << b;
+                const auto a = this->ordered_special_values[i];
+                const auto b = this->ordered_special_values[j];
+                if (!std::isnan(a) && !std::isnan(b))
+                {
+                    EXPECT_THAT(execute(*instance, 0, {a, b}), Result(i > j ? a : b))
+                        << a << ", " << b;
+                }
             }
         }
     }
+    ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
 }
 
 TYPED_TEST(execute_floating_point_types, copysign)
@@ -1119,26 +1167,32 @@ TYPED_TEST(execute_floating_point_types, copysign)
 
     auto instance = instantiate(parse(this->get_binop_code(Instr::f32_copysign)));
     const auto exec = [&](auto arg1, auto arg2) { return execute(*instance, 0, {arg1, arg2}); };
-
-    std::vector p_values(
-        std::begin(this->positive_special_values), std::end(this->positive_special_values));
-    for (const auto x :
-        {TypeParam{0}, Limits::infinity(), FP::nan(FP::canon), FP::nan(FP::canon + 1), FP::nan(1)})
-        p_values.push_back(x);
-
-    for (const auto p1 : p_values)
+    ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+    for (const auto rounding_direction : this->all_rounding_directions)
     {
-        for (const auto p2 : p_values)
-        {
-            // fcopysign(+-p1, +-p2) = +-p1
-            EXPECT_THAT(exec(p1, p2), Result(p1));
-            EXPECT_THAT(exec(-p1, -p2), Result(-p1));
+        ASSERT_EQ(std::fesetround(rounding_direction), 0);
+        SCOPED_TRACE(rounding_direction);
+        std::vector p_values(
+            std::begin(this->positive_special_values), std::end(this->positive_special_values));
+        for (const auto x : {TypeParam{0}, Limits::infinity(), FP::nan(FP::canon),
+                 FP::nan(FP::canon + 1), FP::nan(1)})
+            p_values.push_back(x);
 
-            // fcopysign(+-p1, -+p2) = -+p1
-            EXPECT_THAT(exec(p1, -p2), Result(-p1));
-            EXPECT_THAT(exec(-p1, p2), Result(p1));
+        for (const auto p1 : p_values)
+        {
+            for (const auto p2 : p_values)
+            {
+                // fcopysign(+-p1, +-p2) = +-p1
+                EXPECT_THAT(exec(p1, p2), Result(p1));
+                EXPECT_THAT(exec(-p1, -p2), Result(-p1));
+
+                // fcopysign(+-p1, -+p2) = -+p1
+                EXPECT_THAT(exec(p1, -p2), Result(-p1));
+                EXPECT_THAT(exec(-p1, p2), Result(p1));
+            }
         }
     }
+    ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
 }
 
 
@@ -1170,41 +1224,51 @@ TEST(execute_floating_point, f64_promote_f32)
         {-FP32::nan(FP32::canon), -FP64::nan(FP64::canon)},
     };
 
-    for (const auto& [arg, expected] : test_cases)
+    ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+    for (const auto rounding_direction :
+        execute_floating_point_types<float>::all_rounding_directions)
     {
-        EXPECT_THAT(execute(*instance, 0, {arg}), Result(expected)) << arg << " -> " << expected;
+        ASSERT_EQ(std::fesetround(rounding_direction), 0);
+        SCOPED_TRACE(rounding_direction);
+
+        for (const auto& [arg, expected] : test_cases)
+        {
+            EXPECT_THAT(execute(*instance, 0, {arg}), Result(expected))
+                << arg << " -> " << expected;
+        }
+
+        // Check arithmetic NaNs (payload >= canonical payload).
+        // The following check expect arithmetic NaNs. Canonical NaNs are arithmetic NaNs
+        // and are allowed by the spec in these situations, but our checks are more restrictive
+
+        // An arithmetic NaN must result in any arithmetic NaN.
+        const auto res1 = execute(*instance, 0, {FP32::nan(FP32::canon + 1)});
+        ASSERT_TRUE(!res1.trapped && res1.has_value);
+        EXPECT_EQ(std::signbit(res1.value.f64), 0);
+        EXPECT_GT(FP{res1.value.f64}.nan_payload(), FP64::canon);
+        const auto res2 = execute(*instance, 0, {-FP32::nan(FP32::canon + 1)});
+        ASSERT_TRUE(!res2.trapped && res2.has_value);
+        EXPECT_EQ(std::signbit(res2.value.f64), 1);
+        EXPECT_GT(FP{res2.value.f64}.nan_payload(), FP64::canon);
+
+        // Other NaN must also result in arithmetic NaN.
+        const auto res3 = execute(*instance, 0, {FP32::nan(1)});
+        ASSERT_TRUE(!res3.trapped && res3.has_value);
+        EXPECT_EQ(std::signbit(res3.value.f64), 0);
+        EXPECT_GT(FP{res3.value.f64}.nan_payload(), FP64::canon);
+        const auto res4 = execute(*instance, 0, {-FP32::nan(1)});
+        ASSERT_TRUE(!res4.trapped && res4.has_value);
+        EXPECT_EQ(std::signbit(res4.value.f64), 1);
+        EXPECT_GT(FP{res4.value.f64}.nan_payload(), FP64::canon);
+
+        // Any input NaN other than canonical must result in an arithmetic NaN.
+        for (const auto nan : execute_floating_point_types<float>::positive_noncanonical_nans)
+        {
+            EXPECT_THAT(execute(*instance, 0, {nan}), ArithmeticNaN(double{}));
+            EXPECT_THAT(execute(*instance, 0, {-nan}), ArithmeticNaN(double{}));
+        }
     }
-
-    // Check arithmetic NaNs (payload >= canonical payload).
-    // The following check expect arithmetic NaNs. Canonical NaNs are arithmetic NaNs
-    // and are allowed by the spec in these situations, but our checks are more restrictive
-
-    // An arithmetic NaN must result in any arithmetic NaN.
-    const auto res1 = execute(*instance, 0, {FP32::nan(FP32::canon + 1)});
-    ASSERT_TRUE(!res1.trapped && res1.has_value);
-    EXPECT_EQ(std::signbit(res1.value.f64), 0);
-    EXPECT_GT(FP{res1.value.f64}.nan_payload(), FP64::canon);
-    const auto res2 = execute(*instance, 0, {-FP32::nan(FP32::canon + 1)});
-    ASSERT_TRUE(!res2.trapped && res2.has_value);
-    EXPECT_EQ(std::signbit(res2.value.f64), 1);
-    EXPECT_GT(FP{res2.value.f64}.nan_payload(), FP64::canon);
-
-    // Other NaN must also result in arithmetic NaN.
-    const auto res3 = execute(*instance, 0, {FP32::nan(1)});
-    ASSERT_TRUE(!res3.trapped && res3.has_value);
-    EXPECT_EQ(std::signbit(res3.value.f64), 0);
-    EXPECT_GT(FP{res3.value.f64}.nan_payload(), FP64::canon);
-    const auto res4 = execute(*instance, 0, {-FP32::nan(1)});
-    ASSERT_TRUE(!res4.trapped && res4.has_value);
-    EXPECT_EQ(std::signbit(res4.value.f64), 1);
-    EXPECT_GT(FP{res4.value.f64}.nan_payload(), FP64::canon);
-
-    // Any input NaN other than canonical must result in an arithmetic NaN.
-    for (const auto nan : execute_floating_point_types<float>::positive_noncanonical_nans)
-    {
-        EXPECT_THAT(execute(*instance, 0, {nan}), ArithmeticNaN(double{}));
-        EXPECT_THAT(execute(*instance, 0, {-nan}), ArithmeticNaN(double{}));
-    }
+    ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
 }
 
 TEST(execute_floating_point, f32_demote_f64)
@@ -1323,12 +1387,20 @@ TYPED_TEST(execute_floating_point_types, reinterpret)
     const auto func_float_to_int = std::is_same_v<TypeParam, float> ? 0 : 1;
     const auto func_int_to_float = std::is_same_v<TypeParam, float> ? 2 : 3;
 
-    for (const auto float_value : this->ordered_special_values)
+    ASSERT_EQ(std::fegetround(), FE_TONEAREST);
+    for (const auto rounding_direction : this->all_rounding_directions)
     {
-        const auto uint_value = FP<TypeParam>{float_value}.as_uint();
-        EXPECT_THAT(execute(*instance, func_float_to_int, {float_value}), Result(uint_value));
-        EXPECT_THAT(execute(*instance, func_int_to_float, {uint_value}), Result(float_value));
+        ASSERT_EQ(std::fesetround(rounding_direction), 0);
+        SCOPED_TRACE(rounding_direction);
+
+        for (const auto float_value : this->ordered_special_values)
+        {
+            const auto uint_value = FP<TypeParam>{float_value}.as_uint();
+            EXPECT_THAT(execute(*instance, func_float_to_int, {float_value}), Result(uint_value));
+            EXPECT_THAT(execute(*instance, func_int_to_float, {uint_value}), Result(float_value));
+        }
     }
+    ASSERT_EQ(std::fesetround(FE_TONEAREST), 0);
 }
 
 
