@@ -1,60 +1,51 @@
 #include <test/utils/floating_point_utils.hpp>
+#include <chrono>
 #include <iostream>
 
 using fizzy::test::FP;
 
+template <typename T>
+static bool is_even(T x)
+{
+    using FP = FP<T>;
+    const auto u = FP{x}.as_uint();
+
+    const auto m = u & FP::mantissa_mask;
+
+    constexpr auto exponent_mask = (typename FP::UintType{1} << FP::num_exponent_bits) - 1;
+    constexpr auto exponent_bias = (typename FP::UintType{1} << (FP::num_exponent_bits - 1)) - 1;
+
+    const auto e = ((u >> FP::num_mantissa_bits) & exponent_mask) - exponent_bias;
+
+    if (e == 0)  // 1
+        return false;
+
+    const auto lowest_bit = FP::num_mantissa_bits - e;
+
+    return ((m >> lowest_bit) & 1) == 0;
+}
+
 
 float my_nearest(float x)
 {
-    const auto u = FP{x}.as_uint();
-
     if (std::isnan(x))
-        return FP{u | 0x400000}.value;
+        return FP{FP{x}.as_uint() | 0x400000}.value;
 
-    const auto t = std::trunc(x);
+    auto t = std::trunc(x);
 
-    if (x == t)
-        return t;
+    const auto diff = std::abs(x - t);
 
-    const auto is_even = std::fmod(t, 2.0f) == 0;
+    if (diff > 0.5f || (diff == 0.5f && !is_even(t)))
+        t = t + std::copysign(1.0f, x);
 
-
-    if (std::signbit(x) == 0)  // positive
-    {
-        const auto diff = x - t;
-
-        if (diff < 0.5f)
-            return t;
-
-        if (diff > 0.5f)
-            return t + 1;
-
-
-
-        if (is_even)
-            return t;
-        else
-            return t + 1;
-    }
-    else
-    {
-        const auto diff = t - x;
-
-        if (diff < 0.5f)
-            return t;
-
-        if (diff > 0.5f)
-            return t - 1;
-
-        if (is_even)
-            return t;
-        else
-            return t - 1;
-    }
+    return t;
 }
 
 int main()
 {
+    using clock = std::chrono::steady_clock;
+    const auto start_time = clock::now();
+
     uint32_t i = 0;
     do
     {
@@ -75,5 +66,9 @@ int main()
         ++i;
     } while (i != 0);
 
+    std::cout
+        << "time: "
+        << std::chrono::duration_cast<std::chrono::milliseconds>(clock::now() - start_time).count()
+        << " ms\n";
     return 0;
 }
