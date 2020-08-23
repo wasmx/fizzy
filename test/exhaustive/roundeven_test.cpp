@@ -41,6 +41,18 @@ float my_nearest(float x)
     return t;
 }
 
+
+float roundeven_simple(float x)
+{
+    static constexpr auto is_even = [](auto i) noexcept { return std::fmod(i, 2.0f) == 0; };
+
+    const auto t = std::trunc(x);
+    if (const auto diff = std::abs(x - t); diff > 0.5f || (diff == 0.5f && !is_even(t)))
+        return t + std::copysign(1.0f, x);
+    else
+        return t;
+}
+
 int main()
 {
     using clock = std::chrono::steady_clock;
@@ -50,18 +62,21 @@ int main()
     do
     {
         const auto value = FP{i}.value;
-        const auto n = my_nearest(value);
+        const auto n = roundeven_simple(value);
         const auto expected = ::roundevenf(value);
 
         if (FP{n} != FP{expected})
         {
-            std::cout << value << " " << n << " " << expected << "\n";
-            std::cout << std::hexfloat << value << " " << n << " " << expected << "\n";
-            std::cout << std::hex << FP{value}.as_uint() << " " << FP{n}.as_uint() << " "
-                      << FP{expected}.as_uint() << "\n";
+            if (!std::isnan(n) || !std::isnan(expected))
+            {
+                std::cout << value << " " << n << " " << expected << "\n";
+                std::cout << std::hexfloat << value << " " << n << " " << expected << "\n";
+                std::cout << std::hex << FP{value}.as_uint() << " " << FP{n}.as_uint() << " "
+                          << FP{expected}.as_uint() << "\n";
 
-            std::cout << FP{n}.nan_payload() << " " << FP{expected}.nan_payload();
-            return 1;
+                std::cout << FP{n}.nan_payload() << " " << FP{expected}.nan_payload();
+                return 1;
+            }
         }
         ++i;
     } while (i != 0);
