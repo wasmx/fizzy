@@ -271,8 +271,8 @@ void branch(const Code& code, OperandStack& stack, const Instr*& pc, const uint8
 }
 
 template <class F>
-bool invoke_function(
-    const FuncType& func_type, const F& func, Instance& instance, OperandStack& stack, int depth)
+bool invoke_function(const FuncType& func_type, const F& func, Instance& instance,
+    OperandStack& stack, int depth) noexcept
 {
     const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
@@ -296,9 +296,9 @@ bool invoke_function(
 }
 
 inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
-    OperandStack& stack, int depth)
+    OperandStack& stack, int depth) noexcept
 {
-    const auto func = [func_idx](Instance& _instance, span<const Value> args, int _depth) {
+    const auto func = [func_idx](Instance& _instance, span<const Value> args, int _depth) noexcept {
         return execute(_instance, func_idx, args, _depth);
     };
     return invoke_function(func_type, func, instance, stack, depth);
@@ -801,7 +801,8 @@ std::unique_ptr<Instance> instantiate(Module module,
     return instance;
 }
 
-ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> args, int depth)
+ExecutionResult execute(
+    Instance& instance, FuncIdx func_idx, span<const Value> args, int depth) noexcept
 {
     assert(depth >= 0);
     if (depth > CallStackLimit)
