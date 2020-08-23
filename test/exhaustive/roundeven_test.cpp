@@ -1,4 +1,5 @@
 #include <test/utils/floating_point_utils.hpp>
+#include <cfenv>
 #include <chrono>
 #include <iostream>
 
@@ -58,28 +59,33 @@ int main()
     using clock = std::chrono::steady_clock;
     const auto start_time = clock::now();
 
-    uint32_t i = 0;
-    do
+    for (const auto rounding_direction : {FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO})
     {
-        const auto value = FP{i}.value;
-        const auto n = roundeven_simple(value);
-        const auto expected = ::roundevenf(value);
+        std::fesetround(rounding_direction);
 
-        if (FP{n} != FP{expected})
+        uint32_t i = 0;
+        do
         {
-            if (!std::isnan(n) || !std::isnan(expected))
-            {
-                std::cout << value << " " << n << " " << expected << "\n";
-                std::cout << std::hexfloat << value << " " << n << " " << expected << "\n";
-                std::cout << std::hex << FP{value}.as_uint() << " " << FP{n}.as_uint() << " "
-                          << FP{expected}.as_uint() << "\n";
+            const auto value = FP{i}.value;
+            const auto n = roundeven_simple(value);
+            const auto expected = ::roundevenf(value);
 
-                std::cout << FP{n}.nan_payload() << " " << FP{expected}.nan_payload();
-                return 1;
+            if (FP{n} != FP{expected})
+            {
+                if (!std::isnan(n) || !std::isnan(expected))
+                {
+                    std::cout << value << " " << n << " " << expected << "\n";
+                    std::cout << std::hexfloat << value << " " << n << " " << expected << "\n";
+                    std::cout << std::hex << FP{value}.as_uint() << " " << FP{n}.as_uint() << " "
+                              << FP{expected}.as_uint() << "\n";
+
+                    std::cout << FP{n}.nan_payload() << " " << FP{expected}.nan_payload();
+                    return 1;
+                }
             }
-        }
-        ++i;
-    } while (i != 0);
+            ++i;
+        } while (i != 0);
+    }
 
     std::cout
         << "time: "
