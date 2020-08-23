@@ -303,70 +303,6 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         {
         default:
             throw parser_error{"invalid instruction " + std::to_string(*(pos - 1))};
-
-        // Floating point instructions are unsupported
-        case Instr::f32_eq:
-        case Instr::f32_ne:
-        case Instr::f32_lt:
-        case Instr::f32_gt:
-        case Instr::f32_le:
-        case Instr::f32_ge:
-        case Instr::f64_eq:
-        case Instr::f64_ne:
-        case Instr::f64_lt:
-        case Instr::f64_gt:
-        case Instr::f64_le:
-        case Instr::f64_ge:
-        case Instr::f32_abs:
-        case Instr::f32_neg:
-        case Instr::f32_ceil:
-        case Instr::f32_floor:
-        case Instr::f32_trunc:
-        case Instr::f32_nearest:
-        case Instr::f32_sqrt:
-        case Instr::f32_add:
-        case Instr::f32_sub:
-        case Instr::f32_mul:
-        case Instr::f32_div:
-        case Instr::f32_min:
-        case Instr::f32_max:
-        case Instr::f32_copysign:
-        case Instr::f64_abs:
-        case Instr::f64_neg:
-        case Instr::f64_ceil:
-        case Instr::f64_floor:
-        case Instr::f64_trunc:
-        case Instr::f64_nearest:
-        case Instr::f64_sqrt:
-        case Instr::f64_add:
-        case Instr::f64_sub:
-        case Instr::f64_mul:
-        case Instr::f64_div:
-        case Instr::f64_min:
-        case Instr::f64_max:
-        case Instr::f64_copysign:
-        case Instr::i32_trunc_f32_s:
-        case Instr::i32_trunc_f32_u:
-        case Instr::i32_trunc_f64_s:
-        case Instr::i32_trunc_f64_u:
-        case Instr::i64_trunc_f32_s:
-        case Instr::i64_trunc_f32_u:
-        case Instr::i64_trunc_f64_s:
-        case Instr::i64_trunc_f64_u:
-        case Instr::f32_convert_i32_s:
-        case Instr::f32_convert_i32_u:
-        case Instr::f32_convert_i64_s:
-        case Instr::f32_convert_i64_u:
-        case Instr::f32_demote_f64:
-        case Instr::f64_convert_i32_s:
-        case Instr::f64_convert_i32_u:
-        case Instr::f64_convert_i64_s:
-        case Instr::f64_convert_i64_u:
-        case Instr::f64_promote_f32:
-        case Instr::i32_reinterpret_f32:
-        case Instr::i64_reinterpret_f64:
-        case Instr::f32_reinterpret_i32:
-        case Instr::f64_reinterpret_i64:
             break;
 
         case Instr::unreachable:
@@ -376,6 +312,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         case Instr::drop:
             drop_operand(frame, operand_stack, OperandStackType::Unknown);
             break;
+
         case Instr::select:
         {
             const auto frame_stack_height = static_cast<int>(operand_stack.size());
@@ -393,13 +330,12 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             drop_operand(frame, operand_stack, operand_type);
             drop_operand(frame, operand_stack, operand_type);
             push_operand(operand_stack, operand_type);
-
             break;
         }
 
         case Instr::nop:
-        case Instr::i32_eq:
         case Instr::i32_eqz:
+        case Instr::i32_eq:
         case Instr::i32_ne:
         case Instr::i32_lt_s:
         case Instr::i32_lt_u:
@@ -409,8 +345,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         case Instr::i32_le_u:
         case Instr::i32_ge_s:
         case Instr::i32_ge_u:
-        case Instr::i64_eq:
         case Instr::i64_eqz:
+        case Instr::i64_eq:
         case Instr::i64_ne:
         case Instr::i64_lt_s:
         case Instr::i64_lt_u:
@@ -420,6 +356,18 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         case Instr::i64_le_u:
         case Instr::i64_ge_s:
         case Instr::i64_ge_u:
+        case Instr::f32_eq:
+        case Instr::f32_ne:
+        case Instr::f32_lt:
+        case Instr::f32_gt:
+        case Instr::f32_le:
+        case Instr::f32_ge:
+        case Instr::f64_eq:
+        case Instr::f64_ne:
+        case Instr::f64_lt:
+        case Instr::f64_gt:
+        case Instr::f64_le:
+        case Instr::f64_ge:
         case Instr::i32_clz:
         case Instr::i32_ctz:
         case Instr::i32_popcnt:
@@ -456,9 +404,59 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         case Instr::i64_shr_u:
         case Instr::i64_rotl:
         case Instr::i64_rotr:
+        case Instr::f32_abs:
+        case Instr::f32_neg:
+        case Instr::f32_ceil:
+        case Instr::f32_floor:
+        case Instr::f32_trunc:
+        case Instr::f32_nearest:
+        case Instr::f32_sqrt:
+        case Instr::f32_add:
+        case Instr::f32_sub:
+        case Instr::f32_mul:
+        case Instr::f32_div:
+        case Instr::f32_min:
+        case Instr::f32_max:
+        case Instr::f32_copysign:
+        case Instr::f64_abs:
+        case Instr::f64_neg:
+        case Instr::f64_ceil:
+        case Instr::f64_floor:
+        case Instr::f64_trunc:
+        case Instr::f64_nearest:
+        case Instr::f64_sqrt:
+        case Instr::f64_add:
+        case Instr::f64_sub:
+        case Instr::f64_mul:
+        case Instr::f64_div:
+        case Instr::f64_min:
+        case Instr::f64_max:
+        case Instr::f64_copysign:
         case Instr::i32_wrap_i64:
+        case Instr::i32_trunc_f32_s:
+        case Instr::i32_trunc_f32_u:
+        case Instr::i32_trunc_f64_s:
+        case Instr::i32_trunc_f64_u:
         case Instr::i64_extend_i32_s:
         case Instr::i64_extend_i32_u:
+        case Instr::i64_trunc_f32_s:
+        case Instr::i64_trunc_f32_u:
+        case Instr::i64_trunc_f64_s:
+        case Instr::i64_trunc_f64_u:
+        case Instr::f32_convert_i32_s:
+        case Instr::f32_convert_i32_u:
+        case Instr::f32_convert_i64_s:
+        case Instr::f32_convert_i64_u:
+        case Instr::f32_demote_f64:
+        case Instr::f64_convert_i32_s:
+        case Instr::f64_convert_i32_u:
+        case Instr::f64_convert_i64_s:
+        case Instr::f64_convert_i64_u:
+        case Instr::f64_promote_f32:
+        case Instr::i32_reinterpret_f32:
+        case Instr::i64_reinterpret_f64:
+        case Instr::f32_reinterpret_i32:
+        case Instr::f64_reinterpret_i64:
             break;
 
         case Instr::block:
@@ -493,7 +491,6 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             // Placeholders for immediate values, filled at the matching end or else instructions.
             push(code.immediates, uint32_t{0});  // Diff to the else instruction
             push(code.immediates, uint32_t{0});  // Diff for the immediates.
-
             break;
         }
 
@@ -527,7 +524,6 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             store(if_imm, target_pc);
             if_imm += sizeof(target_pc);
             store(if_imm, target_imm);
-
             break;
         }
 
@@ -733,6 +729,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             push(code.immediates, local_idx);
             break;
         }
+
         case Instr::local_set:
         {
             LocalIdx local_idx;
@@ -743,6 +740,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             push(code.immediates, local_idx);
             break;
         }
+
         case Instr::local_tee:
         {
             LocalIdx local_idx;
@@ -769,6 +767,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             push(code.immediates, global_idx);
             break;
         }
+
         case Instr::global_set:
         {
             GlobalIdx global_idx;
@@ -793,6 +792,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             push(code.immediates, static_cast<uint32_t>(value));
             break;
         }
+
         case Instr::i64_const:
         {
             int64_t value;
@@ -800,6 +800,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             push(code.immediates, static_cast<uint64_t>(value));
             break;
         }
+
         case Instr::f32_const:
         {
             uint32_t value;
@@ -807,6 +808,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             push(code.immediates, value);
             break;
         }
+
         case Instr::f64_const:
         {
             uint64_t value;
@@ -817,6 +819,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
         case Instr::i32_load:
         case Instr::i64_load:
+        case Instr::f32_load:
+        case Instr::f32_store:
         case Instr::i32_load8_s:
         case Instr::i32_load8_u:
         case Instr::i32_load16_s:
@@ -829,15 +833,13 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         case Instr::i64_load32_u:
         case Instr::i32_store:
         case Instr::i64_store:
+        case Instr::f64_load:
+        case Instr::f64_store:
         case Instr::i32_store8:
         case Instr::i32_store16:
         case Instr::i64_store8:
         case Instr::i64_store16:
         case Instr::i64_store32:
-        case Instr::f32_load:
-        case Instr::f64_load:
-        case Instr::f32_store:
-        case Instr::f64_store:
         {
             uint32_t align;
             std::tie(align, pos) = leb128u_decode<uint32_t>(pos, end);
@@ -854,6 +856,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
                 throw validation_error{"memory instructions require imported or defined memory"};
             break;
         }
+
         case Instr::memory_size:
         case Instr::memory_grow:
         {
