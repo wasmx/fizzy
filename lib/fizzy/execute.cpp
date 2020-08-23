@@ -10,7 +10,6 @@
 #include "types.hpp"
 #include <algorithm>
 #include <cassert>
-#include <cfenv>
 #include <cmath>
 #include <cstring>
 #include <stack>
@@ -615,39 +614,21 @@ T fnearest(T value) noexcept
 {
     static_assert(std::is_floating_point_v<T>);
 
-    // This seems not to be needed for the tested implementations of std::nearbyint(),
-    // but C/C++ specification for this function does not guarantee returning arithmetic NaN.
     if (std::isnan(value))
         return std::numeric_limits<T>::quiet_NaN();  // Positive canonical NaN.
 
-    // This implementation uses std::nearbyint() which rounds to integer using current rounding
-    // direction. The rounding direction is temporarily set to "to nearest" for the case when
-    // the current rounding direction is different.
+    // Check if the input integer (as floating-point type) is even.
+    // There is a faster way of doing that by bit manipulations of mantissa and exponent,
+    // but this one is compact and this function is rarely called.
+    // The argument i is expected to contain an integer value.
+    static constexpr auto is_even = [](T i) noexcept { return std::fmod(i, T{2}) == T{0}; };
 
-    // The future C standard has roundeven() function which is much better for the job.
-    // But not generally available yet. Glibc has it already. GCC 10 has __builtin_roundeven().
-    // The LLVM has @llvm.roundeven intrinsic, but seems not to be exposed in Clang yet.
-
-    // Save the current rounding direction. This may be invalid negative value meaning a failure
-    // (probably due to changing rounding direction not being supported on the platform).
-    // volatile is used to prevent calls reordering by the compiler.
-    const volatile auto current_rounding_direction = std::fegetround();
-
-    // Temporarily change the rounding direction to "to nearest" if needed.
-    if (current_rounding_direction != FE_TONEAREST)
-    {
-        [[maybe_unused]] const auto set_succeeded = std::fesetround(FE_TONEAREST);
-        assert(set_succeeded == 0);
-    }
-
-    // volatile is used to prevent compiler from moving the last std::fesetround() before.
-    const volatile auto result = std::nearbyint(value);
-
-    // Reset the rounding direction if we know the previous value and it was actually modified.
-    if (current_rounding_direction >= 0 && current_rounding_direction != FE_TONEAREST)
-        std::fesetround(current_rounding_direction);
-
-    return result;
+    // This implementation is based on adjusting the result produced by trunc() by +-1 when needed.
+    const auto t = std::trunc(value);
+    if (const auto diff = std::abs(value - t); diff > T{0.5} || (diff == T{0.5} && !is_even(t)))
+        return t + std::copysign(T{1}, value);
+    else
+        return t;
 }
 
 template <typename T>
