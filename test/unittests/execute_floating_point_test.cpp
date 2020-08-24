@@ -42,6 +42,11 @@ MATCHER_P(ArithmeticNaN, value, "result with an arithmetic NaN")
     return FP<value_type>{result_value}.is_arithmetic_nan();
 }
 
+namespace
+{
+constexpr auto all_rounding_directions = {FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO};
+}
+
 TEST(execute_floating_point, f32_const)
 {
     /* wat2wasm
@@ -100,9 +105,6 @@ class execute_floating_point_types : public testing::Test
 {
 public:
     using L = typename FP<T>::Limits;
-
-    static constexpr auto all_rounding_directions = {
-        FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO};
 
     // The list of positive floating-point values without zeros, infinities and NaNs.
     inline static const std::array positive_special_values{
@@ -323,7 +325,7 @@ TYPED_TEST(execute_floating_point_types, unop_nan_propagation)
         const auto cnan = FP<TypeParam>::nan(FP<TypeParam>::canon);
 
         ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-        for (const auto rounding_direction : this->all_rounding_directions)
+        for (const auto rounding_direction : all_rounding_directions)
         {
             ASSERT_EQ(std::fesetround(rounding_direction), 0);
             SCOPED_TRACE(rounding_direction);
@@ -438,7 +440,7 @@ TYPED_TEST(execute_floating_point_types, compare)
     const auto ge = [&](auto a, auto b) { return execute(*instance, func_offset + 5, {a, b}); };
 
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
@@ -498,7 +500,7 @@ TYPED_TEST(execute_floating_point_types, abs)
         p_values.push_back(x);
 
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
@@ -528,7 +530,7 @@ TYPED_TEST(execute_floating_point_types, neg)
         p_values.push_back(x);
 
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
@@ -548,7 +550,7 @@ TYPED_TEST(execute_floating_point_types, ceil)
     const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
 
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
@@ -580,7 +582,7 @@ TYPED_TEST(execute_floating_point_types, floor)
     const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
 
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
@@ -612,7 +614,7 @@ TYPED_TEST(execute_floating_point_types, trunc)
     const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
 
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
@@ -643,7 +645,7 @@ TYPED_TEST(execute_floating_point_types, nearest)
     const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
 
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
@@ -1059,7 +1061,7 @@ TYPED_TEST(execute_floating_point_types, min)
     const auto exec = [&](auto arg1, auto arg2) { return execute(*instance, 0, {arg1, arg2}); };
 
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
@@ -1113,7 +1115,7 @@ TYPED_TEST(execute_floating_point_types, max)
     auto instance = instantiate(parse(this->get_binop_code(Instr::f32_max)));
     const auto exec = [&](auto arg1, auto arg2) { return execute(*instance, 0, {arg1, arg2}); };
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
@@ -1168,7 +1170,7 @@ TYPED_TEST(execute_floating_point_types, copysign)
     auto instance = instantiate(parse(this->get_binop_code(Instr::f32_copysign)));
     const auto exec = [&](auto arg1, auto arg2) { return execute(*instance, 0, {arg1, arg2}); };
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
@@ -1225,8 +1227,7 @@ TEST(execute_floating_point, f64_promote_f32)
     };
 
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction :
-        execute_floating_point_types<float>::all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
@@ -1388,7 +1389,7 @@ TYPED_TEST(execute_floating_point_types, reinterpret)
     const auto func_int_to_float = std::is_same_v<TypeParam, float> ? 2 : 3;
 
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
