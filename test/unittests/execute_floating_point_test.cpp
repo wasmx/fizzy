@@ -45,7 +45,74 @@ MATCHER_P(ArithmeticNaN, value, "result with an arithmetic NaN")
 namespace
 {
 constexpr auto all_rounding_directions = {FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO};
-}
+
+template <typename T>
+class TestValues
+{
+    using Limits = typename FP<T>::Limits;
+
+    inline static const std::array m_values{
+        T{0.0},
+
+        Limits::denorm_min(),
+        Limits::min(),
+        std::nextafter(T{1.0}, T{0.0}),
+        T{1.0},
+        std::nextafter(T{1.0}, Limits::infinity()),
+        Limits::max(),
+
+        Limits::infinity(),
+
+        // Canonical NaN:
+        FP<T>::nan(FP<T>::canon),
+
+        // Arithmetic NaNs:
+        FP<T>::nan((FP<T>::canon << 1) - 1),             // All bits set.
+        FP<T>::nan(FP<T>::canon | (FP<T>::canon >> 1)),  // Two top bits set.
+        FP<T>::nan(FP<T>::canon + 1),
+
+        // Signaling (not arithmetic) NaNs:
+        FP<T>::nan(FP<T>::canon >> 1),  // "Standard" signaling NaN.
+        FP<T>::nan(2),
+        FP<T>::nan(1),
+    };
+
+public:
+    using Iterator = typename decltype(m_values)::const_iterator;
+
+    static constexpr auto num_nans = 7;
+    static constexpr auto num_positive = m_values.size() - num_nans;
+
+    static constexpr Iterator first_non_zero = &m_values[1];
+    static constexpr Iterator canonical_nan = &m_values[num_positive];
+    static constexpr Iterator first_noncanonical_nan = canonical_nan + 1;
+    static constexpr Iterator infinity = &m_values[num_positive - 1];
+
+    class Range
+    {
+        Iterator m_begin;
+        Iterator m_end;
+
+    public:
+        constexpr Range(Iterator begin, Iterator end) noexcept : m_begin{begin}, m_end{end} {}
+
+        constexpr Iterator begin() const { return m_begin; }
+        constexpr Iterator end() const { return m_end; }
+    };
+
+    // The list of positive floating-point values without zero, infinity and NaNs.
+    static constexpr Range positive_nonzero_finite() noexcept { return {first_non_zero, infinity}; }
+
+    // The list of positive non-canonical NaN values (including signaling NaNs).
+    static constexpr Range positive_noncanonical_nans() noexcept
+    {
+        return {first_noncanonical_nan, m_values.end()};
+    }
+
+    // The list of positive floating-point values with zero, infinity and NaNs.
+    static constexpr Range positive_all() noexcept { return {m_values.begin(), m_values.end()}; }
+};
+}  // namespace
 
 TEST(execute_floating_point, f32_const)
 {
@@ -106,16 +173,6 @@ class execute_floating_point_types : public testing::Test
 public:
     using L = typename FP<T>::Limits;
 
-    // The list of positive floating-point values without zeros, infinities and NaNs.
-    inline static const std::array positive_special_values{
-        L::denorm_min(),
-        L::min(),
-        std::nextafter(T{1.0}, T{0.0}),
-        T{1.0},
-        std::nextafter(T{1.0}, L::infinity()),
-        L::max(),
-    };
-
     // The list of floating-point values, including infinities and NaNs.
     // They must be strictly ordered (ordered_values[i] < ordered_values[j] for i<j) or NaNs.
     // Therefore -0 is omitted. This allows determining the relation of any pair of values only
@@ -152,18 +209,6 @@ public:
         -FP<T>::nan(FP<T>::canon + 1),
         FP<T>::nan(1),
         -FP<T>::nan(1),
-    };
-
-    inline static const std::array positive_noncanonical_nans = {
-        // Arithmetic:
-        FP<T>::nan((FP<T>::canon << 1) - 1),             // All bits set.
-        FP<T>::nan(FP<T>::canon | (FP<T>::canon >> 1)),  // Two top bits set.
-        FP<T>::nan(FP<T>::canon + 1),
-
-        // Signaling (not arithmetic):
-        FP<T>::nan(FP<T>::canon >> 1),  // "Standard" signaling NaN.
-        FP<T>::nan(2),
-        FP<T>::nan(1),
     };
 
     // The [int_only_begin; int_only_end) is the range of floating-point numbers, where each
@@ -333,7 +378,7 @@ TYPED_TEST(execute_floating_point_types, unop_nan_propagation)
             EXPECT_THAT(execute(*instance, 0, {cnan}), CanonicalNaN(TypeParam{}));
             EXPECT_THAT(execute(*instance, 0, {-cnan}), CanonicalNaN(TypeParam{}));
 
-            for (const auto nan : this->positive_noncanonical_nans)
+            for (const auto nan : TestValues<TypeParam>::positive_noncanonical_nans())
             {
                 const auto res1 = execute(*instance, 0, {nan});
                 EXPECT_THAT(res1, ArithmeticNaN(TypeParam{}))
@@ -383,7 +428,7 @@ TYPED_TEST(execute_floating_point_types, binop_nan_propagation)
         EXPECT_THAT(exec(-cnan, cnan), CanonicalNaN(TypeParam{}));
         EXPECT_THAT(exec(-cnan, -cnan), CanonicalNaN(TypeParam{}));
 
-        for (const auto nan : this->positive_noncanonical_nans)
+        for (const auto nan : TestValues<TypeParam>::positive_noncanonical_nans())
         {
             EXPECT_THAT(exec(q, nan), ArithmeticNaN(TypeParam{}));
             EXPECT_THAT(exec(q, -nan), ArithmeticNaN(TypeParam{}));
@@ -487,17 +532,8 @@ TYPED_TEST(execute_floating_point_types, compare)
 
 TYPED_TEST(execute_floating_point_types, abs)
 {
-    using FP = FP<TypeParam>;
-    using Limits = typename FP::Limits;
-
     auto instance = instantiate(parse(this->get_unop_code(Instr::f32_abs)));
     const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
-
-    std::vector p_values(
-        std::begin(this->positive_special_values), std::end(this->positive_special_values));
-    for (const auto x :
-        {TypeParam{0}, Limits::infinity(), FP::nan(FP::canon), FP::nan(FP::canon + 1), FP::nan(1)})
-        p_values.push_back(x);
 
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
     for (const auto rounding_direction : all_rounding_directions)
@@ -505,7 +541,7 @@ TYPED_TEST(execute_floating_point_types, abs)
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
 
-        for (const auto p : p_values)
+        for (const auto p : TestValues<TypeParam>::positive_all())
         {
             // fabs(+-p) = +p
             EXPECT_THAT(exec(p), Result(p));
@@ -517,24 +553,15 @@ TYPED_TEST(execute_floating_point_types, abs)
 
 TYPED_TEST(execute_floating_point_types, neg)
 {
-    using FP = FP<TypeParam>;
-    using Limits = typename FP::Limits;
-
     auto instance = instantiate(parse(this->get_unop_code(Instr::f32_neg)));
     const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
-
-    std::vector p_values(
-        std::begin(this->positive_special_values), std::end(this->positive_special_values));
-    for (const auto x :
-        {TypeParam{0}, Limits::infinity(), FP::nan(FP::canon), FP::nan(FP::canon + 1), FP::nan(1)})
-        p_values.push_back(x);
 
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
     for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
-        for (const auto p : p_values)
+        for (const auto p : TestValues<TypeParam>::positive_all())
         {
             // fneg(+-p) = -+p
             EXPECT_THAT(exec(p), Result(-p));
@@ -718,7 +745,7 @@ TYPED_TEST(execute_floating_point_types, sqrt)
     EXPECT_THAT(exec(TypeParam{0.0}), Result(TypeParam{0.0}));
     EXPECT_THAT(exec(-TypeParam{0.0}), Result(-TypeParam{0.0}));
 
-    for (const auto p : this->positive_special_values)
+    for (const auto p : TestValues<TypeParam>::positive_nonzero_finite())
     {
         // fsqrt(-p) = nan:canonical
         EXPECT_THAT(exec(-p), CanonicalNaN(TypeParam{}));
@@ -765,7 +792,7 @@ TYPED_TEST(execute_floating_point_types, add)
     EXPECT_THAT(exec(-TypeParam{0.0}, Limits::infinity()), Result(Limits::infinity()));
     EXPECT_THAT(exec(-TypeParam{0.0}, -Limits::infinity()), Result(-Limits::infinity()));
 
-    for (const auto q : this->positive_special_values)
+    for (const auto q : TestValues<TypeParam>::positive_nonzero_finite())
     {
         // fadd(z1, +-inf) = +-inf  (for z1 = +-q)
         EXPECT_THAT(exec(q, Limits::infinity()), Result(Limits::infinity()));
@@ -829,7 +856,7 @@ TYPED_TEST(execute_floating_point_types, sub)
     EXPECT_THAT(exec(-Limits::infinity(), TypeParam{0.0}), Result(-Limits::infinity()));
     EXPECT_THAT(exec(-Limits::infinity(), -TypeParam{0.0}), Result(-Limits::infinity()));
 
-    for (const auto q : this->positive_special_values)
+    for (const auto q : TestValues<TypeParam>::positive_nonzero_finite())
     {
         // fsub(z1, +-inf) = -+inf  (for z1 = +-q)
         EXPECT_THAT(exec(q, Limits::infinity()), Result(-Limits::infinity()));
@@ -963,7 +990,7 @@ TYPED_TEST(execute_floating_point_types, mul)
     EXPECT_THAT(exec(TypeParam{0.0}, -TypeParam{0.0}), Result(-TypeParam{0.0}));
     EXPECT_THAT(exec(-TypeParam{0.0}, TypeParam{0.0}), Result(-TypeParam{0.0}));
 
-    for (const auto q : this->positive_special_values)
+    for (const auto q : TestValues<TypeParam>::positive_nonzero_finite())
     {
         // fmul(+-q1, +-inf) = +inf
         EXPECT_THAT(exec(q, Limits::infinity()), Result(Limits::infinity()));
@@ -1015,7 +1042,7 @@ TYPED_TEST(execute_floating_point_types, div)
     EXPECT_THAT(exec(TypeParam{0.0}, -TypeParam{0.0}), CanonicalNaN(TypeParam{}));
     EXPECT_THAT(exec(-TypeParam{0.0}, TypeParam{0.0}), CanonicalNaN(TypeParam{}));
 
-    for (const auto q : this->positive_special_values)
+    for (const auto q : TestValues<TypeParam>::positive_nonzero_finite())
     {
         // fdiv(+-inf, +-q2) = +inf
         EXPECT_THAT(exec(Limits::infinity(), q), Result(Limits::infinity()));
@@ -1164,9 +1191,6 @@ TYPED_TEST(execute_floating_point_types, max)
 
 TYPED_TEST(execute_floating_point_types, copysign)
 {
-    using FP = FP<TypeParam>;
-    using Limits = typename FP::Limits;
-
     auto instance = instantiate(parse(this->get_binop_code(Instr::f32_copysign)));
     const auto exec = [&](auto arg1, auto arg2) { return execute(*instance, 0, {arg1, arg2}); };
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
@@ -1174,15 +1198,10 @@ TYPED_TEST(execute_floating_point_types, copysign)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
-        std::vector p_values(
-            std::begin(this->positive_special_values), std::end(this->positive_special_values));
-        for (const auto x : {TypeParam{0}, Limits::infinity(), FP::nan(FP::canon),
-                 FP::nan(FP::canon + 1), FP::nan(1)})
-            p_values.push_back(x);
 
-        for (const auto p1 : p_values)
+        for (const auto p1 : TestValues<TypeParam>::positive_all())
         {
-            for (const auto p2 : p_values)
+            for (const auto p2 : TestValues<TypeParam>::positive_all())
             {
                 // fcopysign(+-p1, +-p2) = +-p1
                 EXPECT_THAT(exec(p1, p2), Result(p1));
@@ -1263,7 +1282,7 @@ TEST(execute_floating_point, f64_promote_f32)
         EXPECT_GT(FP{res4.value.f64}.nan_payload(), FP64::canon);
 
         // Any input NaN other than canonical must result in an arithmetic NaN.
-        for (const auto nan : execute_floating_point_types<float>::positive_noncanonical_nans)
+        for (const auto nan : TestValues<float>::positive_noncanonical_nans())
         {
             EXPECT_THAT(execute(*instance, 0, {nan}), ArithmeticNaN(double{}));
             EXPECT_THAT(execute(*instance, 0, {-nan}), ArithmeticNaN(double{}));
@@ -1366,7 +1385,7 @@ TEST(execute_floating_point, f32_demote_f64)
     }
 
     // Any input NaN other than canonical must result in an arithmetic NaN.
-    for (const auto nan : execute_floating_point_types<double>::positive_noncanonical_nans)
+    for (const auto nan : TestValues<double>::positive_noncanonical_nans())
     {
         EXPECT_THAT(execute(*instance, 0, {nan}), ArithmeticNaN(float{}));
         EXPECT_THAT(execute(*instance, 0, {-nan}), ArithmeticNaN(float{}));
