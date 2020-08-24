@@ -339,6 +339,61 @@ public:
 using FloatingPointTypes = testing::Types<float, double>;
 TYPED_TEST_SUITE(execute_floating_point_types, FloatingPointTypes, WasmTypeName);
 
+TYPED_TEST(execute_floating_point_types, test_values_selftest)
+{
+    using TV = TestValues<TypeParam>;
+
+    EXPECT_EQ(std::size(TV::positive_nonzero_infinite()), TV::num_positive - 1);
+    EXPECT_EQ(std::size(TV::positive_nonzero_finite()), TV::num_positive - 2);
+    EXPECT_EQ(std::size(TV::positive_nans()), TV::num_nans);
+    EXPECT_EQ(std::size(TV::positive_noncanonical_nans()), TV::num_nans - 1);
+    EXPECT_EQ(std::size(TV::positive_all()), TV::num_positive + TV::num_nans);
+
+    for (const auto nan : TV::positive_nans())
+        EXPECT_TRUE(std::isnan(nan));
+
+    EXPECT_TRUE(FP<TypeParam>{*TV::canonical_nan}.is_canonical_nan());
+
+    for (const auto nan : TV::positive_noncanonical_nans())
+    {
+        EXPECT_TRUE(std::isnan(nan));
+        EXPECT_FALSE(FP<TypeParam>{nan}.is_canonical_nan());
+    }
+
+    for (const auto p : TV::positive_all())
+        EXPECT_EQ(std::signbit(p), 0);
+
+    const auto& ordered = TV::ordered();
+    auto current = ordered[0];
+    EXPECT_EQ(current, -FP<TypeParam>::Limits::infinity());
+    for (size_t i = 1; i < ordered.size(); ++i)
+    {
+        EXPECT_LT(current, ordered[i]);
+        current = ordered[i];
+    }
+
+    const auto& ordered_and_nans = TV::ordered_and_nans();
+    current = ordered_and_nans[0];
+    EXPECT_EQ(current, -FP<TypeParam>::Limits::infinity());
+    size_t nan_start_index = 0;
+    for (size_t i = 1; i < ordered_and_nans.size(); ++i)
+    {
+        if (std::isnan(ordered_and_nans[i]))
+        {
+            nan_start_index = i;
+            break;
+        }
+
+        EXPECT_LT(current, ordered_and_nans[i]);
+        current = ordered_and_nans[i];
+    }
+    ASSERT_NE(nan_start_index, 0);
+    for (size_t i = nan_start_index; i < ordered_and_nans.size(); ++i)
+    {
+        EXPECT_TRUE(std::isnan(ordered_and_nans[i]));
+    }
+}
+
 TYPED_TEST(execute_floating_point_types, nan_matchers)
 {
     using testing::Not;
