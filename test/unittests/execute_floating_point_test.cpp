@@ -55,10 +55,14 @@ class TestValues
         T{0.0},
 
         Limits::denorm_min(),
+        std::nextafter(Limits::denorm_min(), Limits::infinity()),
+        std::nextafter(Limits::min(), T{0}),
         Limits::min(),
-        std::nextafter(T{1.0}, T{0.0}),
+        std::nextafter(Limits::min(), Limits::infinity()),
+        std::nextafter(T{1.0}, T{0}),
         T{1.0},
         std::nextafter(T{1.0}, Limits::infinity()),
+        std::nextafter(Limits::max(), T{0}),
         Limits::max(),
 
         Limits::infinity(),
@@ -98,10 +102,20 @@ public:
 
         constexpr Iterator begin() const { return m_begin; }
         constexpr Iterator end() const { return m_end; }
+        constexpr size_t size() const { return static_cast<size_t>(m_end - m_begin); }
     };
 
     // The list of positive floating-point values without zero, infinity and NaNs.
     static constexpr Range positive_nonzero_finite() noexcept { return {first_non_zero, infinity}; }
+
+    // The list of positive floating-point values without zero and NaNs (includes infinity).
+    static constexpr Range positive_nonzero_infinite() noexcept
+    {
+        return {first_non_zero, canonical_nan};
+    }
+
+    // The list of positive NaN values.
+    static constexpr Range positive_nans() noexcept { return {canonical_nan, m_values.end()}; }
 
     // The list of positive non-canonical NaN values (including signaling NaNs).
     static constexpr Range positive_noncanonical_nans() noexcept
@@ -111,6 +125,48 @@ public:
 
     // The list of positive floating-point values with zero, infinity and NaNs.
     static constexpr Range positive_all() noexcept { return {m_values.begin(), m_values.end()}; }
+
+    // The list of floating-point values, including infinities.
+    // They are strictly ordered (ordered_values[i] < ordered_values[j] for i<j).
+    // Therefore -0 is omitted. This allows determining the relation of any pair of values only
+    // knowing values' position in the array.
+    static auto& ordered() noexcept
+    {
+        static const auto ordered_values = [] {
+            constexpr auto ps = positive_nonzero_infinite();
+            std::array<T, ps.size() * 2 + 1> a;
+
+            auto it = std::begin(a);
+            it = std::transform(std::reverse_iterator{std::end(ps)},
+                std::reverse_iterator{std::begin(ps)}, it, std::negate<T>{});
+            *it++ = T{0.0};
+            std::copy(std::begin(ps), std::end(ps), it);
+            return a;
+        }();
+
+        return ordered_values;
+    }
+
+    // The list of floating-point values, including infinities and NaNs.
+    // They are strictly ordered (ordered_values[i] < ordered_values[j] for i<j) or NaNs.
+    // Therefore -0 is omitted. This allows determining the relation of any pair of values only
+    // knowing values' position in the array.
+    static auto& ordered_and_nans() noexcept
+    {
+        static const auto ordered_values = [] {
+            const auto& without_nans = ordered();
+            const auto nans = positive_nans();
+            std::array<T, positive_all().size() * 2 - 1> a;
+
+            auto it = std::begin(a);
+            it = std::copy(std::begin(without_nans), std::end(without_nans), it);
+            it = std::copy(std::begin(nans), std::end(nans), it);
+            std::transform(std::begin(nans), std::end(nans), it, std::negate<T>{});
+            return a;
+        }();
+
+        return ordered_values;
+    }
 };
 }  // namespace
 
@@ -172,44 +228,6 @@ class execute_floating_point_types : public testing::Test
 {
 public:
     using L = typename FP<T>::Limits;
-
-    // The list of floating-point values, including infinities and NaNs.
-    // They must be strictly ordered (ordered_values[i] < ordered_values[j] for i<j) or NaNs.
-    // Therefore -0 is omitted. This allows determining the relation of any pair of values only
-    // knowing values' position in the array.
-    inline static const std::array ordered_special_values = {
-        -L::infinity(),
-        -L::max(),
-        std::nextafter(-L::max(), T{0}),
-        std::nextafter(-T{1.0}, -L::infinity()),
-        -T{1.0},
-        std::nextafter(-T{1.0}, T{0}),
-        std::nextafter(-L::min(), -L::infinity()),
-        -L::min(),
-        std::nextafter(-L::min(), T{0}),
-        std::nextafter(-L::denorm_min(), -L::infinity()),
-        -L::denorm_min(),
-        T{0},
-        L::denorm_min(),
-        std::nextafter(L::denorm_min(), L::infinity()),
-        std::nextafter(L::min(), T{0}),
-        L::min(),
-        std::nextafter(L::min(), L::infinity()),
-        std::nextafter(T{1.0}, T{0}),
-        T{1.0},
-        std::nextafter(T{1.0}, L::infinity()),
-        std::nextafter(L::max(), T{0}),
-        L::max(),
-        L::infinity(),
-
-        // NaNs.
-        FP<T>::nan(FP<T>::canon),
-        -FP<T>::nan(FP<T>::canon),
-        FP<T>::nan(FP<T>::canon + 1),
-        -FP<T>::nan(FP<T>::canon + 1),
-        FP<T>::nan(1),
-        -FP<T>::nan(1),
-    };
 
     // The [int_only_begin; int_only_end) is the range of floating-point numbers, where each
     // representable number is an integer and there are no fractional numbers between them.
@@ -491,12 +509,13 @@ TYPED_TEST(execute_floating_point_types, compare)
         SCOPED_TRACE(rounding_direction);
 
         // Check every pair from cartesian product of ordered_values.
-        for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
+        const auto& ordered_values = TestValues<TypeParam>::ordered_and_nans();
+        for (size_t i = 0; i < std::size(ordered_values); ++i)
         {
-            for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
+            for (size_t j = 0; j < std::size(ordered_values); ++j)
             {
-                const auto a = this->ordered_special_values[i];
-                const auto b = this->ordered_special_values[j];
+                const auto a = ordered_values[i];
+                const auto b = ordered_values[j];
                 if (std::isnan(a) || std::isnan(b))
                 {
                     EXPECT_THAT(eq(a, b), Result(0)) << a << "==" << b;
@@ -920,9 +939,10 @@ TYPED_TEST(execute_floating_point_types, add_sub_neg_relation)
     const auto sub = [&](auto a, auto b) { return execute(*instance, sub_fn_idx, {a, b}); };
     const auto addneg = [&](auto a, auto b) { return execute(*instance, addneg_fn_idx, {a, b}); };
 
-    for (const auto z1 : this->ordered_special_values)
+    const auto& ordered_values = TestValues<TypeParam>::ordered_and_nans();
+    for (const auto z1 : ordered_values)
     {
-        for (const auto z2 : this->ordered_special_values)
+        for (const auto z2 : ordered_values)
         {
             const auto sub_result = sub(z1, z2);
             ASSERT_TRUE(sub_result.has_value);
@@ -1093,11 +1113,9 @@ TYPED_TEST(execute_floating_point_types, min)
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
 
-        for (const auto z : this->ordered_special_values)
+        const auto& ordered_values = TestValues<TypeParam>::ordered();
+        for (const auto z : ordered_values)
         {
-            if (std::isnan(z))
-                continue;
-
             // fmin(+inf, z2) = z2
             EXPECT_THAT(exec(Limits::infinity(), z), Result(z));
 
@@ -1119,16 +1137,13 @@ TYPED_TEST(execute_floating_point_types, min)
         // Check every pair from cartesian product of the list of values.
         // fmin(z1, z2) = z1  (if z1 <= z2)
         // fmin(z1, z2) = z2  (if z2 <= z1)
-        for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
+        for (size_t i = 0; i < std::size(ordered_values); ++i)
         {
-            for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
+            for (size_t j = 0; j < std::size(ordered_values); ++j)
             {
-                const auto a = this->ordered_special_values[i];
-                const auto b = this->ordered_special_values[j];
-                if (!std::isnan(a) && !std::isnan(b))
-                {
-                    EXPECT_THAT(exec(a, b), Result(i < j ? a : b)) << a << ", " << b;
-                }
+                const auto a = ordered_values[i];
+                const auto b = ordered_values[j];
+                EXPECT_THAT(exec(a, b), Result(i < j ? a : b)) << a << ", " << b;
             }
         }
     }
@@ -1146,11 +1161,10 @@ TYPED_TEST(execute_floating_point_types, max)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
-        for (const auto z : this->ordered_special_values)
-        {
-            if (std::isnan(z))
-                continue;
 
+        const auto& ordered_values = TestValues<TypeParam>::ordered();
+        for (const auto z : ordered_values)
+        {
             // fmax(+inf, z2) = +inf
             EXPECT_THAT(exec(Limits::infinity(), z), Result(Limits::infinity()));
 
@@ -1172,17 +1186,13 @@ TYPED_TEST(execute_floating_point_types, max)
         // Check every pair from cartesian product of the list of values.
         // fmax(z1, z2) = z1  (if z1 >= z2)
         // fmax(z1, z2) = z2  (if z2 >= z1)
-        for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
+        for (size_t i = 0; i < std::size(ordered_values); ++i)
         {
-            for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
+            for (size_t j = 0; j < std::size(ordered_values); ++j)
             {
-                const auto a = this->ordered_special_values[i];
-                const auto b = this->ordered_special_values[j];
-                if (!std::isnan(a) && !std::isnan(b))
-                {
-                    EXPECT_THAT(execute(*instance, 0, {a, b}), Result(i > j ? a : b))
-                        << a << ", " << b;
-                }
+                const auto a = ordered_values[i];
+                const auto b = ordered_values[j];
+                EXPECT_THAT(execute(*instance, 0, {a, b}), Result(i > j ? a : b)) << a << ", " << b;
             }
         }
     }
@@ -1413,7 +1423,8 @@ TYPED_TEST(execute_floating_point_types, reinterpret)
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
 
-        for (const auto float_value : this->ordered_special_values)
+        const auto& ordered_values = TestValues<TypeParam>::ordered_and_nans();
+        for (const auto float_value : ordered_values)
         {
             const auto uint_value = FP<TypeParam>{float_value}.as_uint();
             EXPECT_THAT(execute(*instance, func_float_to_int, {float_value}), Result(uint_value));
