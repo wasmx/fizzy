@@ -38,8 +38,6 @@ union Value
     template <typename T>
     constexpr Value(T) = delete;
 
-    constexpr operator uint64_t() const noexcept { return i64; }
-
     /// Get the value as the given type. Handy in templates.
     /// Only required specializations are provided.
     template <typename T>

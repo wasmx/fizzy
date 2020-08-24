@@ -30,7 +30,7 @@ TEST(api, execution_result_trap)
     const auto result = Trap;
     EXPECT_TRUE(result.trapped);
     EXPECT_FALSE(result.has_value);
-    EXPECT_EQ(result.value, 0);
+    EXPECT_EQ(result.value.i64, 0);
 }
 
 TEST(api, execution_result_void)
@@ -38,7 +38,7 @@ TEST(api, execution_result_void)
     const auto result = Void;
     EXPECT_FALSE(result.trapped);
     EXPECT_FALSE(result.has_value);
-    EXPECT_EQ(result.value, 0);
+    EXPECT_EQ(result.value.i64, 0);
 }
 
 TEST(api, execution_result_value)
@@ -46,7 +46,7 @@ TEST(api, execution_result_value)
     const ExecutionResult result = Value{1234};
     EXPECT_FALSE(result.trapped);
     EXPECT_TRUE(result.has_value);
-    EXPECT_EQ(result.value, 1234);
+    EXPECT_EQ(result.value.i64, 1234);
 }
 
 TEST(api, execution_result_bool_constructor)
@@ -55,7 +55,7 @@ TEST(api, execution_result_bool_constructor)
     const ExecutionResult result{success};
     EXPECT_TRUE(result.trapped);
     EXPECT_FALSE(result.has_value);
-    EXPECT_EQ(result.value, 0);
+    EXPECT_EQ(result.value.i64, 0);
 }
 
 TEST(api, execution_result_value_constructor)
@@ -64,7 +64,7 @@ TEST(api, execution_result_value_constructor)
     const ExecutionResult result{value};
     EXPECT_FALSE(result.trapped);
     EXPECT_TRUE(result.has_value);
-    EXPECT_EQ(result.value, 1234);
+    EXPECT_EQ(result.value.i64, 1234);
 }
 
 TEST(api, resolve_imported_functions)
@@ -315,7 +315,7 @@ TEST(api, find_exported_global)
 
     auto opt_global = find_exported_global(*instance, "g1");
     ASSERT_TRUE(opt_global);
-    EXPECT_EQ(opt_global->value->i64, 0);
+    EXPECT_EQ(as_uint32(*opt_global->value), 0);
     EXPECT_EQ(opt_global->type.value_type, ValType::i32);
     EXPECT_TRUE(opt_global->type.is_mutable);
 

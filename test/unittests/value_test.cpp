@@ -95,10 +95,3 @@ TEST(value, as_floating_point)
     EXPECT_EQ(Value{d}.f64, d);
     EXPECT_EQ(Value{d}.as<double>(), d);
 }
-
-TEST(value, implicit_conversion_to_i64)
-{
-    const Value v{1};
-    const uint64_t x = v;
-    EXPECT_EQ(x, 1);
-}

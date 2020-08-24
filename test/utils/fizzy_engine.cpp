@@ -56,7 +56,8 @@ FuncType translate_signature(std::string_view signature)
 fizzy::ExecutionResult env_adler32(fizzy::Instance& instance, fizzy::span<const Value> args, int)
 {
     assert(instance.memory != nullptr);
-    const auto ret = fizzy::test::adler32(bytes_view{*instance.memory}.substr(args[0], args[1]));
+    const auto ret = fizzy::test::adler32(
+        bytes_view{*instance.memory}.substr(args[0].as<uint32_t>(), args[1].as<uint32_t>()));
     return Value{ret};
 }
 }  // namespace
@@ -140,7 +141,7 @@ WasmEngine::Result FizzyEngine::execute(
     if (status.trapped)
         return {true, std::nullopt};
     else if (status.has_value)
-        return {false, status.value};
+        return {false, status.value.i64};
     else
         return {false, std::nullopt};
 }

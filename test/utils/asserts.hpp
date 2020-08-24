@@ -5,6 +5,7 @@
 #pragma once
 
 #include "execute.hpp"
+#include "value.hpp"
 #include <gmock/gmock.h>
 #include <test/utils/floating_point_utils.hpp>
 #include <iosfwd>
@@ -54,3 +55,12 @@ namespace fizzy
 {
 std::ostream& operator<<(std::ostream& os, ExecutionResult);
 }
+
+namespace fizzy::test
+{
+inline uint32_t as_uint32(fizzy::Value value)
+{
+    EXPECT_EQ(value.i64 & 0xffffffff00000000, 0);
+    return static_cast<uint32_t>(value.i64);
+}
+}  // namespace fizzy::test
