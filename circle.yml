@@ -278,7 +278,14 @@ jobs:
           command: |
             # Convert to relative paths
             sed -i 's|$(pwd)/||' ~/build/fizzy.lcov
-            codecov --required --file ~/build/fizzy.lcov -X gcov
+
+            counter=1
+            until codecov --required --file ~/build/fizzy.lcov -X gcov || [ $counter = 5 ]; do
+              counter=$((counter+1))
+              sleep 1
+              echo "Try #$counter..."
+            done
+
 
   sanitizers:
     executor: linux-clang-latest
