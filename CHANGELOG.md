@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning].
 
 This release introduces complete floating-point support.
 
-With that in place, Fizzy passes all(*) of the [official test suite (spectest 1.0)]:
+With that in place, Fizzy passes all(*) of the [official test suite (spectest 1.0)](https://github.com/wasmx/wasm-spec/tree/w3c-1.0-jsontests-20200813/test/core/json):
   - 18896 of 18899 binary parser and execution tests,
   - 989 of 989 validation tests,
   - 477 skipped due to testing text format parser.
@@ -114,7 +114,7 @@ fizzy/execute/micro/spinner/1000                 +0.1976         8        10
 
 This main focus for this release is to implement every WebAssembly validation rule from the specification.
 
-It passes a large part of the [official test suite (spectest 1.0)]:
+It passes a large part of the [official test suite (spectest 1.0)](https://github.com/wasmx/wasm-spec/tree/w3c-1.0-jsontests-20200313/test/core/json):
   - 4481 of 4490 binary parser and execution tests,
   - 942 of 942 validation tests,
   - 6381 skipped due to containing floating-point instructions or testing text format parser.
@@ -222,7 +222,7 @@ fizzy/execute/micro/spinner/1000                 -0.0256        10        10
 
 Firstly, this release implements many validation steps prescribed by the specification, with the exception of type checking.
 
-It passes a large part of the [official test suite (spectest 1.0)]:
+It passes a large part of the [official test suite (spectest 1.0)](https://github.com/wasmx/wasm-spec/tree/w3c-1.0-jsontests-20200313/test/core/json):
   - 4481 of 4490 binary parser and execution tests,
   - 659 of 942 validation tests,
   - 6381 skipped due to containing floating-point instructions or testing text format parser.
@@ -348,7 +348,7 @@ First release!
 ### Added
 
 - Supports all instructions with the exception of floating-point ones.
-- Passes a large part of the [official test suite (spectest 1.0)]:
+- Passes a large part of the [official test suite (spectest 1.0)](https://github.com/wasmx/wasm-spec/tree/w3c-1.0-jsontests-20200313/test/core/json):
   - 4482 of 4490 binary parser tests,
   - 301 of 942 validation tests (no full validation implemented yet),
   - 6381 skipped due to containing floating-point instructions or testing text format parser.
@@ -365,6 +365,5 @@ First release!
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Semantic Versioning]: https://semver.org
-[official test suite (spectest 1.0)]: https://github.com/WebAssembly/spec/releases/tag/wg-1.0
 [Profile-Guided Optimization]: https://en.wikipedia.org/wiki/Profile-guided_optimization
 [README: Performance Testing]: ./README.md#Performance-testing

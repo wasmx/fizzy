@@ -33,7 +33,10 @@ In order to prepare the tests, run the following command for each file:
 $ wast2json <file.wast> -o <file.json>
 ```
 
-For ease of use, we have placed the JSON files of the [spec tests] v1.1 release here: https://github.com/wasmx/wasm-spec/tree/vanilla-json
+For ease of use, we have placed the JSON files of the spec tests [w3c-v1.0 branch] here:
+- [Used before Fizzy 0.4](https://github.com/wasmx/wasm-spec/tree/w3c-1.0-jsontests-20200313/test/core/json)
+- [Used since Fizzy 0.4](https://github.com/wasmx/wasm-spec/tree/w3c-1.0-jsontests-20200813/test/core/json)
 
 [spec tests]: https://github.com/WebAssembly/spec/tree/master/test/core
+[w3c-v1.0 branch]: https://github.com/WebAssembly/spec/tree/w3c-1.0/test/core
 [wabt]: https://github.com/WebAssembly/wabt
