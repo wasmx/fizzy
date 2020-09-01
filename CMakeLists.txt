@@ -25,7 +25,7 @@ endif()
 cable_set_build_type(DEFAULT Release CONFIGURATION_TYPES Debug;Release;Coverage)
 
 project(fizzy LANGUAGES CXX C)
-set(PROJECT_VERSION 0.4.0)
+set(PROJECT_VERSION 0.5.0-dev)
 set(CMAKE_CXX_EXTENSIONS OFF)  # Disable extensions to C++ standards in Fizzy targets.
 
 include(TestBigEndian)
