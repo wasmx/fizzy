@@ -154,7 +154,7 @@ commands:
           working_directory: ~/build
           command: |
             if [ ! -d wasm-spec ]; then
-              git clone https://github.com/wasmx/wasm-spec --branch vanilla-json --depth 1
+              git clone https://github.com/wasmx/wasm-spec --branch w3c-1.0-jsontests-20200813 --depth 1
             fi
       - run:
           name: "Run spectest<<#parameters.skip_validation>> (skip validation)<</parameters.skip_validation>>"
