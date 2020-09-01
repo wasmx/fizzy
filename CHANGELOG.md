@@ -5,6 +5,111 @@ Documentation of all notable changes to the **Fizzy** project.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
+## [0.4.0] — Unreleased
+
+This release introduces complete floating-point support.
+
+With that in place, Fizzy passes all(*) of the [official test suite (spectest 1.0)]:
+  - 18896 of 18899 binary parser and execution tests,
+  - 989 of 989 validation tests,
+  - 477 skipped due to testing text format parser.
+
+(*) The three failures are caused by, in our opinion, two bugs in the test cases, and the last one
+because we restrict memory to 256 Mb maximum during instantiation, while the test expects 4 Gb to succeed.
+
+The addition of the new set of instructions causes changes to the execution times.
+Effects of some changes are truly surprising, e.g.
+[`67fd4c8`](https://github.com/wasmx/fizzy/commit/67fd4c8be8ff30477d4b1f51025ae5600ca4c35e#diff-47ed36245217950f22b14dcb2472adbaR60)
+causes over -10% performance regression on GCC 10 by adding two bytes of unused code;
+and [`bffe032`](https://github.com/wasmx/fizzy/commit/bffe032531933638232c5de883d787976c7ba10c),
+which adds two new instructions, makes binaries built with Clang 10 much faster. In the end we decided
+to start using Link-Time Optimized builds for benchmarking to mitigate some of these butterfly effects.
+See also [README: Performance testing].
+
+The performance regression of the execution time is +7% for GCC 10 and +2% for Clang 11.
+This is expected due to increased code size of the interpreter loop (increased _iTLB-load-misses_
+and _LLC-load-misses_ have been [observed](https://github.com/wasmx/fizzy/pull/510#issuecomment-679993073)).
+We plan to mitigate the impact of the change in the future by using [Profile-Guided Optimization].
+
+The performance of Wasm binary parsing and instantiation remains unchanged.
+
+```
+Comparing Fizzy 0.3.0 to 0.4.0 (Intel Haswell CPU 4.0 GHz, GCC 10, LTO)
+Benchmark                                  CPU Time [µs]       Old       New
+----------------------------------------------------------------------------
+
+fizzy/execute/blake2b/512_bytes_rounds_1         +0.0857        78        84
+fizzy/execute/blake2b/512_bytes_rounds_16        +0.0967      1164      1276
+fizzy/execute/ecpairing/onepoint                 +0.0734    395683    424732
+fizzy/execute/keccak256/512_bytes_rounds_1       +0.0457        94        98
+fizzy/execute/keccak256/512_bytes_rounds_16      +0.0492      1374      1442
+fizzy/execute/memset/256_bytes                   +0.1102         6         7
+fizzy/execute/memset/60000_bytes                 +0.1106      1390      1544
+fizzy/execute/mul256_opt0/input0                 +0.0205        25        26
+fizzy/execute/mul256_opt0/input1                 +0.0198        25        26
+fizzy/execute/sha1/512_bytes_rounds_1            +0.0477        86        90
+fizzy/execute/sha1/512_bytes_rounds_16           +0.0467      1196      1252
+fizzy/execute/sha256/512_bytes_rounds_1          +0.0885        83        91
+fizzy/execute/sha256/512_bytes_rounds_16         +0.0951      1142      1250
+fizzy/execute/micro/eli_interpreter/halt         +0.1457         0         0
+fizzy/execute/micro/eli_interpreter/exec105      +0.1711         4         5
+fizzy/execute/micro/factorial/10                 +0.0643         0         0
+fizzy/execute/micro/factorial/20                 +0.0213         1         1
+fizzy/execute/micro/fibonacci/24                 +0.0518      7131      7500
+fizzy/execute/micro/host_adler32/1               +0.0242         0         0
+fizzy/execute/micro/host_adler32/100             +0.0054         3         3
+fizzy/execute/micro/host_adler32/1000            -0.0126        30        29
+fizzy/execute/micro/spinner/1                    +0.0860         0         0
+fizzy/execute/micro/spinner/1000                 +0.1976         8        10
+```
+
+### Added
+
+- `f32.const`, `f64.const`, `f32.add`, `f64.add` instructions. [#424](https://github.com/wasmx/fizzy/pull/424) 
+  [#467](https://github.com/wasmx/fizzy/pull/467)
+- `f32.sub`, `f64.sub` instructions. [#474](https://github.com/wasmx/fizzy/pull/474)
+- `f32.mul`, `f64.mul` instructions. [#473](https://github.com/wasmx/fizzy/pull/473)
+- `f32.div`, `f64.div` instructions. [#468](https://github.com/wasmx/fizzy/pull/468)
+- `f32.sqrt`, `f64.sqrt` instructions. [#480](https://github.com/wasmx/fizzy/pull/480)
+- `f32.copysign`, `f64.copysign` instructions. [#471](https://github.com/wasmx/fizzy/pull/471)
+- `f32.abs`, `f64.abs` instructions. [#476](https://github.com/wasmx/fizzy/pull/476)
+- `f32.neg`, `f64.neg` instructions. [#477](https://github.com/wasmx/fizzy/pull/477)
+- Floating-point comparison instructions: `f32.eq`, `f32.ne`, `f32.lt`, `f32.gt`, `f32.le`, `f64.ge`, `f64.eq`, 
+   `f64.ne`, `f64.lt`, `f64.gt`, `f64.le`, `f64.ge`. [#449](https://github.com/wasmx/fizzy/pull/449)
+- `f32.min`, `f32.max`, `f64.min`, `f64.max` instructions. [#472](https://github.com/wasmx/fizzy/pull/472)
+- `f32.ceil`, `f32.floor`, `f32.trunc`, `f64.ceil`, `f64.floor`, `f64.trunc` instructions. 
+  [#481](https://github.com/wasmx/fizzy/pull/481)
+- `f32.nearest`, `f64.nearest` instructions. [#486](https://github.com/wasmx/fizzy/pull/486)
+- Floating-point to integer truncation instructions: `i32.trunc_f32_s`, `i32.trunc_f32_u`, `i32.trunc_f64_s`, `i32.trunc_f64_u`, `i64.trunc_f32_s`, `i64.trunc_f32_u`, 
+  `i64.trunc_f64_s`, `i64.trunc_f64_u`. [#447](https://github.com/wasmx/fizzy/pull/447)
+- Integer to floating-point conversion instructions: `f32.convert_i32_s`, `f32.convert_i32_u`, `f32.convert_i64_s`, `f32.convert_i64_u`, 
+  `f64.convert_i32_s`, `f64.convert_i32_u`, `f64.convert_i64_s`, `f64.convert_i64_u`. 
+  [#455](https://github.com/wasmx/fizzy/pull/455)
+- `f64.promote_f32` instruction. [#457](https://github.com/wasmx/fizzy/pull/457)
+- `f32.demote_f64` instruction. [#458](https://github.com/wasmx/fizzy/pull/458)
+- Reinterpret instructions: `i32.reinterpret_f32`, `i64.reinterpret_f64`, `f32.reinterpret_i32`, `f64.reinterpret_i64`. 
+  [#459](https://github.com/wasmx/fizzy/pull/459)
+- Floating-point memory instructions: `f32.load`, `f64.load`, `f32.store`, `f64.store`. [#456](https://github.com/wasmx/fizzy/pull/456)
+- Floating-point globals support. [#446](https://github.com/wasmx/fizzy/pull/446)
+- `fizzy-spectests` support for floating-point tests. [#445](https://github.com/wasmx/fizzy/pull/445)
+  [#460](https://github.com/wasmx/fizzy/pull/460) [#484](https://github.com/wasmx/fizzy/pull/484)
+- Comprehensive tests for all NaNs and all rounding directions. [#475](https://github.com/wasmx/fizzy/pull/475)
+  [#487](https://github.com/wasmx/fizzy/pull/487) [#488](https://github.com/wasmx/fizzy/pull/488)
+  [#500](https://github.com/wasmx/fizzy/pull/500)
+- A single-precision floating-point benchmark approximating pi using Taylor's series. [#482](https://github.com/wasmx/fizzy/pull/482)
+- A double-precision floating-point benchmark approximating pi using Ramanujan's algorithm. [#483](https://github.com/wasmx/fizzy/pull/483)
+
+### Changed
+- Execution API now uses union-based `Value` type instead of `uint64_t `to represent values of all supported types. 
+  [#419](https://github.com/wasmx/fizzy/pull/419) [#423](https://github.com/wasmx/fizzy/pull/423) 
+  [#448](https://github.com/wasmx/fizzy/pull/448) [#462](https://github.com/wasmx/fizzy/pull/462)
+  [#464](https://github.com/wasmx/fizzy/pull/464)
+- `fizzy-spectests` output can be configured for various verbosity. [#453](https://github.com/wasmx/fizzy/pull/453)
+- `ExternalGlobal` now includes type of value, which is checked against module definition for imported globals. 
+  [#493](https://github.com/wasmx/fizzy/pull/493) 
+- Mark `execute()` completely exception free (`noexcept`). [#438](https://github.com/wasmx/fizzy/pull/438)
+
+
 ## [0.3.0] — 2020-07-29
 
 This main focus for this release is to implement every WebAssembly validation rule from the specification.
@@ -256,7 +361,10 @@ First release!
 [0.1.0]: https://github.com/wasmx/fizzy/releases/tag/v0.1.0
 [0.2.0]: https://github.com/wasmx/fizzy/releases/tag/v0.2.0
 [0.3.0]: https://github.com/wasmx/fizzy/releases/tag/v0.3.0
+[0.4.0]: https://github.com/wasmx/fizzy/compare/v0.3.0..master
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Semantic Versioning]: https://semver.org
 [official test suite (spectest 1.0)]: https://github.com/WebAssembly/spec/releases/tag/wg-1.0
+[Profile-Guided Optimization]: https://en.wikipedia.org/wiki/Profile-guided_optimization
+[README: Performance Testing]: ./README.md#Performance-testing

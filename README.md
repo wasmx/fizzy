@@ -101,6 +101,36 @@ In the GNU C Library the rounding mode can be controlled via the [`fesetround` a
 
 If strict compliance is sought with WebAssembly, then the user of Fizzy must ensure to keep the default rounding mode.
 
+
+## Development
+
+### Performance testing
+
+We use the following build configuration for performance testing:
+
+- Release build type (`-DCMAKE_BUILD_TYPE=Release`)
+
+  This enables `-O3` optimization level and disables asserts.
+
+- Link-Time Optimization (`-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=TRUE`)
+
+  This does not give big performance gains (v0.3: +1%, v0.4: -3%), but most importantly
+  eliminates performance instabilities related to layout changes in the code section of the binaries.
+  See [#510](https://github.com/wasmx/fizzy/pull/510) for example.
+
+- Latest version of GCC or Clang compiler
+
+  The Fizzy built with recent versions of GCC and Clang has comparable performance.
+  For LTO builds of Fizzy 0.4.0 Clang 10/11 is 4% faster than GCC 10.
+
+- libstdc++ standard library
+
+- No "native" architecture selection
+
+  The compiler option `-march=native` is not used, leaving default architecture to be selected.
+  Building for native CPU architecture can be easily enabled with CMake option `-DNATIVE=TRUE`.
+  We leave the investigation of the impact of this for the future.
+
 ## Releases
 
 For a list of releases and changelog see the [CHANGELOG file](./CHANGELOG.md).
