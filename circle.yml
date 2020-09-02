@@ -428,10 +428,16 @@ workflows:
     unless: <<pipeline.parameters.benchmark>>
     jobs:
       - lint
-      - release-linux
+      - release-linux:
+          requires:
+            - release-native-linux
       - release-native-linux
-      - release-macos
-      - release-native-macos
+      - release-macos:
+          requires:
+            - release-native-macos
+      - release-native-macos:
+          requires:
+            - sanitizers-macos
       - coverage
       - cxx20
       - sanitizers
