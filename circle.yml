@@ -140,10 +140,10 @@ commands:
         default: false
       expected_passed:
         type: integer
-        default: 18899
+        default: 18900
       expected_failed:
         type: integer
-        default: 3
+        default: 2
       expected_skipped:
         type: integer
         default: 477
