@@ -450,6 +450,36 @@ inline void comparison_op(OperandStack& stack, Op<T> op) noexcept
 }
 
 template <typename T>
+inline constexpr T add(T a, T b) noexcept
+{
+    return a + b;
+}
+
+template <typename T>
+inline constexpr T sub(T a, T b) noexcept
+{
+    return a - b;
+}
+
+template <typename T>
+inline constexpr T mul(T a, T b) noexcept
+{
+    return a * b;
+}
+
+template <typename T>
+inline constexpr T div(T a, T b) noexcept
+{
+    return a / b;
+}
+
+template <typename T>
+inline constexpr T rem(T a, T b) noexcept
+{
+    return a % b;
+}
+
+template <typename T>
 inline T shift_left(T lhs, T rhs) noexcept
 {
     static_assert(std::is_integral_v<T>);
@@ -1448,17 +1478,17 @@ ExecutionResult execute(
         }
         case Instr::i32_add:
         {
-            binary_op(stack, std::plus<uint32_t>());
+            binary_op(stack, add<uint32_t>);
             break;
         }
         case Instr::i32_sub:
         {
-            binary_op(stack, std::minus<uint32_t>());
+            binary_op(stack, sub<uint32_t>);
             break;
         }
         case Instr::i32_mul:
         {
-            binary_op(stack, std::multiplies<uint32_t>());
+            binary_op(stack, mul<uint32_t>);
             break;
         }
         case Instr::i32_div_s:
@@ -1470,7 +1500,7 @@ ExecutionResult execute(
                 trap = true;
                 goto end;
             }
-            binary_op(stack, std::divides<int32_t>());
+            binary_op(stack, div<int32_t>);
             break;
         }
         case Instr::i32_div_u:
@@ -1481,7 +1511,7 @@ ExecutionResult execute(
                 trap = true;
                 goto end;
             }
-            binary_op(stack, std::divides<uint32_t>());
+            binary_op(stack, div<uint32_t>);
             break;
         }
         case Instr::i32_rem_s:
@@ -1499,7 +1529,7 @@ ExecutionResult execute(
                 stack.top() = 0;
             }
             else
-                binary_op(stack, std::modulus<int32_t>());
+                binary_op(stack, rem<int32_t>);
             break;
         }
         case Instr::i32_rem_u:
@@ -1510,7 +1540,7 @@ ExecutionResult execute(
                 trap = true;
                 goto end;
             }
-            binary_op(stack, std::modulus<uint32_t>());
+            binary_op(stack, rem<uint32_t>);
             break;
         }
         case Instr::i32_and:
@@ -1571,17 +1601,17 @@ ExecutionResult execute(
         }
         case Instr::i64_add:
         {
-            binary_op(stack, std::plus<uint64_t>());
+            binary_op(stack, add<uint64_t>);
             break;
         }
         case Instr::i64_sub:
         {
-            binary_op(stack, std::minus<uint64_t>());
+            binary_op(stack, sub<uint64_t>);
             break;
         }
         case Instr::i64_mul:
         {
-            binary_op(stack, std::multiplies<uint64_t>());
+            binary_op(stack, mul<uint64_t>);
             break;
         }
         case Instr::i64_div_s:
@@ -1593,7 +1623,7 @@ ExecutionResult execute(
                 trap = true;
                 goto end;
             }
-            binary_op(stack, std::divides<int64_t>());
+            binary_op(stack, div<int64_t>);
             break;
         }
         case Instr::i64_div_u:
@@ -1604,7 +1634,7 @@ ExecutionResult execute(
                 trap = true;
                 goto end;
             }
-            binary_op(stack, std::divides<uint64_t>());
+            binary_op(stack, div<uint64_t>);
             break;
         }
         case Instr::i64_rem_s:
@@ -1622,7 +1652,7 @@ ExecutionResult execute(
                 stack.top() = 0;
             }
             else
-                binary_op(stack, std::modulus<int64_t>());
+                binary_op(stack, rem<int64_t>);
             break;
         }
         case Instr::i64_rem_u:
@@ -1633,7 +1663,7 @@ ExecutionResult execute(
                 trap = true;
                 goto end;
             }
-            binary_op(stack, std::modulus<uint64_t>());
+            binary_op(stack, rem<uint64_t>);
             break;
         }
         case Instr::i64_and:
@@ -1716,17 +1746,17 @@ ExecutionResult execute(
 
         case Instr::f32_add:
         {
-            binary_op(stack, std::plus<float>{});
+            binary_op(stack, add<float>);
             break;
         }
         case Instr::f32_sub:
         {
-            binary_op(stack, std::minus<float>{});
+            binary_op(stack, sub<float>);
             break;
         }
         case Instr::f32_mul:
         {
-            binary_op(stack, std::multiplies<float>{});
+            binary_op(stack, mul<float>);
             break;
         }
         case Instr::f32_div:
@@ -1794,17 +1824,17 @@ ExecutionResult execute(
 
         case Instr::f64_add:
         {
-            binary_op(stack, std::plus<double>{});
+            binary_op(stack, add<double>);
             break;
         }
         case Instr::f64_sub:
         {
-            binary_op(stack, std::minus<double>{});
+            binary_op(stack, sub<double>);
             break;
         }
         case Instr::f64_mul:
         {
-            binary_op(stack, std::multiplies<double>{});
+            binary_op(stack, mul<double>);
             break;
         }
         case Instr::f64_div:
