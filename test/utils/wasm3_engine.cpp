@@ -40,10 +40,9 @@ namespace
 {
 const void* env_adler32(IM3Runtime /*runtime*/, uint64_t* stack, void* mem)
 {
-    uint64_t* ret = stack;
-    const uint32_t offset = *(uint32_t*)(stack++);
-    const uint32_t length = *(uint32_t*)(stack++);
-    *ret = fizzy::test::adler32({reinterpret_cast<uint8_t*>(mem) + offset, length});
+    const uint32_t offset = static_cast<uint32_t>(stack[0]);
+    const uint32_t length = static_cast<uint32_t>(stack[1]);
+    stack[0] = fizzy::test::adler32({reinterpret_cast<uint8_t*>(mem) + offset, length});
     return m3Err_none;
 }
 }  // namespace
