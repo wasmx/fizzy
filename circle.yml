@@ -23,8 +23,8 @@ executors:
       xcode: 11.6.0
 
 commands:
-  description: "Install macOS system dependencies"
   install_macos_deps:
+    description: "Install macOS system dependencies"
     steps:
       - run:
           name: "Install system dependencies"
