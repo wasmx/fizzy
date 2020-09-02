@@ -2,18 +2,7 @@
 // Copyright 2019-2020 The Fizzy Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-#include "bytes.hpp"
-#include <cstdint>
-#include <utility>
-
-std::pair<uint64_t, const uint8_t*> nop(const uint8_t* p, const uint8_t* end)
-{
-    auto n = p + 10;
-    if (n > end)
-        n = end;
-
-    return {*p, n};
-}
+#include "experimental.hpp"
 
 // Adapted from LLVM.
 // https://github.com/llvm/llvm-project/blob/master/llvm/include/llvm/Support/LEB128.h#L128
