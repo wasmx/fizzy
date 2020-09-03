@@ -297,7 +297,7 @@ TEST(instantiate, imported_memory_invalid)
     const auto bin_without_max = from_hex("0061736d01000000020a01036d6f64016d020001");
     const auto module_without_max = parse(bin_without_max);
     EXPECT_THROW_MESSAGE(
-        instantiate(module_without_max, {}, {}, {{&memory, {1, MemoryPagesLimit + 1}}}),
+        instantiate(module_without_max, {}, {}, {{&memory, {1, DefaultMemoryPagesLimit + 1}}}),
         instantiate_error,
         "imported memory limits cannot exceed hard memory limit of 268435456 bytes");
 }

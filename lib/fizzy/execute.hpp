@@ -5,6 +5,7 @@
 #pragma once
 
 #include "exceptions.hpp"
+#include "limits.hpp"
 #include "module.hpp"
 #include "span.hpp"
 #include "types.hpp"
@@ -73,6 +74,8 @@ struct Instance
     // For these cases unique_ptr would either have a normal deleter or noop deleter respectively
     bytes_ptr memory = {nullptr, [](bytes*) {}};
     Limits memory_limits;
+    // Hard limit for memory growth in pages, checked when memory is defined as unbounded in module
+    uint32_t memory_pages_limit = 0;
     // Table is either allocated and owned by the instance or imported and owned externally.
     // For these cases unique_ptr would either have a normal deleter or noop deleter respectively.
     table_ptr table = {nullptr, [](table_elements*) {}};
@@ -81,13 +84,14 @@ struct Instance
     std::vector<ExternalFunction> imported_functions;
     std::vector<ExternalGlobal> imported_globals;
 
-    Instance(Module _module, bytes_ptr _memory, Limits _memory_limits, table_ptr _table,
-        Limits _table_limits, std::vector<Value> _globals,
+    Instance(Module _module, bytes_ptr _memory, Limits _memory_limits, uint32_t _memory_pages_limit,
+        table_ptr _table, Limits _table_limits, std::vector<Value> _globals,
         std::vector<ExternalFunction> _imported_functions,
         std::vector<ExternalGlobal> _imported_globals)
       : module(std::move(_module)),
         memory(std::move(_memory)),
         memory_limits(_memory_limits),
+        memory_pages_limit(_memory_pages_limit),
         table(std::move(_table)),
         table_limits(_table_limits),
         globals(std::move(_globals)),
@@ -101,7 +105,8 @@ std::unique_ptr<Instance> instantiate(Module module,
     std::vector<ExternalFunction> imported_functions = {},
     std::vector<ExternalTable> imported_tables = {},
     std::vector<ExternalMemory> imported_memories = {},
-    std::vector<ExternalGlobal> imported_globals = {});
+    std::vector<ExternalGlobal> imported_globals = {},
+    uint32_t memory_pages_limit = DefaultMemoryPagesLimit);
 
 // Execute a function on an instance.
 ExecutionResult execute(
