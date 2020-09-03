@@ -13,14 +13,14 @@ namespace fizzy::test
 {
 static_assert(sizeof(IM3Function) <= sizeof(WasmEngine::FuncRef));
 
-class Wasm3Engine : public WasmEngine
+class Wasm3Engine final : public WasmEngine
 {
     IM3Environment m_env{nullptr};
     IM3Runtime m_runtime{nullptr};
 
 public:
     Wasm3Engine() : m_env{m3_NewEnvironment()} {}
-    ~Wasm3Engine()
+    ~Wasm3Engine() final
     {
         if (m_runtime)
             m3_FreeRuntime(m_runtime);
