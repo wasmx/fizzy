@@ -42,6 +42,134 @@ MATCHER_P(ArithmeticNaN, value, "result with an arithmetic NaN")
     return FP<value_type>{result_value}.is_arithmetic_nan();
 }
 
+namespace
+{
+constexpr auto all_rounding_directions = {FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO};
+
+template <typename T>
+class TestValues
+{
+    using Limits = typename FP<T>::Limits;
+
+    inline static const std::array m_values{
+        T{0.0},
+
+        Limits::denorm_min(),
+        std::nextafter(Limits::denorm_min(), Limits::infinity()),
+        std::nextafter(Limits::min(), T{0}),
+        Limits::min(),
+        std::nextafter(Limits::min(), Limits::infinity()),
+        std::nextafter(T{1.0}, T{0}),
+        T{1.0},
+        std::nextafter(T{1.0}, Limits::infinity()),
+        std::nextafter(Limits::max(), T{0}),
+        Limits::max(),
+
+        Limits::infinity(),
+
+        // Canonical NaN:
+        FP<T>::nan(FP<T>::canon),
+
+        // Arithmetic NaNs:
+        FP<T>::nan((FP<T>::canon << 1) - 1),             // All bits set.
+        FP<T>::nan(FP<T>::canon | (FP<T>::canon >> 1)),  // Two top bits set.
+        FP<T>::nan(FP<T>::canon + 1),
+
+        // Signaling (not arithmetic) NaNs:
+        FP<T>::nan(FP<T>::canon >> 1),  // "Standard" signaling NaN.
+        FP<T>::nan(2),
+        FP<T>::nan(1),
+    };
+
+public:
+    using Iterator = typename decltype(m_values)::const_iterator;
+
+    static constexpr auto num_nans = 7;
+    static constexpr auto num_positive = m_values.size() - num_nans;
+
+    static constexpr Iterator first_non_zero = &m_values[1];
+    static constexpr Iterator canonical_nan = &m_values[num_positive];
+    static constexpr Iterator first_noncanonical_nan = canonical_nan + 1;
+    static constexpr Iterator infinity = &m_values[num_positive - 1];
+
+    class Range
+    {
+        Iterator m_begin;
+        Iterator m_end;
+
+    public:
+        constexpr Range(Iterator begin, Iterator end) noexcept : m_begin{begin}, m_end{end} {}
+
+        constexpr Iterator begin() const { return m_begin; }
+        constexpr Iterator end() const { return m_end; }
+        constexpr size_t size() const { return static_cast<size_t>(m_end - m_begin); }
+    };
+
+    // The list of positive floating-point values without zero, infinity and NaNs.
+    static constexpr Range positive_nonzero_finite() noexcept { return {first_non_zero, infinity}; }
+
+    // The list of positive floating-point values without zero and NaNs (includes infinity).
+    static constexpr Range positive_nonzero_infinite() noexcept
+    {
+        return {first_non_zero, canonical_nan};
+    }
+
+    // The list of positive NaN values.
+    static constexpr Range positive_nans() noexcept { return {canonical_nan, m_values.end()}; }
+
+    // The list of positive non-canonical NaN values (including signaling NaNs).
+    static constexpr Range positive_noncanonical_nans() noexcept
+    {
+        return {first_noncanonical_nan, m_values.end()};
+    }
+
+    // The list of positive floating-point values with zero, infinity and NaNs.
+    static constexpr Range positive_all() noexcept { return {m_values.begin(), m_values.end()}; }
+
+    // The list of floating-point values, including infinities.
+    // They are strictly ordered (ordered_values[i] < ordered_values[j] for i<j).
+    // Therefore -0 is omitted. This allows determining the relation of any pair of values only
+    // knowing values' position in the array.
+    static auto& ordered() noexcept
+    {
+        static const auto ordered_values = [] {
+            constexpr auto ps = positive_nonzero_infinite();
+            std::array<T, ps.size() * 2 + 1> a;
+
+            auto it = std::begin(a);
+            it = std::transform(std::reverse_iterator{std::end(ps)},
+                std::reverse_iterator{std::begin(ps)}, it, std::negate<T>{});
+            *it++ = T{0.0};
+            std::copy(std::begin(ps), std::end(ps), it);
+            return a;
+        }();
+
+        return ordered_values;
+    }
+
+    // The list of floating-point values, including infinities and NaNs.
+    // They are strictly ordered (ordered_values[i] < ordered_values[j] for i<j) or NaNs.
+    // Therefore -0 is omitted. This allows determining the relation of any pair of values only
+    // knowing values' position in the array.
+    static auto& ordered_and_nans() noexcept
+    {
+        static const auto ordered_values = [] {
+            const auto& without_nans = ordered();
+            const auto nans = positive_nans();
+            std::array<T, positive_all().size() * 2 - 1> a;
+
+            auto it = std::begin(a);
+            it = std::copy(std::begin(without_nans), std::end(without_nans), it);
+            it = std::copy(std::begin(nans), std::end(nans), it);
+            std::transform(std::begin(nans), std::end(nans), it, std::negate<T>{});
+            return a;
+        }();
+
+        return ordered_values;
+    }
+};
+}  // namespace
+
 TEST(execute_floating_point, f32_const)
 {
     /* wat2wasm
@@ -100,69 +228,6 @@ class execute_floating_point_types : public testing::Test
 {
 public:
     using L = typename FP<T>::Limits;
-
-    static constexpr auto all_rounding_directions = {
-        FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO};
-
-    // The list of positive floating-point values without zeros, infinities and NaNs.
-    inline static const std::array positive_special_values{
-        L::denorm_min(),
-        L::min(),
-        std::nextafter(T{1.0}, T{0.0}),
-        T{1.0},
-        std::nextafter(T{1.0}, L::infinity()),
-        L::max(),
-    };
-
-    // The list of floating-point values, including infinities and NaNs.
-    // They must be strictly ordered (ordered_values[i] < ordered_values[j] for i<j) or NaNs.
-    // Therefore -0 is omitted. This allows determining the relation of any pair of values only
-    // knowing values' position in the array.
-    inline static const std::array ordered_special_values = {
-        -L::infinity(),
-        -L::max(),
-        std::nextafter(-L::max(), T{0}),
-        std::nextafter(-T{1.0}, -L::infinity()),
-        -T{1.0},
-        std::nextafter(-T{1.0}, T{0}),
-        std::nextafter(-L::min(), -L::infinity()),
-        -L::min(),
-        std::nextafter(-L::min(), T{0}),
-        std::nextafter(-L::denorm_min(), -L::infinity()),
-        -L::denorm_min(),
-        T{0},
-        L::denorm_min(),
-        std::nextafter(L::denorm_min(), L::infinity()),
-        std::nextafter(L::min(), T{0}),
-        L::min(),
-        std::nextafter(L::min(), L::infinity()),
-        std::nextafter(T{1.0}, T{0}),
-        T{1.0},
-        std::nextafter(T{1.0}, L::infinity()),
-        std::nextafter(L::max(), T{0}),
-        L::max(),
-        L::infinity(),
-
-        // NaNs.
-        FP<T>::nan(FP<T>::canon),
-        -FP<T>::nan(FP<T>::canon),
-        FP<T>::nan(FP<T>::canon + 1),
-        -FP<T>::nan(FP<T>::canon + 1),
-        FP<T>::nan(1),
-        -FP<T>::nan(1),
-    };
-
-    inline static const std::array positive_noncanonical_nans = {
-        // Arithmetic:
-        FP<T>::nan((FP<T>::canon << 1) - 1),             // All bits set.
-        FP<T>::nan(FP<T>::canon | (FP<T>::canon >> 1)),  // Two top bits set.
-        FP<T>::nan(FP<T>::canon + 1),
-
-        // Signaling (not arithmetic):
-        FP<T>::nan(FP<T>::canon >> 1),  // "Standard" signaling NaN.
-        FP<T>::nan(2),
-        FP<T>::nan(1),
-    };
 
     // The [int_only_begin; int_only_end) is the range of floating-point numbers, where each
     // representable number is an integer and there are no fractional numbers between them.
@@ -274,6 +339,61 @@ public:
 using FloatingPointTypes = testing::Types<float, double>;
 TYPED_TEST_SUITE(execute_floating_point_types, FloatingPointTypes, WasmTypeName);
 
+TYPED_TEST(execute_floating_point_types, test_values_selftest)
+{
+    using TV = TestValues<TypeParam>;
+
+    EXPECT_EQ(std::size(TV::positive_nonzero_infinite()), TV::num_positive - 1);
+    EXPECT_EQ(std::size(TV::positive_nonzero_finite()), TV::num_positive - 2);
+    EXPECT_EQ(std::size(TV::positive_nans()), TV::num_nans);
+    EXPECT_EQ(std::size(TV::positive_noncanonical_nans()), TV::num_nans - 1);
+    EXPECT_EQ(std::size(TV::positive_all()), TV::num_positive + TV::num_nans);
+
+    for (const auto nan : TV::positive_nans())
+        EXPECT_TRUE(std::isnan(nan));
+
+    EXPECT_TRUE(FP<TypeParam>{*TV::canonical_nan}.is_canonical_nan());
+
+    for (const auto nan : TV::positive_noncanonical_nans())
+    {
+        EXPECT_TRUE(std::isnan(nan));
+        EXPECT_FALSE(FP<TypeParam>{nan}.is_canonical_nan());
+    }
+
+    for (const auto p : TV::positive_all())
+        EXPECT_EQ(std::signbit(p), 0);
+
+    const auto& ordered = TV::ordered();
+    auto current = ordered[0];
+    EXPECT_EQ(current, -FP<TypeParam>::Limits::infinity());
+    for (size_t i = 1; i < ordered.size(); ++i)
+    {
+        EXPECT_LT(current, ordered[i]);
+        current = ordered[i];
+    }
+
+    const auto& ordered_and_nans = TV::ordered_and_nans();
+    current = ordered_and_nans[0];
+    EXPECT_EQ(current, -FP<TypeParam>::Limits::infinity());
+    size_t nan_start_index = 0;
+    for (size_t i = 1; i < ordered_and_nans.size(); ++i)
+    {
+        if (std::isnan(ordered_and_nans[i]))
+        {
+            nan_start_index = i;
+            break;
+        }
+
+        EXPECT_LT(current, ordered_and_nans[i]);
+        current = ordered_and_nans[i];
+    }
+    ASSERT_NE(nan_start_index, 0);
+    for (size_t i = nan_start_index; i < ordered_and_nans.size(); ++i)
+    {
+        EXPECT_TRUE(std::isnan(ordered_and_nans[i]));
+    }
+}
+
 TYPED_TEST(execute_floating_point_types, nan_matchers)
 {
     using testing::Not;
@@ -323,7 +443,7 @@ TYPED_TEST(execute_floating_point_types, unop_nan_propagation)
         const auto cnan = FP<TypeParam>::nan(FP<TypeParam>::canon);
 
         ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-        for (const auto rounding_direction : this->all_rounding_directions)
+        for (const auto rounding_direction : all_rounding_directions)
         {
             ASSERT_EQ(std::fesetround(rounding_direction), 0);
             SCOPED_TRACE(rounding_direction);
@@ -331,7 +451,7 @@ TYPED_TEST(execute_floating_point_types, unop_nan_propagation)
             EXPECT_THAT(execute(*instance, 0, {cnan}), CanonicalNaN(TypeParam{}));
             EXPECT_THAT(execute(*instance, 0, {-cnan}), CanonicalNaN(TypeParam{}));
 
-            for (const auto nan : this->positive_noncanonical_nans)
+            for (const auto nan : TestValues<TypeParam>::positive_noncanonical_nans())
             {
                 const auto res1 = execute(*instance, 0, {nan});
                 EXPECT_THAT(res1, ArithmeticNaN(TypeParam{}))
@@ -381,7 +501,7 @@ TYPED_TEST(execute_floating_point_types, binop_nan_propagation)
         EXPECT_THAT(exec(-cnan, cnan), CanonicalNaN(TypeParam{}));
         EXPECT_THAT(exec(-cnan, -cnan), CanonicalNaN(TypeParam{}));
 
-        for (const auto nan : this->positive_noncanonical_nans)
+        for (const auto nan : TestValues<TypeParam>::positive_noncanonical_nans())
         {
             EXPECT_THAT(exec(q, nan), ArithmeticNaN(TypeParam{}));
             EXPECT_THAT(exec(q, -nan), ArithmeticNaN(TypeParam{}));
@@ -438,18 +558,19 @@ TYPED_TEST(execute_floating_point_types, compare)
     const auto ge = [&](auto a, auto b) { return execute(*instance, func_offset + 5, {a, b}); };
 
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
 
         // Check every pair from cartesian product of ordered_values.
-        for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
+        const auto& ordered_values = TestValues<TypeParam>::ordered_and_nans();
+        for (size_t i = 0; i < std::size(ordered_values); ++i)
         {
-            for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
+            for (size_t j = 0; j < std::size(ordered_values); ++j)
             {
-                const auto a = this->ordered_special_values[i];
-                const auto b = this->ordered_special_values[j];
+                const auto a = ordered_values[i];
+                const auto b = ordered_values[j];
                 if (std::isnan(a) || std::isnan(b))
                 {
                     EXPECT_THAT(eq(a, b), Result(0)) << a << "==" << b;
@@ -485,25 +606,16 @@ TYPED_TEST(execute_floating_point_types, compare)
 
 TYPED_TEST(execute_floating_point_types, abs)
 {
-    using FP = FP<TypeParam>;
-    using Limits = typename FP::Limits;
-
     auto instance = instantiate(parse(this->get_unop_code(Instr::f32_abs)));
     const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
 
-    std::vector p_values(
-        std::begin(this->positive_special_values), std::end(this->positive_special_values));
-    for (const auto x :
-        {TypeParam{0}, Limits::infinity(), FP::nan(FP::canon), FP::nan(FP::canon + 1), FP::nan(1)})
-        p_values.push_back(x);
-
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
 
-        for (const auto p : p_values)
+        for (const auto p : TestValues<TypeParam>::positive_all())
         {
             // fabs(+-p) = +p
             EXPECT_THAT(exec(p), Result(p));
@@ -515,24 +627,15 @@ TYPED_TEST(execute_floating_point_types, abs)
 
 TYPED_TEST(execute_floating_point_types, neg)
 {
-    using FP = FP<TypeParam>;
-    using Limits = typename FP::Limits;
-
     auto instance = instantiate(parse(this->get_unop_code(Instr::f32_neg)));
     const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
 
-    std::vector p_values(
-        std::begin(this->positive_special_values), std::end(this->positive_special_values));
-    for (const auto x :
-        {TypeParam{0}, Limits::infinity(), FP::nan(FP::canon), FP::nan(FP::canon + 1), FP::nan(1)})
-        p_values.push_back(x);
-
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
-        for (const auto p : p_values)
+        for (const auto p : TestValues<TypeParam>::positive_all())
         {
             // fneg(+-p) = -+p
             EXPECT_THAT(exec(p), Result(-p));
@@ -548,7 +651,7 @@ TYPED_TEST(execute_floating_point_types, ceil)
     const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
 
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
@@ -580,7 +683,7 @@ TYPED_TEST(execute_floating_point_types, floor)
     const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
 
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
@@ -612,7 +715,7 @@ TYPED_TEST(execute_floating_point_types, trunc)
     const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
 
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
@@ -643,7 +746,7 @@ TYPED_TEST(execute_floating_point_types, nearest)
     const auto exec = [&](auto arg) { return execute(*instance, 0, {arg}); };
 
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
@@ -716,7 +819,7 @@ TYPED_TEST(execute_floating_point_types, sqrt)
     EXPECT_THAT(exec(TypeParam{0.0}), Result(TypeParam{0.0}));
     EXPECT_THAT(exec(-TypeParam{0.0}), Result(-TypeParam{0.0}));
 
-    for (const auto p : this->positive_special_values)
+    for (const auto p : TestValues<TypeParam>::positive_nonzero_finite())
     {
         // fsqrt(-p) = nan:canonical
         EXPECT_THAT(exec(-p), CanonicalNaN(TypeParam{}));
@@ -763,7 +866,7 @@ TYPED_TEST(execute_floating_point_types, add)
     EXPECT_THAT(exec(-TypeParam{0.0}, Limits::infinity()), Result(Limits::infinity()));
     EXPECT_THAT(exec(-TypeParam{0.0}, -Limits::infinity()), Result(-Limits::infinity()));
 
-    for (const auto q : this->positive_special_values)
+    for (const auto q : TestValues<TypeParam>::positive_nonzero_finite())
     {
         // fadd(z1, +-inf) = +-inf  (for z1 = +-q)
         EXPECT_THAT(exec(q, Limits::infinity()), Result(Limits::infinity()));
@@ -827,7 +930,7 @@ TYPED_TEST(execute_floating_point_types, sub)
     EXPECT_THAT(exec(-Limits::infinity(), TypeParam{0.0}), Result(-Limits::infinity()));
     EXPECT_THAT(exec(-Limits::infinity(), -TypeParam{0.0}), Result(-Limits::infinity()));
 
-    for (const auto q : this->positive_special_values)
+    for (const auto q : TestValues<TypeParam>::positive_nonzero_finite())
     {
         // fsub(z1, +-inf) = -+inf  (for z1 = +-q)
         EXPECT_THAT(exec(q, Limits::infinity()), Result(-Limits::infinity()));
@@ -891,9 +994,10 @@ TYPED_TEST(execute_floating_point_types, add_sub_neg_relation)
     const auto sub = [&](auto a, auto b) { return execute(*instance, sub_fn_idx, {a, b}); };
     const auto addneg = [&](auto a, auto b) { return execute(*instance, addneg_fn_idx, {a, b}); };
 
-    for (const auto z1 : this->ordered_special_values)
+    const auto& ordered_values = TestValues<TypeParam>::ordered_and_nans();
+    for (const auto z1 : ordered_values)
     {
-        for (const auto z2 : this->ordered_special_values)
+        for (const auto z2 : ordered_values)
         {
             const auto sub_result = sub(z1, z2);
             ASSERT_TRUE(sub_result.has_value);
@@ -961,7 +1065,7 @@ TYPED_TEST(execute_floating_point_types, mul)
     EXPECT_THAT(exec(TypeParam{0.0}, -TypeParam{0.0}), Result(-TypeParam{0.0}));
     EXPECT_THAT(exec(-TypeParam{0.0}, TypeParam{0.0}), Result(-TypeParam{0.0}));
 
-    for (const auto q : this->positive_special_values)
+    for (const auto q : TestValues<TypeParam>::positive_nonzero_finite())
     {
         // fmul(+-q1, +-inf) = +inf
         EXPECT_THAT(exec(q, Limits::infinity()), Result(Limits::infinity()));
@@ -1013,7 +1117,7 @@ TYPED_TEST(execute_floating_point_types, div)
     EXPECT_THAT(exec(TypeParam{0.0}, -TypeParam{0.0}), CanonicalNaN(TypeParam{}));
     EXPECT_THAT(exec(-TypeParam{0.0}, TypeParam{0.0}), CanonicalNaN(TypeParam{}));
 
-    for (const auto q : this->positive_special_values)
+    for (const auto q : TestValues<TypeParam>::positive_nonzero_finite())
     {
         // fdiv(+-inf, +-q2) = +inf
         EXPECT_THAT(exec(Limits::infinity(), q), Result(Limits::infinity()));
@@ -1059,16 +1163,14 @@ TYPED_TEST(execute_floating_point_types, min)
     const auto exec = [&](auto arg1, auto arg2) { return execute(*instance, 0, {arg1, arg2}); };
 
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
 
-        for (const auto z : this->ordered_special_values)
+        const auto& ordered_values = TestValues<TypeParam>::ordered();
+        for (const auto z : ordered_values)
         {
-            if (std::isnan(z))
-                continue;
-
             // fmin(+inf, z2) = z2
             EXPECT_THAT(exec(Limits::infinity(), z), Result(z));
 
@@ -1090,16 +1192,13 @@ TYPED_TEST(execute_floating_point_types, min)
         // Check every pair from cartesian product of the list of values.
         // fmin(z1, z2) = z1  (if z1 <= z2)
         // fmin(z1, z2) = z2  (if z2 <= z1)
-        for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
+        for (size_t i = 0; i < std::size(ordered_values); ++i)
         {
-            for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
+            for (size_t j = 0; j < std::size(ordered_values); ++j)
             {
-                const auto a = this->ordered_special_values[i];
-                const auto b = this->ordered_special_values[j];
-                if (!std::isnan(a) && !std::isnan(b))
-                {
-                    EXPECT_THAT(exec(a, b), Result(i < j ? a : b)) << a << ", " << b;
-                }
+                const auto a = ordered_values[i];
+                const auto b = ordered_values[j];
+                EXPECT_THAT(exec(a, b), Result(i < j ? a : b)) << a << ", " << b;
             }
         }
     }
@@ -1113,15 +1212,14 @@ TYPED_TEST(execute_floating_point_types, max)
     auto instance = instantiate(parse(this->get_binop_code(Instr::f32_max)));
     const auto exec = [&](auto arg1, auto arg2) { return execute(*instance, 0, {arg1, arg2}); };
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
-        for (const auto z : this->ordered_special_values)
-        {
-            if (std::isnan(z))
-                continue;
 
+        const auto& ordered_values = TestValues<TypeParam>::ordered();
+        for (const auto z : ordered_values)
+        {
             // fmax(+inf, z2) = +inf
             EXPECT_THAT(exec(Limits::infinity(), z), Result(Limits::infinity()));
 
@@ -1143,17 +1241,13 @@ TYPED_TEST(execute_floating_point_types, max)
         // Check every pair from cartesian product of the list of values.
         // fmax(z1, z2) = z1  (if z1 >= z2)
         // fmax(z1, z2) = z2  (if z2 >= z1)
-        for (size_t i = 0; i < std::size(this->ordered_special_values); ++i)
+        for (size_t i = 0; i < std::size(ordered_values); ++i)
         {
-            for (size_t j = 0; j < std::size(this->ordered_special_values); ++j)
+            for (size_t j = 0; j < std::size(ordered_values); ++j)
             {
-                const auto a = this->ordered_special_values[i];
-                const auto b = this->ordered_special_values[j];
-                if (!std::isnan(a) && !std::isnan(b))
-                {
-                    EXPECT_THAT(execute(*instance, 0, {a, b}), Result(i > j ? a : b))
-                        << a << ", " << b;
-                }
+                const auto a = ordered_values[i];
+                const auto b = ordered_values[j];
+                EXPECT_THAT(execute(*instance, 0, {a, b}), Result(i > j ? a : b)) << a << ", " << b;
             }
         }
     }
@@ -1162,25 +1256,17 @@ TYPED_TEST(execute_floating_point_types, max)
 
 TYPED_TEST(execute_floating_point_types, copysign)
 {
-    using FP = FP<TypeParam>;
-    using Limits = typename FP::Limits;
-
     auto instance = instantiate(parse(this->get_binop_code(Instr::f32_copysign)));
     const auto exec = [&](auto arg1, auto arg2) { return execute(*instance, 0, {arg1, arg2}); };
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
-        std::vector p_values(
-            std::begin(this->positive_special_values), std::end(this->positive_special_values));
-        for (const auto x : {TypeParam{0}, Limits::infinity(), FP::nan(FP::canon),
-                 FP::nan(FP::canon + 1), FP::nan(1)})
-            p_values.push_back(x);
 
-        for (const auto p1 : p_values)
+        for (const auto p1 : TestValues<TypeParam>::positive_all())
         {
-            for (const auto p2 : p_values)
+            for (const auto p2 : TestValues<TypeParam>::positive_all())
             {
                 // fcopysign(+-p1, +-p2) = +-p1
                 EXPECT_THAT(exec(p1, p2), Result(p1));
@@ -1225,8 +1311,7 @@ TEST(execute_floating_point, f64_promote_f32)
     };
 
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction :
-        execute_floating_point_types<float>::all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
@@ -1262,7 +1347,7 @@ TEST(execute_floating_point, f64_promote_f32)
         EXPECT_GT(FP{res4.value.f64}.nan_payload(), FP64::canon);
 
         // Any input NaN other than canonical must result in an arithmetic NaN.
-        for (const auto nan : execute_floating_point_types<float>::positive_noncanonical_nans)
+        for (const auto nan : TestValues<float>::positive_noncanonical_nans())
         {
             EXPECT_THAT(execute(*instance, 0, {nan}), ArithmeticNaN(double{}));
             EXPECT_THAT(execute(*instance, 0, {-nan}), ArithmeticNaN(double{}));
@@ -1365,7 +1450,7 @@ TEST(execute_floating_point, f32_demote_f64)
     }
 
     // Any input NaN other than canonical must result in an arithmetic NaN.
-    for (const auto nan : execute_floating_point_types<double>::positive_noncanonical_nans)
+    for (const auto nan : TestValues<double>::positive_noncanonical_nans())
     {
         EXPECT_THAT(execute(*instance, 0, {nan}), ArithmeticNaN(float{}));
         EXPECT_THAT(execute(*instance, 0, {-nan}), ArithmeticNaN(float{}));
@@ -1388,12 +1473,13 @@ TYPED_TEST(execute_floating_point_types, reinterpret)
     const auto func_int_to_float = std::is_same_v<TypeParam, float> ? 2 : 3;
 
     ASSERT_EQ(std::fegetround(), FE_TONEAREST);
-    for (const auto rounding_direction : this->all_rounding_directions)
+    for (const auto rounding_direction : all_rounding_directions)
     {
         ASSERT_EQ(std::fesetround(rounding_direction), 0);
         SCOPED_TRACE(rounding_direction);
 
-        for (const auto float_value : this->ordered_special_values)
+        const auto& ordered_values = TestValues<TypeParam>::ordered_and_nans();
+        for (const auto float_value : ordered_values)
         {
             const auto uint_value = FP<TypeParam>{float_value}.as_uint();
             EXPECT_THAT(execute(*instance, func_float_to_int, {float_value}), Result(uint_value));
