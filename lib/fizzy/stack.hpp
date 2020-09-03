@@ -13,47 +13,39 @@
 namespace fizzy
 {
 template <typename T>
-class Stack : public std::vector<T>
+class Stack
 {
+    std::vector<T> m_container;
+
 public:
-    using difference_type = typename std::vector<T>::difference_type;
-
-    using std::vector<T>::vector;
-
-    using std::vector<T>::back;
-    using std::vector<T>::emplace_back;
-    using std::vector<T>::pop_back;
-    using std::vector<T>::resize;
-    using std::vector<T>::size;
-
-    // Also used: size(), resize(), clear(), empty(), end()
-
-    void push(T val) { emplace_back(val); }
+    void push(T val) { m_container.emplace_back(val); }
 
     template <typename... Args>
     void emplace(Args&&... args)
     {
-        std::vector<T>::emplace_back(std::forward<Args>(args)...);
+        m_container.emplace_back(std::forward<Args>(args)...);
     }
 
-    T pop()
+    T pop() noexcept
     {
-        const auto res = back();
-        pop_back();
+        assert(!m_container.empty());
+        const auto res = m_container.back();
+        m_container.pop_back();
         return res;
     }
 
-    T& operator[](size_t index) noexcept { return std::vector<T>::operator[](size() - index - 1); }
+    bool empty() const noexcept { return m_container.empty(); }
 
-    T& top() noexcept { return (*this)[0]; }
+    size_t size() const noexcept { return m_container.size(); }
 
-    /// Drops @a num_elements elements from the top of the stack.
-    void drop(size_t num_elements = 1) noexcept { resize(size() - num_elements); }
+    T& operator[](size_t index) noexcept { return m_container[size() - index - 1]; }
+
+    T& top() noexcept { return m_container.back(); }
 
     void shrink(size_t new_size) noexcept
     {
         assert(new_size <= size());
-        resize(new_size);
+        m_container.resize(new_size);
     }
 };
 
