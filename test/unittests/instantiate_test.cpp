@@ -490,6 +490,65 @@ TEST(instantiate, memory_single_large_maximum)
         "cannot exceed hard memory limit of 268435456 bytes");
 }
 
+TEST(instantiate, memory_single_custom_hard_limit)
+{
+    /* wat2wasm
+      (memory 2 4)
+    */
+    const auto bin = from_hex("0061736d01000000050401010204");
+    const auto module = parse(bin);
+
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {}, 1), instantiate_error,
+        "cannot exceed hard memory limit of 65536 bytes");
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {}, 3), instantiate_error,
+        "cannot exceed hard memory limit of 196608 bytes");
+
+    EXPECT_NO_THROW(instantiate(module, {}, {}, {}, {}, 4));
+    EXPECT_NO_THROW(instantiate(module, {}, {}, {}, {}, 8));
+}
+
+TEST(instantiate, imported_memory_custom_hard_limit)
+{
+    /* wat2wasm
+      (memory (import "mod" "mem") 2)
+    */
+    const auto bin = from_hex("0061736d01000000020c01036d6f64036d656d020002");
+    const auto module = parse(bin);
+
+    bytes memory(PageSize * 3, 0);
+
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {3, 4}}}, {}, 1), instantiate_error,
+        "imported memory limits cannot exceed hard memory limit of 65536 bytes");
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {3, 4}}}, {}, 2), instantiate_error,
+        "imported memory limits cannot exceed hard memory limit of 131072 bytes");
+    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {3, 4}}}, {}, 3), instantiate_error,
+        "imported memory limits cannot exceed hard memory limit of 196608 bytes");
+
+    EXPECT_NO_THROW(instantiate(module, {}, {}, {{&memory, {3, std::nullopt}}}, {}, 3));
+    EXPECT_NO_THROW(instantiate(module, {}, {}, {{&memory, {3, std::nullopt}}}, {}, 4));
+    EXPECT_NO_THROW(instantiate(module, {}, {}, {{&memory, {3, 4}}}, {}, 4));
+    EXPECT_NO_THROW(instantiate(module, {}, {}, {{&memory, {3, 4}}}, {}, 8));
+
+    /* wat2wasm
+      (memory (import "mod" "mem") 2 6)
+    */
+    const auto bin_max_limit = from_hex("0061736d01000000020d01036d6f64036d656d02010206");
+    const auto module_max_limit = parse(bin_max_limit);
+
+    EXPECT_THROW_MESSAGE(instantiate(module_max_limit, {}, {}, {{&memory, {3, 4}}}, {}, 1),
+        instantiate_error, "imported memory limits cannot exceed hard memory limit of 65536 bytes");
+    EXPECT_THROW_MESSAGE(instantiate(module_max_limit, {}, {}, {{&memory, {3, 4}}}, {}, 2),
+        instantiate_error,
+        "imported memory limits cannot exceed hard memory limit of 131072 bytes");
+    EXPECT_THROW_MESSAGE(instantiate(module_max_limit, {}, {}, {{&memory, {3, 4}}}, {}, 3),
+        instantiate_error,
+        "imported memory limits cannot exceed hard memory limit of 196608 bytes");
+
+    EXPECT_NO_THROW(instantiate(module_max_limit, {}, {}, {{&memory, {3, 4}}}, {}, 4));
+    EXPECT_NO_THROW(instantiate(module_max_limit, {}, {}, {{&memory, {3, 6}}}, {}, 6));
+    EXPECT_NO_THROW(instantiate(module_max_limit, {}, {}, {{&memory, {3, 6}}}, {}, 8));
+}
+
 TEST(instantiate, element_section)
 {
     /* wat2wasm
