@@ -303,7 +303,6 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         {
         default:
             throw parser_error{"invalid instruction " + std::to_string(*(pos - 1))};
-            break;
 
         case Instr::unreachable:
             mark_frame_unreachable(frame, operand_stack);

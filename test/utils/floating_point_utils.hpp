@@ -53,9 +53,9 @@ struct FP
 
     T value{};
 
-    explicit FP(T v) noexcept : value{v} {};
+    explicit FP(T v) noexcept : value{v} {}
 
-    explicit FP(UintType u) noexcept : value{bit_cast<T>(u)} {};
+    explicit FP(UintType u) noexcept : value{bit_cast<T>(u)} {}
 
     /// Return unsigned integer with the binary representation of the value.
     UintType as_uint() const noexcept { return bit_cast<UintType>(value); }
