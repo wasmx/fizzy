@@ -29,6 +29,8 @@ import sys
 DEBUG = False
 
 WAT2WASM_TOOL = 'wat2wasm'
+WAT2WASM_DEFAULT_OPTIONS = ['--disable-saturating-float-to-int',
+                            '--disable-sign-extension', '--disable-multi-value']
 FORMAT_TOOL = 'clang-format'
 
 WAT_RE = re.compile(r'/\* wat2wasm(.*)\n([^*]*)\*/', re.MULTILINE)
@@ -88,6 +90,7 @@ try:
         with open(TMP_WAT_FILE, 'w') as f:
             f.write(wat)
 
+        options = WAT2WASM_DEFAULT_OPTIONS + options
         r = subprocess.run([WAT2WASM_TOOL, TMP_WAT_FILE] + options,
                            capture_output=True, text=True)
         if r.returncode != 0:
