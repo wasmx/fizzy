@@ -2,11 +2,14 @@
 // Copyright 2020 The Fizzy Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#include "wasm_engine.hpp"
 #include <stdexcept>
 #include <string>
 
 namespace fizzy::test
 {
+WasmEngine::~WasmEngine() noexcept = default;
+
 void validate_function_signature(std::string_view signature)
 {
     if (signature.find_first_of(":") == std::string::npos)
