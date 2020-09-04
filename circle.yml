@@ -6,9 +6,6 @@ parameters:
     default: false
 
 executors:
-  lint:
-    docker:
-      - image: ethereum/cpp-build-env:14-lint
   linux-gcc-9:
     docker:
       - image: ethereum/cpp-build-env:14-gcc-9
@@ -17,7 +14,7 @@ executors:
       - image: ethereum/cpp-build-env:14-gcc-10
   linux-clang-latest:
     docker:
-      - image: ethereum/cpp-build-env:14-clang-10
+      - image: ethereum/cpp-build-env:15-clang-10
   macos:
     macos:
       xcode: 11.6.0
@@ -175,7 +172,7 @@ commands:
 jobs:
 
   lint:
-    executor: lint
+    executor: linux-clang-latest
     steps:
       - checkout
       - run:
@@ -212,6 +209,10 @@ jobs:
             ./wat2wasm4cpp.py test/unittests/wasm_engine_test.cpp
             ./wat2wasm4cpp.py test/spectests/spectests.cpp
             git diff --color --exit-code
+      - build:
+          build_type: Debug
+          cmake_options: -DCMAKE_CXX_STANDARD=20 -DCMAKE_CXX_CLANG_TIDY=clang-tidy
+      - test
 
   release-linux:
     executor: linux-gcc-9
@@ -247,15 +248,6 @@ jobs:
       - build:
           build_type: Release
           cmake_options: -DNATIVE=ON
-      - test
-
-  cxx20:
-    executor: linux-gcc-latest
-    steps:
-      - checkout
-      - build:
-          build_type: Debug
-          cmake_options: -DCMAKE_CXX_STANDARD=20
       - test
 
   coverage:
@@ -295,7 +287,7 @@ jobs:
       - checkout
       - build:
           build_type: RelWithDebInfo
-          cmake_options: -DCMAKE_CXX_CLANG_TIDY=clang-tidy -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
+          cmake_options: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
       - test
       - benchmark:
           min_time: "0.01"
@@ -440,7 +432,6 @@ workflows:
           requires:
             - sanitizers-macos
       - coverage
-      - cxx20
       - sanitizers
       - sanitizers-macos
       - fuzzing
