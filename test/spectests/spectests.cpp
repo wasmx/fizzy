@@ -21,6 +21,7 @@ namespace
 {
 constexpr auto JsonExtension = ".json";
 constexpr auto UnnamedModule = "_unnamed";
+constexpr unsigned TestMemoryPagesLimit = (4 * 1024 * 1024 * 1024ULL) / fizzy::PageSize;  // 4 Gb
 
 // spectest module details:
 // https://github.com/WebAssembly/spec/issues/1111
@@ -126,9 +127,10 @@ public:
                         continue;
                     }
 
-                    m_instances[name] = fizzy::instantiate(std::move(module),
-                        std::move(imports.functions), std::move(imports.tables),
-                        std::move(imports.memories), std::move(imports.globals));
+                    m_instances[name] =
+                        fizzy::instantiate(std::move(module), std::move(imports.functions),
+                            std::move(imports.tables), std::move(imports.memories),
+                            std::move(imports.globals), TestMemoryPagesLimit);
 
                     m_last_module_name = name;
                 }

@@ -632,6 +632,115 @@ TEST(execute, memory_grow)
     EXPECT_THAT(execute(module, 0, {0xffffffe}), Result(-1));
 }
 
+TEST(execute, memory_grow_custom_hard_limit)
+{
+    constexpr std::pair<uint32_t, uint32_t> test_cases[]{
+        {0, 1},
+        {1, 1},
+        {15, 1},
+        {16, -1},
+        {0xffffffff, -1},
+    };
+
+    /* wat2wasm
+    (memory 1)
+    (func (param i32) (result i32)
+      get_local 0
+      memory.grow
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d0100000001060160017f017f0302010005030100010a08010600200040000b");
+    const auto module = parse(wasm);
+
+    for (const auto& test_case : test_cases)
+    {
+        const auto instance = instantiate(module, {}, {}, {}, {}, 16);
+        EXPECT_THAT(execute(*instance, 0, {test_case.first}), Result(test_case.second));
+    }
+
+    /* wat2wasm
+    (memory 1 16)
+    (func (param i32) (result i32)
+      get_local 0
+      memory.grow
+    )
+    */
+    const auto wasm_max_limit =
+        from_hex("0061736d0100000001060160017f017f030201000504010101100a08010600200040000b");
+    const auto module_max_limit = parse(wasm_max_limit);
+
+    for (const auto& test_case : test_cases)
+    {
+        const auto instance = instantiate(module_max_limit, {}, {}, {}, {}, 32);
+        EXPECT_THAT(execute(*instance, 0, {test_case.first}), Result(test_case.second));
+    }
+
+    /* wat2wasm
+    (memory (import "mod" "mem") 1)
+    (func (param i32) (result i32)
+      get_local 0
+      memory.grow
+    )
+    */
+    const auto wasm_imported = from_hex(
+        "0061736d0100000001060160017f017f020c01036d6f64036d656d020001030201000a08010600200040000b");
+    const auto module_imported = parse(wasm_imported);
+
+    for (const auto& test_case : test_cases)
+    {
+        bytes memory(PageSize, 0);
+        const auto instance =
+            instantiate(module_imported, {}, {}, {{&memory, {1, std::nullopt}}}, {}, 16);
+        EXPECT_THAT(execute(*instance, 0, {test_case.first}), Result(test_case.second));
+
+        bytes memory_max_limit(PageSize, 0);
+        const auto instance_max_limit =
+            instantiate(module_imported, {}, {}, {{&memory_max_limit, {1, 16}}}, {}, 32);
+        EXPECT_THAT(execute(*instance_max_limit, 0, {test_case.first}), Result(test_case.second));
+    }
+
+    /* wat2wasm
+    (memory (import "mod" "mem") 1 16)
+    (func (param i32) (result i32)
+      get_local 0
+      memory.grow
+    )
+    */
+    const auto wasm_imported_max_limit = from_hex(
+        "0061736d0100000001060160017f017f020d01036d6f64036d656d02010110030201000a08010600200040000"
+        "b");
+    const auto module_imported_max_limit = parse(wasm_imported_max_limit);
+
+    for (const auto& test_case : test_cases)
+    {
+        bytes memory(PageSize, 0);
+        const auto instance =
+            instantiate(module_imported_max_limit, {}, {}, {{&memory, {1, 16}}}, {}, 32);
+        EXPECT_THAT(execute(*instance, 0, {test_case.first}), Result(test_case.second));
+    }
+
+    /* wat2wasm
+    (memory (import "mod" "mem") 1 32)
+    (func (param i32) (result i32)
+      get_local 0
+      memory.grow
+    )
+    */
+    const auto wasm_imported_max_limit_narrowing = from_hex(
+        "0061736d0100000001060160017f017f020d01036d6f64036d656d02010120030201000a08010600200040000"
+        "b");
+    const auto module_imported_max_limit_narrowing = parse(wasm_imported_max_limit_narrowing);
+
+    for (const auto& test_case : test_cases)
+    {
+        bytes memory(PageSize, 0);
+        const auto instance =
+            instantiate(module_imported_max_limit_narrowing, {}, {}, {{&memory, {1, 16}}}, {}, 32);
+        EXPECT_THAT(execute(*instance, 0, {test_case.first}), Result(test_case.second));
+    }
+}
+
 TEST(execute, start_section)
 {
     // In this test the start function (index 1) writes a i32 value to the memory

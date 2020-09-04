@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "execute.hpp"
-#include "limits.hpp"
 #include "module.hpp"
 #include "stack.hpp"
 #include "trunc_boundaries.hpp"
@@ -172,7 +171,7 @@ std::tuple<table_ptr, Limits> allocate_table(
 }
 
 std::tuple<bytes_ptr, Limits> allocate_memory(const std::vector<Memory>& module_memories,
-    const std::vector<ExternalMemory>& imported_memories)
+    const std::vector<ExternalMemory>& imported_memories, uint32_t memory_pages_limit)
 {
     static const auto bytes_delete = [](bytes* b) noexcept { delete b; };
     static const auto null_delete = [](bytes*) noexcept {};
@@ -185,11 +184,11 @@ std::tuple<bytes_ptr, Limits> allocate_memory(const std::vector<Memory>& module_
         const auto memory_max = module_memories[0].limits.max;
 
         // TODO: better error handling
-        if ((memory_min > MemoryPagesLimit) ||
-            (memory_max.has_value() && *memory_max > MemoryPagesLimit))
+        if ((memory_min > memory_pages_limit) ||
+            (memory_max.has_value() && *memory_max > memory_pages_limit))
         {
             throw instantiate_error{"cannot exceed hard memory limit of " +
-                                    std::to_string(MemoryPagesLimit * PageSize) + " bytes"};
+                                    std::to_string(memory_pages_limit * PageSize) + " bytes"};
         }
 
         // NOTE: fill it with zeroes
@@ -202,11 +201,11 @@ std::tuple<bytes_ptr, Limits> allocate_memory(const std::vector<Memory>& module_
         const auto memory_max = imported_memories[0].limits.max;
 
         // TODO: better error handling
-        if ((memory_min > MemoryPagesLimit) ||
-            (memory_max.has_value() && *memory_max > MemoryPagesLimit))
+        if ((memory_min > memory_pages_limit) ||
+            (memory_max.has_value() && *memory_max > memory_pages_limit))
         {
             throw instantiate_error{"imported memory limits cannot exceed hard memory limit of " +
-                                    std::to_string(MemoryPagesLimit * PageSize) + " bytes"};
+                                    std::to_string(memory_pages_limit * PageSize) + " bytes"};
         }
 
         bytes_ptr memory{imported_memories[0].data, null_delete};
@@ -688,7 +687,8 @@ std::optional<uint32_t> find_export(const Module& module, ExternalKind kind, std
 
 std::unique_ptr<Instance> instantiate(Module module,
     std::vector<ExternalFunction> imported_functions, std::vector<ExternalTable> imported_tables,
-    std::vector<ExternalMemory> imported_memories, std::vector<ExternalGlobal> imported_globals)
+    std::vector<ExternalMemory> imported_memories, std::vector<ExternalGlobal> imported_globals,
+    uint32_t memory_pages_limit /*= DefaultMemoryPagesLimit*/)
 {
     assert(module.funcsec.size() == module.codesec.size());
 
@@ -712,7 +712,16 @@ std::unique_ptr<Instance> instantiate(Module module,
 
     auto [table, table_limits] = allocate_table(module.tablesec, imported_tables);
 
-    auto [memory, memory_limits] = allocate_memory(module.memorysec, imported_memories);
+    auto [memory, memory_limits] =
+        allocate_memory(module.memorysec, imported_memories, memory_pages_limit);
+    // In case upper limit for local/imported memory is defined,
+    // we adjust the hard memory limit, to ensure memory.grow will fail when exceeding it.
+    // Note: allocate_memory ensures memory's max limit is always below memory_pages_limit.
+    if (memory_limits.max.has_value())
+    {
+        assert(*memory_limits.max <= memory_pages_limit);
+        memory_pages_limit = *memory_limits.max;
+    }
 
     // Before starting to fill memory and table,
     // check that data and element segments are within bounds.
@@ -756,8 +765,8 @@ std::unique_ptr<Instance> instantiate(Module module,
     // We need to create instance before filling table,
     // because table functions will capture the pointer to instance.
     auto instance = std::make_unique<Instance>(std::move(module), std::move(memory), memory_limits,
-        std::move(table), table_limits, std::move(globals), std::move(imported_functions),
-        std::move(imported_globals));
+        memory_pages_limit, std::move(table), table_limits, std::move(globals),
+        std::move(imported_functions), std::move(imported_globals));
 
     // Fill the table based on elements segment
     for (size_t i = 0; i < instance->module.elementsec.size(); ++i)
@@ -1240,10 +1249,7 @@ ExecutionResult execute(
             uint32_t ret = static_cast<uint32_t>(cur_pages);
             try
             {
-                const size_t memory_max_pages =
-                    (instance.memory_limits.max.has_value() ? *instance.memory_limits.max :
-                                                              MemoryPagesLimit);
-                if (new_pages > memory_max_pages)
+                if (new_pages > instance.memory_pages_limit)
                     throw std::bad_alloc();
                 memory->resize(new_pages * PageSize);
             }
