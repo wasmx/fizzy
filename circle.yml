@@ -6,9 +6,6 @@ parameters:
     default: false
 
 executors:
-  lint:
-    docker:
-      - image: ethereum/cpp-build-env:14-lint
   linux-gcc-9:
     docker:
       - image: ethereum/cpp-build-env:14-gcc-9
@@ -17,7 +14,7 @@ executors:
       - image: ethereum/cpp-build-env:14-gcc-10
   linux-clang-latest:
     docker:
-      - image: ethereum/cpp-build-env:14-clang-10
+      - image: ethereum/cpp-build-env:15-clang-10
   macos:
     macos:
       xcode: 11.6.0
@@ -33,6 +30,12 @@ commands:
   build:
     description: "Build"
     parameters:
+      build_type:
+        type: enum
+        enum: [ "Debug", "Release", "RelWithDebInfo", "Coverage" ]
+      cmake_options:
+        type: string
+        default: ""
       target:
         type: string
         default: all
@@ -51,7 +54,7 @@ commands:
 
             # Create the toolchain.info file for cache key.
             echo $TOOLCHAIN >> toolchain.info
-            echo $BUILD_TYPE >> toolchain.info
+            echo <<parameters.build_type>> >> toolchain.info
             $CXX --version >> toolchain.info
       - restore_cache:
           name: "Restore Hunter cache"
@@ -60,7 +63,7 @@ commands:
           name: "Configure"
           working_directory: ~/build
           command: |
-            cmake ../project -G Ninja -DCMAKE_INSTALL_PREFIX=~/install -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DFIZZY_TESTING=ON $CMAKE_OPTIONS
+            cmake ../project -G Ninja -DCMAKE_INSTALL_PREFIX=~/install -DCMAKE_BUILD_TYPE=<<parameters.build_type>> -DFIZZY_TESTING=ON <<parameters.cmake_options>>
       - save_cache:
           name: "Save Hunter cache"
           key: *hunter-cache-key
@@ -73,18 +76,18 @@ commands:
   test:
     description: "Test"
     steps:
-    - run:
-        name: "Run unit tests"
-        working_directory: ~/build
-        command: ctest -R unittests -j4 --schedule-random --output-on-failure
-    - run:
-        name: "Run smoke tests"
-        working_directory: ~/build
-        command: ctest -R smoketests -j4 --schedule-random --output-on-failure
-    - run:
-        name: "Run other tests"
-        working_directory: ~/build
-        command: ctest -E 'unittests|smoketests' -j4 --schedule-random --output-on-failure
+      - run:
+          name: "Run unit tests"
+          working_directory: ~/build
+          command: ctest -R unittests -j4 --schedule-random --output-on-failure
+      - run:
+          name: "Run smoke tests"
+          working_directory: ~/build
+          command: ctest -R smoketests -j4 --schedule-random --output-on-failure
+      - run:
+          name: "Run other tests"
+          working_directory: ~/build
+          command: ctest -E 'unittests|smoketests' -j4 --schedule-random --output-on-failure
 
   collect_coverage_data:
     description: "Collect coverage data"
@@ -169,101 +172,90 @@ commands:
 jobs:
 
   lint:
-    executor: lint
+    executor: linux-clang-latest
     steps:
-    - checkout
-    - run:
-        name: "Check code format"
-        command: |
-          clang-format --version
-          find . -name '*.hpp' -o -name '*.cpp' -o -name '*.h' -o -name '*.c' -not -wholename './test/benchmarks/*' | xargs clang-format -i
-          git diff --color --exit-code
-    - run:
-        name: "Run codespell"
-        command: |
-          codespell --quiet-level=4 -I .codespell-whitelist
-    - run:
-        name: "Install wabt"
-        working_directory: ~/bin
-        command: curl -L https://github.com/WebAssembly/wabt/releases/download/1.0.15/wabt-1.0.15-linux.tar.gz | tar xz --strip=1
-    - run:
-        name: "Check wat2wasm4cpp"
-        command: |
-          export PATH=$PATH:~/bin
-          ./wat2wasm4cpp.py test/unittests/api_test.cpp
-          ./wat2wasm4cpp.py test/unittests/end_to_end_test.cpp
-          ./wat2wasm4cpp.py test/unittests/execute_call_test.cpp
-          ./wat2wasm4cpp.py test/unittests/execute_control_test.cpp
-          ./wat2wasm4cpp.py test/unittests/execute_floating_point_test.cpp
-          ./wat2wasm4cpp.py test/unittests/execute_numeric_test.cpp
-          ./wat2wasm4cpp.py test/unittests/execute_test.cpp
-          ./wat2wasm4cpp.py test/unittests/instantiate_test.cpp
-          ./wat2wasm4cpp.py test/unittests/module_test.cpp
-          ./wat2wasm4cpp.py test/unittests/parser_test.cpp
-          ./wat2wasm4cpp.py test/unittests/validation_stack_test.cpp
-          ./wat2wasm4cpp.py test/unittests/validation_stack_type_test.cpp
-          ./wat2wasm4cpp.py test/unittests/validation_test.cpp
-          ./wat2wasm4cpp.py test/unittests/wasm_engine_test.cpp
-          ./wat2wasm4cpp.py test/spectests/spectests.cpp
-          git diff --color --exit-code
+      - checkout
+      - run:
+          name: "Check code format"
+          command: |
+            clang-format --version
+            find . -name '*.hpp' -o -name '*.cpp' -o -name '*.h' -o -name '*.c' -not -wholename './test/benchmarks/*' | xargs clang-format -i
+            git diff --color --exit-code
+      - run:
+          name: "Run codespell"
+          command: |
+            codespell --quiet-level=4 -I .codespell-whitelist
+      - run:
+          name: "Install wabt"
+          working_directory: ~/bin
+          command: curl -L https://github.com/WebAssembly/wabt/releases/download/1.0.15/wabt-1.0.15-linux.tar.gz | tar xz --strip=1
+      - run:
+          name: "Check wat2wasm4cpp"
+          command: |
+            export PATH=$PATH:~/bin
+            ./wat2wasm4cpp.py test/unittests/api_test.cpp
+            ./wat2wasm4cpp.py test/unittests/end_to_end_test.cpp
+            ./wat2wasm4cpp.py test/unittests/execute_call_test.cpp
+            ./wat2wasm4cpp.py test/unittests/execute_control_test.cpp
+            ./wat2wasm4cpp.py test/unittests/execute_floating_point_test.cpp
+            ./wat2wasm4cpp.py test/unittests/execute_numeric_test.cpp
+            ./wat2wasm4cpp.py test/unittests/execute_test.cpp
+            ./wat2wasm4cpp.py test/unittests/instantiate_test.cpp
+            ./wat2wasm4cpp.py test/unittests/module_test.cpp
+            ./wat2wasm4cpp.py test/unittests/parser_test.cpp
+            ./wat2wasm4cpp.py test/unittests/validation_stack_test.cpp
+            ./wat2wasm4cpp.py test/unittests/validation_stack_type_test.cpp
+            ./wat2wasm4cpp.py test/unittests/validation_test.cpp
+            ./wat2wasm4cpp.py test/unittests/wasm_engine_test.cpp
+            ./wat2wasm4cpp.py test/spectests/spectests.cpp
+            git diff --color --exit-code
+      - build:
+          build_type: Debug
+          cmake_options: -DCMAKE_CXX_STANDARD=20 -DCMAKE_CXX_CLANG_TIDY=clang-tidy
+      - test
 
   release-linux:
     executor: linux-gcc-9
-    environment:
-      BUILD_TYPE: Release
     steps:
       - checkout
-      - build
+      - build:
+          build_type: Release
       - test
 
   release-native-linux:
     executor: linux-gcc-latest
-    environment:
-      BUILD_TYPE: Release
-      CMAKE_OPTIONS: -DNATIVE=ON
     steps:
       - checkout
-      - build
+      - build:
+          build_type: Release
+          cmake_options: -DNATIVE=ON
       - test
 
   release-macos:
     executor: macos
-    environment:
-      BUILD_TYPE: Release
     steps:
       - install_macos_deps
       - checkout
-      - build
+      - build:
+          build_type: Release
       - test
 
   release-native-macos:
     executor: macos
-    environment:
-      BUILD_TYPE: Release
-      CMAKE_OPTIONS: -DNATIVE=ON
     steps:
       - install_macos_deps
       - checkout
-      - build
-      - test
-
-  cxx20:
-    executor: linux-gcc-latest
-    environment:
-      BUILD_TYPE: Debug
-      CMAKE_OPTIONS: -DCMAKE_CXX_STANDARD=20
-    steps:
-      - checkout
-      - build
+      - build:
+          build_type: Release
+          cmake_options: -DNATIVE=ON
       - test
 
   coverage:
     executor: linux-clang-latest
-    environment:
-      BUILD_TYPE: Coverage
     steps:
       - checkout
-      - build
+      - build:
+          build_type: Coverage
       - persist_to_workspace:
           root: ~/build
           paths:
@@ -290,12 +282,12 @@ jobs:
   sanitizers:
     executor: linux-clang-latest
     environment:
-      BUILD_TYPE: RelWithDebInfo
-      CMAKE_OPTIONS: -DCMAKE_CXX_CLANG_TIDY=clang-tidy -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
       UBSAN_OPTIONS: halt_on_error=1
     steps:
       - checkout
-      - build
+      - build:
+          build_type: RelWithDebInfo
+          cmake_options: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
       - test
       - benchmark:
           min_time: "0.01"
@@ -304,13 +296,13 @@ jobs:
   sanitizers-macos:
     executor: macos
     environment:
-      BUILD_TYPE: RelWithDebInfo
-      CMAKE_OPTIONS: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
       UBSAN_OPTIONS: halt_on_error=1
     steps:
       - install_macos_deps
       - checkout
-      - build
+      - build:
+          build_type: RelWithDebInfo
+          cmake_options: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
       - test
       - benchmark:
           min_time: "0.01"
@@ -322,7 +314,6 @@ jobs:
     environment:
       CC: gcc-9
       CXX: g++-9
-      BUILD_TYPE: Release
     steps:
       - run:
           name: "Install benchmark compare.py"
@@ -350,6 +341,7 @@ jobs:
 
       - checkout
       - build:
+          build_type: Release
           target: fizzy-bench fizzy-bench-internal
       - benchmark:
           repetitions: 9
@@ -358,6 +350,7 @@ jobs:
           name: "Checkout base"
           command: git checkout $(git merge-base HEAD origin/master)
       - build:
+          build_type: Release
           target: fizzy-bench fizzy-bench-internal
       - benchmark:
           repetitions: 9
@@ -372,12 +365,12 @@ jobs:
   fuzzing:
     executor: linux-clang-latest
     environment:
-      BUILD_TYPE: RelWithDebInfo
-      CMAKE_OPTIONS: -DFIZZY_FUZZING=ON -DENABLE_ASSERTIONS=ON
       UBSAN_OPTIONS: halt_on_error=1
     steps:
       - checkout
-      - build
+      - build:
+          build_type: RelWithDebInfo
+          cmake_options: -DFIZZY_FUZZING=ON -DENABLE_ASSERTIONS=ON
       - restore_cache:
           name: "Restore fuzzing corpus"
           key: fuzzing-corpus
@@ -439,7 +432,6 @@ workflows:
           requires:
             - sanitizers-macos
       - coverage
-      - cxx20
       - sanitizers
       - sanitizers-macos
       - fuzzing
