@@ -9,6 +9,8 @@ target_sources(
     fizzy PRIVATE
     bytes.hpp
     constexpr_vector.hpp
+    exceptions.cpp
+    exceptions.hpp
     execute.cpp
     execute.hpp
     instructions.cpp

@@ -24,7 +24,7 @@ public:
         std::optional<uint64_t> value;
     };
 
-    virtual ~WasmEngine() noexcept = default;
+    virtual ~WasmEngine() noexcept;
 
     /// Parses input wasm binary. The created module is discarded.
     /// Returns false on parsing error.
