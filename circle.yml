@@ -30,6 +30,9 @@ commands:
   build:
     description: "Build"
     parameters:
+      configuration_name:
+        type: string
+        default: ""
       build_type:
         type: enum
         enum: [ "Debug", "Release", "RelWithDebInfo", "Coverage" ]
@@ -60,9 +63,10 @@ commands:
           name: "Restore Hunter cache"
           key: &hunter-cache-key hunter-{{arch}}-{{checksum "toolchain.info"}}-{{checksum "cmake/Hunter/init.cmake"}}
       - run:
-          name: "Configure"
+          name: "Configure <<parameters.configuration_name>> (<<parameters.build_type>>)"
           working_directory: ~/build
           command: |
+            rm -f CMakeCache.txt
             cmake ../project -G Ninja -DCMAKE_INSTALL_PREFIX=~/install -DCMAKE_BUILD_TYPE=<<parameters.build_type>> -DFIZZY_TESTING=ON <<parameters.cmake_options>>
       - save_cache:
           name: "Save Hunter cache"
@@ -70,7 +74,7 @@ commands:
           paths:
             - ~/.hunter/_Base/Cache
       - run:
-          name: "Build"
+          name: "Build <<parameters.configuration_name>> (<<parameters.build_type>>)"
           command: cmake --build ~/build --target <<parameters.target>> -- -j12
 
   test:
@@ -228,8 +232,13 @@ jobs:
             ./wat2wasm4cpp.py test/spectests/spectests.cpp
             git diff --color --exit-code
       - build:
+          configuration_name: "Tidy"
           build_type: Debug
-          cmake_options: -DCMAKE_CXX_STANDARD=20 -DCMAKE_CXX_CLANG_TIDY=clang-tidy
+          cmake_options: -DWEVERYTHING=TRUE -DCMAKE_CXX_CLANG_TIDY=clang-tidy
+      - build:
+          configuration_name: "C++20"
+          build_type: Debug
+          cmake_options: -DCMAKE_CXX_STANDARD=20
       - test
 
   release-linux:
