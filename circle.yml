@@ -106,10 +106,29 @@ commands:
             llvm-cov report -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $binaries > coverage/report.txt
             llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt -region-coverage-lt=100 $binaries > coverage/missing.html
             llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $binaries > coverage/full.html
-            llvm-cov export -instr-profile fizzy.profdata -format=lcov $binaries > fizzy.lcov
+            llvm-cov export -instr-profile fizzy.profdata -format=lcov $binaries > coverage.lcov
       - store_artifacts:
           path: ~/build/coverage
           destination: coverage
+
+  upload_coverage_data:
+    description: "Upload coverage data"
+    steps:
+      - run:
+          name: "Upgrade codecov"
+          command: sudo pip3 install --upgrade --quiet --no-cache-dir codecov
+      - run:
+          name: "Upload to Codecov"
+          command: |
+            # Convert to relative paths
+            sed -i 's|$(pwd)/||' ~/build/coverage.lcov
+
+            counter=1
+            until codecov --required --file ~/build/coverage.lcov -X gcov || [ $counter = 5 ]; do
+              counter=$((counter+1))
+              sleep 1
+              echo "Try #$counter..."
+            done
 
 
   benchmark:
@@ -250,8 +269,7 @@ jobs:
       - test
 
   coverage-clang:
-    docker:
-      - image: ethereum/cpp-build-env:14-clang-10
+    executor: linux-clang-latest
     steps:
       - checkout
       - build:
@@ -262,21 +280,6 @@ jobs:
             - bin/*
       - test
       - collect_coverage_data
-      - run:
-          name: "Upgrade codecov"
-          command: sudo pip3 install --upgrade --quiet --no-cache-dir codecov
-      - run:
-          name: "Upload to Codecov"
-          command: |
-            # Convert to relative paths
-            sed -i 's|$(pwd)/||' ~/build/fizzy.lcov
-
-            counter=1
-            until codecov --required --file ~/build/fizzy.lcov -X gcov || [ $counter = 5 ]; do
-              counter=$((counter+1))
-              sleep 1
-              echo "Try #$counter..."
-            done
 
   coverage-gcc:
     executor: linux-gcc-latest
@@ -294,6 +297,7 @@ jobs:
       - store_artifacts:
           path: ~/build/coverage
           destination: coverage
+      - upload_coverage_data
 
   sanitizers:
     executor: linux-clang-latest
@@ -422,8 +426,7 @@ jobs:
           destination: artifacts
 
   spectest:
-    docker:
-      - image: ethereum/cpp-build-env:14-clang-10
+    executor: linux-clang-latest
     steps:
       - checkout
       - attach_workspace:
