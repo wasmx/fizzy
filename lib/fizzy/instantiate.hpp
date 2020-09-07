@@ -13,27 +13,13 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
+#include <vector>
 
 namespace fizzy
 {
 // The result of an execution.
-struct ExecutionResult
-{
-    const bool trapped = false;
-    const bool has_value = false;
-    const Value value{};
-
-    /// Constructs result with a value.
-    constexpr ExecutionResult(Value _value) noexcept : has_value{true}, value{_value} {}
-
-    /// Constructs result in "void" or "trap" state depending on the success flag.
-    /// Prefer using Void and Trap constants instead.
-    constexpr explicit ExecutionResult(bool success) noexcept : trapped{!success} {}
-};
-
-constexpr ExecutionResult Void{true};
-constexpr ExecutionResult Trap{false};
-
+struct ExecutionResult;
 struct Instance;
 
 struct ExternalFunction
@@ -107,16 +93,6 @@ std::unique_ptr<Instance> instantiate(Module module,
     std::vector<ExternalMemory> imported_memories = {},
     std::vector<ExternalGlobal> imported_globals = {},
     uint32_t memory_pages_limit = DefaultMemoryPagesLimit);
-
-// Execute a function on an instance.
-ExecutionResult execute(
-    Instance& instance, FuncIdx func_idx, span<const Value> args, int depth = 0) noexcept;
-
-inline ExecutionResult execute(
-    Instance& instance, FuncIdx func_idx, std::initializer_list<Value> args) noexcept
-{
-    return execute(instance, func_idx, span<const Value>{args});
-}
 
 
 // Function that should be used by instantiate as imports, identified by module and function name.
