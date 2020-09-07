@@ -11,8 +11,8 @@ target_sources(
     constexpr_vector.hpp
     exceptions.cpp
     exceptions.hpp
-    execute.cpp
-    execute.hpp
+    instantiate.cpp
+    instantiate.hpp
     instructions.cpp
     instructions.hpp
     leb128.hpp
