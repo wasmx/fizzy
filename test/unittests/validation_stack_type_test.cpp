@@ -891,4 +891,41 @@ TEST(validation_stack_type, unreachable_select)
     */
     const auto wasm_mismatch5 = from_hex("0061736d01000000010401600000030201000a06010400001b0b");
     EXPECT_THROW_MESSAGE(parse(wasm_mismatch5), validation_error, "too many results");
+
+    /* wat2wasm
+    (func (result i32)
+      unreachable
+      select
+      i32.add
+    )
+    */
+
+    const auto wasm_mismatch6 =
+        from_hex("0061736d010000000105016000017f030201000a07010500001b6a0b");
+    EXPECT_NO_THROW(parse(wasm_mismatch6));
+
+    /* wat2wasm
+    (func (result i32)
+      unreachable
+      i32.const 0
+      select
+      i32.add
+    )
+    */
+
+    const auto wasm_mismatch7 =
+        from_hex("0061736d010000000105016000017f030201000a090107000041001b6a0b");
+    EXPECT_NO_THROW(parse(wasm_mismatch7));
+
+    /* wat2wasm --no-check
+    (func (result i32)
+      unreachable
+      i64.const 0
+      select
+      i32.add
+    )
+    */
+    const auto wasm_mismatch8 =
+        from_hex("0061736d010000000105016000017f030201000a090107000042001b6a0b");
+    EXPECT_THROW_MESSAGE(parse(wasm_mismatch8), validation_error, "type mismatch");
 }
