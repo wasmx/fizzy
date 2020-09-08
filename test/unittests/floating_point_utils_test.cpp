@@ -31,10 +31,12 @@ TEST(floating_point_utils, binary_representation_implementation_defined)
 {
     EXPECT_EQ(FP(FP64::Limits::quiet_NaN()).as_uint(), 0x7FF'8000000000000);
     EXPECT_EQ(FP(FP64::Limits::quiet_NaN()).nan_payload(), 0x8000000000000);
+    EXPECT_EQ(FP(FP64::Limits::signaling_NaN()).as_uint(), 0x7FF'4000000000000);
     EXPECT_EQ(FP(FP64::Limits::signaling_NaN()).nan_payload(), 0x4000000000000);
 
     EXPECT_EQ(FP(FP32::Limits::quiet_NaN()).as_uint(), 0x7FC00000);
     EXPECT_EQ(FP(FP32::Limits::quiet_NaN()).nan_payload(), 0x400000);
+    EXPECT_EQ(FP(FP32::Limits::signaling_NaN()).as_uint(), 0x7FA00000);
     EXPECT_EQ(FP(FP32::Limits::signaling_NaN()).nan_payload(), 0x200000);
 }
 
