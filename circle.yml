@@ -8,10 +8,10 @@ parameters:
 executors:
   linux-gcc-9:
     docker:
-      - image: ethereum/cpp-build-env:14-gcc-9
+      - image: ethereum/cpp-build-env:15-gcc-9
   linux-gcc-latest:
     docker:
-      - image: ethereum/cpp-build-env:14-gcc-10
+      - image: ethereum/cpp-build-env:15-gcc-10
   linux-clang-latest:
     docker:
       - image: ethereum/cpp-build-env:15-clang-10
@@ -106,11 +106,29 @@ commands:
             llvm-cov report -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $binaries > coverage/report.txt
             llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt -region-coverage-lt=100 $binaries > coverage/missing.html
             llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $binaries > coverage/full.html
-            llvm-cov export -instr-profile fizzy.profdata -format=lcov $binaries > fizzy.lcov
-            genhtml fizzy.lcov -o coverage -t Fizzy
+            llvm-cov export -instr-profile fizzy.profdata -format=lcov $binaries > coverage.lcov
       - store_artifacts:
           path: ~/build/coverage
           destination: coverage
+
+  upload_coverage_data:
+    description: "Upload coverage data"
+    steps:
+      - run:
+          name: "Upgrade codecov"
+          command: sudo pip3 install --upgrade --quiet --no-cache-dir codecov
+      - run:
+          name: "Upload to Codecov"
+          command: |
+            # Convert to relative paths
+            sed -i 's|$(pwd)/||' ~/build/coverage.lcov
+
+            counter=1
+            until codecov --required --file ~/build/coverage.lcov -X gcov || [ $counter = 5 ]; do
+              counter=$((counter+1))
+              sleep 1
+              echo "Try #$counter..."
+            done
 
 
   benchmark:
@@ -250,9 +268,8 @@ jobs:
           cmake_options: -DNATIVE=ON
       - test
 
-  coverage:
-    docker:
-      - image: ethereum/cpp-build-env:14-clang-10
+  coverage-clang:
+    executor: linux-clang-latest
     steps:
       - checkout
       - build:
@@ -263,22 +280,24 @@ jobs:
             - bin/*
       - test
       - collect_coverage_data
+
+  coverage-gcc:
+    executor: linux-gcc-latest
+    steps:
+      - checkout
+      - build:
+          build_type: Coverage
+      - test
       - run:
-          name: "Upgrade codecov"
-          command: sudo pip3 install --upgrade --quiet --no-cache-dir codecov
-      - run:
-          name: "Upload to Codecov"
+          name: "Create coverage report"
+          working_directory: ~/build
           command: |
-            # Convert to relative paths
-            sed -i 's|$(pwd)/||' ~/build/fizzy.lcov
-
-            counter=1
-            until codecov --required --file ~/build/fizzy.lcov -X gcov || [ $counter = 5 ]; do
-              counter=$((counter+1))
-              sleep 1
-              echo "Try #$counter..."
-            done
-
+            lcov -c -d . -o coverage.lcov --exclude='/usr/include/*' --exclude="$HOME/.hunter/*" --exclude="$PWD/_deps/*"
+            genhtml coverage.lcov -o coverage -t Fizzy
+      - store_artifacts:
+          path: ~/build/coverage
+          destination: coverage
+      - upload_coverage_data
 
   sanitizers:
     executor: linux-clang-latest
@@ -407,8 +426,7 @@ jobs:
           destination: artifacts
 
   spectest:
-    docker:
-      - image: ethereum/cpp-build-env:14-clang-10
+    executor: linux-clang-latest
     steps:
       - checkout
       - attach_workspace:
@@ -433,13 +451,14 @@ workflows:
       - release-native-macos:
           requires:
             - sanitizers-macos
-      - coverage
+      - coverage-gcc
+      - coverage-clang
       - sanitizers
       - sanitizers-macos
       - fuzzing
       - spectest:
           requires:
-            - coverage
+            - coverage-clang
 
   benchmarking:
     when: <<pipeline.parameters.benchmark>>
