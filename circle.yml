@@ -27,6 +27,20 @@ commands:
           name: "Install system dependencies"
           command: HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 brew install cmake ninja
 
+  install_wabt:
+    description: "Install WABT tools"
+    steps:
+      - run:
+          name: "Install WABT tools"
+          command: |
+            if type wast2json; then
+              wast2json --version
+            else
+              [[ $OSTYPE = darwin* ]] && os=macos || os=ubuntu
+              cd /usr/local
+              curl -L https://github.com/WebAssembly/wabt/releases/download/1.0.19/wabt-1.0.19-$os.tar.gz | sudo tar xz --strip 1
+            fi
+
   build:
     description: "Build"
     parameters:
@@ -174,12 +188,16 @@ commands:
         default: 477
 
     steps:
+      - install_wabt
       - run:
           name: "Download spectest files"
           working_directory: ~/build
           command: |
             if [ ! -d wasm-spec ]; then
-              git clone https://github.com/wasmx/wasm-spec --branch w3c-1.0-jsontests-20200813 --depth 1
+              git clone https://github.com/wasmx/wasm-spec --branch w3c-1.0-jsontests-20200813 --depth 1 wasm-spec
+              mkdir json && cd json
+              options='--disable-saturating-float-to-int --disable-sign-extension --disable-multi-value'
+              find ../wasm-spec/test/core -name '*.wast' -exec wast2json $options {} \;
             fi
       - run:
           name: "Run spectest<<#parameters.skip_validation>> (skip validation)<</parameters.skip_validation>>"
@@ -187,7 +205,7 @@ commands:
           command: |
             set +e
             expected="  PASSED <<parameters.expected_passed>>, FAILED <<parameters.expected_failed>>, SKIPPED <<parameters.expected_skipped>>."
-            result=$(bin/fizzy-spectests <<#parameters.skip_validation>>--skip-validation<</parameters.skip_validation>> wasm-spec/test/core/json | tail -1)
+            result=$(bin/fizzy-spectests <<#parameters.skip_validation>>--skip-validation<</parameters.skip_validation>> json | tail -1)
             echo $result
             if [ "$expected" != "$result" ]; then exit 1; fi
 
@@ -207,10 +225,7 @@ jobs:
           name: "Run codespell"
           command: |
             codespell --quiet-level=4 -I .codespell-whitelist
-      - run:
-          name: "Install wabt"
-          working_directory: ~/bin
-          command: curl -L https://github.com/WebAssembly/wabt/releases/download/1.0.15/wabt-1.0.15-linux.tar.gz | tar xz --strip=1
+      - install_wabt
       - run:
           name: "Check wat2wasm4cpp"
           command: |
