@@ -137,8 +137,8 @@ public:
             std::array<T, ps.size() * 2 + 1> a;
 
             auto it = std::begin(a);
-            it = std::transform(std::reverse_iterator{std::end(ps)},
-                std::reverse_iterator{std::begin(ps)}, it, std::negate<T>{});
+            it = std::transform(std::make_reverse_iterator(std::end(ps)),
+                std::make_reverse_iterator(std::begin(ps)), it, std::negate<T>{});
             *it++ = T{0.0};
             std::copy(std::begin(ps), std::end(ps), it);
             return a;

@@ -12,7 +12,7 @@
 
 namespace fizzy::test
 {
-class FizzyEngine : public WasmEngine
+class FizzyEngine final : public WasmEngine
 {
     std::unique_ptr<Instance> m_instance;
 

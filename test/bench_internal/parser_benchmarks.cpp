@@ -2,17 +2,13 @@
 // Copyright 2019-2020 The Fizzy Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#include "experimental.hpp"
 #include "parser.hpp"
 #include <benchmark/benchmark.h>
 #include <test/utils/leb128_encode.hpp>
 #include <algorithm>
 #include <random>
 #include <vector>
-
-std::pair<uint64_t, const uint8_t*> nop(const uint8_t* p, const uint8_t* end);
-std::pair<uint64_t, const uint8_t*> leb128u_decode_u64_noinline(
-    const uint8_t* input, const uint8_t* end);
-std::pair<uint64_t, const uint8_t*> decodeULEB128(const uint8_t* p, const uint8_t* end);
 
 namespace
 {
@@ -39,6 +35,21 @@ fizzy::bytes generate_ascii_vec(size_t size)
     result += size_encoded;
     std::generate_n(std::back_inserter(result), size, [&] { return dist(g_gen); });
     return result;
+}
+
+[[gnu::noinline]] std::pair<uint64_t, const uint8_t*> nop(const uint8_t* p, const uint8_t* end)
+{
+    auto n = p + 10;
+    if (n > end)
+        n = end;
+
+    return {*p, n};
+}
+
+[[gnu::noinline]] std::pair<uint64_t, const uint8_t*> leb128u_decode_u64_noinline(
+    const uint8_t* input, const uint8_t* end)
+{
+    return fizzy::leb128u_decode<uint64_t>(input, end);
 }
 }  // namespace
 

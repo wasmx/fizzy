@@ -12,7 +12,7 @@
 
 namespace fizzy::test
 {
-class WabtEngine : public WasmEngine
+class WabtEngine final : public WasmEngine
 {
     wabt::interp::Environment m_env;
     wabt::interp::DefinedModule* m_module{nullptr};
