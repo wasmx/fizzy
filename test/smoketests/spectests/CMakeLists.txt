@@ -13,6 +13,16 @@ set_tests_properties(
 )
 
 add_test(
+        NAME fizzy/smoketests/spectests/default/smoketest.json
+        COMMAND fizzy-spectests ${CMAKE_CURRENT_LIST_DIR}/default/smoketest.json
+)
+set_tests_properties(
+        fizzy/smoketests/spectests/default
+        PROPERTIES
+        PASS_REGULAR_EXPRESSION "PASSED 32, FAILED 0, SKIPPED 3"
+)
+
+add_test(
     NAME fizzy/smoketests/spectests/skipvalidation
     COMMAND fizzy-spectests ${CMAKE_CURRENT_LIST_DIR}/default --skip-validation
 )
@@ -79,7 +89,7 @@ add_test(
 set_tests_properties(
     fizzy/smoketests/spectests/cli-missing-dir-arg
     PROPERTIES
-    PASS_REGULAR_EXPRESSION "Missing DIR argument"
+    PASS_REGULAR_EXPRESSION "Missing PATH argument"
 )
 
 add_test(

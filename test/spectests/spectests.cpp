@@ -667,6 +667,21 @@ private:
     std::string m_current_test_type;
 };
 
+void log_total(const fs::path& path, const test_results& res)
+{
+    std::cout << "TOTAL " << (res.passed + res.failed + res.skipped) << " tests ran from " << path
+              << ".\n  PASSED " << res.passed << ", FAILED " << res.failed << ", SKIPPED "
+              << res.skipped << ".\n";
+}
+
+bool run_tests_from_file(const fs::path& path, const test_settings& settings)
+{
+    const auto res = test_runner{settings}.run_from_file(path);
+
+    log_total(path, res);
+    return res.failed == 0;
+}
+
 bool run_tests_from_dir(const fs::path& path, const test_settings& settings)
 {
     std::vector<fs::path> files;
@@ -688,10 +703,7 @@ bool run_tests_from_dir(const fs::path& path, const test_settings& settings)
         total.skipped += res.skipped;
     }
 
-    std::cout << "TOTAL " << (total.passed + total.failed + total.skipped) << " tests ran from "
-              << path << ".\n  PASSED " << total.passed << ", FAILED " << total.failed
-              << ", SKIPPED " << total.skipped << ".\n";
-
+    log_total(path, total);
     return total.failed == 0;
 }
 
@@ -701,7 +713,7 @@ int main(int argc, char** argv)
 {
     try
     {
-        std::string dir;
+        std::string target;
         test_settings settings;
 
         for (auto i = 1; i < argc; ++i)
@@ -723,16 +735,18 @@ int main(int argc, char** argv)
                 }
             }
             else
-                dir = argv[i];
+                target = argv[i];
         }
 
-        if (dir.empty())
+        if (target.empty())
         {
-            std::cerr << "Missing DIR argument\n";
+            std::cerr << "Missing PATH argument\n";
             return -1;
         }
 
-        const bool res = run_tests_from_dir(dir, settings);
+        const fs::path path = target;
+        const bool res = fs::is_directory(path) ? run_tests_from_dir(path, settings) :
+                                                  run_tests_from_file(path, settings);
         return res ? 0 : 1;
     }
     catch (const std::exception& ex)
