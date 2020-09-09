@@ -251,7 +251,8 @@ jobs:
       - test
 
   coverage:
-    executor: linux-clang-latest
+    docker:
+      - image: ethereum/cpp-build-env:14-clang-10
     steps:
       - checkout
       - build:
@@ -406,7 +407,8 @@ jobs:
           destination: artifacts
 
   spectest:
-    executor: linux-clang-latest
+    docker:
+      - image: ethereum/cpp-build-env:14-clang-10
     steps:
       - checkout
       - attach_workspace:
