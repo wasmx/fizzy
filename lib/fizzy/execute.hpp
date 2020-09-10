@@ -37,14 +37,15 @@ constexpr ExecutionResult Void{true};
 constexpr ExecutionResult Trap{false};
 
 /// Execute a function on an instance.
-ExecutionResult execute(
-    Instance& instance, FuncIdx func_idx, span<const Value> args, int depth) noexcept;
+ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> args,
+    ThreadContext& thread_context) noexcept;
 
 /// Execute a function on an instance with implicit depth 0.
 inline ExecutionResult execute(
     Instance& instance, FuncIdx func_idx, span<const Value> args) noexcept
 {
-    return execute(instance, func_idx, args, 0);
+    ThreadContext thread_context;
+    return execute(instance, func_idx, args, thread_context);
 }
 
 inline ExecutionResult execute(

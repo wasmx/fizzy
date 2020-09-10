@@ -147,11 +147,11 @@ TEST(execute_call, call_indirect_imported_table)
 
     const Module module = parse(bin);
 
-    auto f1 = [](Instance&, span<const Value>, int) { return Value{1}; };
-    auto f2 = [](Instance&, span<const Value>, int) { return Value{2}; };
-    auto f3 = [](Instance&, span<const Value>, int) { return Value{3}; };
-    auto f4 = [](Instance&, span<const Value>, int) { return Value{4}; };
-    auto f5 = [](Instance&, span<const Value>, int) { return Trap; };
+    auto f1 = [](Instance&, span<const Value>, ThreadContext&) { return Value{1}; };
+    auto f2 = [](Instance&, span<const Value>, ThreadContext&) { return Value{2}; };
+    auto f3 = [](Instance&, span<const Value>, ThreadContext&) { return Value{3}; };
+    auto f4 = [](Instance&, span<const Value>, ThreadContext&) { return Value{4}; };
+    auto f5 = [](Instance&, span<const Value>, ThreadContext&) { return Trap; };
 
     auto out_i32 = FuncType{{}, {ValType::i32}};
     auto out_i64 = FuncType{{}, {ValType::i64}};
@@ -218,7 +218,9 @@ TEST(execute_call, imported_function_call)
 
     const auto module = parse(wasm);
 
-    constexpr auto host_foo = [](Instance&, span<const Value>, int) { return Value{42}; };
+    constexpr auto host_foo = [](Instance&, span<const Value>, ThreadContext&) {
+        return Value{42};
+    };
     const auto host_foo_type = module.typesec[0];
 
     auto instance = instantiate(module, {{host_foo, host_foo_type}});
@@ -243,7 +245,7 @@ TEST(execute_call, imported_function_call_with_arguments)
 
     const auto module = parse(wasm);
 
-    auto host_foo = [](Instance&, span<const Value> args, int) {
+    auto host_foo = [](Instance&, span<const Value> args, ThreadContext&) {
         return Value{as_uint32(args[0]) * 2};
     };
     const auto host_foo_type = module.typesec[0];
@@ -287,11 +289,11 @@ TEST(execute_call, imported_functions_call_indirect)
     ASSERT_EQ(module.importsec.size(), 2);
     ASSERT_EQ(module.codesec.size(), 2);
 
-    constexpr auto sqr = [](Instance&, span<const Value> args, int) {
+    constexpr auto sqr = [](Instance&, span<const Value> args, ThreadContext&) {
         const auto x = as_uint32(args[0]);
         return Value{uint64_t{x} * uint64_t{x}};
     };
-    constexpr auto isqrt = [](Instance&, span<const Value> args, int) {
+    constexpr auto isqrt = [](Instance&, span<const Value> args, ThreadContext&) {
         const auto x = as_uint32(args[0]);
         return Value{(11 + uint64_t{x} / 11) / 2};
     };
@@ -337,7 +339,8 @@ TEST(execute_call, imported_function_from_another_module)
     const auto func_idx = fizzy::find_exported_function(module1, "sub");
     ASSERT_TRUE(func_idx.has_value());
 
-    auto sub = [&instance1, func_idx](Instance&, span<const Value> args, int) -> ExecutionResult {
+    auto sub = [&instance1, func_idx](
+                   Instance&, span<const Value> args, ThreadContext&) -> ExecutionResult {
         return fizzy::execute(*instance1, *func_idx, args);
     };
 
@@ -476,8 +479,10 @@ TEST(execute_call, call_max_depth)
     const auto module = parse(bin);
     auto instance = instantiate(module);
 
-    EXPECT_THAT(execute(*instance, 0, {}, 2048), Result(42));
-    EXPECT_THAT(execute(*instance, 1, {}, 2048), Traps());
+    ThreadContext thread_context;
+    thread_context.depth = 2048;
+    EXPECT_THAT(execute(*instance, 0, {}, thread_context), Result(42));
+    EXPECT_THAT(execute(*instance, 1, {}, thread_context), Traps());
 }
 
 // A regression test for incorrect number of arguments passed to a call.
@@ -515,8 +520,9 @@ TEST(execute_call, call_imported_infinite_recursion)
         "0061736d010000000105016000017f020b01036d6f6403666f6f0000030201000a0601040010000b");
 
     const auto module = parse(wasm);
-    auto host_foo = [](Instance& instance, span<const Value>, int depth) -> ExecutionResult {
-        return execute(instance, 0, {}, depth + 1);
+    auto host_foo = [](Instance& instance, span<const Value>,
+                        ThreadContext& thread_context) -> ExecutionResult {
+        return execute(instance, 0, {}, thread_context);
     };
     const auto host_foo_type = module.typesec[0];
 
