@@ -50,7 +50,8 @@ TEST(span, array)
 
 TEST(span, stack)
 {
-    OperandStack stack({}, 0, 4, nullptr, 0);
+    Value* external_storage = nullptr;
+    OperandStack stack({}, 0, 4, external_storage, 0);
     stack.push(10);
     stack.push(11);
     stack.push(12);

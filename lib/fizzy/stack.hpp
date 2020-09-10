@@ -72,7 +72,7 @@ public:
     /// Based on @p max_stack_height decides if to use small pre-allocated storage or allocate
     /// large storage.
     /// Sets the top item pointer to below the stack bottom.
-    OperandStack(span<const Value> args, size_t num_locals, size_t max_stack_height, Value* external_storage, size_t external_storage_size)
+    OperandStack(span<const Value> args, size_t num_locals, size_t max_stack_height, Value*& external_storage, size_t external_storage_size)
     {
         const auto num_args = args.size();
         const auto storage_size_required = num_args + num_locals + max_stack_height;
@@ -81,6 +81,7 @@ public:
         if (storage_size_required <= external_storage_size)
         {
             storage = external_storage;
+            external_storage += storage_size_required;
         }
         else
         {

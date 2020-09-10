@@ -498,10 +498,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
     const auto& code = instance.module.codesec[code_idx];
     auto* const memory = instance.memory.get();
 
-    constexpr auto stack_space_size = 128 / sizeof(Value);
-    Value stack_space[stack_space_size];
     OperandStack stack(args, code.local_count, static_cast<size_t>(code.max_stack_height),
-        stack_space, std::size(stack_space));
+        thread_context.free_space, thread_context.space_left());
 
     const Instr* pc = code.instructions.data();
     const uint8_t* immediates = code.immediates.data();

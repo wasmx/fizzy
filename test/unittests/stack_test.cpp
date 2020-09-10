@@ -115,7 +115,8 @@ TEST(stack, struct_item)
 
 TEST(operand_stack, construct)
 {
-    OperandStack stack({}, 0, 0, nullptr, 0);
+    fizzy::Value* external_storage = nullptr;
+    OperandStack stack({}, 0, 0, external_storage, 0);
     EXPECT_EQ(stack.size(), 0);
     stack.shrink(0);
     EXPECT_EQ(stack.size(), 0);
@@ -123,7 +124,9 @@ TEST(operand_stack, construct)
 
 TEST(operand_stack, top)
 {
-    OperandStack stack({}, 0, 1, nullptr, 0);
+    fizzy::Value* external_storage = nullptr;
+
+    OperandStack stack({}, 0, 1, external_storage, 0);
     EXPECT_EQ(stack.size(), 0);
 
     stack.push(1);
@@ -147,7 +150,9 @@ TEST(operand_stack, top)
 
 TEST(operand_stack, small)
 {
-    OperandStack stack({}, 0, 3, nullptr, 0);
+    fizzy::Value* external_storage = nullptr;
+
+    OperandStack stack({}, 0, 3, external_storage, 0);
     EXPECT_EQ(stack.size(), 0);
 
     stack.push(1);
@@ -175,8 +180,10 @@ TEST(operand_stack, small)
 
 TEST(operand_stack, large)
 {
+    fizzy::Value* external_storage = nullptr;
+
     constexpr auto max_height = 33;
-    OperandStack stack({}, 0, max_height, nullptr, 0);
+    OperandStack stack({}, 0, max_height, external_storage, 0);
 
     for (unsigned i = 0; i < max_height; ++i)
         stack.push(i);
@@ -189,8 +196,10 @@ TEST(operand_stack, large)
 
 TEST(operand_stack, shrink)
 {
+    fizzy::Value* external_storage = nullptr;
+
     constexpr auto max_height = 60;
-    OperandStack stack({}, 0, max_height, nullptr, 0);
+    OperandStack stack({}, 0, max_height, external_storage, 0);
 
     for (unsigned i = 0; i < max_height; ++i)
         stack.push(i);
@@ -206,7 +215,9 @@ TEST(operand_stack, shrink)
 
 TEST(operand_stack, rbegin_rend)
 {
-    OperandStack stack({}, 0, 3, nullptr, 0);
+    fizzy::Value* external_storage = nullptr;
+
+    OperandStack stack({}, 0, 3, external_storage, 0);
     EXPECT_EQ(stack.rbegin(), stack.rend());
 
     stack.push(1);
@@ -219,7 +230,9 @@ TEST(operand_stack, rbegin_rend)
 
 TEST(operand_stack, to_vector)
 {
-    OperandStack stack({}, 0, 3, nullptr, 0);
+    fizzy::Value* external_storage = nullptr;
+
+    OperandStack stack({}, 0, 3, external_storage, 0);
     EXPECT_THAT(std::vector(stack.rbegin(), stack.rend()), IsEmpty());
 
     stack.push(1);
