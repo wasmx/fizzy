@@ -10,6 +10,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstring>
+#include <mutex>
 #include <stack>
 
 namespace fizzy
@@ -54,14 +55,14 @@ void branch(const Code& code, OperandStack& stack, const Instr*& pc, const uint8
 
 template <class F>
 bool invoke_function(const FuncType& func_type, const F& func, Instance& instance,
-    OperandStack& stack, int depth) noexcept
+    OperandStack& stack, ThreadContext& thread_context) noexcept
 {
     const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
     span<const Value> call_args{stack.rend() - num_args, num_args};
     stack.drop(num_args);
 
-    const auto ret = func(instance, call_args, depth + 1);
+    const auto ret = func(instance, call_args, thread_context);
     // Bubble up traps
     if (ret.trapped)
         return false;
@@ -78,12 +79,13 @@ bool invoke_function(const FuncType& func_type, const F& func, Instance& instanc
 }
 
 inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
-    OperandStack& stack, int depth) noexcept
+    OperandStack& stack, ThreadContext& thread_context) noexcept
 {
-    const auto func = [func_idx](Instance& _instance, span<const Value> args, int _depth) noexcept {
-        return execute(_instance, func_idx, args, _depth);
+    const auto func = [func_idx](Instance& _instance, span<const Value> args,
+                          ThreadContext& _thread_context) noexcept {
+        return execute(_instance, func_idx, args, _thread_context);
     };
-    return invoke_function(func_type, func, instance, stack, depth);
+    return invoke_function(func_type, func, instance, stack, thread_context);
 }
 
 template <typename T>
@@ -461,15 +463,16 @@ __attribute__((no_sanitize("float-cast-overflow"))) inline constexpr float demot
 
 }  // namespace
 
-ExecutionResult execute(
-    Instance& instance, FuncIdx func_idx, span<const Value> args, int depth) noexcept
+ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> args,
+    ThreadContext& thread_context) noexcept
 {
-    assert(depth >= 0);
-    if (depth > CallStackLimit)
+    if (thread_context.depth > CallStackLimit)
         return Trap;
 
+    std::lock_guard guard{thread_context};
+
     if (func_idx < instance.imported_functions.size())
-        return instance.imported_functions[func_idx].function(instance, args, depth);
+        return instance.imported_functions[func_idx].function(instance, args, thread_context);
 
     const auto code_idx = func_idx - instance.imported_functions.size();
     assert(code_idx < instance.module.codesec.size());
@@ -565,7 +568,7 @@ ExecutionResult execute(
             const auto called_func_idx = read<uint32_t>(immediates);
             const auto& func_type = instance.module.get_function_type(called_func_idx);
 
-            if (!invoke_function(func_type, called_func_idx, instance, stack, depth))
+            if (!invoke_function(func_type, called_func_idx, instance, stack, thread_context))
                 goto trap;
             break;
         }
@@ -590,7 +593,7 @@ ExecutionResult execute(
             if (expected_type != actual_type)
                 goto trap;
 
-            if (!invoke_function(actual_type, called_func->function, instance, stack, depth))
+            if (!invoke_function(actual_type, called_func->function, instance, stack, thread_context))
                 goto trap;
             break;
         }
