@@ -123,13 +123,13 @@ TEST(stack, struct_item)
 
 TEST(operand_stack, construct)
 {
-    OperandStack stack({}, 0, 0);
+    OperandStack stack({}, 0, 0, nullptr, 0);
     EXPECT_EQ(stack.size(), 0);
 }
 
 TEST(operand_stack, top)
 {
-    OperandStack stack({}, 0, 1);
+    OperandStack stack({}, 0, 1, nullptr, 0);
     EXPECT_EQ(stack.size(), 0);
 
     stack.push(1);
@@ -158,7 +158,8 @@ TEST(operand_stack, top)
 
 TEST(operand_stack, small)
 {
-    OperandStack stack({}, 0, 3);
+    fizzy::Value storage[3];
+    OperandStack stack({}, 0, 3, storage, std::size(storage));
     ASSERT_LT(address_diff(&stack, stack.rbegin()), 100) << "not allocated on the system stack";
 
     EXPECT_EQ(stack.size(), 0);
@@ -188,8 +189,9 @@ TEST(operand_stack, small)
 
 TEST(operand_stack, small_with_locals)
 {
+    fizzy::Value storage[6];
     const fizzy::Value args[] = {0xa1, 0xa2};
-    OperandStack stack(args, 3, 1);
+    OperandStack stack(args, 3, 1, storage, std::size(storage));
     ASSERT_LT(address_diff(&stack, stack.rbegin()), 100) << "not allocated on the system stack";
 
     EXPECT_EQ(stack.size(), 0);
@@ -229,7 +231,7 @@ TEST(operand_stack, small_with_locals)
 TEST(operand_stack, large)
 {
     constexpr auto max_height = 33;
-    OperandStack stack({}, 0, max_height);
+    OperandStack stack({}, 0, max_height, nullptr, 0);
     ASSERT_GT(address_diff(&stack, stack.rbegin()), 100) << "not allocated on the heap";
 
     for (unsigned i = 0; i < max_height; ++i)
@@ -247,7 +249,7 @@ TEST(operand_stack, large_with_locals)
     constexpr auto max_height = 33;
     constexpr auto num_locals = 5;
     constexpr auto num_args = std::size(args);
-    OperandStack stack(args, num_locals, max_height);
+    OperandStack stack(args, num_locals, max_height, nullptr, 0);
     ASSERT_GT(address_diff(&stack, stack.rbegin()), 100) << "not allocated on the heap";
 
     for (unsigned i = 0; i < max_height; ++i)
@@ -279,7 +281,7 @@ TEST(operand_stack, large_with_locals)
 
 TEST(operand_stack, rbegin_rend)
 {
-    OperandStack stack({}, 0, 3);
+    OperandStack stack({}, 0, 3, nullptr, 0);
     EXPECT_EQ(stack.rbegin(), stack.rend());
 
     stack.push(1);
@@ -293,7 +295,7 @@ TEST(operand_stack, rbegin_rend)
 TEST(operand_stack, rbegin_rend_locals)
 {
     const fizzy::Value args[] = {0xa1};
-    OperandStack stack(args, 4, 2);
+    OperandStack stack(args, 4, 2, nullptr, 0);
     EXPECT_EQ(stack.rbegin(), stack.rend());
 
     stack.push(1);
@@ -313,7 +315,7 @@ TEST(operand_stack, rbegin_rend_locals)
 
 TEST(operand_stack, to_vector)
 {
-    OperandStack stack({}, 0, 3);
+    OperandStack stack({}, 0, 3, nullptr, 0);
     EXPECT_THAT(std::vector(stack.rbegin(), stack.rend()), IsEmpty());
 
     stack.push(1);

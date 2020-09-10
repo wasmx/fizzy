@@ -477,7 +477,10 @@ ExecutionResult execute(
     const auto& code = instance.module.get_code(func_idx);
     auto* const memory = instance.memory.get();
 
-    OperandStack stack(args, code.local_count, static_cast<size_t>(code.max_stack_height));
+    constexpr auto stack_space_size = 128 / sizeof(Value);
+    Value stack_space[stack_space_size];
+    OperandStack stack(args, code.local_count, static_cast<size_t>(code.max_stack_height),
+        stack_space, std::size(stack_space));
 
     const Instr* pc = code.instructions.data();
     const uint8_t* immediates = code.immediates.data();
