@@ -25,6 +25,10 @@ struct Instance;
 class ThreadContext
 {
 public:
+    Value stack_space[512];
+
+    size_t space_left = 512;
+
     int depth = 0;
 
     void lock() noexcept { ++depth; }
