@@ -10,7 +10,6 @@
 #include <cassert>
 #include <cmath>
 #include <cstring>
-#include <mutex>
 #include <stack>
 
 namespace fizzy
@@ -461,6 +460,25 @@ __attribute__((no_sanitize("float-cast-overflow"))) inline constexpr float demot
     return static_cast<float>(value);
 }
 
+class ThreadContextGuard
+{
+    ThreadContext& m_thread_context;
+    Value* const m_free_space;
+
+public:
+    explicit ThreadContextGuard(ThreadContext& thread_context) noexcept
+      : m_thread_context{thread_context}, m_free_space{m_thread_context.free_space}
+    {
+        m_thread_context.lock();
+    }
+
+    ~ThreadContextGuard() noexcept
+    {
+        m_thread_context.unlock();
+        m_thread_context.free_space = m_free_space;
+    }
+};
+
 }  // namespace
 
 ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> args,
@@ -469,7 +487,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
     if (thread_context.depth > CallStackLimit)
         return Trap;
 
-    std::lock_guard guard{thread_context};
+    ThreadContextGuard guard{thread_context};
 
     if (func_idx < instance.imported_functions.size())
         return instance.imported_functions[func_idx].function(instance, args, thread_context);
@@ -593,7 +611,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             if (expected_type != actual_type)
                 goto trap;
 
-            if (!invoke_function(actual_type, called_func->function, instance, stack, thread_context))
+            if (!invoke_function(
+                    actual_type, called_func->function, instance, stack, thread_context))
                 goto trap;
             break;
         }

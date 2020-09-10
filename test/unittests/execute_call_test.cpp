@@ -529,6 +529,7 @@ TEST(execute_call, call_imported_infinite_recursion)
     auto instance = instantiate(module, {{host_foo, host_foo_type}});
 
     EXPECT_THAT(execute(*instance, 0, {}), Traps());
+    EXPECT_THAT(execute(*instance, 1, {}), Traps());
 }
 
 TEST(execute_call, call_indirect_imported_table_infinite_recursion)
