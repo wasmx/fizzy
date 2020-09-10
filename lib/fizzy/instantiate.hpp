@@ -25,7 +25,7 @@ struct Instance;
 class ThreadContext
 {
 public:
-    static constexpr size_t N = 32;
+    static constexpr size_t N = 512;
 
     Value stack_space[N];
 
