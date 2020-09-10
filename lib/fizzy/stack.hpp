@@ -72,8 +72,6 @@ class OperandStack
     /// The unbounded storage for items.
     std::unique_ptr<Value[]> m_large_storage;
 
-    Value* bottom() noexcept { return m_large_storage ? m_large_storage.get() : m_small_storage; }
-
 public:
     /// Default constructor.
     ///
@@ -154,7 +152,7 @@ public:
     {
         assert(new_size <= size());
         // For new_size == 0, the m_top will point below the storage.
-        m_top = bottom() + new_size - 1;
+        m_top = m_bottom + new_size - 1;
     }
 
     /// Returns iterator to the bottom of the stack.
