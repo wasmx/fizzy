@@ -13,6 +13,7 @@ target_sources(
     cxx20/bit.hpp
     cxx20/span.hpp
     bytes.hpp
+    capi.cpp
     constexpr_vector.hpp
     exceptions.cpp
     exceptions.hpp

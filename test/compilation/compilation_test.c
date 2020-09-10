@@ -4,4 +4,9 @@
 
 #include <fizzy/fizzy.h>
 
-void dummy() {}
+bool dummy(void);
+
+bool dummy()
+{
+    return fizzy_validate(NULL, 0);
+}
