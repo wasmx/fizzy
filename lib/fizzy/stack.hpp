@@ -52,9 +52,6 @@ public:
 
 class OperandStack
 {
-    /// The size of the pre-allocated internal storage: 128 bytes.
-    static constexpr auto small_storage_size = 128 / sizeof(Value);
-
     /// The pointer to the top item, or below the stack bottom if stack is empty.
     ///
     /// This pointer always alias m_storage, but it is kept as the first field
@@ -66,9 +63,6 @@ class OperandStack
 
     Value* m_locals;
 
-    /// The pre-allocated internal storage.
-    Value m_small_storage[small_storage_size];
-
     /// The unbounded storage for items.
     std::unique_ptr<Value[]> m_large_storage;
 
@@ -78,15 +72,15 @@ public:
     /// Based on @p max_stack_height decides if to use small pre-allocated storage or allocate
     /// large storage.
     /// Sets the top item pointer to below the stack bottom.
-    OperandStack(span<const Value> args, size_t num_locals, size_t max_stack_height)
+    OperandStack(span<const Value> args, size_t num_locals, size_t max_stack_height, Value* external_storage, size_t external_storage_size)
     {
         const auto num_args = args.size();
         const auto storage_size_required = num_args + num_locals + max_stack_height;
 
         Value* storage;
-        if (storage_size_required <= small_storage_size)
+        if (storage_size_required <= external_storage_size)
         {
-            storage = &m_small_storage[0];
+            storage = external_storage;
         }
         else
         {
