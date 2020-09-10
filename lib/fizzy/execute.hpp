@@ -36,9 +36,17 @@ struct ExecutionResult
 constexpr ExecutionResult Void{true};
 constexpr ExecutionResult Trap{false};
 
-// Execute a function on an instance.
-ExecutionResult execute(
-    Instance& instance, FuncIdx func_idx, span<const Value> args, int depth = 0) noexcept;
+/// Execute a function on an instance.
+ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> args,
+    ThreadContext& thread_context) noexcept;
+
+/// Execute a function on an instance with implicit depth 0.
+inline ExecutionResult execute(
+    Instance& instance, FuncIdx func_idx, span<const Value> args) noexcept
+{
+    ThreadContext thread_context;
+    return execute(instance, func_idx, args, thread_context);
+}
 
 inline ExecutionResult execute(
     Instance& instance, FuncIdx func_idx, std::initializer_list<Value> args) noexcept

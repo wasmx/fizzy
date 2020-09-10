@@ -328,7 +328,9 @@ std::unique_ptr<Instance> instantiate(Module module,
         for (const auto idx : instance->module.elementsec[i].init)
         {
             auto func = [idx, &instance_ref = *instance](fizzy::Instance&, span<const Value> args,
-                            int depth) { return execute(instance_ref, idx, args, depth); };
+                            ThreadContext& thread_context) {
+                return execute(instance_ref, idx, args, thread_context);
+            };
 
             *it_table++ =
                 ExternalFunction{std::move(func), instance->module.get_function_type(idx)};
@@ -361,7 +363,9 @@ std::unique_ptr<Instance> instantiate(Module module,
                         auto& table_function = (*it_table)->function;
                         table_function = [shared_instance, func = std::move(table_function)](
                                              fizzy::Instance& _instance, span<const Value> args,
-                                             int depth) { return func(_instance, args, depth); };
+                                             ThreadContext& thread_context) {
+                            return func(_instance, args, thread_context);
+                        };
                         ++it_table;
                     }
                 }
@@ -432,8 +436,9 @@ std::optional<ExternalFunction> find_exported_function(Instance& instance, std::
         return std::nullopt;
 
     const auto idx = *opt_index;
-    auto func = [idx, &instance](fizzy::Instance&, span<const Value> args, int depth) {
-        return execute(instance, idx, args, depth);
+    auto func = [idx, &instance](
+                    fizzy::Instance&, span<const Value> args, ThreadContext& thread_context) {
+        return execute(instance, idx, args, thread_context);
     };
 
     return ExternalFunction{std::move(func), instance.module.get_function_type(idx)};

@@ -22,9 +22,30 @@ namespace fizzy
 struct ExecutionResult;
 struct Instance;
 
+class ThreadContext
+{
+public:
+    static constexpr size_t N = 512;
+
+    Value stack_space[N];
+
+    Value* free_space = stack_space;
+
+    size_t space_left() const noexcept
+    {
+        return static_cast<size_t>((stack_space + N) - free_space);
+    }
+
+    int depth = 0;
+
+    void lock() noexcept { ++depth; }
+
+    void unlock() noexcept { --depth; }
+};
+
 struct ExternalFunction
 {
-    std::function<ExecutionResult(Instance&, span<const Value>, int depth)> function;
+    std::function<ExecutionResult(Instance&, span<const Value>, ThreadContext&)> function;
     FuncType type;
 };
 
@@ -102,7 +123,7 @@ struct ImportedFunction
     std::string name;
     std::vector<ValType> inputs;
     std::optional<ValType> output;
-    std::function<ExecutionResult(Instance&, span<const Value>, int depth)> function;
+    std::function<ExecutionResult(Instance&, span<const Value>, ThreadContext&)> function;
 };
 
 // Create vector of ExternalFunctions ready to be passed to instantiate.
