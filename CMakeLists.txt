@@ -86,7 +86,8 @@ if(FIZZY_FUZZING)
     add_link_options(${fuzzing_flags})
 endif()
 
-set(include_dir ${PROJECT_SOURCE_DIR}/include)  # Public include directory.
+# Public include directory.
+set(FIZZY_INCLUDE_DIR $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)

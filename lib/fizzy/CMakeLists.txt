@@ -4,9 +4,12 @@
 
 add_library(fizzy)
 add_library(fizzy::fizzy ALIAS fizzy)
+target_compile_features(fizzy PUBLIC cxx_std_17)
+target_include_directories(fizzy PUBLIC ${FIZZY_INCLUDE_DIR})
 
 target_sources(
     fizzy PRIVATE
+    ${FIZZY_INCLUDE_DIR}/fizzy/fizzy.h
     cxx20/bit.hpp
     cxx20/span.hpp
     bytes.hpp
@@ -32,4 +35,3 @@ target_sources(
     utf8.hpp
     value.hpp
 )
-target_compile_features(fizzy PUBLIC cxx_std_17)
