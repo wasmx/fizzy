@@ -58,6 +58,34 @@ TEST(execute_call, call_with_arguments)
     EXPECT_THAT(execute(parse(wasm), 1, {}), Result(4));
 }
 
+TEST(execute_call, call_shared_stack_space)
+{
+    /* wat2wasm
+    (module
+      (func $double (param i32) (result i64)
+        local.get 0
+        i64.extend_i32_u
+        local.get 0
+        i64.extend_i32_u
+        i64.add
+      )
+
+      (func $main (param i32) (param i32) (result i64)
+        local.get 1
+        local.get 0
+        i32.add
+        call $double
+      )
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010c0260017f017e60027f7f017e03030200010a150209002000ad2000ad7c0b0900200120"
+        "006a10000b");
+
+    auto instance = instantiate(parse(wasm));
+    EXPECT_THAT(execute(*instance, 1, {2, 3}), Result(10));  // double(2+3)
+}
+
 TEST(execute_call, call_indirect)
 {
     /* wat2wasm
@@ -205,6 +233,36 @@ TEST(execute_call, call_indirect_uninited_table)
     EXPECT_THAT(execute(module, 3, {4}), Traps());
 }
 
+TEST(execute_call, call_indirect_shared_stack_space)
+{
+    /* wat2wasm
+    (module
+      (type $ft (func (param i32) (result i64)))
+      (func $double (param i32) (result i64)
+        local.get 0
+        i64.extend_i32_u
+        local.get 0
+        i64.extend_i32_u
+        i64.add
+      )
+
+      (func $main (param i32) (param i32) (result i64)
+        local.get 1
+        local.get 0
+        call_indirect (type $ft)
+      )
+
+      (table anyfunc (elem $double))
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010c0260017f017e60027f7f017e0303020001040501700101010907010041000b01000a15"
+        "0209002000ad2000ad7c0b0900200120001100000b");
+
+    auto instance = instantiate(parse(wasm));
+    EXPECT_THAT(execute(*instance, 1, {0, 10}), Result(20));  // double(10)
+}
+
 TEST(execute_call, imported_function_call)
 {
     /* wat2wasm
@@ -263,16 +321,16 @@ TEST(execute_call, imported_functions_call_indirect)
       (func $sqr    (import "env" "sqr") (param i32) (result i64))
       (func $isqrt  (import "env" "isqrt") (param i32) (result i64))
       (func $double (param i32) (result i64)
-        get_local 0
-        i64.extend_u/i32
-        get_local 0
-        i64.extend_u/i32
+        local.get 0
+        i64.extend_i32_u
+        local.get 0
+        i64.extend_i32_u
         i64.add
       )
 
       (func $main (param i32) (param i32) (result i64)
-        get_local 1
-        get_local 0
+        local.get 1
+        local.get 0
         call_indirect (type $ft)
       )
 
@@ -529,6 +587,7 @@ TEST(execute_call, call_imported_infinite_recursion)
     auto instance = instantiate(module, {{host_foo, host_foo_type}});
 
     EXPECT_THAT(execute(*instance, 0, {}), Traps());
+    EXPECT_THAT(execute(*instance, 1, {}), Traps());
 }
 
 TEST(execute_call, call_indirect_imported_table_infinite_recursion)

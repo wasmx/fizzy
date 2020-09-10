@@ -25,9 +25,16 @@ struct Instance;
 class ThreadContext
 {
 public:
-    Value stack_space[512];
+    static constexpr size_t N = 128;
 
-    size_t space_left = 512;
+    Value stack_space[N];
+
+    Value* free_space = stack_space;
+
+    size_t space_left() const noexcept
+    {
+        return static_cast<size_t>((stack_space + N) - free_space);
+    }
 
     int depth = 0;
 

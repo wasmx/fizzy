@@ -10,9 +10,11 @@ using namespace testing;
 
 namespace
 {
-intptr_t address_diff(const void* a, const void* b) noexcept
+/// Computes absolute difference of two addresses.
+/*[[clang::no_sanitize("address")]]*/ intptr_t address_diff(const void* a, const void* b) noexcept
 {
-    return std::abs(reinterpret_cast<intptr_t>(a) - reinterpret_cast<intptr_t>(b));
+    const auto diff = reinterpret_cast<intptr_t>(a) - reinterpret_cast<intptr_t>(b);
+    return std::abs(diff);
 }
 }  // namespace
 

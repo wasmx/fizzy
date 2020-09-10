@@ -106,7 +106,10 @@ public:
         }
 
         m_bottom = m_locals + num_args + num_local_variables;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
         m_top = m_bottom - 1;
+#pragma GCC diagnostic pop
 
         std::copy(std::begin(args), std::end(args), m_locals);
         std::fill_n(m_locals + num_args, num_local_variables, 0);

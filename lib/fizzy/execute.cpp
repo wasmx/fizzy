@@ -463,15 +463,20 @@ __attribute__((no_sanitize("float-cast-overflow"))) inline constexpr float demot
 class ThreadContextGuard
 {
     ThreadContext& m_thread_context;
+    Value* const m_free_space;
 
 public:
     explicit ThreadContextGuard(ThreadContext& thread_context) noexcept
-      : m_thread_context{thread_context}
+      : m_thread_context{thread_context}, m_free_space{m_thread_context.free_space}
     {
         m_thread_context.lock();
     }
 
-    ~ThreadContextGuard() noexcept { m_thread_context.unlock(); }
+    ~ThreadContextGuard() noexcept
+    {
+        m_thread_context.unlock();
+        m_thread_context.free_space = m_free_space;
+    }
 };
 
 }  // namespace
@@ -493,10 +498,14 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
     const auto& code = instance.module.get_code(func_idx);
     auto* const memory = instance.memory.get();
 
-    constexpr auto stack_space_size = 128 / sizeof(Value);
-    Value stack_space[stack_space_size];
+    auto* current_thread_context = &thread_context;
+
     OperandStack stack(args, code.local_count, static_cast<size_t>(code.max_stack_height),
-        stack_space, std::size(stack_space));
+        current_thread_context->free_space, current_thread_context->space_left());
+    const auto storage_size_required =
+        args.size() + code.local_count + static_cast<size_t>(code.max_stack_height);
+    if (storage_size_required <= current_thread_context->space_left())
+        current_thread_context->free_space += storage_size_required;
 
     const Instr* pc = code.instructions.data();
     const uint8_t* immediates = code.immediates.data();
@@ -581,7 +590,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
             const auto called_func_idx = read<uint32_t>(immediates);
             const auto& called_func_type = instance.module.get_function_type(called_func_idx);
 
-            if (!invoke_function(called_func_type, called_func_idx, instance, stack, thread_context))
+            if (!invoke_function(
+                    called_func_type, called_func_idx, instance, stack, *current_thread_context))
                 goto trap;
             break;
         }
@@ -607,7 +617,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, span<const Value> 
                 goto trap;
 
             if (!invoke_function(
-                    actual_type, called_func->function, instance, stack, thread_context))
+                    actual_type, called_func->function, instance, stack, *current_thread_context))
                 goto trap;
             break;
         }
