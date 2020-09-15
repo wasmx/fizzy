@@ -17,6 +17,10 @@ if(SANITIZE MATCHES address)
     set(flags "-fsanitize=address ${flags}")
 endif()
 
+if(CMAKE_GENERATOR MATCHES Ninja)
+    set(build_command BUILD_COMMAND ${CMAKE_COMMAND} --build . -j4)
+endif()
+
 ExternalProject_Add(wabt
     EXCLUDE_FROM_ALL 1
     PREFIX ${prefix}
@@ -37,6 +41,7 @@ ExternalProject_Add(wabt
     -DCMAKE_POSITION_INDEPENDENT_CODE=FALSE
     -DCMAKE_CXX_FLAGS=${flags}
     -DCMAKE_C_FLAGS=${flags}
+    ${build_command}
     INSTALL_COMMAND ""
     BUILD_BYPRODUCTS ${wabt_library}
 )
