@@ -44,7 +44,7 @@ void handle_unexpected_errors() noexcept
         return std::string{options}.find("ignore_errors") != std::string::npos;
     }();
     if (!ignore_errors)
-        __builtin_trap();
+        __builtin_unreachable();
 }
 
 constexpr auto wabt_ignored_errors = {
