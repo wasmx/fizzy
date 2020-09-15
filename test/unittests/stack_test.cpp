@@ -117,8 +117,6 @@ TEST(operand_stack, construct)
 {
     OperandStack stack(0);
     EXPECT_EQ(stack.size(), 0);
-    stack.shrink(0);
-    EXPECT_EQ(stack.size(), 0);
 }
 
 TEST(operand_stack, top)
@@ -136,7 +134,7 @@ TEST(operand_stack, top)
     EXPECT_EQ(stack.top().i64, 101);
     EXPECT_EQ(stack[0].i64, 101);
 
-    stack.shrink(0);
+    stack.drop(1);
     EXPECT_EQ(stack.size(), 0);
 
     stack.push(2);
@@ -185,23 +183,6 @@ TEST(operand_stack, large)
     for (int expected = max_height - 1; expected >= 0; --expected)
         EXPECT_EQ(stack.pop().i64, expected);
     EXPECT_EQ(stack.size(), 0);
-}
-
-TEST(operand_stack, shrink)
-{
-    constexpr auto max_height = 60;
-    OperandStack stack(max_height);
-
-    for (unsigned i = 0; i < max_height; ++i)
-        stack.push(i);
-
-    EXPECT_EQ(stack.size(), max_height);
-    constexpr auto new_height = max_height / 3;
-    stack.shrink(new_height);
-    EXPECT_EQ(stack.size(), new_height);
-    EXPECT_EQ(stack.top().i64, new_height - 1);
-    EXPECT_EQ(stack[0].i64, new_height - 1);
-    EXPECT_EQ(stack[new_height - 1].i64, 0);
 }
 
 TEST(operand_stack, rbegin_rend)

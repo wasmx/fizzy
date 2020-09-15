@@ -127,17 +127,6 @@ public:
         m_top -= num;
     }
 
-    /// Shrinks the stack to the given new size by dropping items from the top.
-    ///
-    /// Requires new_size <= size().
-    /// shrink(0) clears entire stack and moves the top pointer below the stack base.
-    void shrink(size_t new_size) noexcept
-    {
-        assert(new_size <= size());
-        // For new_size == 0, the m_top will point below the storage.
-        m_top = bottom() + new_size - 1;
-    }
-
     /// Returns iterator to the bottom of the stack.
     const Value* rbegin() const noexcept { return bottom(); }
 
