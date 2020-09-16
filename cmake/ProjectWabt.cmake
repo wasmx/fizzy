@@ -11,6 +11,16 @@ set(binary_dir ${prefix}/src/wabt-build)
 set(include_dir ${source_dir})
 set(wabt_library ${binary_dir}/${CMAKE_STATIC_LIBRARY_PREFIX}wabt${CMAKE_STATIC_LIBRARY_SUFFIX})
 
+set(flags -fvisibility=hidden)
+if(SANITIZE MATCHES address)
+    # Instrument WABT with ASan - required for container-overflow checks.
+    set(flags "-fsanitize=address ${flags}")
+endif()
+
+if(CMAKE_GENERATOR MATCHES Ninja)
+    set(build_command BUILD_COMMAND ${CMAKE_COMMAND} --build . -j4)
+endif()
+
 ExternalProject_Add(wabt
     EXCLUDE_FROM_ALL 1
     PREFIX ${prefix}
@@ -29,8 +39,9 @@ ExternalProject_Add(wabt
     -DBUILD_TESTS=OFF
     -DBUILD_TOOLS=OFF
     -DCMAKE_POSITION_INDEPENDENT_CODE=FALSE
-    -DCMAKE_CXX_FLAGS=-fvisibility=hidden
-    -DCMAKE_C_FLAGS=-fvisibility=hidden
+    -DCMAKE_CXX_FLAGS=${flags}
+    -DCMAKE_C_FLAGS=${flags}
+    ${build_command}
     INSTALL_COMMAND ""
     BUILD_BYPRODUCTS ${wabt_library}
 )
