@@ -38,9 +38,9 @@ cable_configure_compiler()
 add_compile_options(
     -Wcast-qual
     -Wcast-align
-    -Wextra-semi
     -Wmissing-declarations
-    -Wold-style-cast
+    $<$<COMPILE_LANGUAGE:CXX>:-Wextra-semi>
+    $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast>
 )
 cable_add_cxx_compiler_flag_if_supported(-Wfinal-dtor-non-final-class)
 cable_add_cxx_compiler_flag_if_supported(-Wnewline-eof)
