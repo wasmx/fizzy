@@ -96,7 +96,28 @@ bool wabt_parse(const uint8_t* data, size_t data_size) noexcept
 
 }  // namespace
 
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noexcept
+extern "C" {
+
+size_t LLVMFuzzerMutate(uint8_t* data, size_t size, size_t max_size) noexcept;
+
+size_t LLVMFuzzerCustomMutator(
+    uint8_t* data, size_t size, size_t max_size, [[maybe_unused]] unsigned int seed) noexcept
+{
+    static constexpr uint8_t wasm_prefix[]{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00};
+    static constexpr auto wasm_prefix_size = sizeof(wasm_prefix);
+
+    // For inputs shorter than wasm prefix just mutate it.
+    if (size <= wasm_prefix_size)
+        return LLVMFuzzerMutate(data, size, max_size);
+
+    // For other, leave prefix unchanged. It is likely to be valid and we don't want to waste time
+    // on mutating the prefix.
+    const auto new_size_without_prefix = LLVMFuzzerMutate(
+        data + wasm_prefix_size, size - wasm_prefix_size, max_size - wasm_prefix_size);
+    return new_size_without_prefix + wasm_prefix_size;
+}
+
+int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noexcept
 {
     const auto expected = wabt_parse(data, data_size);
 
@@ -147,4 +168,5 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
     }
 
     return 0;
+}
 }
