@@ -60,6 +60,18 @@ bool wabt_parse(const uint8_t* data, size_t data_size) noexcept
 
     ReadBinaryOptions read_options;
     read_options.features.enable_mutable_globals();
+    read_options.features.disable_exceptions();
+    read_options.features.disable_annotations();
+    read_options.features.disable_bulk_memory();
+    read_options.features.disable_gc();
+    read_options.features.disable_memory64();
+    read_options.features.disable_multi_value();
+    read_options.features.disable_reference_types();
+    read_options.features.disable_sat_float_to_int();
+    read_options.features.disable_sign_extension();
+    read_options.features.disable_simd();
+    read_options.features.disable_tail_call();
+    read_options.features.disable_threads();
     Module module;
 
     wabt_errors.clear();
