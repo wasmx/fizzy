@@ -5,6 +5,10 @@
 cmake_minimum_required(VERSION 3.15)
 
 cmake_policy(SET CMP0077 NEW)
+if(POLICY CMP0097)
+    cmake_policy(SET CMP0097 NEW)
+endif()
+
 set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
 
 include(cmake/cable.cmake)
