@@ -265,6 +265,7 @@ jobs:
           command: |
             export PATH=$PATH:~/bin
             ./wat2wasm4cpp.py test/unittests/api_test.cpp
+            ./wat2wasm4cpp.py test/unittests/capi_test.cpp
             ./wat2wasm4cpp.py test/unittests/end_to_end_test.cpp
             ./wat2wasm4cpp.py test/unittests/execute_call_test.cpp
             ./wat2wasm4cpp.py test/unittests/execute_control_test.cpp
