@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "cxx20/bit.hpp"
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -11,16 +12,6 @@
 
 namespace fizzy::test
 {
-/// Simple implementation of C++20's std::bit_cast.
-template <typename DstT, typename SrcT>
-DstT bit_cast(SrcT x) noexcept
-{
-    DstT z;
-    static_assert(sizeof(x) == sizeof(z));
-    __builtin_memcpy(&z, &x, sizeof(x));
-    return z;
-}
-
 /// A wrapper for floating-point types with inspection/construction/comparison utilities.
 template <typename T>
 struct FP
