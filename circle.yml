@@ -216,6 +216,10 @@ jobs:
     steps:
       - checkout
       - run:
+          name: "Run shellcheck"
+          command: |
+            git ls-files '*.sh' | xargs shellcheck
+      - run:
           name: "Check code format"
           command: |
             clang-format --version
