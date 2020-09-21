@@ -102,7 +102,15 @@ public:
 
         constexpr Iterator begin() const { return m_begin; }
         constexpr Iterator end() const { return m_end; }
-        constexpr size_t size() const { return static_cast<size_t>(m_end - m_begin); }
+
+        [[gnu::no_sanitize("pointer-subtract")]] constexpr size_t size() const
+        {
+            // The "pointer-subtract" sanitizer is disabled because GCC fails to compile
+            // constexpr function with pointer subtraction.
+            // The bug https://gcc.gnu.org/bugzilla/show_bug.cgi?id=97145
+            // is to be fixed in GCC 10.3.
+            return static_cast<size_t>(m_end - m_begin);
+        }
     };
 
     // The list of positive floating-point values without zero, infinity and NaNs.
