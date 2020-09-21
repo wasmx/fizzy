@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "execute.hpp"
+#include "cxx20/bit.hpp"
 #include "stack.hpp"
 #include "trunc_boundaries.hpp"
 #include "types.hpp"
@@ -14,6 +15,9 @@
 
 namespace fizzy
 {
+using I32 = uint32_t;
+using F32 = float;
+
 namespace
 {
 // code_offset + imm_offset + stack_height
@@ -205,10 +209,9 @@ inline bool store_into_memory(
     return true;
 }
 
-template <typename Op>
-inline void unary_op(OperandStack& stack, Op op) noexcept
+template <typename T>
+inline void unary_op(OperandStack& stack, T(op)(T)) noexcept
 {
-    using T = decltype(op({}));
     const auto result = op(stack.top().as<T>());
     stack.top() = Value{result};  // Convert to Value, also from signed integer types.
 }
@@ -349,6 +352,18 @@ inline uint64_t ctz64(uint64_t value) noexcept
 inline uint64_t popcnt64(uint64_t value) noexcept
 {
     return static_cast<uint64_t>(__builtin_popcountll(value));
+}
+
+template <typename T>
+inline T neg(T a) noexcept
+{
+    return -a;
+}
+
+template <>
+inline float neg(float a) noexcept
+{
+    return bit_cast<F32>(bit_cast<I32>(a) ^ 0x80000000);
 }
 
 template <typename T>
@@ -1231,13 +1246,15 @@ ExecutionResult execute(
 
         case Instr::f32_abs:
         {
-            // TODO: This can be optimized https://godbolt.org/z/aPqvfo
-            unary_op(stack, static_cast<float (*)(float)>(std::fabs));
+            asm("/*f32_abs*/");
+            stack.top().f32 = bit_cast<F32>(bit_cast<I32>(stack.top().f32) & 0x7fffffff);
             break;
         }
         case Instr::f32_neg:
         {
-            unary_op(stack, std::negate<float>{});
+            asm("/*f32_neg*/");
+            //stack.top().f32 = bit_cast<F32>(bit_cast<I32>(stack.top().f32) ^ 0x80000000);
+            unary_op(stack, neg<float>);
             break;
         }
         case Instr::f32_ceil:
@@ -1303,6 +1320,7 @@ ExecutionResult execute(
             //       while this can be implemented with just generic registers and integer
             //       instructions: (a & ABS_MASK) | (b & SIGN_MASK).
             //       https://godbolt.org/z/aPqvfo
+            asm("/*f32_copysign*/");
             binary_op(stack, static_cast<float (*)(float, float)>(std::copysign));
             break;
         }
@@ -1315,7 +1333,7 @@ ExecutionResult execute(
         }
         case Instr::f64_neg:
         {
-            unary_op(stack, std::negate<double>{});
+            unary_op(stack, neg<double>);
             break;
         }
         case Instr::f64_ceil:
