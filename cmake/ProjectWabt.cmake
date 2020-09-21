@@ -14,7 +14,7 @@ set(wabt_library ${binary_dir}/${CMAKE_STATIC_LIBRARY_PREFIX}wabt${CMAKE_STATIC_
 set(flags -fvisibility=hidden)
 if(SANITIZE MATCHES address)
     # Instrument WABT with ASan - required for container-overflow checks.
-    set(flags "-fsanitize=address ${flags}")
+    set(flags "-D_GLIBCXX_SANITIZE_VECTOR -fsanitize=address ${flags}")
 endif()
 
 if(CMAKE_GENERATOR MATCHES Ninja)
