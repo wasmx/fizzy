@@ -260,7 +260,7 @@ parser_result<std::string> parse_string(const uint8_t* pos, const uint8_t* end)
     uint32_t size;
     std::tie(size, pos) = leb128u_decode<uint32_t>(pos, end);
 
-    if ((pos + size) > end)
+    if ((end - pos) < size)
         throw parser_error{"unexpected EOF"};
 
     if (!utf8_validate(pos, pos + size))
@@ -421,7 +421,7 @@ inline parser_result<Data> parse(const uint8_t* pos, const uint8_t* end)
     uint32_t size;
     std::tie(size, pos) = leb128u_decode<uint32_t>(pos, end);
 
-    if ((pos + size) > end)
+    if ((end - pos) < size)
         throw parser_error{"unexpected EOF"};
 
     auto init = bytes(pos, pos + size);
@@ -453,10 +453,10 @@ Module parse(bytes_view input)
         uint32_t size;
         std::tie(size, it) = leb128u_decode<uint32_t>(it, input.end());
 
-        const auto expected_section_end = it + size;
-        if (expected_section_end > input.end())
+        if ((input.end() - it) < size)
             throw parser_error{"unexpected EOF"};
 
+        const auto expected_section_end = it + size;
         switch (id)
         {
         case SectionId::type:

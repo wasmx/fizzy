@@ -29,8 +29,8 @@ inline parser_result<uint8_t> parse_byte(const uint8_t* pos, const uint8_t* end)
 template <typename T>
 inline parser_result<T> parse_value(const uint8_t* pos, const uint8_t* end)
 {
-    constexpr auto size = sizeof(T);
-    if (pos + size > end)
+    constexpr ptrdiff_t size = sizeof(T);
+    if ((end - pos) < size)
         throw parser_error{"unexpected EOF"};
 
     T value;
