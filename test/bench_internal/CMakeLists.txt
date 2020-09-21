@@ -9,6 +9,7 @@ target_sources(fizzy-bench-internal PRIVATE
     execute_benchmarks.cpp
     experimental.cpp
     experimental.hpp
+    instructions_benchmarks.cpp
     parser_benchmarks.cpp
 )
 
