@@ -4,7 +4,6 @@
 
 #include "utf8.hpp"
 #include <gtest/gtest.h>
-#include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
 
 using namespace fizzy;
@@ -132,4 +131,34 @@ TEST(utf8, validate)
     };
     for (const auto& testcase : testcases)
         EXPECT_EQ(utf8_validate(testcase.first), testcase.second);
+}
+
+TEST(utf8, missing_second_byte)
+{
+    constexpr uint8_t first_bytes[]{0xDF, 0xE0, 0xEC, 0xED, 0xEF, 0xF0, 0xF3, 0xF4};
+    for (const auto b : first_bytes)
+    {
+        const uint8_t input[]{b};
+        EXPECT_FALSE(utf8_validate({input, std::size(input)}));
+    }
+}
+
+TEST(utf8, missing_third_byte)
+{
+    constexpr uint8_t first_bytes[]{0xE0, 0xEC, 0xED, 0xEF, 0xF0, 0xF3, 0xF4};
+    for (const auto b : first_bytes)
+    {
+        const uint8_t input[]{b, 0xA0};
+        EXPECT_FALSE(utf8_validate({input, std::size(input)}));
+    }
+}
+
+TEST(utf8, missing_forth_byte)
+{
+    constexpr uint8_t first_bytes[]{0xF0, 0xF3, 0xF4};
+    for (const auto b : first_bytes)
+    {
+        const uint8_t input[]{b, 0xA0, 0xA0};
+        EXPECT_FALSE(utf8_validate({input, std::size(input)}));
+    }
 }

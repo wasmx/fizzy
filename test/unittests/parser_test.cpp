@@ -1370,11 +1370,19 @@ TEST(parser, data_section_without_memory)
 
 TEST(parser, data_section_out_of_bounds)
 {
+    // Expected data of length 1, 0 bytes given.
     const auto wasm1 = bytes{wasm_prefix} + make_section(11, make_vec({"0041000b01"_bytes}));
     EXPECT_THROW_MESSAGE(parse(wasm1), parser_error, "unexpected EOF");
+
+    // Expected data of length 9, 8 bytes given.
     const auto wasm2 =
         bytes{wasm_prefix} + make_section(11, make_vec({"0041000b09d0d1d2d3d4d5d6d7"_bytes}));
     EXPECT_THROW_MESSAGE(parse(wasm2), parser_error, "unexpected EOF");
+
+    // Expected data of length 127 (0x7f), 1 byte given. This detects invalid pointer comparison
+    // with ASan pointer-compare,pointer-subtract.
+    const auto wasm3 = bytes{wasm_prefix} + make_section(11, make_vec({"0041000b7fd0"_bytes}));
+    EXPECT_THROW_MESSAGE(parse(wasm3), parser_error, "unexpected EOF");
 }
 
 TEST(parser, unknown_section_empty)

@@ -16,10 +16,10 @@ namespace
 const Module ModuleWithSingleFunction = {
     {FuncType{{}, {}}}, {}, {0}, {}, {}, {}, {}, std::nullopt, {}, {}, {}, {}, {}, {}, {}};
 
-inline auto parse_expr(const bytes& input, FuncIdx func_idx = 0,
+inline auto parse_expr(bytes_view input, FuncIdx func_idx = 0,
     const std::vector<Locals>& locals = {}, const Module& module = ModuleWithSingleFunction)
 {
-    return fizzy::parse_expr(input.data(), input.data() + input.size(), func_idx, locals, module);
+    return fizzy::parse_expr(input.data(), input.end(), func_idx, locals, module);
 }
 }  // namespace
 
@@ -497,11 +497,20 @@ TEST(parser_expr, immediate_leb128_out_of_bounds)
 
 TEST(parser_expr, immediate_float_out_of_bounds)
 {
-    const auto expr_f32_const = bytes{uint8_t(Instr::f32_const), 0x01};
-    EXPECT_THROW_MESSAGE(parse_expr(expr_f32_const), parser_error, "unexpected EOF");
-    const auto expr_f64_const =
-        bytes{uint8_t(Instr::f64_const), 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
-    EXPECT_THROW_MESSAGE(parse_expr(expr_f64_const), parser_error, "unexpected EOF");
+    // These tests use exact-fit array to detect invalid pointer comparisons in parser.
+
+    const uint8_t expr_f32_const[]{uint8_t(Instr::f32_const), 0x01};
+    EXPECT_THROW_MESSAGE(parse_expr(bytes_view{expr_f32_const, std::size(expr_f32_const)}),
+        parser_error, "unexpected EOF");
+
+    const uint8_t expr_f64_const_2[]{uint8_t(Instr::f64_const), 0x01, 0x02};
+    EXPECT_THROW_MESSAGE(parse_expr(bytes_view{expr_f64_const_2, std::size(expr_f64_const_2)}),
+        parser_error, "unexpected EOF");
+
+    const uint8_t expr_f64_const_7[]{
+        uint8_t(Instr::f64_const), 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
+    EXPECT_THROW_MESSAGE(parse_expr(bytes_view{expr_f64_const_7, std::size(expr_f64_const_7)}),
+        parser_error, "unexpected EOF");
 }
 
 TEST(parser_expr, load_store_immediates_out_of_bounds)
