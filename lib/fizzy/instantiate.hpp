@@ -4,10 +4,10 @@
 
 #pragma once
 
+#include "cxx20/span.hpp"
 #include "exceptions.hpp"
 #include "limits.hpp"
 #include "module.hpp"
-#include "span.hpp"
 #include "types.hpp"
 #include "value.hpp"
 #include <cstdint>

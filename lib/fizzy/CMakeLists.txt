@@ -8,6 +8,7 @@ add_library(fizzy::fizzy ALIAS fizzy)
 target_sources(
     fizzy PRIVATE
     cxx20/bit.hpp
+    cxx20/span.hpp
     bytes.hpp
     constexpr_vector.hpp
     exceptions.cpp
@@ -24,7 +25,6 @@ target_sources(
     parser.cpp
     parser.hpp
     parser_expr.cpp
-    span.hpp
     stack.hpp
     trunc_boundaries.hpp
     types.hpp

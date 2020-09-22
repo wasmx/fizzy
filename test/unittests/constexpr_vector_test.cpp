@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "constexpr_vector.hpp"
-#include "span.hpp"
+#include "cxx20/span.hpp"
 #include <gmock/gmock.h>
 #include <vector>
 
