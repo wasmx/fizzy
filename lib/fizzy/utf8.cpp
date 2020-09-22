@@ -105,11 +105,12 @@ bool utf8_validate(const uint8_t* pos, const uint8_t* end) noexcept
         else
             return false;
 
-        // At this point need to read at least one more byte
-        if ((pos + required_bytes - 1) > end)
+
+        // At this point need to read at least one more byte.
+        assert(required_bytes > 1);
+        if ((end - pos) < required_bytes - 1)
             return false;
 
-        assert(required_bytes > 1);
 
         // Byte2 may have exceptional encodings
         const uint8_t byte2 = *pos++;
