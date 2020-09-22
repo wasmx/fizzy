@@ -2,10 +2,10 @@
 // Copyright 2019-2020 The Fizzy Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#include "cxx20/span.hpp"
 #include "instructions.hpp"
 #include "module.hpp"
 #include "parser.hpp"
-#include "span.hpp"
 #include "stack.hpp"
 #include <cassert>
 
