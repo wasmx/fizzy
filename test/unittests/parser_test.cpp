@@ -1324,7 +1324,8 @@ TEST(parser, data_section_memidx_nonzero)
 {
     const auto section_contents = make_vec({"0141010b0100"_bytes});
     const auto bin = bytes{wasm_prefix} + make_section(11, section_contents);
-    EXPECT_THROW_MESSAGE(parse(bin), parser_error, "unexpected memidx value 1");
+    EXPECT_THROW_MESSAGE(
+        parse(bin), validation_error, "invalid memory index 1 (only memory 0 is allowed)");
 }
 
 TEST(parser, data_section_invalid_initializer)
@@ -1338,15 +1339,15 @@ TEST(parser, data_section_invalid_initializer)
 TEST(parser, data_section_empty_vector_without_memory)
 {
     const auto bin = bytes{wasm_prefix} + make_section(11, make_vec({"0041010b00"_bytes}));
-    EXPECT_THROW_MESSAGE(
-        parse(bin), validation_error, "data section encountered without a memory section");
+    EXPECT_THROW_MESSAGE(parse(bin), validation_error,
+        "invalid memory index 0 (data section encountered without a memory section)");
 }
 
 TEST(parser, data_section_without_memory)
 {
     const auto bin = bytes{wasm_prefix} + make_section(11, make_vec({"0041010b02aaff"_bytes}));
-    EXPECT_THROW_MESSAGE(
-        parse(bin), validation_error, "data section encountered without a memory section");
+    EXPECT_THROW_MESSAGE(parse(bin), validation_error,
+        "invalid memory index 0 (data section encountered without a memory section)");
 }
 
 TEST(parser, data_section_out_of_bounds)
