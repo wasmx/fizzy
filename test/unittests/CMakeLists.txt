@@ -10,6 +10,7 @@ target_link_libraries(fizzy-unittests PRIVATE fizzy::fizzy fizzy::test-utils GTe
 target_sources(
     fizzy-unittests PRIVATE
     api_test.cpp
+    bit_cast_test.cpp
     constexpr_vector_test.cpp
     end_to_end_test.cpp
     execute_call_test.cpp
