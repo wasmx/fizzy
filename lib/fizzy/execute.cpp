@@ -474,10 +474,7 @@ ExecutionResult execute(
     if (func_idx < instance.imported_functions.size())
         return instance.imported_functions[func_idx].function(instance, args, depth);
 
-    const auto code_idx = func_idx - instance.imported_functions.size();
-    assert(code_idx < instance.module.codesec.size());
-
-    const auto& code = instance.module.codesec[code_idx];
+    const auto& code = instance.module.get_code(func_idx);
     auto* const memory = instance.memory.get();
 
     OperandStack stack(args, code.local_count, static_cast<size_t>(code.max_stack_height));

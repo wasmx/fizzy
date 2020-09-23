@@ -76,6 +76,14 @@ struct Module
                    globalsec[idx - imported_global_types.size()].type;
     }
 
+    const Code& get_code(FuncIdx func_idx) const noexcept
+    {
+        assert(func_idx >= imported_function_types.size());  // Cannot be imported function.
+        const auto code_idx = func_idx - imported_function_types.size();
+        assert(code_idx < codesec.size());
+        return codesec[code_idx];
+    }
+
     bool has_table() const noexcept { return !tablesec.empty() || !imported_table_types.empty(); }
 
     bool has_memory() const noexcept
