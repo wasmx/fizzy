@@ -980,7 +980,7 @@ TEST(execute, reuse_args)
 
     const std::vector<Value> args{20, 3};
     const auto expected = args[0].i64 % (args[0].i64 / args[1].i64);
-    EXPECT_THAT(execute(*instance, 0, args), Result(expected));
+    EXPECT_THAT(execute(*instance, 0, args.data()), Result(expected));
     EXPECT_THAT(args[0].i64, 20);
     EXPECT_THAT(args[1].i64, 3);
 

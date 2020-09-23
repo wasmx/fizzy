@@ -336,8 +336,7 @@ bool check(const FunctionDescription& func, fizzy::Instance& instance, const uin
     for (size_t i = 0; i < func.num_arguments; ++i)
         args[i] = make_value(func.param_types[i], inputs[i]);
 
-    const auto r = fizzy::execute(
-        instance, func.idx, fizzy::span<const fizzy::Value>(args, func.num_arguments));
+    const auto r = fizzy::execute(instance, func.idx, args);
 
     if (func.options == Options::TrapIsInvalidOperation)
     {
