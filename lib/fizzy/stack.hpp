@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "cxx20/span.hpp"
 #include "value.hpp"
 #include <cassert>
 #include <cstdint>
@@ -49,17 +50,32 @@ public:
     }
 };
 
+
+/// Contains current frame's locals (including arguments) and operand stack.
+/// The storage space for locals and operand stack together is allocated as a
+/// continuous memory. Elements occupy the storage space in the order:
+/// arguments, local variables, operand stack. Arguments and local variables can
+/// be accessed under a single namespace using local() method and are separate
+/// from the stack itself.
 class OperandStack
 {
     /// The size of the pre-allocated internal storage: 128 bytes.
     static constexpr auto small_storage_size = 128 / sizeof(Value);
 
-    /// The pointer to the top item, or below the stack bottom if stack is empty.
+    /// The pointer to the top item of the operand stack,
+    /// or below the stack bottom if stack is empty.
     ///
-    /// This pointer always alias m_storage, but it is kept as the first field
+    /// This pointer always alias m_locals, but it is kept as the first field
     /// because it is accessed the most. Therefore, it must be initialized
-    /// in the constructor after the m_storage.
+    /// in the constructor after the m_locals.
     Value* m_top;
+
+    /// The pointer to the beginning of the locals array.
+    /// This always points to one of the storages.
+    Value* m_locals;
+
+    /// The pointer to the bottom of the operand stack.
+    Value* m_bottom;
 
     /// The pre-allocated internal storage.
     Value m_small_storage[small_storage_size];
@@ -67,35 +83,56 @@ class OperandStack
     /// The unbounded storage for items.
     std::unique_ptr<Value[]> m_large_storage;
 
-    Value* bottom() noexcept { return m_large_storage ? m_large_storage.get() : m_small_storage; }
-
-    const Value* bottom() const noexcept
-    {
-        return m_large_storage ? m_large_storage.get() : m_small_storage;
-    }
-
 public:
     /// Default constructor.
     ///
-    /// Based on @p max_stack_height decides if to use small pre-allocated storage or allocate
-    /// large storage.
-    /// Sets the top item pointer to below the stack bottom.
-    explicit OperandStack(size_t max_stack_height)
+    /// Based on required storage space decides to use small pre-allocated
+    /// storage or allocate large storage.
+    /// Sets the top stack operand pointer to below the operand stack bottom.
+    /// @param args                 Function arguments. Values are copied at the beginning of the
+    ///                             storage space.
+    /// @param num_local_variables  The number of the function local variables (excluding
+    ///                             arguments). This number of values is zeroed in the storage space
+    ///                             after the arguments.
+    /// @param max_stack_height     The maximum operand stack height in the function. This excludes
+    ///                             args and num_local_variables.
+    OperandStack(span<const Value> args, size_t num_local_variables, size_t max_stack_height)
     {
-        if (max_stack_height > small_storage_size)
-            m_large_storage = std::make_unique<Value[]>(max_stack_height);
-        m_top = bottom() - 1;
+        const auto num_args = args.size();
+        const auto storage_size_required = num_args + num_local_variables + max_stack_height;
+
+        if (storage_size_required <= small_storage_size)
+        {
+            m_locals = &m_small_storage[0];
+        }
+        else
+        {
+            m_large_storage = std::make_unique<Value[]>(storage_size_required);
+            m_locals = &m_large_storage[0];
+        }
+
+        m_bottom = m_locals + num_args + num_local_variables;
+        m_top = m_bottom - 1;
+
+        std::copy(std::begin(args), std::end(args), m_locals);
+        std::fill_n(m_locals + num_args, num_local_variables, 0);
     }
 
     OperandStack(const OperandStack&) = delete;
     OperandStack& operator=(const OperandStack&) = delete;
 
+    Value& local(size_t index) noexcept
+    {
+        assert(m_locals + index < m_bottom);
+        return m_locals[index];
+    }
+
     /// The current number of items on the stack (aka stack height).
-    size_t size() const noexcept { return static_cast<size_t>(m_top + 1 - bottom()); }
+    size_t size() const noexcept { return static_cast<size_t>(m_top + 1 - m_bottom); }
 
     /// Returns the reference to the top item.
     /// Requires non-empty stack.
-    auto& top() noexcept
+    Value& top() noexcept
     {
         assert(size() != 0);
         return *m_top;
@@ -103,7 +140,7 @@ public:
 
     /// Returns the reference to the stack item on given position from the stack top.
     /// Requires index < size().
-    auto& operator[](size_t index) noexcept
+    Value& operator[](size_t index) noexcept
     {
         assert(index < size());
         return *(m_top - index);
@@ -115,7 +152,7 @@ public:
 
     /// Returns an item popped from the top of the stack.
     /// Requires non-empty stack.
-    auto pop() noexcept
+    Value pop() noexcept
     {
         assert(size() != 0);
         return *m_top--;
@@ -127,19 +164,8 @@ public:
         m_top -= num;
     }
 
-    /// Shrinks the stack to the given new size by dropping items from the top.
-    ///
-    /// Requires new_size <= size().
-    /// shrink(0) clears entire stack and moves the top pointer below the stack base.
-    void shrink(size_t new_size) noexcept
-    {
-        assert(new_size <= size());
-        // For new_size == 0, the m_top will point below the storage.
-        m_top = bottom() + new_size - 1;
-    }
-
     /// Returns iterator to the bottom of the stack.
-    const Value* rbegin() const noexcept { return bottom(); }
+    const Value* rbegin() const noexcept { return m_bottom; }
 
     /// Returns end iterator counting from the bottom of the stack.
     const Value* rend() const noexcept { return m_top + 1; }

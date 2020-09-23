@@ -8,6 +8,14 @@
 using namespace fizzy;
 using namespace testing;
 
+namespace
+{
+intptr_t address_diff(const void* a, const void* b) noexcept
+{
+    return std::abs(reinterpret_cast<intptr_t>(a) - reinterpret_cast<intptr_t>(b));
+}
+}  // namespace
+
 TEST(stack, push_and_pop)
 {
     Stack<char> stack;
@@ -115,15 +123,13 @@ TEST(stack, struct_item)
 
 TEST(operand_stack, construct)
 {
-    OperandStack stack(0);
-    EXPECT_EQ(stack.size(), 0);
-    stack.shrink(0);
+    OperandStack stack({}, 0, 0);
     EXPECT_EQ(stack.size(), 0);
 }
 
 TEST(operand_stack, top)
 {
-    OperandStack stack(1);
+    OperandStack stack({}, 0, 1);
     EXPECT_EQ(stack.size(), 0);
 
     stack.push(1);
@@ -136,7 +142,12 @@ TEST(operand_stack, top)
     EXPECT_EQ(stack.top().i64, 101);
     EXPECT_EQ(stack[0].i64, 101);
 
-    stack.shrink(0);
+    stack.drop(0);
+    EXPECT_EQ(stack.size(), 1);
+    EXPECT_EQ(stack.top().i64, 101);
+    EXPECT_EQ(stack[0].i64, 101);
+
+    stack.drop(1);
     EXPECT_EQ(stack.size(), 0);
 
     stack.push(2);
@@ -147,7 +158,9 @@ TEST(operand_stack, top)
 
 TEST(operand_stack, small)
 {
-    OperandStack stack(3);
+    OperandStack stack({}, 0, 3);
+    ASSERT_LT(address_diff(&stack, stack.rbegin()), 100) << "not allocated on the system stack";
+
     EXPECT_EQ(stack.size(), 0);
 
     stack.push(1);
@@ -173,10 +186,51 @@ TEST(operand_stack, small)
     EXPECT_EQ(stack.top().i64, 12);
 }
 
+TEST(operand_stack, small_with_locals)
+{
+    const fizzy::Value args[] = {0xa1, 0xa2};
+    OperandStack stack(args, 3, 1);
+    ASSERT_LT(address_diff(&stack, stack.rbegin()), 100) << "not allocated on the system stack";
+
+    EXPECT_EQ(stack.size(), 0);
+
+    stack.push(0xff);
+    EXPECT_EQ(stack.size(), 1);
+    EXPECT_EQ(stack.top().i64, 0xff);
+    EXPECT_EQ(stack[0].i64, 0xff);
+
+    EXPECT_EQ(stack.local(0).i64, 0xa1);
+    EXPECT_EQ(stack.local(1).i64, 0xa2);
+    EXPECT_EQ(stack.local(2).i64, 0);
+    EXPECT_EQ(stack.local(3).i64, 0);
+    EXPECT_EQ(stack.local(4).i64, 0);
+
+    stack.local(0) = 0xc0;
+    stack.local(1) = 0xc1;
+    stack.local(2) = 0xc2;
+    stack.local(3) = 0xc3;
+    stack.local(4) = 0xc4;
+
+    EXPECT_EQ(stack.local(0).i64, 0xc0);
+    EXPECT_EQ(stack.local(1).i64, 0xc1);
+    EXPECT_EQ(stack.local(2).i64, 0xc2);
+    EXPECT_EQ(stack.local(3).i64, 0xc3);
+    EXPECT_EQ(stack.local(4).i64, 0xc4);
+
+    EXPECT_EQ(stack.pop().i64, 0xff);
+    EXPECT_EQ(stack.size(), 0);
+    EXPECT_EQ(stack.local(0).i64, 0xc0);
+    EXPECT_EQ(stack.local(1).i64, 0xc1);
+    EXPECT_EQ(stack.local(2).i64, 0xc2);
+    EXPECT_EQ(stack.local(3).i64, 0xc3);
+    EXPECT_EQ(stack.local(4).i64, 0xc4);
+}
+
 TEST(operand_stack, large)
 {
     constexpr auto max_height = 33;
-    OperandStack stack(max_height);
+    OperandStack stack({}, 0, max_height);
+    ASSERT_GT(address_diff(&stack, stack.rbegin()), 100) << "not allocated on the heap";
 
     for (unsigned i = 0; i < max_height; ++i)
         stack.push(i);
@@ -187,26 +241,45 @@ TEST(operand_stack, large)
     EXPECT_EQ(stack.size(), 0);
 }
 
-TEST(operand_stack, shrink)
+TEST(operand_stack, large_with_locals)
 {
-    constexpr auto max_height = 60;
-    OperandStack stack(max_height);
+    const fizzy::Value args[] = {0xa1, 0xa2};
+    constexpr auto max_height = 33;
+    constexpr auto num_locals = 5;
+    constexpr auto num_args = std::size(args);
+    OperandStack stack(args, num_locals, max_height);
+    ASSERT_GT(address_diff(&stack, stack.rbegin()), 100) << "not allocated on the heap";
 
     for (unsigned i = 0; i < max_height; ++i)
         stack.push(i);
 
     EXPECT_EQ(stack.size(), max_height);
-    constexpr auto new_height = max_height / 3;
-    stack.shrink(new_height);
-    EXPECT_EQ(stack.size(), new_height);
-    EXPECT_EQ(stack.top().i64, new_height - 1);
-    EXPECT_EQ(stack[0].i64, new_height - 1);
-    EXPECT_EQ(stack[new_height - 1].i64, 0);
+    for (unsigned i = 0; i < max_height; ++i)
+        EXPECT_EQ(stack[i].i64, max_height - i - 1);
+
+    EXPECT_EQ(stack.local(0).i64, 0xa1);
+    EXPECT_EQ(stack.local(1).i64, 0xa2);
+
+    for (unsigned i = num_args; i < num_args + num_locals; ++i)
+        EXPECT_EQ(stack.local(i).i64, 0);
+
+    for (unsigned i = 0; i < num_args + num_locals; ++i)
+        stack.local(i) = fizzy::Value{i};
+    for (unsigned i = 0; i < num_args + num_locals; ++i)
+        EXPECT_EQ(stack.local(i).i64, i);
+
+    for (int expected = max_height - 1; expected >= 0; --expected)
+        EXPECT_EQ(stack.pop().i64, expected);
+    EXPECT_EQ(stack.size(), 0);
+
+    for (unsigned i = 0; i < num_args + num_locals; ++i)
+        EXPECT_EQ(stack.local(i).i64, i);
 }
+
 
 TEST(operand_stack, rbegin_rend)
 {
-    OperandStack stack(3);
+    OperandStack stack({}, 0, 3);
     EXPECT_EQ(stack.rbegin(), stack.rend());
 
     stack.push(1);
@@ -217,9 +290,30 @@ TEST(operand_stack, rbegin_rend)
     EXPECT_EQ((stack.rend() - 1)->i64, 3);
 }
 
+TEST(operand_stack, rbegin_rend_locals)
+{
+    const fizzy::Value args[] = {0xa1};
+    OperandStack stack(args, 4, 2);
+    EXPECT_EQ(stack.rbegin(), stack.rend());
+
+    stack.push(1);
+    EXPECT_LT(stack.rbegin(), stack.rend());
+    EXPECT_EQ(stack.rend() - stack.rbegin(), 1);
+    EXPECT_EQ(stack.rbegin()->i64, 1);
+    EXPECT_EQ((stack.rend() - 1)->i64, 1);
+
+    stack.push(2);
+    EXPECT_LT(stack.rbegin(), stack.rend());
+    EXPECT_EQ(stack.rend() - stack.rbegin(), 2);
+    EXPECT_EQ(stack.rbegin()->i64, 1);
+    EXPECT_EQ((stack.rbegin() + 1)->i64, 2);
+    EXPECT_EQ((stack.rend() - 1)->i64, 2);
+    EXPECT_EQ((stack.rend() - 2)->i64, 1);
+}
+
 TEST(operand_stack, to_vector)
 {
-    OperandStack stack(3);
+    OperandStack stack({}, 0, 3);
     EXPECT_THAT(std::vector(stack.rbegin(), stack.rend()), IsEmpty());
 
     stack.push(1);
