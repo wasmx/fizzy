@@ -492,8 +492,8 @@ private:
             std::stringstream message;
             message << "Incorrect returned value. Expected: " << expected_value.i64 << " (0x"
                     << std::hex << expected_value.i64 << ")"
-                    << " Actual: " << actual_value.i64 << " (0x" << std::hex << actual_value.i64
-                    << ")";
+                    << " Actual: " << std::dec << actual_value.i64 << " (0x" << std::hex
+                    << actual_value.i64 << ")";
             fail(message.str());
             return false;
         }
