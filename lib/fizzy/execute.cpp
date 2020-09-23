@@ -1519,8 +1519,8 @@ ExecutionResult execute(
     }
 
 end:
-    // WebAssembly 1.0 allows at most one return variable.
-    assert(pc == &code.instructions[code.instructions.size()] && stack.size() <= 1);
+    assert(pc == &code.instructions[code.instructions.size()]);  // End of code must be reached.
+    assert(stack.size() == instance.module.get_function_type(func_idx).outputs.size());
 
     return stack.size() != 0 ? ExecutionResult{stack.pop()} : Void;
 
