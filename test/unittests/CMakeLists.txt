@@ -5,7 +5,7 @@
 include(GoogleTest)
 
 add_executable(fizzy-unittests)
-target_link_libraries(fizzy-unittests PRIVATE fizzy::fizzy fizzy::test-utils GTest::gtest_main GTest::gmock)
+target_link_libraries(fizzy-unittests PRIVATE fizzy::fizzy-internal fizzy::test-utils GTest::gtest_main GTest::gmock)
 
 target_sources(
     fizzy-unittests PRIVATE

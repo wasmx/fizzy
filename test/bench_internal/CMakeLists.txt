@@ -12,5 +12,4 @@ target_sources(fizzy-bench-internal PRIVATE
     parser_benchmarks.cpp
 )
 
-target_link_libraries(fizzy-bench-internal PRIVATE fizzy::fizzy fizzy::test-utils benchmark::benchmark_main)
-target_include_directories(fizzy-bench-internal PRIVATE ${fizzy_include_dir})
+target_link_libraries(fizzy-bench-internal PRIVATE fizzy::fizzy-internal fizzy::test-utils benchmark::benchmark_main)
