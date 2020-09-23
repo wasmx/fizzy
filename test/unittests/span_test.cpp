@@ -50,7 +50,7 @@ TEST(span, array)
 
 TEST(span, stack)
 {
-    OperandStack stack({}, 0, 4);
+    OperandStack stack(nullptr, 0, 0, 4);
     stack.push(10);
     stack.push(11);
     stack.push(12);

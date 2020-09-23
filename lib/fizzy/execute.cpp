@@ -476,7 +476,8 @@ ExecutionResult execute(
     const auto& code = instance.module.get_code(func_idx);
     auto* const memory = instance.memory.get();
 
-    OperandStack stack(args, code.local_count, static_cast<size_t>(code.max_stack_height));
+    OperandStack stack(
+        args.data(), args.size(), code.local_count, static_cast<size_t>(code.max_stack_height));
 
     const Instr* pc = code.instructions.data();
     const uint8_t* immediates = code.immediates.data();
