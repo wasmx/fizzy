@@ -160,15 +160,15 @@ TEST(execute, global_get_imported_and_internal)
       (global (import "mod" "g2") i32)
       (global i32 (i32.const 42))
       (global i32 (i32.const 43))
-      (func (param i32) (result i32) (get_global 0))
-      (func (param i32) (result i32) (get_global 1))
-      (func (param i32) (result i32) (get_global 2))
-      (func (param i32) (result i32) (get_global 3))
+      (func (result i32) (get_global 0))
+      (func (result i32) (get_global 1))
+      (func (result i32) (get_global 2))
+      (func (result i32) (get_global 3))
     )
      */
     const auto wasm = from_hex(
-        "0061736d0100000001060160017f017f021502036d6f64026731037f00036d6f64026732037f00030504000000"
-        "00060b027f00412a0b7f00412b0b0a1504040023000b040023010b040023020b040023030b");
+        "0061736d010000000105016000017f021502036d6f64026731037f00036d6f64026732037f0003050400000000"
+        "060b027f00412a0b7f00412b0b0a1504040023000b040023010b040023020b040023030b");
     const auto module = parse(wasm);
 
     Value g1 = 40;
@@ -827,7 +827,7 @@ TEST(execute, imported_functions_and_regular_one)
         return Value{as_uint32(args[0]) + as_uint32(args[1])};
     };
     constexpr auto host_foo2 = [](Instance&, span<const Value> args, int) {
-        return Value{as_uint32(args[0]) * as_uint32(args[0])};
+        return Value{as_uint32(args[0]) * as_uint32(args[1])};
     };
 
     const auto module = parse(wasm);
@@ -835,15 +835,30 @@ TEST(execute, imported_functions_and_regular_one)
     auto instance =
         instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[0]}});
     EXPECT_THAT(execute(*instance, 0, {20, 22}), Result(42));
-    EXPECT_THAT(execute(*instance, 1, {20}), Result(400));
+    EXPECT_THAT(execute(*instance, 1, {20, 10}), Result(200));
+}
 
-    // check correct number of arguments is passed to host
+TEST(execute, imported_functions_count_args)
+{
+    /* wat2wasm
+    (type (func (param i32 i32) (result i32)))
+    (type (func (param i32) (result i32)))
+    (import "mod" "foo1" (func (type 0)))
+    (import "mod" "foo2" (func (type 1)))
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010c0260027f7f017f60017f017f021702036d6f6404666f6f310000036d6f6404666f6f32"
+        "0001");
+
+    // Check if correct number of arguments is passed to host functions.
     constexpr auto count_args = [](Instance&, span<const Value> args, int) {
         return Value{args.size()};
     };
 
+    const auto module = parse(wasm);
+    ASSERT_EQ(module.typesec.size(), 2);
     auto instance_counter =
-        instantiate(module, {{count_args, module.typesec[0]}, {count_args, module.typesec[0]}});
+        instantiate(module, {{count_args, module.typesec[0]}, {count_args, module.typesec[1]}});
     EXPECT_THAT(execute(*instance_counter, 0, {20, 22}), Result(2));
     EXPECT_THAT(execute(*instance_counter, 1, {20}), Result(1));
 }

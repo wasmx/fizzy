@@ -468,6 +468,9 @@ ExecutionResult execute(
     if (depth > CallStackLimit)
         return Trap;
 
+    assert(args.size() == instance.module.get_function_type(func_idx).inputs.size());
+
+    assert(instance.module.imported_function_types.size() == instance.imported_functions.size());
     if (func_idx < instance.imported_functions.size())
         return instance.imported_functions[func_idx].function(instance, args, depth);
 
@@ -560,9 +563,9 @@ ExecutionResult execute(
         case Instr::call:
         {
             const auto called_func_idx = read<uint32_t>(immediates);
-            const auto& func_type = instance.module.get_function_type(called_func_idx);
+            const auto& called_func_type = instance.module.get_function_type(called_func_idx);
 
-            if (!invoke_function(func_type, called_func_idx, instance, stack, depth))
+            if (!invoke_function(called_func_type, called_func_idx, instance, stack, depth))
                 goto trap;
             break;
         }
