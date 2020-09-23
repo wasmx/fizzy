@@ -45,9 +45,14 @@ struct Module
     // Types of globals defined in import section
     std::vector<GlobalType> imported_global_types;
 
+    size_t get_function_count() const noexcept
+    {
+        return imported_function_types.size() + funcsec.size();
+    }
+
     const FuncType& get_function_type(FuncIdx idx) const noexcept
     {
-        assert(idx < imported_function_types.size() + funcsec.size());
+        assert(idx < get_function_count());
 
         if (idx < imported_function_types.size())
             return imported_function_types[idx];
@@ -56,11 +61,6 @@ struct Module
         assert(type_idx < typesec.size());
 
         return typesec[type_idx];
-    }
-
-    size_t get_function_count() const noexcept
-    {
-        return imported_function_types.size() + funcsec.size();
     }
 
     size_t get_global_count() const noexcept
