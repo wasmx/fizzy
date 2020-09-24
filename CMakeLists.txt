@@ -86,6 +86,10 @@ if(FIZZY_FUZZING)
     add_link_options(${fuzzing_flags})
 endif()
 
+
+include(CMakePackageConfigHelpers)
+include(GNUInstallDirs)
+
 # Public include directory.
 set(FIZZY_INCLUDE_DIR $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
@@ -100,5 +104,12 @@ if(FIZZY_TESTING)
     add_subdirectory(test)
 endif()
 
+set(CMAKE_INSTALL_CMAKEPACKAGEDIR ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME})
+
+write_basic_package_version_file(fizzyConfigVersion.cmake COMPATIBILITY ExactVersion)
+configure_package_config_file(cmake/Config.cmake.in fizzyConfig.cmake INSTALL_DESTINATION ${CMAKE_INSTALL_CMAKEPACKAGEDIR})
+
 install(TARGETS fizzy EXPORT fizzyTargets)
 install(DIRECTORY include/fizzy TYPE INCLUDE)
+install(EXPORT fizzyTargets NAMESPACE fizzy:: DESTINATION ${CMAKE_INSTALL_CMAKEPACKAGEDIR})
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/fizzyConfig.cmake ${CMAKE_CURRENT_BINARY_DIR}/fizzyConfigVersion.cmake DESTINATION ${CMAKE_INSTALL_CMAKEPACKAGEDIR})
