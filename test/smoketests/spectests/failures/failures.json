@@ -19,7 +19,7 @@
   {"type": "assert_unlinkable", "line": 38, "filename": "failures.13.wasm", "text": "error", "module_type": "binary"}, 
   {"type": "module", "line": 41, "filename": "failures.14.wasm"}, 
   {"type": "assert_return", "line": 48, "action": {"type": "invoke", "field": "foo.i32", "args": []}, "expected": [{"type": "i32", "value": "2"}]}, 
-  {"type": "assert_return", "line": 49, "action": {"type": "invoke", "field": "foo.i64", "args": []}, "expected": [{"type": "i64", "value": "2"}]}, 
+  {"type": "assert_return", "line": 49, "action": {"type": "invoke", "field": "foo.i64", "args": []}, "expected": [{"type": "i64", "value": "12"}]}, 
   {"type": "assert_return", "line": 50, "action": {"type": "invoke", "field": "foo.f32", "args": []}, "expected": [{"type": "f32", "value": "1075654427"}]}, 
   {"type": "assert_return", "line": 51, "action": {"type": "invoke", "field": "foo.f64", "args": []}, "expected": [{"type": "f64", "value": "4612712839142428377"}]}, 
   {"type": "assert_return", "line": 52, "action": {"type": "invoke", "field": "foo.f32", "args": []}, "expected": [{"type": "f32", "value": "nan:canonical"}]}, 
