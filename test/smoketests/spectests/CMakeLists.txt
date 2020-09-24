@@ -73,6 +73,16 @@ set_tests_properties(
 )
 
 add_test(
+        NAME fizzy/smoketests/spectests/failures-output
+        COMMAND fizzy-spectests ${CMAKE_CURRENT_LIST_DIR}/failures
+)
+set_tests_properties(
+        fizzy/smoketests/spectests/failures-output
+        PROPERTIES
+        PASS_REGULAR_EXPRESSION "FAILED Incorrect returned value\\. Expected: 12 \\(0xc\\) Actual: 10 \\(0xa\\)"
+)
+
+add_test(
     NAME fizzy/smoketests/spectests/broken
     COMMAND fizzy-spectests ${CMAKE_CURRENT_LIST_DIR}/broken
 )
