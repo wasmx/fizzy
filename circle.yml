@@ -41,6 +41,34 @@ commands:
               curl -L https://github.com/WebAssembly/wabt/releases/download/1.0.19/wabt-1.0.19-$os.tar.gz | sudo tar xz --strip 1
             fi
 
+  install_testfloat:
+    description: "Install TestFloat test suite tools"
+    steps:
+      - restore_cache:
+          name: "Get TestFloat from cache"
+          key: &testfloat-cache-key TestFloat-3e-{{arch}}-v3
+      - run:
+          name: "Install TestFloat"
+          working_directory: /tmp
+          command: |
+            if [ ! -f testfloat_gen ]; then
+              git clone --depth=1 --single-branch https://github.com/ucb-bar/berkeley-softfloat-3.git
+              git clone --depth=1 --single-branch https://github.com/ucb-bar/berkeley-testfloat-3.git
+
+              BUILD_DIR=build/Linux-x86_64-GCC
+              export TESTFLOAT_OPTS=-DFLOAT64
+              (cd berkeley-softfloat-3/$BUILD_DIR && make -j)
+              (cd berkeley-testfloat-3/$BUILD_DIR && make testfloat_gen -j)
+              mv berkeley-testfloat-3/$BUILD_DIR/testfloat_gen .
+            fi
+            sudo install -v testfloat_gen /usr/local/bin
+            echo 'export FIZZY_TESTFLOAT_REQUIRED=TRUE' >> $BASH_ENV
+      - save_cache:
+          name: "Save TestFloat to cache"
+          key: *testfloat-cache-key
+          paths:
+            - /tmp/testfloat_gen
+
   build:
     description: "Build"
     parameters:
@@ -67,7 +95,8 @@ commands:
             $CC --version
             $CXX --version
             cmake --version
-            printf "\nninja $(ninja --version) $((ninja --help 2>&1 || true) | grep -- -j)"
+            printf "\nninja $(ninja --version) $((ninja --help 2>&1 || true) | grep -- -j)\n"
+            echo TestFloat required: $FIZZY_TESTFLOAT_REQUIRED
 
             # Create the toolchain.info file for cache key.
             echo $TOOLCHAIN >> toolchain.info
@@ -114,7 +143,7 @@ commands:
           name: "Collect coverage data"
           working_directory: ~/build
           command: |
-            binaries='-object bin/fizzy-unittests -object bin/fizzy-spectests -object bin/fizzy-bench'
+            binaries='-object bin/fizzy-unittests -object bin/fizzy-spectests -object bin/fizzy-bench -object bin/fizzy-testfloat'
 
             mkdir coverage
             find -name '*.profraw'
@@ -249,6 +278,7 @@ jobs:
             ./wat2wasm4cpp.py test/unittests/validation_test.cpp
             ./wat2wasm4cpp.py test/unittests/wasm_engine_test.cpp
             ./wat2wasm4cpp.py test/spectests/spectests.cpp
+            ./wat2wasm4cpp.py test/testfloat/testfloat.cpp
             git diff --color --exit-code
       - build:
           configuration_name: "Tidy"
@@ -258,11 +288,13 @@ jobs:
           configuration_name: "C++20"
           build_type: Debug
           cmake_options: -DCMAKE_CXX_STANDARD=20
+      - install_testfloat
       - test
 
   release-linux:
     executor: linux-gcc-9
     steps:
+      - install_testfloat
       - checkout
       - build:
           build_type: Release
@@ -271,6 +303,7 @@ jobs:
   release-native-linux:
     executor: linux-gcc-latest
     steps:
+      - install_testfloat
       - checkout
       - build:
           build_type: Release
@@ -299,6 +332,7 @@ jobs:
   coverage-clang:
     executor: linux-clang-latest
     steps:
+      - install_testfloat
       - checkout
       - build:
           build_type: Coverage
@@ -332,6 +366,7 @@ jobs:
     environment:
       UBSAN_OPTIONS: halt_on_error=1
     steps:
+      - install_testfloat
       - checkout
       - build:
           build_type: RelWithDebInfo

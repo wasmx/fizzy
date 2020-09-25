@@ -65,6 +65,11 @@ Read [this guide](./test/benchmarks/README.md) for a short introduction.
 Fizzy is capable of executing the official WebAssembly tests.
 Follow [this guide](./test/spectests/README.md) for using the tool.
 
+### fizzy-testfloat
+
+A tool for testing implementations of floating-point instructions.
+Follow [this guide](./test/testfloat/README.md) for using the tool.
+
 ### fizzy-unittests
 
 This is the unit tests suite of Fizzy.
