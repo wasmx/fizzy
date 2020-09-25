@@ -24,18 +24,19 @@ endif()
 ExternalProject_Add(wabt
     EXCLUDE_FROM_ALL 1
     PREFIX ${prefix}
-    DOWNLOAD_NAME wabt-1.0.12.tar.gz
+    DOWNLOAD_NAME wabt-1.0.19.tar.gz
     DOWNLOAD_DIR ${prefix}/downloads
     SOURCE_DIR ${source_dir}
     BINARY_DIR ${binary_dir}
-    URL https://github.com/WebAssembly/wabt/archive/1.0.12.tar.gz
-    URL_HASH SHA256=5333949ed4ae63808afa0d1f7d627cd7485ebeec339590571e5f2cb21e304f79
+    URL https://github.com/WebAssembly/wabt/archive/1.0.19.tar.gz
+    URL_HASH SHA256=134f2afc8205d0a3ab89c5f0d424ff3823e9d2769c39d2235aa37eba7abc15ba
     CMAKE_ARGS
     -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
     -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
     -DWITH_EXCEPTIONS=OFF
+    -DBUILD_LIBWASM=OFF
     -DBUILD_TESTS=OFF
     -DBUILD_TOOLS=OFF
     -DCMAKE_POSITION_INDEPENDENT_CODE=FALSE
