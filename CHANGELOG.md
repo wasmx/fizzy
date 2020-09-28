@@ -5,12 +5,116 @@ Documentation of all notable changes to the **Fizzy** project.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
+## [0.5.0] — unreleased
+
+This release focuses on behind the scenes code and test cleanups, and preparation for a public API.
+
+Fizzy passes all(*) of the [official test suite (spectest 1.0)](https://github.com/wasmx/wasm-spec/tree/w3c-1.0-jsontests-20200813/test/core/json):
+  - 17911 of 17913 binary parser and execution tests,
+  - 989 of 989 validation tests,
+  - 477 skipped due to testing text format parser.
+
+(*) The two failures are caused by, in our opinion, two bugs in the test cases.
+
+A notable change is the upgrade from WABT 1.0.12 to 1.0.19 in our testing infrastructure.
+While this allows us to conduct fuzzing, it must be noted there is a [significant speed regression](https://github.com/WebAssembly/wabt/issues/1550)
+with the newer WABT.
+
+There is a slight speed regression compared to Fizzy 0.4.0, which can be attributed to
+the code layout restructuring in [#518](https://github.com/wasmx/fizzy/pull/518).
+
+### Detailed benchmark results
+
+#### Instantiation
+
+```
+                               |            fizzy            |   wabt  |  wasm3  |
+                               |       0.5.0       |  0.4.0  |  1.0.19 |  0.4.7  |
+                                abs. [µs]  rel. [%]  rel. [%]  rel. [%]  rel. [%]
+geometric mean                                  100       101       279        27
+blake2b                                28       100        99       306        38
+ecpairing                            1399       100       101       305         3
+keccak256                              47       100       103       289        18
+memset                                 10       100       100       285        79
+mul256_opt0                            12       100       101       246        56
+ramanujan_pi                           28       100       101       260        30
+sha1                                   43       100       101       284        19
+sha256                                 69       100       100       297        12
+taylor_pi                               7       100        99       246       116
+```
+
+#### Execution
+
+```
+                               |            fizzy            |        wabt       |  wasm3  |
+                               |       0.5.0       |  0.4.0  |  1.0.19 |  1.0.12 |  0.4.7  |
+                                abs. [µs]  rel. [%]  rel. [%]  rel. [%]  rel. [%]  rel. [%]
+geometirc mean                                  100        95       508       167        26
+blake2b/512_bytes_rounds_1             87       100        97       523       172        26
+blake2b/512_bytes_rounds_16          1329       100        96       525       172        26
+ecpairing/onepoint                 411770       100       102       516       172        38
+keccak256/512_bytes_rounds_1          105       100        96       416       162        18
+keccak256/512_bytes_rounds_16        1548       100        96       418       162        18
+memset/256_bytes                        7       100        96       509       155        28
+memset/60000_bytes                   1623       100        95       507       155        28
+mul256_opt0/input0                     29       100        91       545       152        22
+mul256_opt0/input1                     29       100        89       543       152        22
+ramanujan_pi/33_runs                  138       100        91       483       163        22
+sha1/512_bytes_rounds_1                94       100        97       563       181        29
+sha1/512_bytes_rounds_16             1318       100        96       566       179        29
+sha256/512_bytes_rounds_1              96       100        98       539       186        30
+sha256/512_bytes_rounds_16           1326       100        97       540       186        30
+taylor_pi/pi_1000000_runs           41668       100        96       465       154        29
+```
+
+### Added
+
+- `fizzy-testfloat` tool to check floating-point instructions implementation against Berkeley TestFloat test suite.
+  [#511](https://github.com/wasmx/fizzy/pull/511)
+- `instantiate` function now has `memory_pages_limit` parameter to configure hard limit on memory allocation.
+  `fizzy-spectests` uses the required 4 GB memory limit now.
+  [#515](https://github.com/wasmx/fizzy/pull/515)
+- `fizzy-spectests` tool can now run tests form a single `*.wast` file. [#525](https://github.com/wasmx/fizzy/pull/525)
+- The `shellcheck` linter is now used on CI. [#537](https://github.com/wasmx/fizzy/pull/537)
+- There is now `lib/fizzy/cxx20` directory with substitute implementations of C++20 standard library features, which Fizzy
+  uses when compiled in pre-C++20 standard (default). Currently it contains `bit_cast` and `span` utilities.
+  [#535](https://github.com/wasmx/fizzy/pull/535) [#541](https://github.com/wasmx/fizzy/pull/541)
+
+### Changed
+
+- Optimization in `execute` to allocate memory only once for all of the arguments, locals, and operand stack.
+  [#382](https://github.com/wasmx/fizzy/pull/382)
+- Trap handling in `execute` has been simplified. [#425](https://github.com/wasmx/fizzy/pull/425)
+- `fizzy-bench` now uses WABT version 1.0.19. [#443](https://github.com/wasmx/fizzy/pull/443)
+- New simpler implementation of `f32.nearest` and `f64.nearest`. [#504](https://github.com/wasmx/fizzy/pull/504)
+- `execute.hpp` now includes declarations only for `execute` functions. Other functions of C++ API (`instantiate`,
+  `resolve_imported_functions`, exports access) have been moved to `instantiate.hpp`.
+  [#518](https://github.com/wasmx/fizzy/pull/518)
+- More strict compiler warnings have been enabled. [#508](https://github.com/wasmx/fizzy/pull/508)
+- Remove some less useful benchmarking cases. [#555](https://github.com/wasmx/fizzy/pull/555)
+- CI improvements. [#465](https://github.com/wasmx/fizzy/pull/465) [#516](https://github.com/wasmx/fizzy/pull/516)
+  [#519](https://github.com/wasmx/fizzy/pull/519) [#520](https://github.com/wasmx/fizzy/pull/520)
+  [#523](https://github.com/wasmx/fizzy/pull/523) [#532](https://github.com/wasmx/fizzy/pull/532)
+  [#549](https://github.com/wasmx/fizzy/pull/549)
+- Code and test cleanups and refactoring. [#495](https://github.com/wasmx/fizzy/pull/495)
+  [#505](https://github.com/wasmx/fizzy/pull/505) [#521](https://github.com/wasmx/fizzy/pull/521)
+  [#522](https://github.com/wasmx/fizzy/pull/522)
+
+### Fixed
+
+- Incorrect results in some floating point operations with NaNs in GCC builds without optimization.
+  [#513](https://github.com/wasmx/fizzy/pull/513)
+- Potential undefined behaviour in pointer arithmetic in parser. [#539](https://github.com/wasmx/fizzy/pull/539)
+- Ensure (in debug mode) that `execute()` receives the correct number of inputs and returns the correct number of output.
+  [#547](https://github.com/wasmx/fizzy/pull/547)
+- Incorrect failure logging in `fizzy-spectests` tool. [#548](https://github.com/wasmx/fizzy/pull/548)
+
 ## [0.4.0] — 2020-09-01
 
 This release introduces complete floating-point support.
 
 With that in place, Fizzy passes all(*) of the [official test suite (spectest 1.0)](https://github.com/wasmx/wasm-spec/tree/w3c-1.0-jsontests-20200813/test/core/json):
-  - 18896 of 18899 binary parser and execution tests,
+  - 17910 of 17913 binary parser and execution tests,
   - 989 of 989 validation tests,
   - 477 skipped due to testing text format parser.
 
@@ -335,7 +439,7 @@ fizzy/execute/micro/spinner/1000                 -0.4801        20        10
 - Validation of stack height for call instructions. [#338](https://github.com/wasmx/fizzy/pull/338)
   [#387](https://github.com/wasmx/fizzy/pull/387)
 - Validation of type indices in function section. [#334](https://github.com/wasmx/fizzy/pull/334)
-- `fizzy-bench` executes the start function on all engines (previously it did not on wabt).
+- `fizzy-bench` executes the start function on all engines (previously it did not on WABT).
   [#332](https://github.com/wasmx/fizzy/pull/332)
   [#349](https://github.com/wasmx/fizzy/pull/349) 
 - `fizzy-bench` correctly handles errors during validation phase. [#340](https://github.com/wasmx/fizzy/pull/340)
@@ -362,6 +466,7 @@ First release!
 [0.2.0]: https://github.com/wasmx/fizzy/releases/tag/v0.2.0
 [0.3.0]: https://github.com/wasmx/fizzy/releases/tag/v0.3.0
 [0.4.0]: https://github.com/wasmx/fizzy/releases/tag/v0.4.0
+[0.5.0]: https://github.com/wasmx/fizzy/compare/v0.4.0...master
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Semantic Versioning]: https://semver.org
