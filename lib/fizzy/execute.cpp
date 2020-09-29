@@ -468,13 +468,13 @@ ExecutionResult execute(
     if (depth > CallStackLimit)
         return Trap;
 
+    assert(args.size() == instance.module.get_function_type(func_idx).inputs.size());
+
+    assert(instance.module.imported_function_types.size() == instance.imported_functions.size());
     if (func_idx < instance.imported_functions.size())
         return instance.imported_functions[func_idx].function(instance, args, depth);
 
-    const auto code_idx = func_idx - instance.imported_functions.size();
-    assert(code_idx < instance.module.codesec.size());
-
-    const auto& code = instance.module.codesec[code_idx];
+    const auto& code = instance.module.get_code(func_idx);
     auto* const memory = instance.memory.get();
 
     OperandStack stack(args, code.local_count, static_cast<size_t>(code.max_stack_height));
@@ -560,9 +560,9 @@ ExecutionResult execute(
         case Instr::call:
         {
             const auto called_func_idx = read<uint32_t>(immediates);
-            const auto& func_type = instance.module.get_function_type(called_func_idx);
+            const auto& called_func_type = instance.module.get_function_type(called_func_idx);
 
-            if (!invoke_function(func_type, called_func_idx, instance, stack, depth))
+            if (!invoke_function(called_func_type, called_func_idx, instance, stack, depth))
                 goto trap;
             break;
         }
@@ -1516,8 +1516,8 @@ ExecutionResult execute(
     }
 
 end:
-    // WebAssembly 1.0 allows at most one return variable.
-    assert(pc == &code.instructions[code.instructions.size()] && stack.size() <= 1);
+    assert(pc == &code.instructions[code.instructions.size()]);  // End of code must be reached.
+    assert(stack.size() == instance.module.get_function_type(func_idx).outputs.size());
 
     return stack.size() != 0 ? ExecutionResult{stack.pop()} : Void;
 

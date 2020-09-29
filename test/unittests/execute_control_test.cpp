@@ -547,7 +547,7 @@ TEST(execute_control, br_multiple_blocks_stack_cleanup)
     const auto bin =
         from_hex("0061736d01000000010401600000030201000a11010f0002404101034042020c010b1a0b0b");
 
-    EXPECT_THAT(execute(parse(bin), 0, {7}), Result());
+    EXPECT_THAT(execute(parse(bin), 0, {}), Result());
 }
 
 TEST(execute_control, block_with_result)

@@ -15,12 +15,12 @@ TEST(module, functions)
     /* wat2wasm
       (func (import "m" "f1") (param i32 i32) (result i32))
       (func)
-      (func (param i64))
+      (func (param i64) (local i32))
       (func (result f32) (f32.const 0))
     */
     const auto bin = from_hex(
         "0061736d0100000001120460027f7f017f60000060017e006000017d020801016d02663100000304030102030a"
-        "0f0302000b02000b070043000000000b");
+        "110302000b0401017f0b070043000000000b");
     const auto module = parse(bin);
 
     ASSERT_EQ(module.get_function_count(), 4);
@@ -29,6 +29,13 @@ TEST(module, functions)
     EXPECT_EQ(module.get_function_type(1), (FuncType{}));
     EXPECT_EQ(module.get_function_type(2), (FuncType{{ValType::i64}, {}}));
     EXPECT_EQ(module.get_function_type(3), (FuncType{{}, {ValType::f32}}));
+
+    EXPECT_EQ(module.get_code(1).instructions.size(), 1);
+    EXPECT_EQ(module.get_code(1).local_count, 0);
+    EXPECT_EQ(module.get_code(2).instructions.size(), 1);
+    EXPECT_EQ(module.get_code(2).local_count, 1);
+    EXPECT_EQ(module.get_code(3).instructions.size(), 2);
+    EXPECT_EQ(module.get_code(3).local_count, 0);
 }
 
 TEST(module, globals)
