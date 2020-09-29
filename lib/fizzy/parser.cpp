@@ -341,8 +341,14 @@ inline parser_result<Element> parse(const uint8_t* pos, const uint8_t* end)
 {
     TableIdx table_index;
     std::tie(table_index, pos) = leb128u_decode<uint32_t>(pos, end);
+
+    // TODO: The check should be table_index < num_of_tables (0 or 1),
+    //       but access to the module is needed.
     if (table_index != 0)
-        throw parser_error{"unexpected tableidx value " + std::to_string(table_index)};
+    {
+        throw validation_error{
+            "invalid table index " + std::to_string(table_index) + " (only table 0 is allowed)"};
+    }
 
     ConstantExpression offset;
     // Offset expression is required to have i32 result value
@@ -588,7 +594,10 @@ std::unique_ptr<const Module> parse(bytes_view input)
     }
 
     if (!module->elementsec.empty() && !module->has_table())
-        throw validation_error{"element section encountered without a table section"};
+    {
+        throw validation_error{
+            "invalid table index 0 (element section encountered without a table section)"};
+    }
 
     const auto total_func_count = module->get_function_count();
 
