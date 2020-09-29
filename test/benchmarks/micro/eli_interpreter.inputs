@@ -1,11 +1,3 @@
-halt
-interp_switch
-ii:i
-0 1001
-00
-1001
-00
-
 exec105
 interp_switch
 ii:i
