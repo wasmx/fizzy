@@ -56,51 +56,6 @@ inline constexpr DstT extend(SrcT in) noexcept
         return DstT{in};
 }
 
-/// Converts the top stack item by truncating a float value to an integer value.
-template <typename SrcT, typename DstT>
-inline bool trunc(OperandStack& stack) noexcept
-{
-    static_assert(std::is_floating_point_v<SrcT>);
-    static_assert(std::is_integral_v<DstT>);
-    using boundaries = trunc_boundaries<SrcT, DstT>;
-
-    const auto input = stack.top().as<SrcT>();
-    if (input > boundaries::lower && input < boundaries::upper)
-    {
-        assert(!std::isnan(input));
-        assert(input != std::numeric_limits<SrcT>::infinity());
-        assert(input != -std::numeric_limits<SrcT>::infinity());
-        stack.top() = static_cast<DstT>(input);
-        return true;
-    }
-    return false;
-}
-
-/// Converts the top stack item from an integer value to a float value.
-template <typename SrcT, typename DstT>
-inline void convert(OperandStack& stack) noexcept
-{
-    static_assert(std::is_integral_v<SrcT>);
-    static_assert(std::is_floating_point_v<DstT>);
-    stack.top() = static_cast<DstT>(stack.top().as<SrcT>());
-}
-
-/// Performs a bit_cast from SrcT type to DstT type.
-///
-/// This should be optimized to empty function in assembly. Except for f32 -> i32 where pushing
-/// the result i32 value to the stack requires zero-extension to 64-bit.
-template <typename SrcT, typename DstT>
-inline void reinterpret(OperandStack& stack) noexcept
-{
-    static_assert(std::is_integral_v<SrcT> == std::is_floating_point_v<DstT> ||
-                  std::is_floating_point_v<SrcT> == std::is_integral_v<DstT>);
-    static_assert(sizeof(SrcT) == sizeof(DstT));
-    const auto src = stack.top().as<SrcT>();
-    DstT dst;
-    __builtin_memcpy(&dst, &src, sizeof(dst));
-    stack.top() = dst;
-}
-
 template <typename DstT, typename SrcT = DstT>
 inline bool load_from_memory(
     bytes_view memory, OperandStack& stack, const uint8_t*& immediates) noexcept
@@ -145,6 +100,51 @@ inline bool store_into_memory(
 
     store<DstT>(memory, address + offset, value);
     return true;
+}
+
+/// Converts the top stack item by truncating a float value to an integer value.
+template <typename SrcT, typename DstT>
+inline bool trunc(OperandStack& stack) noexcept
+{
+    static_assert(std::is_floating_point_v<SrcT>);
+    static_assert(std::is_integral_v<DstT>);
+    using boundaries = trunc_boundaries<SrcT, DstT>;
+
+    const auto input = stack.top().as<SrcT>();
+    if (input > boundaries::lower && input < boundaries::upper)
+    {
+        assert(!std::isnan(input));
+        assert(input != std::numeric_limits<SrcT>::infinity());
+        assert(input != -std::numeric_limits<SrcT>::infinity());
+        stack.top() = static_cast<DstT>(input);
+        return true;
+    }
+    return false;
+}
+
+/// Converts the top stack item from an integer value to a float value.
+template <typename SrcT, typename DstT>
+inline void convert(OperandStack& stack) noexcept
+{
+    static_assert(std::is_integral_v<SrcT>);
+    static_assert(std::is_floating_point_v<DstT>);
+    stack.top() = static_cast<DstT>(stack.top().as<SrcT>());
+}
+
+/// Performs a bit_cast from SrcT type to DstT type.
+///
+/// This should be optimized to empty function in assembly. Except for f32 -> i32 where pushing
+/// the result i32 value to the stack requires zero-extension to 64-bit.
+template <typename SrcT, typename DstT>
+inline void reinterpret(OperandStack& stack) noexcept
+{
+    static_assert(std::is_integral_v<SrcT> == std::is_floating_point_v<DstT> ||
+                  std::is_floating_point_v<SrcT> == std::is_integral_v<DstT>);
+    static_assert(sizeof(SrcT) == sizeof(DstT));
+    const auto src = stack.top().as<SrcT>();
+    DstT dst;
+    __builtin_memcpy(&dst, &src, sizeof(dst));
+    stack.top() = dst;
 }
 
 template <typename Op>
