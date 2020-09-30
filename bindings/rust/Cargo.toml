@@ -12,6 +12,9 @@ description = "Bindings to Fizzy"
 categories = ["external-ffi-bindings"]
 edition = "2018"
 
+[dev-dependencies]
+hex = "0.4.2"
+
 [build-dependencies]
 bindgen = "0.54.0"
 cmake = "0.1"
