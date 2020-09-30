@@ -454,22 +454,37 @@ jobs:
       - build:
           build_type: RelWithDebInfo
           cmake_options: -DFIZZY_FUZZING=ON -DENABLE_ASSERTIONS=ON
+          target: fizzy-fuzz-parser
       - restore_cache:
           name: "Restore fuzzing corpus"
           key: fuzzing-corpus
       - run:
+          name: "Prepare corpus"
+          working_directory: ~/build
+          command: |
+            git clone --depth=1 --single-branch https://github.com/wasmx/wasm-fuzzing-corpus
+            mkdir -p corpus  # From cache
+            mkdir corpus-local
+            bin/fizzy-fuzz-parser -merge=1 -use_value_profile=1 corpus-local corpus wasm-fuzzing-corpus/wasm
+      - run:
           name: "Parser fuzzing"
           working_directory: ~/build
           command: |
-            mkdir -p corpus
-            bin/fizzy-fuzz-parser corpus -jobs=7 -runs=1000000 -max_len=1024 -len_control=100000 -use_value_profile=1 -verbosity=0 -print_final_stats=1
+            RUNS=4000000
+            MAX_LEN=100
+
+            # Invisible background jobs:
+            bin/fizzy-fuzz-parser corpus-local -runs=$RUNS -max_len=$MAX_LEN -len_control=100000 -use_value_profile=1 -verbosity=0 -jobs=5 2>/dev/null &
+
+            # Main job, to see logs:
+            bin/fizzy-fuzz-parser corpus-local -runs=$RUNS -max_len=$MAX_LEN -len_control=100000 -use_value_profile=1 -print_final_stats=1
+            wait
       - run:
           name: "Clean up fuzzing corpus"
           working_directory: ~/build
           command: |
-            mv corpus corpus-full
-            mkdir corpus
-            bin/fizzy-fuzz-parser -merge=1 corpus corpus-full -use_value_profile=1
+            rm corpus -rf && mkdir corpus  # Reset cached corpus, we want it to be "moving-window"
+            bin/fizzy-fuzz-parser -merge=1 -use_value_profile=1 corpus corpus-local
       - save_cache:
           name: "Save fuzzing corpus"
           key: fuzzing-corpus-{{epoch}}
@@ -482,7 +497,7 @@ jobs:
             corpus_name="corpus-$(date +%Y%m%d%H%M)"
             mv corpus $corpus_name
             mkdir -p artifacts
-            tar cfz artifacts/fizzy-$corpus_name.tar.gz $corpus_name
+            tar -czf artifacts/fizzy-$corpus_name.tar.gz $corpus_name
       - store_artifacts:
           name: "Store fuzzing corpus"
           path: ~/build/artifacts
