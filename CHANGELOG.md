@@ -5,7 +5,7 @@ Documentation of all notable changes to the **Fizzy** project.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
-## [0.5.0] — unreleased
+## [0.5.0] — 2020-09-30
 
 This release focuses on behind the scenes code and test cleanups, and preparation for a public API.
 
@@ -466,7 +466,7 @@ First release!
 [0.2.0]: https://github.com/wasmx/fizzy/releases/tag/v0.2.0
 [0.3.0]: https://github.com/wasmx/fizzy/releases/tag/v0.3.0
 [0.4.0]: https://github.com/wasmx/fizzy/releases/tag/v0.4.0
-[0.5.0]: https://github.com/wasmx/fizzy/compare/v0.4.0...master
+[0.5.0]: https://github.com/wasmx/fizzy/releases/tag/v0.5.0
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Semantic Versioning]: https://semver.org
