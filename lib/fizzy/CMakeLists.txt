@@ -36,3 +36,9 @@ target_sources(
     utf8.hpp
     value.hpp
 )
+
+# The fizzy::fizzy-internal links fizzy::fizzy library with access to internal headers.
+add_library(fizzy-internal INTERFACE)
+add_library(fizzy::fizzy-internal ALIAS fizzy-internal)
+target_link_libraries(fizzy-internal INTERFACE fizzy::fizzy)
+target_include_directories(fizzy-internal INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})

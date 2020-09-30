@@ -4,8 +4,7 @@
 
 add_executable(fizzy-bench bench.cpp)
 target_compile_features(fizzy-bench PRIVATE cxx_std_17)
-target_link_libraries(fizzy-bench PRIVATE fizzy::fizzy fizzy::test-utils benchmark::benchmark)
-target_include_directories(fizzy-bench PRIVATE ${fizzy_include_dir})
+target_link_libraries(fizzy-bench PRIVATE fizzy::fizzy-internal fizzy::test-utils benchmark::benchmark)
 
 if(UNIX AND NOT APPLE)
     # For libstdc++ up to version 8 (included) this is needed for proper <filesystem> support.

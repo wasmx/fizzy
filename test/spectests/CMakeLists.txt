@@ -9,8 +9,7 @@ find_package(nlohmann_json REQUIRED)
 
 add_executable(fizzy-spectests spectests.cpp)
 target_compile_features(fizzy-spectests PRIVATE cxx_std_17)
-target_link_libraries(fizzy-spectests PRIVATE fizzy::fizzy fizzy::test-utils nlohmann_json::nlohmann_json)
-target_include_directories(fizzy-spectests PRIVATE ${fizzy_include_dir})
+target_link_libraries(fizzy-spectests PRIVATE fizzy::fizzy-internal fizzy::test-utils nlohmann_json::nlohmann_json)
 
 if(UNIX AND NOT APPLE)
     # For libstdc++ up to version 8 (included) this is needed for proper <filesystem> support.
