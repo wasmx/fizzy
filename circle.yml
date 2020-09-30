@@ -512,6 +512,51 @@ jobs:
       - spectest
       - collect_coverage_data
 
+  bindings-rust:
+    docker:
+      - image: rust:1-buster
+    steps:
+      - checkout
+      - run:
+          name: Update environment
+          command: |
+            echo 'deb http://deb.debian.org/debian buster-backports main' >> /etc/apt/sources.list
+            apt -qq update
+            apt -yq -t buster-backports install cmake --no-install-recommends
+            apt -yq install libclang-dev clang cmake --no-install-recommends
+            rustup component add rustfmt
+      - run:
+          name: Check formatting
+          command: |
+            rustfmt --version
+            cargo fmt --all -- --check
+      - run:
+          name: Build
+          command: cargo build
+      - run:
+          name: Test
+          command: cargo test
+
+  bindings-rust-asan:
+    docker:
+      - image: rust:1-buster
+    steps:
+      - checkout
+      - run:
+          name: Update environment
+          command: |
+            echo 'deb http://deb.debian.org/debian buster-backports main' >> /etc/apt/sources.list
+            apt -qq update
+            apt -yq -t buster-backports install cmake --no-install-recommends
+            apt -yq install llvm-8-dev clang-8 --no-install-recommends
+            rustup toolchain install nightly-x86_64-unknown-linux-gnu
+      - run:
+          name: Build
+          command: RUSTFLAGS="-Z sanitizer=address" ASAN_OPTIONS=detect_leaks=1 cargo +nightly build --target x86_64-unknown-linux-gnu
+      - run:
+          name: Test
+          command: RUSTFLAGS="-Z sanitizer=address -C opt-level=0" ASAN_OPTIONS=detect_leaks=1 cargo +nightly test --target x86_64-unknown-linux-gnu
+
 workflows:
   version: 2
 
@@ -537,6 +582,10 @@ workflows:
       - spectest:
           requires:
             - coverage-clang
+      - bindings-rust
+      - bindings-rust-asan:
+          requires:
+            - bindings-rust
 
   benchmarking:
     when: <<pipeline.parameters.benchmark>>
