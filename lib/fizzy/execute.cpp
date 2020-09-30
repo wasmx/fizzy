@@ -28,64 +28,6 @@ inline T read(const uint8_t*& input) noexcept
     return ret;
 }
 
-void branch(const Code& code, OperandStack& stack, const Instr*& pc, const uint8_t*& immediates,
-    uint32_t arity) noexcept
-{
-    const auto code_offset = read<uint32_t>(immediates);
-    const auto imm_offset = read<uint32_t>(immediates);
-    const auto stack_drop = read<uint32_t>(immediates);
-
-    pc = code.instructions.data() + code_offset;
-    immediates = code.immediates.data() + imm_offset;
-
-    // When branch is taken, additional stack items must be dropped.
-    assert(static_cast<int>(stack_drop) >= 0);
-    assert(stack.size() >= stack_drop + arity);
-    if (arity != 0)
-    {
-        assert(arity == 1);
-        const auto result = stack.top();
-        stack.drop(stack_drop);
-        stack.top() = result;
-    }
-    else
-        stack.drop(stack_drop);
-}
-
-template <class F>
-bool invoke_function(const FuncType& func_type, const F& func, Instance& instance,
-    OperandStack& stack, int depth) noexcept
-{
-    const auto num_args = func_type.inputs.size();
-    assert(stack.size() >= num_args);
-    span<const Value> call_args{stack.rend() - num_args, num_args};
-    stack.drop(num_args);
-
-    const auto ret = func(instance, call_args, depth + 1);
-    // Bubble up traps
-    if (ret.trapped)
-        return false;
-
-    const auto num_outputs = func_type.outputs.size();
-    // NOTE: we can assume these two from validation
-    assert(num_outputs <= 1);
-    assert(ret.has_value == (num_outputs == 1));
-    // Push back the result
-    if (num_outputs != 0)
-        stack.push(ret.value);
-
-    return true;
-}
-
-inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
-    OperandStack& stack, int depth) noexcept
-{
-    const auto func = [func_idx](Instance& _instance, span<const Value> args, int _depth) noexcept {
-        return execute(_instance, func_idx, args, _depth);
-    };
-    return invoke_function(func_type, func, instance, stack, depth);
-}
-
 template <typename T>
 inline void store(bytes& input, size_t offset, T value) noexcept
 {
@@ -459,6 +401,63 @@ __attribute__((no_sanitize("float-cast-overflow"))) inline constexpr float demot
     return static_cast<float>(value);
 }
 
+void branch(const Code& code, OperandStack& stack, const Instr*& pc, const uint8_t*& immediates,
+    uint32_t arity) noexcept
+{
+    const auto code_offset = read<uint32_t>(immediates);
+    const auto imm_offset = read<uint32_t>(immediates);
+    const auto stack_drop = read<uint32_t>(immediates);
+
+    pc = code.instructions.data() + code_offset;
+    immediates = code.immediates.data() + imm_offset;
+
+    // When branch is taken, additional stack items must be dropped.
+    assert(static_cast<int>(stack_drop) >= 0);
+    assert(stack.size() >= stack_drop + arity);
+    if (arity != 0)
+    {
+        assert(arity == 1);
+        const auto result = stack.top();
+        stack.drop(stack_drop);
+        stack.top() = result;
+    }
+    else
+        stack.drop(stack_drop);
+}
+
+template <class F>
+bool invoke_function(const FuncType& func_type, const F& func, Instance& instance,
+    OperandStack& stack, int depth) noexcept
+{
+    const auto num_args = func_type.inputs.size();
+    assert(stack.size() >= num_args);
+    span<const Value> call_args{stack.rend() - num_args, num_args};
+    stack.drop(num_args);
+
+    const auto ret = func(instance, call_args, depth + 1);
+    // Bubble up traps
+    if (ret.trapped)
+        return false;
+
+    const auto num_outputs = func_type.outputs.size();
+    // NOTE: we can assume these two from validation
+    assert(num_outputs <= 1);
+    assert(ret.has_value == (num_outputs == 1));
+    // Push back the result
+    if (num_outputs != 0)
+        stack.push(ret.value);
+
+    return true;
+}
+
+inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
+    OperandStack& stack, int depth) noexcept
+{
+    const auto func = [func_idx](Instance& _instance, span<const Value> args, int _depth) noexcept {
+        return execute(_instance, func_idx, args, _depth);
+    };
+    return invoke_function(func_type, func, instance, stack, depth);
+}
 }  // namespace
 
 ExecutionResult execute(
