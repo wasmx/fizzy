@@ -38,9 +38,9 @@ cable_configure_compiler()
 add_compile_options(
     -Wcast-qual
     -Wcast-align
-    -Wextra-semi
     -Wmissing-declarations
-    -Wold-style-cast
+    $<$<COMPILE_LANGUAGE:CXX>:-Wextra-semi>
+    $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast>
 )
 cable_add_cxx_compiler_flag_if_supported(-Wfinal-dtor-non-final-class)
 cable_add_cxx_compiler_flag_if_supported(-Wnewline-eof)
@@ -86,7 +86,8 @@ if(FIZZY_FUZZING)
     add_link_options(${fuzzing_flags})
 endif()
 
-set(include_dir ${PROJECT_SOURCE_DIR}/include)  # Public include directory.
+# Public include directory.
+set(FIZZY_INCLUDE_DIR $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
@@ -98,3 +99,6 @@ if(FIZZY_TESTING)
     enable_testing()  # Enable CTest. Must be done in main CMakeLists.txt.
     add_subdirectory(test)
 endif()
+
+install(TARGETS fizzy EXPORT fizzyTargets)
+install(DIRECTORY include/fizzy TYPE INCLUDE)
