@@ -110,7 +110,7 @@ commands:
           working_directory: ~/build
           command: |
             rm -f CMakeCache.txt
-            cmake ../project -G Ninja -DCMAKE_INSTALL_PREFIX=~/install -DCMAKE_BUILD_TYPE=<<parameters.build_type>> -DFIZZY_TESTING=ON <<parameters.cmake_options>>
+            cmake ../project -G Ninja -DCMAKE_INSTALL_PREFIX=~/install -DCMAKE_BUILD_TYPE=<<parameters.build_type>> -DFIZZY_TESTING=ON -DFIZZY_WASI=ON <<parameters.cmake_options>>
       - save_cache:
           name: "Save Hunter cache"
           key: *hunter-cache-key
@@ -143,7 +143,7 @@ commands:
           name: "Collect coverage data"
           working_directory: ~/build
           command: |
-            binaries='-object bin/fizzy-unittests -object bin/fizzy-spectests -object bin/fizzy-bench -object bin/fizzy-testfloat'
+            binaries='-object bin/fizzy-unittests -object bin/fizzy-spectests -object bin/fizzy-bench -object bin/fizzy-testfloat -object bin/fizzy-wasi'
 
             mkdir coverage
             find -name '*.profraw'
