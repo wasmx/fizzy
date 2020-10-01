@@ -4,8 +4,8 @@
 
 mod sys;
 
-pub fn validate(input: &[u8]) -> bool {
-    unsafe { sys::fizzy_validate(input.as_ptr(), input.len()) }
+pub fn validate<T: AsRef<[u8]>>(input: T) -> bool {
+    unsafe { sys::fizzy_validate(input.as_ref().as_ptr(), input.as_ref().len()) }
 }
 
 #[cfg(test)]
