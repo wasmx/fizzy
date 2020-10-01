@@ -432,12 +432,13 @@ bool invoke_function(const FuncType& func_type, const F& func, Instance& instanc
     const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
     span<const Value> call_args{stack.rend() - num_args, num_args};
-    stack.drop(num_args);
 
     const auto ret = func(instance, call_args, depth + 1);
     // Bubble up traps
     if (ret.trapped)
         return false;
+
+    stack.drop(num_args);
 
     const auto num_outputs = func_type.outputs.size();
     // NOTE: we can assume these two from validation
