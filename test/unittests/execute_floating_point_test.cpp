@@ -1893,7 +1893,7 @@ TEST(execute_floating_point, f32_load_overflow)
     auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
-    EXPECT_THAT(execute(*instance, 0, {0}), Traps());
+    EXPECT_THAT(execute(*instance, 0, {Value{0}}), Traps());
     // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
     EXPECT_THAT(execute(*instance, 0, {0x80000000}), Traps());
     // Offset is 0x7fffffff + 0x80000001 => 0x100000000
@@ -1966,7 +1966,7 @@ TEST(execute_floating_point, f64_load_overflow)
     auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
-    EXPECT_THAT(execute(*instance, 0, {0}), Traps());
+    EXPECT_THAT(execute(*instance, 0, {Value{0}}), Traps());
     // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
     EXPECT_THAT(execute(*instance, 0, {0x80000000}), Traps());
     // Offset is 0x7fffffff + 0x80000001 => 0x100000000
@@ -2043,7 +2043,7 @@ TEST(execute_floating_point, f32_store_overflow)
     auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
-    EXPECT_THAT(execute(*instance, 0, {0}), Traps());
+    EXPECT_THAT(execute(*instance, 0, {Value{0}}), Traps());
     // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
     EXPECT_THAT(execute(*instance, 0, {0x80000000}), Traps());
     // Offset is 0x7fffffff + 0x80000001 => 0x100000000
@@ -2120,7 +2120,7 @@ TEST(execute_floating_point, f64_store_overflow)
     auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
-    EXPECT_THAT(execute(*instance, 0, {0}), Traps());
+    EXPECT_THAT(execute(*instance, 0, {Value{0}}), Traps());
     // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
     EXPECT_THAT(execute(*instance, 0, {0x80000000}), Traps());
     // Offset is 0x7fffffff + 0x80000001 => 0x100000000
