@@ -1,0 +1,17 @@
+# Fizzy: A fast WebAssembly interpreter
+# Copyright 2019-2020 The Fizzy Authors.
+# SPDX-License-Identifier: Apache-2.0
+
+[package]
+name = "fizzy"
+version = "0.6.0-dev"
+authors = ["Alex Beregszaszi <alex@rtfs.hu>"]
+license = "Apache-2.0"
+repository = "https://github.com/wasmx/fizzy"
+description = "Bindings to Fizzy"
+categories = ["external-ffi-bindings"]
+edition = "2018"
+
+[build-dependencies]
+bindgen = "0.54.0"
+cmake = "0.1"
