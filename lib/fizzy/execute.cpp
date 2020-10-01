@@ -426,7 +426,7 @@ void branch(const Code& code, OperandStack& stack, const Instr*& pc, const uint8
 }
 
 template <class F>
-bool invoke_function(const FuncType& func_type, const F& func, Instance& instance,
+inline bool invoke_function(const FuncType& func_type, const F& func, Instance& instance,
     OperandStack& stack, int depth) noexcept
 {
     const auto num_args = func_type.inputs.size();
