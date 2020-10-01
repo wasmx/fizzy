@@ -75,6 +75,63 @@ impl Module {
 /// A WebAssembly value of i32/i64/f32/f64.
 pub type Value = sys::FizzyValue;
 
+// NOTE: the union does not have i32
+impl Value {
+    pub fn as_i32(&self) -> i32 {
+        unsafe { self.i64 as i32 }
+    }
+    pub fn as_u32(&self) -> u32 {
+        unsafe { self.i64 as u32 }
+    }
+    pub fn as_i64(&self) -> i64 {
+        unsafe { self.i64 as i64 }
+    }
+    pub fn as_u64(&self) -> u64 {
+        unsafe { self.i64 }
+    }
+    pub fn as_f32(&self) -> f32 {
+        unsafe { self.f32 }
+    }
+    pub fn as_f64(&self) -> f64 {
+        unsafe { self.f64 }
+    }
+}
+
+impl From<i32> for Value {
+    fn from(v: i32) -> Self {
+        Value { i64: v as u64 }
+    }
+}
+
+impl From<u32> for Value {
+    fn from(v: u32) -> Self {
+        Value { i64: v as u64 }
+    }
+}
+
+impl From<i64> for Value {
+    fn from(v: i64) -> Self {
+        Value { i64: v as u64 }
+    }
+}
+
+impl From<u64> for Value {
+    fn from(v: u64) -> Self {
+        Value { i64: v }
+    }
+}
+impl From<f32> for Value {
+    fn from(v: f32) -> Self {
+        Value { f32: v }
+    }
+}
+
+impl From<f64> for Value {
+    fn from(v: f64) -> Self {
+        Value { f64: v }
+    }
+}
+
 /// The result of an execution.
 pub struct ExecutionResult(sys::FizzyExecutionResult);
 
@@ -182,17 +239,20 @@ mod tests {
         let result = unsafe { instance.unsafe_execute(1, &[], 0) };
         assert!(!result.trapped());
         assert!(result.value().is_some());
-        unsafe {
-            assert_eq!(result.value().unwrap().i64, 42);
-        } // FIXME: this is actually i32
+        assert_eq!(result.value().unwrap().as_i32(), 42);
 
+        // Explicit type specification
         let result =
-            unsafe { instance.unsafe_execute(2, &[Value { i64: 42 }, Value { i64: 2 }], 0) };
+            unsafe { instance.unsafe_execute(2, &[(42 as i32).into(), (2 as i32).into()], 0) };
         assert!(!result.trapped());
         assert!(result.value().is_some());
-        unsafe {
-            assert_eq!(result.value().unwrap().i64, 21);
-        } // FIXME: this is actually i32
+        assert_eq!(result.value().unwrap().as_i32(), 21);
+
+        // Implicit i64 types (even though the code expects i32)
+        let result = unsafe { instance.unsafe_execute(2, &[42.into(), 2.into()], 0) };
+        assert!(!result.trapped());
+        assert!(result.value().is_some());
+        assert_eq!(result.value().unwrap().as_i32(), 21);
 
         let result = unsafe { instance.unsafe_execute(3, &[], 0) };
         assert!(result.trapped());
