@@ -28,64 +28,6 @@ inline T read(const uint8_t*& input) noexcept
     return ret;
 }
 
-void branch(const Code& code, OperandStack& stack, const Instr*& pc, const uint8_t*& immediates,
-    uint32_t arity) noexcept
-{
-    const auto code_offset = read<uint32_t>(immediates);
-    const auto imm_offset = read<uint32_t>(immediates);
-    const auto stack_drop = read<uint32_t>(immediates);
-
-    pc = code.instructions.data() + code_offset;
-    immediates = code.immediates.data() + imm_offset;
-
-    // When branch is taken, additional stack items must be dropped.
-    assert(static_cast<int>(stack_drop) >= 0);
-    assert(stack.size() >= stack_drop + arity);
-    if (arity != 0)
-    {
-        assert(arity == 1);
-        const auto result = stack.top();
-        stack.drop(stack_drop);
-        stack.top() = result;
-    }
-    else
-        stack.drop(stack_drop);
-}
-
-template <class F>
-bool invoke_function(const FuncType& func_type, const F& func, Instance& instance,
-    OperandStack& stack, int depth) noexcept
-{
-    const auto num_args = func_type.inputs.size();
-    assert(stack.size() >= num_args);
-    span<const Value> call_args{stack.rend() - num_args, num_args};
-    stack.drop(num_args);
-
-    const auto ret = func(instance, call_args, depth + 1);
-    // Bubble up traps
-    if (ret.trapped)
-        return false;
-
-    const auto num_outputs = func_type.outputs.size();
-    // NOTE: we can assume these two from validation
-    assert(num_outputs <= 1);
-    assert(ret.has_value == (num_outputs == 1));
-    // Push back the result
-    if (num_outputs != 0)
-        stack.push(ret.value);
-
-    return true;
-}
-
-inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
-    OperandStack& stack, int depth) noexcept
-{
-    const auto func = [func_idx](Instance& _instance, span<const Value> args, int _depth) noexcept {
-        return execute(_instance, func_idx, args, _depth);
-    };
-    return invoke_function(func_type, func, instance, stack, depth);
-}
-
 template <typename T>
 inline void store(bytes& input, size_t offset, T value) noexcept
 {
@@ -112,51 +54,6 @@ inline constexpr DstT extend(SrcT in) noexcept
     }
     else
         return DstT{in};
-}
-
-/// Converts the top stack item by truncating a float value to an integer value.
-template <typename SrcT, typename DstT>
-inline bool trunc(OperandStack& stack) noexcept
-{
-    static_assert(std::is_floating_point_v<SrcT>);
-    static_assert(std::is_integral_v<DstT>);
-    using boundaries = trunc_boundaries<SrcT, DstT>;
-
-    const auto input = stack.top().as<SrcT>();
-    if (input > boundaries::lower && input < boundaries::upper)
-    {
-        assert(!std::isnan(input));
-        assert(input != std::numeric_limits<SrcT>::infinity());
-        assert(input != -std::numeric_limits<SrcT>::infinity());
-        stack.top() = static_cast<DstT>(input);
-        return true;
-    }
-    return false;
-}
-
-/// Converts the top stack item from an integer value to a float value.
-template <typename SrcT, typename DstT>
-inline void convert(OperandStack& stack) noexcept
-{
-    static_assert(std::is_integral_v<SrcT>);
-    static_assert(std::is_floating_point_v<DstT>);
-    stack.top() = static_cast<DstT>(stack.top().as<SrcT>());
-}
-
-/// Performs a bit_cast from SrcT type to DstT type.
-///
-/// This should be optimized to empty function in assembly. Except for f32 -> i32 where pushing
-/// the result i32 value to the stack requires zero-extension to 64-bit.
-template <typename SrcT, typename DstT>
-inline void reinterpret(OperandStack& stack) noexcept
-{
-    static_assert(std::is_integral_v<SrcT> == std::is_floating_point_v<DstT> ||
-                  std::is_floating_point_v<SrcT> == std::is_integral_v<DstT>);
-    static_assert(sizeof(SrcT) == sizeof(DstT));
-    const auto src = stack.top().as<SrcT>();
-    DstT dst;
-    __builtin_memcpy(&dst, &src, sizeof(dst));
-    stack.top() = dst;
 }
 
 template <typename DstT, typename SrcT = DstT>
@@ -203,6 +100,51 @@ inline bool store_into_memory(
 
     store<DstT>(memory, address + offset, value);
     return true;
+}
+
+/// Converts the top stack item by truncating a float value to an integer value.
+template <typename SrcT, typename DstT>
+inline bool trunc(OperandStack& stack) noexcept
+{
+    static_assert(std::is_floating_point_v<SrcT>);
+    static_assert(std::is_integral_v<DstT>);
+    using boundaries = trunc_boundaries<SrcT, DstT>;
+
+    const auto input = stack.top().as<SrcT>();
+    if (input > boundaries::lower && input < boundaries::upper)
+    {
+        assert(!std::isnan(input));
+        assert(input != std::numeric_limits<SrcT>::infinity());
+        assert(input != -std::numeric_limits<SrcT>::infinity());
+        stack.top() = static_cast<DstT>(input);
+        return true;
+    }
+    return false;
+}
+
+/// Converts the top stack item from an integer value to a float value.
+template <typename SrcT, typename DstT>
+inline void convert(OperandStack& stack) noexcept
+{
+    static_assert(std::is_integral_v<SrcT>);
+    static_assert(std::is_floating_point_v<DstT>);
+    stack.top() = static_cast<DstT>(stack.top().as<SrcT>());
+}
+
+/// Performs a bit_cast from SrcT type to DstT type.
+///
+/// This should be optimized to empty function in assembly. Except for f32 -> i32 where pushing
+/// the result i32 value to the stack requires zero-extension to 64-bit.
+template <typename SrcT, typename DstT>
+inline void reinterpret(OperandStack& stack) noexcept
+{
+    static_assert(std::is_integral_v<SrcT> == std::is_floating_point_v<DstT> ||
+                  std::is_floating_point_v<SrcT> == std::is_integral_v<DstT>);
+    static_assert(sizeof(SrcT) == sizeof(DstT));
+    const auto src = stack.top().as<SrcT>();
+    DstT dst;
+    __builtin_memcpy(&dst, &src, sizeof(dst));
+    stack.top() = dst;
 }
 
 template <typename Op>
@@ -459,6 +401,63 @@ __attribute__((no_sanitize("float-cast-overflow"))) inline constexpr float demot
     return static_cast<float>(value);
 }
 
+void branch(const Code& code, OperandStack& stack, const Instr*& pc, const uint8_t*& immediates,
+    uint32_t arity) noexcept
+{
+    const auto code_offset = read<uint32_t>(immediates);
+    const auto imm_offset = read<uint32_t>(immediates);
+    const auto stack_drop = read<uint32_t>(immediates);
+
+    pc = code.instructions.data() + code_offset;
+    immediates = code.immediates.data() + imm_offset;
+
+    // When branch is taken, additional stack items must be dropped.
+    assert(static_cast<int>(stack_drop) >= 0);
+    assert(stack.size() >= stack_drop + arity);
+    if (arity != 0)
+    {
+        assert(arity == 1);
+        const auto result = stack.top();
+        stack.drop(stack_drop);
+        stack.top() = result;
+    }
+    else
+        stack.drop(stack_drop);
+}
+
+template <class F>
+bool invoke_function(const FuncType& func_type, const F& func, Instance& instance,
+    OperandStack& stack, int depth) noexcept
+{
+    const auto num_args = func_type.inputs.size();
+    assert(stack.size() >= num_args);
+    span<const Value> call_args{stack.rend() - num_args, num_args};
+    stack.drop(num_args);
+
+    const auto ret = func(instance, call_args, depth + 1);
+    // Bubble up traps
+    if (ret.trapped)
+        return false;
+
+    const auto num_outputs = func_type.outputs.size();
+    // NOTE: we can assume these two from validation
+    assert(num_outputs <= 1);
+    assert(ret.has_value == (num_outputs == 1));
+    // Push back the result
+    if (num_outputs != 0)
+        stack.push(ret.value);
+
+    return true;
+}
+
+inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
+    OperandStack& stack, int depth) noexcept
+{
+    const auto func = [func_idx](Instance& _instance, span<const Value> args, int _depth) noexcept {
+        return execute(_instance, func_idx, args, _depth);
+    };
+    return invoke_function(func_type, func, instance, stack, depth);
+}
 }  // namespace
 
 ExecutionResult execute(
