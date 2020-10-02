@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "cxx20/span.hpp"
 #include "value.hpp"
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -96,9 +96,9 @@ public:
     ///                             after the arguments.
     /// @param max_stack_height     The maximum operand stack height in the function. This excludes
     ///                             args and num_local_variables.
-    OperandStack(span<const Value> args, size_t num_local_variables, size_t max_stack_height)
+    OperandStack(
+        const Value* args, size_t num_args, size_t num_local_variables, size_t max_stack_height)
     {
-        const auto num_args = args.size();
         const auto storage_size_required = num_args + num_local_variables + max_stack_height;
 
         if (storage_size_required <= small_storage_size)
@@ -114,8 +114,8 @@ public:
         m_bottom = m_locals + num_args + num_local_variables;
         m_top = m_bottom - 1;
 
-        std::copy(std::begin(args), std::end(args), m_locals);
-        std::fill_n(m_locals + num_args, num_local_variables, 0);
+        const auto local_variables = std::copy_n(args, num_args, m_locals);
+        std::fill_n(local_variables, num_local_variables, 0);
     }
 
     OperandStack(const OperandStack&) = delete;

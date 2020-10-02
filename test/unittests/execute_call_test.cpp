@@ -338,7 +338,7 @@ TEST(execute_call, imported_function_from_another_module)
     ASSERT_TRUE(func_idx.has_value());
 
     auto sub = [&instance1, func_idx](Instance&, span<const Value> args, int) -> ExecutionResult {
-        return fizzy::execute(*instance1, *func_idx, args);
+        return fizzy::execute(*instance1, *func_idx, args.data());
     };
 
     auto instance2 = instantiate(module2, {{sub, module1.typesec[0]}});

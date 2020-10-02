@@ -328,7 +328,7 @@ std::unique_ptr<Instance> instantiate(Module module,
         for (const auto idx : instance->module.elementsec[i].init)
         {
             auto func = [idx, &instance_ref = *instance](fizzy::Instance&, span<const Value> args,
-                            int depth) { return execute(instance_ref, idx, args, depth); };
+                            int depth) { return execute(instance_ref, idx, args.data(), depth); };
 
             *it_table++ =
                 ExternalFunction{std::move(func), instance->module.get_function_type(idx)};
@@ -433,7 +433,7 @@ std::optional<ExternalFunction> find_exported_function(Instance& instance, std::
 
     const auto idx = *opt_index;
     auto func = [idx, &instance](fizzy::Instance&, span<const Value> args, int depth) {
-        return execute(instance, idx, args, depth);
+        return execute(instance, idx, args.data(), depth);
     };
 
     return ExternalFunction{std::move(func), instance.module.get_function_type(idx)};

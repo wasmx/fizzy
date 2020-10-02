@@ -340,7 +340,7 @@ TEST(execute, i32_load_overflow)
     auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
-    EXPECT_THAT(execute(*instance, 0, {0}), Traps());
+    EXPECT_THAT(execute(*instance, 0, {Value{0}}), Traps());
     // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
     EXPECT_THAT(execute(*instance, 0, {0x80000000}), Traps());
     // Offset is 0x7fffffff + 0x80000001 => 0x100000000
@@ -362,7 +362,7 @@ TEST(execute, i64_load_overflow)
     auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
-    EXPECT_THAT(execute(*instance, 0, {0}), Traps());
+    EXPECT_THAT(execute(*instance, 0, {Value{0}}), Traps());
     // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
     EXPECT_THAT(execute(*instance, 0, {0x80000000}), Traps());
     // Offset is 0x7fffffff + 0x80000001 => 0x100000000
@@ -486,7 +486,7 @@ TEST(execute, i32_store_overflow)
     auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
-    EXPECT_THAT(execute(*instance, 0, {0}), Traps());
+    EXPECT_THAT(execute(*instance, 0, {Value{0}}), Traps());
     // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
     EXPECT_THAT(execute(*instance, 0, {0x80000000}), Traps());
     // Offset is 0x7fffffff + 0x80000001 => 0x100000000
@@ -510,7 +510,7 @@ TEST(execute, i64_store_overflow)
     auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
-    EXPECT_THAT(execute(*instance, 0, {0}), Traps());
+    EXPECT_THAT(execute(*instance, 0, {Value{0}}), Traps());
     // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
     EXPECT_THAT(execute(*instance, 0, {0x80000000}), Traps());
     // Offset is 0x7fffffff + 0x80000001 => 0x100000000
@@ -980,7 +980,7 @@ TEST(execute, reuse_args)
 
     const std::vector<Value> args{20, 3};
     const auto expected = args[0].i64 % (args[0].i64 / args[1].i64);
-    EXPECT_THAT(execute(*instance, 0, args), Result(expected));
+    EXPECT_THAT(execute(*instance, 0, args.data()), Result(expected));
     EXPECT_THAT(args[0].i64, 20);
     EXPECT_THAT(args[1].i64, 3);
 

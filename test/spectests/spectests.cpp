@@ -480,7 +480,8 @@ private:
             args.push_back(*arg_value);
         }
 
-        return fizzy::execute(*instance, *func_idx, args);
+        assert(args.size() == instance->module.get_function_type(*func_idx).inputs.size());
+        return fizzy::execute(*instance, *func_idx, args.data());
     }
 
     bool check_integer_result(fizzy::Value actual_value, const json& expected)
