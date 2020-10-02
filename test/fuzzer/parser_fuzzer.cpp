@@ -72,6 +72,9 @@ bool wabt_parse(const uint8_t* data, size_t data_size) noexcept
     read_options.features.disable_simd();
     read_options.features.disable_tail_call();
     read_options.features.disable_threads();
+    read_options.fail_on_custom_section_error = false;
+    read_options.stop_on_first_error = true;
+    read_options.read_debug_names = false;
     Module module;
 
     wabt_errors.clear();
@@ -82,6 +85,8 @@ bool wabt_parse(const uint8_t* data, size_t data_size) noexcept
 
         if (Failed(result))
             return false;
+
+        wabt_errors.clear();  // Clear errors (probably) from custom sections.
     }
 
     {
