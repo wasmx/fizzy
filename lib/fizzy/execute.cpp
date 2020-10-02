@@ -101,7 +101,7 @@ inline T load(bytes_view input, size_t offset) noexcept
 }
 
 template <typename DstT, typename SrcT>
-inline DstT extend(SrcT in) noexcept
+inline constexpr DstT extend(SrcT in) noexcept
 {
     if constexpr (std::is_same_v<SrcT, DstT>)
         return in;
@@ -176,7 +176,7 @@ inline bool load_from_memory(
 }
 
 template <typename DstT>
-inline DstT shrink(Value value) noexcept
+inline constexpr DstT shrink(Value value) noexcept
 {
     if constexpr (std::is_floating_point_v<DstT>)
         return value.as<DstT>();
@@ -262,7 +262,7 @@ inline constexpr T rem(T a, T b) noexcept
 }
 
 template <typename T>
-inline T shift_left(T lhs, T rhs) noexcept
+inline constexpr T shift_left(T lhs, T rhs) noexcept
 {
     static_assert(std::is_integral_v<T>);
 
@@ -272,7 +272,7 @@ inline T shift_left(T lhs, T rhs) noexcept
 }
 
 template <typename T>
-inline T shift_right(T lhs, T rhs) noexcept
+inline constexpr T shift_right(T lhs, T rhs) noexcept
 {
     static_assert(std::is_integral_v<T>);
 
@@ -282,7 +282,7 @@ inline T shift_right(T lhs, T rhs) noexcept
 }
 
 template <typename T>
-inline T rotl(T lhs, T rhs) noexcept
+inline constexpr T rotl(T lhs, T rhs) noexcept
 {
     static_assert(std::is_integral_v<T>);
 
@@ -296,7 +296,7 @@ inline T rotl(T lhs, T rhs) noexcept
 }
 
 template <typename T>
-inline T rotr(T lhs, T rhs) noexcept
+inline constexpr T rotr(T lhs, T rhs) noexcept
 {
     static_assert(std::is_integral_v<T>);
 
@@ -423,7 +423,7 @@ __attribute__((no_sanitize("float-divide-by-zero"))) inline constexpr T fdiv(T a
 }
 
 template <typename T>
-inline constexpr T fmin(T a, T b) noexcept
+inline T fmin(T a, T b) noexcept
 {
     static_assert(std::is_floating_point_v<T>);
 
@@ -437,7 +437,7 @@ inline constexpr T fmin(T a, T b) noexcept
 }
 
 template <typename T>
-inline constexpr T fmax(T a, T b) noexcept
+inline T fmax(T a, T b) noexcept
 {
     static_assert(std::is_floating_point_v<T>);
 
