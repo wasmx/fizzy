@@ -47,10 +47,10 @@ void handle_unexpected_errors() noexcept
         __builtin_unreachable();
 }
 
-constexpr auto wabt_ignored_errors = {
-    "unable to read u32 leb128: version",
-    "invalid linking metadata version:",
-};
+//constexpr auto wabt_ignored_errors = {
+//    "unable to read u32 leb128: version",
+//    "invalid linking metadata version:",
+//};
 
 wabt::Errors wabt_errors;
 
@@ -135,15 +135,15 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noexcept
             bool has_errors = false;
             for (const auto& err : wabt_errors)
             {
-                bool ignored = false;
-
-                for (const auto& m : wabt_ignored_errors)
-                {
-                    if (err.message.find(m) != std::string::npos)
-                        ignored = true;
-                }
-                if (ignored)
-                    continue;
+//                bool ignored = false;
+//
+//                for (const auto& m : wabt_ignored_errors)
+//                {
+//                    if (err.message.find(m) != std::string::npos)
+//                        ignored = true;
+//                }
+//                if (ignored)
+//                    continue;
 
                 std::cerr << "  MISSED ERROR: " << err.message << "\n";
                 has_errors = true;
