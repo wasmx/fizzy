@@ -2,9 +2,6 @@
 # Copyright 2019-2020 The Fizzy Authors.
 # SPDX-License-Identifier: Apache-2.0
 
-include(ProjectWabt)
-include(ProjectWasm3)
-
 add_library(test-utils STATIC)
 add_library(fizzy::test-utils ALIAS test-utils)
 
