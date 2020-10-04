@@ -175,12 +175,14 @@ inline parser_result<ConstantExpression> parse_constant_expression(
     }
     case Instr::f32_const:
         result.kind = ConstantExpression::Kind::Constant;
-        std::tie(result.value.constant, pos) = parse_value<uint32_t>(pos, end);
+        std::tie(result.value.constant, pos) =
+            parse_value<uint32_t>(pos, static_cast<size_t>(end - pos));
         constant_actual_type = ValType::f32;
         break;
     case Instr::f64_const:
         result.kind = ConstantExpression::Kind::Constant;
-        std::tie(result.value.constant, pos) = parse_value<uint64_t>(pos, end);
+        std::tie(result.value.constant, pos) =
+            parse_value<uint64_t>(pos, static_cast<size_t>(end - pos));
         constant_actual_type = ValType::f64;
         break;
     }

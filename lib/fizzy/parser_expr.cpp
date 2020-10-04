@@ -803,7 +803,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         case Instr::f32_const:
         {
             uint32_t value;
-            std::tie(value, pos) = parse_value<uint32_t>(pos, end);
+            std::tie(value, pos) = parse_value<uint32_t>(pos, static_cast<size_t>(end - pos));
             push(code.immediates, value);
             break;
         }
@@ -811,7 +811,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         case Instr::f64_const:
         {
             uint64_t value;
-            std::tie(value, pos) = parse_value<uint64_t>(pos, end);
+            std::tie(value, pos) = parse_value<uint64_t>(pos, static_cast<size_t>(end - pos));
             push(code.immediates, value);
             break;
         }
