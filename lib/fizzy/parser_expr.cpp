@@ -97,14 +97,14 @@ inline bool type_matches(OperandStackType actual_type, OperandStackType expected
 ///
 /// Spec: https://webassembly.github.io/spec/core/binary/types.html#binary-blocktype.
 /// @return optional type of the block result.
-parser_result<std::optional<ValType>> parse_blocktype(const uint8_t* pos, const uint8_t* end)
+parser_result<std::optional<ValType>> parse_blocktype(const uint8_t* pos, size_t remaining_size)
 {
     // The byte meaning an empty wasm result type.
     // https://webassembly.github.io/spec/core/binary/types.html#result-types
     constexpr uint8_t BlockTypeEmpty = 0x40;
 
     uint8_t type;
-    std::tie(type, pos) = parse_byte(pos, static_cast<size_t>(end - pos));
+    std::tie(type, pos) = parse_byte(pos, remaining_size);
 
     if (type == BlockTypeEmpty)
         return {std::nullopt, pos};
@@ -461,7 +461,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         case Instr::block:
         {
             std::optional<ValType> block_type;
-            std::tie(block_type, pos) = parse_blocktype(pos, end);
+            std::tie(block_type, pos) = parse_blocktype(pos, static_cast<size_t>(end - pos));
 
             // Push label with immediates offset after arity.
             control_stack.emplace(Instr::block, block_type, static_cast<int>(operand_stack.size()),
@@ -472,7 +472,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         case Instr::loop:
         {
             std::optional<ValType> loop_type;
-            std::tie(loop_type, pos) = parse_blocktype(pos, end);
+            std::tie(loop_type, pos) = parse_blocktype(pos, static_cast<size_t>(end - pos));
 
             control_stack.emplace(Instr::loop, loop_type, static_cast<int>(operand_stack.size()),
                 code.instructions.size(), code.immediates.size());
@@ -482,7 +482,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         case Instr::if_:
         {
             std::optional<ValType> if_type;
-            std::tie(if_type, pos) = parse_blocktype(pos, end);
+            std::tie(if_type, pos) = parse_blocktype(pos, static_cast<size_t>(end - pos));
 
             control_stack.emplace(Instr::if_, if_type, static_cast<int>(operand_stack.size()),
                 code.instructions.size(), code.immediates.size());
