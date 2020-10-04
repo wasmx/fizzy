@@ -104,7 +104,7 @@ parser_result<std::optional<ValType>> parse_blocktype(const uint8_t* pos, const 
     constexpr uint8_t BlockTypeEmpty = 0x40;
 
     uint8_t type;
-    std::tie(type, pos) = parse_byte(pos, end);
+    std::tie(type, pos) = parse_byte(pos, static_cast<size_t>(end - pos));
 
     if (type == BlockTypeEmpty)
         return {std::nullopt, pos};
@@ -280,7 +280,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
     while (continue_parsing)
     {
         uint8_t opcode;
-        std::tie(opcode, pos) = parse_byte(pos, end);
+        std::tie(opcode, pos) = parse_byte(pos, static_cast<size_t>(end - pos));
 
         auto& frame = control_stack.top();
         const auto& type = type_table[opcode];
@@ -712,7 +712,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             push(code.immediates, callee_type_idx);
 
             uint8_t table_idx;
-            std::tie(table_idx, pos) = parse_byte(pos, end);
+            std::tie(table_idx, pos) = parse_byte(pos, static_cast<size_t>(end - pos));
             if (table_idx != 0)
                 throw parser_error{"invalid tableidx encountered with call_indirect"};
             break;
@@ -860,7 +860,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         case Instr::memory_grow:
         {
             uint8_t memory_idx;
-            std::tie(memory_idx, pos) = parse_byte(pos, end);
+            std::tie(memory_idx, pos) = parse_byte(pos, static_cast<size_t>(end - pos));
             if (memory_idx != 0)
                 throw parser_error{"invalid memory index encountered"};
 

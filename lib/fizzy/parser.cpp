@@ -83,7 +83,7 @@ template <>
 parser_result<ValType> parse(const uint8_t* pos, const uint8_t* end)
 {
     uint8_t byte;
-    std::tie(byte, pos) = parse_byte(pos, end);
+    std::tie(byte, pos) = parse_byte(pos, static_cast<size_t>(end - pos));
     const auto valtype = validate_valtype(byte);
     return {valtype, pos};
 }
@@ -92,7 +92,7 @@ template <>
 inline parser_result<FuncType> parse(const uint8_t* pos, const uint8_t* end)
 {
     uint8_t kind;
-    std::tie(kind, pos) = parse_byte(pos, end);
+    std::tie(kind, pos) = parse_byte(pos, static_cast<size_t>(end - pos));
     if (kind != 0x60)
     {
         throw parser_error{
@@ -115,7 +115,7 @@ inline parser_result<GlobalType> parse_global_type(const uint8_t* pos, const uin
     std::tie(type.value_type, pos) = parse<ValType>(pos, end);
 
     uint8_t mutability;
-    std::tie(mutability, pos) = parse_byte(pos, end);
+    std::tie(mutability, pos) = parse_byte(pos, static_cast<size_t>(end - pos));
     if (mutability != 0x00 && mutability != 0x01)
     {
         throw parser_error{"unexpected byte value " + std::to_string(mutability) +
@@ -135,7 +135,7 @@ inline parser_result<ConstantExpression> parse_constant_expression(
     std::optional<ValType> constant_actual_type;
 
     uint8_t opcode;
-    std::tie(opcode, pos) = parse_byte(pos, end);
+    std::tie(opcode, pos) = parse_byte(pos, static_cast<size_t>(end - pos));
 
     const auto instr = static_cast<Instr>(opcode);
     switch (instr)
@@ -186,7 +186,7 @@ inline parser_result<ConstantExpression> parse_constant_expression(
     }
 
     uint8_t end_opcode;
-    std::tie(end_opcode, pos) = parse_byte(pos, end);
+    std::tie(end_opcode, pos) = parse_byte(pos, static_cast<size_t>(end - pos));
 
     if (static_cast<Instr>(end_opcode) != Instr::end)
         throw validation_error{"constant expression has multiple instructions"};
@@ -212,7 +212,7 @@ inline parser_result<Limits> parse_limits(const uint8_t* pos, const uint8_t* end
     Limits result;
 
     uint8_t kind;
-    std::tie(kind, pos) = parse_byte(pos, end);
+    std::tie(kind, pos) = parse_byte(pos, static_cast<size_t>(end - pos));
     switch (kind)
     {
     case 0x00:
@@ -233,7 +233,7 @@ template <>
 inline parser_result<Table> parse(const uint8_t* pos, const uint8_t* end)
 {
     uint8_t elemtype;
-    std::tie(elemtype, pos) = parse_byte(pos, end);
+    std::tie(elemtype, pos) = parse_byte(pos, static_cast<size_t>(end - pos));
     if (elemtype != FuncRef)
         throw parser_error{"unexpected table elemtype: " + std::to_string(elemtype)};
 
@@ -278,7 +278,7 @@ inline parser_result<Import> parse(const uint8_t* pos, const uint8_t* end)
     std::tie(result.name, pos) = parse_string(pos, end);
 
     uint8_t kind;
-    std::tie(kind, pos) = parse_byte(pos, end);
+    std::tie(kind, pos) = parse_byte(pos, static_cast<size_t>(end - pos));
     switch (kind)
     {
     case 0x00:
@@ -311,7 +311,7 @@ inline parser_result<Export> parse(const uint8_t* pos, const uint8_t* end)
     std::tie(result.name, pos) = parse_string(pos, end);
 
     uint8_t kind;
-    std::tie(kind, pos) = parse_byte(pos, end);
+    std::tie(kind, pos) = parse_byte(pos, static_cast<size_t>(end - pos));
     switch (kind)
     {
     case 0x00:

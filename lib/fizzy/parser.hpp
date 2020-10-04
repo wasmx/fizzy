@@ -18,9 +18,9 @@ using parser_result = std::pair<T, const uint8_t*>;
 
 Module parse(bytes_view input);
 
-inline parser_result<uint8_t> parse_byte(const uint8_t* pos, const uint8_t* end)
+inline parser_result<uint8_t> parse_byte(const uint8_t* pos, size_t remaining_size)
 {
-    if (pos == end)
+    if (remaining_size == 0)
         throw parser_error{"unexpected EOF"};
 
     return {*pos, pos + 1};
