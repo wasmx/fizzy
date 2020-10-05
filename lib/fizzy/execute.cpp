@@ -60,7 +60,7 @@ template <typename DstT, typename SrcT = DstT>
 inline bool load_from_memory(
     bytes_view memory, OperandStack& stack, const uint8_t*& immediates) noexcept
 {
-    const auto address = stack.pop().as<uint32_t>();
+    const auto address = stack.top().as<uint32_t>();
     // NOTE: alignment is dropped by the parser
     const auto offset = read<uint32_t>(immediates);
     // Addressing is 32-bit, but we keep the value as 64-bit to detect overflows.
@@ -68,7 +68,7 @@ inline bool load_from_memory(
         return false;
 
     const auto ret = load<SrcT>(memory, address + offset);
-    stack.push(extend<DstT>(ret));
+    stack.top() = extend<DstT>(ret);
     return true;
 }
 
@@ -830,8 +830,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i32_eqz:
         {
-            const auto value = stack.pop().as<uint32_t>();
-            stack.push(uint32_t{value == 0});
+            const auto value = stack.top().as<uint32_t>();
+            stack.top() = uint32_t{value == 0};
             break;
         }
         case Instr::i32_eq:
@@ -886,7 +886,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i64_eqz:
         {
-            stack.push(uint32_t{stack.pop().i64 == 0});
+            stack.top() = uint32_t{stack.top().i64 == 0};
             break;
         }
         case Instr::i64_eq:
@@ -1377,7 +1377,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
 
         case Instr::i32_wrap_i64:
         {
-            stack.push(stack.pop().as<uint32_t>());
+            stack.top() = stack.top().as<uint32_t>();
             break;
         }
         case Instr::i32_trunc_f32_s:
@@ -1406,8 +1406,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i64_extend_i32_s:
         {
-            const auto value = stack.pop().as<int32_t>();
-            stack.push(int64_t{value});
+            stack.top() = int64_t{stack.top().as<int32_t>()};
             break;
         }
         case Instr::i64_extend_i32_u:
