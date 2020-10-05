@@ -538,6 +538,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
 
     // FIXME: Remove reference.
     auto& sp = stack.sp();
+    const auto bottom = sp;
 
     while (true)
     {
@@ -1571,7 +1572,7 @@ end:
     assert(pc == &code.instructions[code.instructions.size()]);  // End of code must be reached.
     assert(stack.size() == instance.module->get_function_type(func_idx).outputs.size());
 
-    return stack.size() != 0 ? ExecutionResult{*sp} : Void;
+    return sp != bottom ? ExecutionResult{*sp} : Void;
 
 trap:
     return Trap;
