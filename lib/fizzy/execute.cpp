@@ -431,9 +431,8 @@ inline bool invoke_function(const FuncType& func_type, const F& func, Instance& 
 {
     const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
-    span<const Value> call_args{stack.rend() - num_args, num_args};
 
-    const auto ret = func(instance, call_args, depth + 1);
+    const auto ret = func(instance, stack.rend() - num_args, depth + 1);
     // Bubble up traps
     if (ret.trapped)
         return false;
@@ -454,8 +453,8 @@ inline bool invoke_function(const FuncType& func_type, const F& func, Instance& 
 inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
     OperandStack& stack, int depth) noexcept
 {
-    const auto func = [func_idx](Instance& _instance, span<const Value> args, int _depth) noexcept {
-        return execute(_instance, func_idx, args.data(), _depth);
+    const auto func = [func_idx](Instance& _instance, const Value* args, int _depth) noexcept {
+        return execute(_instance, func_idx, args, _depth);
     };
     return invoke_function(func_type, func, instance, stack, depth);
 }
@@ -588,7 +587,11 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             if (expected_type != actual_type)
                 goto trap;
 
-            if (!invoke_function(actual_type, called_func->function, instance, stack, depth))
+            const auto l = [&called_func](
+                               Instance& _instance, const Value* _args, int _depth) noexcept {
+                return called_func->function(_instance, {_args, 0}, _depth);
+            };
+            if (!invoke_function(actual_type, l, instance, stack, depth))
                 goto trap;
             break;
         }
