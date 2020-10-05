@@ -458,7 +458,7 @@ __attribute__((no_sanitize("float-cast-overflow"))) inline constexpr float demot
     return static_cast<float>(value);
 }
 
-void branch(const Code& code, OperandStack& stack, const Instr*& pc, const uint8_t*& immediates,
+void branch(const Code& code, Value*& sp, const Instr*& pc, const uint8_t*& immediates,
     uint32_t arity) noexcept
 {
     const auto code_offset = read<uint32_t>(immediates);
@@ -470,16 +470,16 @@ void branch(const Code& code, OperandStack& stack, const Instr*& pc, const uint8
 
     // When branch is taken, additional stack items must be dropped.
     assert(static_cast<int>(stack_drop) >= 0);
-    assert(stack.size() >= stack_drop + arity);
+    //    assert(stack.size() >= stack_drop + arity);
     if (arity != 0)
     {
         assert(arity == 1);
-        const auto result = stack.top();
-        stack.drop(stack_drop);
-        stack.top() = result;
+        const auto result = *sp;
+        sp -= stack_drop;
+        *sp = result;
     }
     else
-        stack.drop(stack_drop);
+        sp -= stack_drop;
 }
 
 template <class F>
@@ -599,7 +599,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
                 break;
             }
 
-            branch(code, stack, pc, immediates, arity);
+            branch(code, sp, pc, immediates, arity);
             break;
         }
         case Instr::br_table:
@@ -614,7 +614,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
                                               br_table_size * BranchImmediateSize;
             immediates += label_idx_offset;
 
-            branch(code, stack, pc, immediates, arity);
+            branch(code, sp, pc, immediates, arity);
             break;
         }
         case Instr::call:
