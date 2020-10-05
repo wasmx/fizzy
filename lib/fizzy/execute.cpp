@@ -1065,17 +1065,17 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         case Instr::i32_clz:
         {
             asm("/*i32_clz*/");
-            unary_op(&stack.top(), clz32);
+            unary_op(sp, clz32);
             break;
         }
         case Instr::i32_ctz:
         {
-            unary_op(&stack.top(), ctz32);
+            unary_op(sp, ctz32);
             break;
         }
         case Instr::i32_popcnt:
         {
-            unary_op(&stack.top(), popcnt32);
+            unary_op(sp, popcnt32);
             break;
         }
         case Instr::i32_add:
@@ -1177,17 +1177,17 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         case Instr::i64_clz:
         {
             asm("/*i64_clz*/");
-            unary_op(&stack.top(), clz64);
+            unary_op(sp, clz64);
             break;
         }
         case Instr::i64_ctz:
         {
-            unary_op(&stack.top(), ctz64);
+            unary_op(sp, ctz64);
             break;
         }
         case Instr::i64_popcnt:
         {
-            unary_op(&stack.top(), popcnt64);
+            unary_op(sp, popcnt64);
             break;
         }
         case Instr::i64_add:
@@ -1288,37 +1288,37 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
 
         case Instr::f32_abs:
         {
-            unary_op(&stack.top(), fabs<float>);
+            unary_op(sp, fabs<float>);
             break;
         }
         case Instr::f32_neg:
         {
-            unary_op(&stack.top(), fneg<float>);
+            unary_op(sp, fneg<float>);
             break;
         }
         case Instr::f32_ceil:
         {
-            unary_op(&stack.top(), fceil<float>);
+            unary_op(sp, fceil<float>);
             break;
         }
         case Instr::f32_floor:
         {
-            unary_op(&stack.top(), ffloor<float>);
+            unary_op(sp, ffloor<float>);
             break;
         }
         case Instr::f32_trunc:
         {
-            unary_op(&stack.top(), ftrunc<float>);
+            unary_op(sp, ftrunc<float>);
             break;
         }
         case Instr::f32_nearest:
         {
-            unary_op(&stack.top(), fnearest<float>);
+            unary_op(sp, fnearest<float>);
             break;
         }
         case Instr::f32_sqrt:
         {
-            unary_op(&stack.top(), static_cast<float (*)(float)>(std::sqrt));
+            unary_op(sp, static_cast<float (*)(float)>(std::sqrt));
             break;
         }
 
@@ -1360,37 +1360,37 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
 
         case Instr::f64_abs:
         {
-            unary_op(&stack.top(), fabs<double>);
+            unary_op(sp, fabs<double>);
             break;
         }
         case Instr::f64_neg:
         {
-            unary_op(&stack.top(), fneg<double>);
+            unary_op(sp, fneg<double>);
             break;
         }
         case Instr::f64_ceil:
         {
-            unary_op(&stack.top(), fceil<double>);
+            unary_op(sp, fceil<double>);
             break;
         }
         case Instr::f64_floor:
         {
-            unary_op(&stack.top(), ffloor<double>);
+            unary_op(sp, ffloor<double>);
             break;
         }
         case Instr::f64_trunc:
         {
-            unary_op(&stack.top(), ftrunc<double>);
+            unary_op(sp, ftrunc<double>);
             break;
         }
         case Instr::f64_nearest:
         {
-            unary_op(&stack.top(), fnearest<double>);
+            unary_op(sp, fnearest<double>);
             break;
         }
         case Instr::f64_sqrt:
         {
-            unary_op(&stack.top(), static_cast<double (*)(double)>(std::sqrt));
+            unary_op(sp, static_cast<double (*)(double)>(std::sqrt));
             break;
         }
 
