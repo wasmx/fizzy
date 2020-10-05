@@ -466,11 +466,12 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
     if (depth > CallStackLimit)
         return Trap;
 
+    const auto& func_type = instance.module.get_function_type(func_idx);
+
     assert(instance.module.imported_function_types.size() == instance.imported_functions.size());
     if (func_idx < instance.imported_functions.size())
         return instance.imported_functions[func_idx].function(instance, {args, 0}, depth);
 
-    const auto& func_type = instance.module.get_function_type(func_idx);
     const auto& code = instance.module.get_code(func_idx);
     auto* const memory = instance.memory.get();
 
