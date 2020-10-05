@@ -327,8 +327,8 @@ std::unique_ptr<Instance> instantiate(Module module,
         auto it_table = instance->table->begin() + elementsec_offsets[i];
         for (const auto idx : instance->module.elementsec[i].init)
         {
-            auto func = [idx, &instance_ref = *instance](fizzy::Instance&, span<const Value> args,
-                            int depth) { return execute(instance_ref, idx, args.data(), depth); };
+            auto func = [idx, &instance_ref = *instance](fizzy::Instance&, const Value* args,
+                            int depth) { return execute(instance_ref, idx, args, depth); };
 
             *it_table++ =
                 ExternalFunction{std::move(func), instance->module.get_function_type(idx)};
@@ -360,7 +360,7 @@ std::unique_ptr<Instance> instantiate(Module module,
                         // Wrap the function with the lambda capturing shared instance
                         auto& table_function = (*it_table)->function;
                         table_function = [shared_instance, func = std::move(table_function)](
-                                             fizzy::Instance& _instance, span<const Value> args,
+                                             fizzy::Instance& _instance, const Value* args,
                                              int depth) { return func(_instance, args, depth); };
                         ++it_table;
                     }
@@ -413,8 +413,11 @@ std::vector<ExternalFunction> resolve_imported_functions(
                                     " output type doesn't match imported function in module"};
         }
 
-        external_functions.emplace_back(
-            ExternalFunction{std::move(it->function), module_func_type});
+        const auto l = [f = std::move(it->function)](
+                           Instance& _instance, const Value* _args, int _depth) noexcept {
+            return f(_instance, {_args, 0}, _depth);
+        };
+        external_functions.emplace_back(ExternalFunction{std::move(l), module_func_type});
     }
 
     return external_functions;
@@ -432,8 +435,8 @@ std::optional<ExternalFunction> find_exported_function(Instance& instance, std::
         return std::nullopt;
 
     const auto idx = *opt_index;
-    auto func = [idx, &instance](fizzy::Instance&, span<const Value> args, int depth) {
-        return execute(instance, idx, args.data(), depth);
+    auto func = [idx, &instance](fizzy::Instance&, const Value* args, int depth) {
+        return execute(instance, idx, args, depth);
     };
 
     return ExternalFunction{std::move(func), instance.module.get_function_type(idx)};

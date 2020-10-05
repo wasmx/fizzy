@@ -24,7 +24,7 @@ struct Instance;
 
 struct ExternalFunction
 {
-    std::function<ExecutionResult(Instance&, span<const Value>, int depth)> function;
+    std::function<ExecutionResult(Instance&, const Value*, int depth)> function;
     FuncType type;
 };
 

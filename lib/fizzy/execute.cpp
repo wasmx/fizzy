@@ -470,7 +470,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
 
     assert(instance.module.imported_function_types.size() == instance.imported_functions.size());
     if (func_idx < instance.imported_functions.size())
-        return instance.imported_functions[func_idx].function(instance, {args, 0}, depth);
+        return instance.imported_functions[func_idx].function(instance, args, depth);
 
     const auto& code = instance.module.get_code(func_idx);
     auto* const memory = instance.memory.get();
@@ -586,11 +586,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             if (expected_type != actual_type)
                 goto trap;
 
-            const auto l = [&called_func](
-                               Instance& _instance, const Value* _args, int _depth) noexcept {
-                return called_func->function(_instance, {_args, 0}, _depth);
-            };
-            if (!invoke_function(actual_type, l, instance, stack, depth))
+            if (!invoke_function(actual_type, called_func->function, instance, stack, depth))
                 goto trap;
             break;
         }
