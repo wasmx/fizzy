@@ -510,9 +510,8 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
 {
     const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
-    span<const Value> call_args{stack.rend() - num_args, num_args};
 
-    const auto ret = execute(instance, func_idx, call_args.data(), depth + 1);
+    const auto ret = execute(instance, func_idx, stack.rend() - num_args, depth + 1);
     // Bubble up traps
     if (ret.trapped)
         return false;
