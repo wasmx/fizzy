@@ -889,6 +889,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i32_eq:
         {
+            asm("/*i32_eq*/");
             comparison_op(stack, std::equal_to<uint32_t>());
             break;
         }
@@ -944,6 +945,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i64_eq:
         {
+            asm("/*i64_eq*/");
             comparison_op(stack, std::equal_to<uint64_t>());
             break;
         }
@@ -1057,6 +1059,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
 
         case Instr::i32_clz:
         {
+            asm("/*i32_clz*/");
             unary_op(stack, clz32);
             break;
         }
@@ -1072,6 +1075,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i32_add:
         {
+            asm("/*i32_add*/");
             binary_op(stack, add<uint32_t>);
             break;
         }
@@ -1167,6 +1171,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
 
         case Instr::i64_clz:
         {
+            asm("/*i64_clz*/");
             unary_op(stack, clz64);
             break;
         }
@@ -1182,6 +1187,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i64_add:
         {
+            asm("/*i64_add*/");
             binary_op(stack, add<uint64_t>);
             break;
         }
