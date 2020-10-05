@@ -138,6 +138,8 @@ public:
         return *m_top;
     }
 
+    Value*& sp() noexcept { return m_top; }
+
     /// Returns the reference to the stack item on given position from the stack top.
     /// Requires index < size().
     Value& operator[](size_t index) noexcept
