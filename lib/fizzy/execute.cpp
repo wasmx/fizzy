@@ -661,15 +661,15 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             const auto val2 = *sp--;
             const auto val1 = *sp--;
             if (condition == 0)
-                stack.push(val2);
+                *++sp = (val2);
             else
-                stack.push(val1);
+                *++sp = (val1);
             break;
         }
         case Instr::local_get:
         {
             const auto idx = read<uint32_t>(immediates);
-            stack.push(stack.local(idx));
+            *++sp = (stack.local(idx));
             break;
         }
         case Instr::local_set:
@@ -690,13 +690,13 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             assert(idx < instance.imported_globals.size() + instance.globals.size());
             if (idx < instance.imported_globals.size())
             {
-                stack.push(*instance.imported_globals[idx].value);
+                *++sp = (*instance.imported_globals[idx].value);
             }
             else
             {
                 const auto module_global_idx = idx - instance.imported_globals.size();
                 assert(module_global_idx < instance.module->globalsec.size());
-                stack.push(instance.globals[module_global_idx]);
+                *++sp = (instance.globals[module_global_idx]);
             }
             break;
         }
@@ -847,7 +847,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::memory_size:
         {
-            stack.push(static_cast<uint32_t>(memory->size() / PageSize));
+            *++sp = (static_cast<uint32_t>(memory->size() / PageSize));
             break;
         }
         case Instr::memory_grow:
@@ -868,21 +868,21 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             {
                 ret = static_cast<uint32_t>(-1);
             }
-            stack.push(ret);
+            *++sp = (ret);
             break;
         }
         case Instr::i32_const:
         case Instr::f32_const:
         {
             const auto value = read<uint32_t>(immediates);
-            stack.push(value);
+            *++sp = (value);
             break;
         }
         case Instr::i64_const:
         case Instr::f64_const:
         {
             const auto value = read<uint64_t>(immediates);
-            stack.push(value);
+            *++sp = (value);
             break;
         }
         case Instr::i32_eqz:
