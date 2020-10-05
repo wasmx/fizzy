@@ -173,11 +173,12 @@ inline void binary_op(Value*& sp, Op op) noexcept
 }
 
 template <typename T, template <typename> class Op>
-inline void comparison_op(OperandStack& stack, Op<T> op) noexcept
+inline void comparison_op(Value*& sp, Op<T> op) noexcept
 {
-    const auto val2 = stack.pop().as<T>();
-    const auto val1 = stack.top().as<T>();
-    stack.top() = uint32_t{op(val1, val2)};
+    const auto val2 = sp->as<T>();
+    --sp;
+    const auto val1 = sp->as<T>();
+    *sp = uint32_t{op(val1, val2)};
 }
 
 template <typename T>
@@ -891,52 +892,52 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         case Instr::i32_eq:
         {
             asm("/*i32_eq*/");
-            comparison_op(stack, std::equal_to<uint32_t>());
+            comparison_op(stack.sp(), std::equal_to<uint32_t>());
             break;
         }
         case Instr::i32_ne:
         {
-            comparison_op(stack, std::not_equal_to<uint32_t>());
+            comparison_op(stack.sp(), std::not_equal_to<uint32_t>());
             break;
         }
         case Instr::i32_lt_s:
         {
-            comparison_op(stack, std::less<int32_t>());
+            comparison_op(stack.sp(), std::less<int32_t>());
             break;
         }
         case Instr::i32_lt_u:
         {
-            comparison_op(stack, std::less<uint32_t>());
+            comparison_op(stack.sp(), std::less<uint32_t>());
             break;
         }
         case Instr::i32_gt_s:
         {
-            comparison_op(stack, std::greater<int32_t>());
+            comparison_op(stack.sp(), std::greater<int32_t>());
             break;
         }
         case Instr::i32_gt_u:
         {
-            comparison_op(stack, std::greater<uint32_t>());
+            comparison_op(stack.sp(), std::greater<uint32_t>());
             break;
         }
         case Instr::i32_le_s:
         {
-            comparison_op(stack, std::less_equal<int32_t>());
+            comparison_op(stack.sp(), std::less_equal<int32_t>());
             break;
         }
         case Instr::i32_le_u:
         {
-            comparison_op(stack, std::less_equal<uint32_t>());
+            comparison_op(stack.sp(), std::less_equal<uint32_t>());
             break;
         }
         case Instr::i32_ge_s:
         {
-            comparison_op(stack, std::greater_equal<int32_t>());
+            comparison_op(stack.sp(), std::greater_equal<int32_t>());
             break;
         }
         case Instr::i32_ge_u:
         {
-            comparison_op(stack, std::greater_equal<uint32_t>());
+            comparison_op(stack.sp(), std::greater_equal<uint32_t>());
             break;
         }
         case Instr::i64_eqz:
@@ -947,114 +948,114 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         case Instr::i64_eq:
         {
             asm("/*i64_eq*/");
-            comparison_op(stack, std::equal_to<uint64_t>());
+            comparison_op(stack.sp(), std::equal_to<uint64_t>());
             break;
         }
         case Instr::i64_ne:
         {
-            comparison_op(stack, std::not_equal_to<uint64_t>());
+            comparison_op(stack.sp(), std::not_equal_to<uint64_t>());
             break;
         }
         case Instr::i64_lt_s:
         {
-            comparison_op(stack, std::less<int64_t>());
+            comparison_op(stack.sp(), std::less<int64_t>());
             break;
         }
         case Instr::i64_lt_u:
         {
-            comparison_op(stack, std::less<uint64_t>());
+            comparison_op(stack.sp(), std::less<uint64_t>());
             break;
         }
         case Instr::i64_gt_s:
         {
-            comparison_op(stack, std::greater<int64_t>());
+            comparison_op(stack.sp(), std::greater<int64_t>());
             break;
         }
         case Instr::i64_gt_u:
         {
-            comparison_op(stack, std::greater<uint64_t>());
+            comparison_op(stack.sp(), std::greater<uint64_t>());
             break;
         }
         case Instr::i64_le_s:
         {
-            comparison_op(stack, std::less_equal<int64_t>());
+            comparison_op(stack.sp(), std::less_equal<int64_t>());
             break;
         }
         case Instr::i64_le_u:
         {
-            comparison_op(stack, std::less_equal<uint64_t>());
+            comparison_op(stack.sp(), std::less_equal<uint64_t>());
             break;
         }
         case Instr::i64_ge_s:
         {
-            comparison_op(stack, std::greater_equal<int64_t>());
+            comparison_op(stack.sp(), std::greater_equal<int64_t>());
             break;
         }
         case Instr::i64_ge_u:
         {
-            comparison_op(stack, std::greater_equal<uint64_t>());
+            comparison_op(stack.sp(), std::greater_equal<uint64_t>());
             break;
         }
 
         case Instr::f32_eq:
         {
-            comparison_op(stack, std::equal_to<float>());
+            comparison_op(stack.sp(), std::equal_to<float>());
             break;
         }
         case Instr::f32_ne:
         {
-            comparison_op(stack, std::not_equal_to<float>());
+            comparison_op(stack.sp(), std::not_equal_to<float>());
             break;
         }
         case Instr::f32_lt:
         {
-            comparison_op(stack, std::less<float>());
+            comparison_op(stack.sp(), std::less<float>());
             break;
         }
         case Instr::f32_gt:
         {
-            comparison_op<float>(stack, std::greater<float>());
+            comparison_op<float>(stack.sp(), std::greater<float>());
             break;
         }
         case Instr::f32_le:
         {
-            comparison_op(stack, std::less_equal<float>());
+            comparison_op(stack.sp(), std::less_equal<float>());
             break;
         }
         case Instr::f32_ge:
         {
-            comparison_op(stack, std::greater_equal<float>());
+            comparison_op(stack.sp(), std::greater_equal<float>());
             break;
         }
 
         case Instr::f64_eq:
         {
-            comparison_op(stack, std::equal_to<double>());
+            comparison_op(stack.sp(), std::equal_to<double>());
             break;
         }
         case Instr::f64_ne:
         {
-            comparison_op(stack, std::not_equal_to<double>());
+            comparison_op(stack.sp(), std::not_equal_to<double>());
             break;
         }
         case Instr::f64_lt:
         {
-            comparison_op(stack, std::less<double>());
+            comparison_op(stack.sp(), std::less<double>());
             break;
         }
         case Instr::f64_gt:
         {
-            comparison_op<double>(stack, std::greater<double>());
+            comparison_op<double>(stack.sp(), std::greater<double>());
             break;
         }
         case Instr::f64_le:
         {
-            comparison_op(stack, std::less_equal<double>());
+            comparison_op(stack.sp(), std::less_equal<double>());
             break;
         }
         case Instr::f64_ge:
         {
-            comparison_op(stack, std::greater_equal<double>());
+            comparison_op(stack.sp(), std::greater_equal<double>());
             break;
         }
 
