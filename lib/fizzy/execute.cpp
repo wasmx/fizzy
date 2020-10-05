@@ -683,7 +683,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         case Instr::local_tee:
         {
             const auto idx = read<uint32_t>(immediates);
-            stack.local(idx) = stack.top();
+            stack.local(idx) = *sp;
             break;
         }
         case Instr::global_get:
@@ -1515,7 +1515,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::f32_demote_f64:
         {
-            stack.top() = demote(stack.top().f64);
+            *sp = demote(sp->f64);
             break;
         }
         case Instr::f64_convert_i32_s:
@@ -1540,7 +1540,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::f64_promote_f32:
         {
-            stack.top() = double{stack.top().f32};
+            *sp = double{sp->f32};
             break;
         }
         case Instr::i32_reinterpret_f32:
