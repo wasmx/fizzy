@@ -108,19 +108,19 @@ inline bool store_into_memory(bytes& memory, Value*& sp, const uint8_t*& immedia
 
 /// Converts the top stack item by truncating a float value to an integer value.
 template <typename SrcT, typename DstT>
-inline bool trunc(OperandStack& stack) noexcept
+inline bool trunc(Value* sp) noexcept
 {
     static_assert(std::is_floating_point_v<SrcT>);
     static_assert(std::is_integral_v<DstT>);
     using boundaries = trunc_boundaries<SrcT, DstT>;
 
-    const auto input = stack.top().as<SrcT>();
+    const auto input = sp->as<SrcT>();
     if (input > boundaries::lower && input < boundaries::upper)
     {
         assert(!std::isnan(input));
         assert(input != std::numeric_limits<SrcT>::infinity());
         assert(input != -std::numeric_limits<SrcT>::infinity());
-        stack.top() = static_cast<DstT>(input);
+        *sp = static_cast<DstT>(input);
         return true;
     }
     return false;
@@ -128,11 +128,11 @@ inline bool trunc(OperandStack& stack) noexcept
 
 /// Converts the top stack item from an integer value to a float value.
 template <typename SrcT, typename DstT>
-inline void convert(OperandStack& stack) noexcept
+inline void convert(Value* sp) noexcept
 {
     static_assert(std::is_integral_v<SrcT>);
     static_assert(std::is_floating_point_v<DstT>);
-    stack.top() = static_cast<DstT>(stack.top().as<SrcT>());
+    *sp = static_cast<DstT>(sp->as<SrcT>());
 }
 
 /// Performs a bit_cast from SrcT type to DstT type.
@@ -140,15 +140,15 @@ inline void convert(OperandStack& stack) noexcept
 /// This should be optimized to empty function in assembly. Except for f32 -> i32 where pushing
 /// the result i32 value to the stack requires zero-extension to 64-bit.
 template <typename SrcT, typename DstT>
-inline void reinterpret(OperandStack& stack) noexcept
+inline void reinterpret(Value* sp) noexcept
 {
     static_assert(std::is_integral_v<SrcT> == std::is_floating_point_v<DstT> ||
                   std::is_floating_point_v<SrcT> == std::is_integral_v<DstT>);
     static_assert(sizeof(SrcT) == sizeof(DstT));
-    const auto src = stack.top().as<SrcT>();
+    const auto src = sp->as<SrcT>();
     DstT dst;
     __builtin_memcpy(&dst, &src, sizeof(dst));
-    stack.top() = dst;
+    *sp = dst;
 }
 
 template <typename Op>
@@ -1435,25 +1435,25 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i32_trunc_f32_s:
         {
-            if (!trunc<float, int32_t>(stack))
+            if (!trunc<float, int32_t>(sp))
                 goto trap;
             break;
         }
         case Instr::i32_trunc_f32_u:
         {
-            if (!trunc<float, uint32_t>(stack))
+            if (!trunc<float, uint32_t>(sp))
                 goto trap;
             break;
         }
         case Instr::i32_trunc_f64_s:
         {
-            if (!trunc<double, int32_t>(stack))
+            if (!trunc<double, int32_t>(sp))
                 goto trap;
             break;
         }
         case Instr::i32_trunc_f64_u:
         {
-            if (!trunc<double, uint32_t>(stack))
+            if (!trunc<double, uint32_t>(sp))
                 goto trap;
             break;
         }
@@ -1469,46 +1469,46 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i64_trunc_f32_s:
         {
-            if (!trunc<float, int64_t>(stack))
+            if (!trunc<float, int64_t>(sp))
                 goto trap;
             break;
         }
         case Instr::i64_trunc_f32_u:
         {
-            if (!trunc<float, uint64_t>(stack))
+            if (!trunc<float, uint64_t>(sp))
                 goto trap;
             break;
         }
         case Instr::i64_trunc_f64_s:
         {
-            if (!trunc<double, int64_t>(stack))
+            if (!trunc<double, int64_t>(sp))
                 goto trap;
             break;
         }
         case Instr::i64_trunc_f64_u:
         {
-            if (!trunc<double, uint64_t>(stack))
+            if (!trunc<double, uint64_t>(sp))
                 goto trap;
             break;
         }
         case Instr::f32_convert_i32_s:
         {
-            convert<int32_t, float>(stack);
+            convert<int32_t, float>(sp);
             break;
         }
         case Instr::f32_convert_i32_u:
         {
-            convert<uint32_t, float>(stack);
+            convert<uint32_t, float>(sp);
             break;
         }
         case Instr::f32_convert_i64_s:
         {
-            convert<int64_t, float>(stack);
+            convert<int64_t, float>(sp);
             break;
         }
         case Instr::f32_convert_i64_u:
         {
-            convert<uint64_t, float>(stack);
+            convert<uint64_t, float>(sp);
             break;
         }
         case Instr::f32_demote_f64:
@@ -1518,22 +1518,22 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::f64_convert_i32_s:
         {
-            convert<int32_t, double>(stack);
+            convert<int32_t, double>(sp);
             break;
         }
         case Instr::f64_convert_i32_u:
         {
-            convert<uint32_t, double>(stack);
+            convert<uint32_t, double>(sp);
             break;
         }
         case Instr::f64_convert_i64_s:
         {
-            convert<int64_t, double>(stack);
+            convert<int64_t, double>(sp);
             break;
         }
         case Instr::f64_convert_i64_u:
         {
-            convert<uint64_t, double>(stack);
+            convert<uint64_t, double>(sp);
             break;
         }
         case Instr::f64_promote_f32:
@@ -1543,22 +1543,22 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i32_reinterpret_f32:
         {
-            reinterpret<float, uint32_t>(stack);
+            reinterpret<float, uint32_t>(sp);
             break;
         }
         case Instr::i64_reinterpret_f64:
         {
-            reinterpret<double, uint64_t>(stack);
+            reinterpret<double, uint64_t>(sp);
             break;
         }
         case Instr::f32_reinterpret_i32:
         {
-            reinterpret<uint32_t, float>(stack);
+            reinterpret<uint32_t, float>(sp);
             break;
         }
         case Instr::f64_reinterpret_i64:
         {
-            reinterpret<uint64_t, double>(stack);
+            reinterpret<uint64_t, double>(sp);
             break;
         }
 
