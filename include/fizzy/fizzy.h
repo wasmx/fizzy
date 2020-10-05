@@ -134,6 +134,12 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 /// If passed pointer is NULL, has no effect.
 void fizzy_free_instance(FizzyInstance* instance);
 
+/// Get pointer to module of an instance.
+///
+/// @note The returned pointer represents non-owning, "view"-access to the module and must not be
+/// passed to fizzy_free_module.
+const FizzyModule* fizzy_get_instance_module(FizzyInstance* instance);
+
 /// Get pointer to memory of an instance.
 ///
 /// @returns Pointer to memory data or NULL in case instance doesn't have any memory.
