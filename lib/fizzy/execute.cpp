@@ -530,14 +530,14 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
     const auto& code = instance.module->get_code(func_idx);
     auto* const memory = instance.memory.get();
 
-    OperandStack stack(args, func_type.inputs.size(), code.local_count,
+    OperandStack _stack(args, func_type.inputs.size(), code.local_count,
         static_cast<size_t>(code.max_stack_height));
 
     const Instr* pc = code.instructions.data();
     const uint8_t* immediates = code.immediates.data();
 
     // FIXME: Remove reference.
-    auto& sp = stack.sp();
+    auto& sp = _stack.sp();
     const auto bottom = sp;
 
     while (true)
@@ -669,19 +669,19 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         case Instr::local_get:
         {
             const auto idx = read<uint32_t>(immediates);
-            *++sp = (stack.local(idx));
+            *++sp = (_stack.local(idx));
             break;
         }
         case Instr::local_set:
         {
             const auto idx = read<uint32_t>(immediates);
-            stack.local(idx) = *sp--;
+            _stack.local(idx) = *sp--;
             break;
         }
         case Instr::local_tee:
         {
             const auto idx = read<uint32_t>(immediates);
-            stack.local(idx) = *sp;
+            _stack.local(idx) = *sp;
             break;
         }
         case Instr::global_get:
@@ -1094,8 +1094,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i32_div_s:
         {
-            const auto rhs = stack.pop().as<int32_t>();
-            const auto lhs = stack.top().as<int32_t>();
+            const auto rhs = sp--->as<int32_t>();
+            const auto lhs = sp->as<int32_t>();
             if (rhs == 0 || (lhs == std::numeric_limits<int32_t>::min() && rhs == -1))
                 goto trap;
             *sp = div(lhs, rhs);
@@ -1103,19 +1103,19 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i32_div_u:
         {
-            const auto rhs = stack.pop().as<uint32_t>();
+            const auto rhs = sp--->as<uint32_t>();
             if (rhs == 0)
                 goto trap;
-            const auto lhs = stack.top().as<uint32_t>();
+            const auto lhs = sp->as<uint32_t>();
             *sp = div(lhs, rhs);
             break;
         }
         case Instr::i32_rem_s:
         {
-            const auto rhs = stack.pop().as<int32_t>();
+            const auto rhs = sp--->as<int32_t>();
             if (rhs == 0)
                 goto trap;
-            const auto lhs = stack.top().as<int32_t>();
+            const auto lhs = sp->as<int32_t>();
             if (lhs == std::numeric_limits<int32_t>::min() && rhs == -1)
                 *sp = 0;
             else
@@ -1124,10 +1124,10 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i32_rem_u:
         {
-            const auto rhs = stack.pop().as<uint32_t>();
+            const auto rhs = sp--->as<uint32_t>();
             if (rhs == 0)
                 goto trap;
-            const auto lhs = stack.top().as<uint32_t>();
+            const auto lhs = sp->as<uint32_t>();
             *sp = rem(lhs, rhs);
             break;
         }
@@ -1206,8 +1206,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i64_div_s:
         {
-            const auto rhs = stack.pop().as<int64_t>();
-            const auto lhs = stack.top().as<int64_t>();
+            const auto rhs = sp--->as<int64_t>();
+            const auto lhs = sp->as<int64_t>();
             if (rhs == 0 || (lhs == std::numeric_limits<int64_t>::min() && rhs == -1))
                 goto trap;
             *sp = div(lhs, rhs);
@@ -1215,19 +1215,19 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i64_div_u:
         {
-            const auto rhs = stack.pop().i64;
+            const auto rhs = sp--->i64;
             if (rhs == 0)
                 goto trap;
-            const auto lhs = stack.top().i64;
+            const auto lhs = sp->i64;
             *sp = div(lhs, rhs);
             break;
         }
         case Instr::i64_rem_s:
         {
-            const auto rhs = stack.pop().as<int64_t>();
+            const auto rhs = sp--->as<int64_t>();
             if (rhs == 0)
                 goto trap;
-            const auto lhs = stack.top().as<int64_t>();
+            const auto lhs = sp->as<int64_t>();
             if (lhs == std::numeric_limits<int64_t>::min() && rhs == -1)
                 *sp = 0;
             else
@@ -1236,10 +1236,10 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i64_rem_u:
         {
-            const auto rhs = stack.pop().i64;
+            const auto rhs = sp--->i64;
             if (rhs == 0)
                 goto trap;
-            const auto lhs = stack.top().i64;
+            const auto lhs = sp->i64;
             *sp = rem(lhs, rhs);
             break;
         }
@@ -1570,7 +1570,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
 
 end:
     assert(pc == &code.instructions[code.instructions.size()]);  // End of code must be reached.
-    assert(stack.size() == instance.module->get_function_type(func_idx).outputs.size());
+    // assert(stack.size() == instance.module->get_function_type(func_idx).outputs.size());
 
     return sp != bottom ? ExecutionResult{*sp} : Void;
 
