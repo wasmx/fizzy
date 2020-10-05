@@ -537,7 +537,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
     const uint8_t* immediates = code.immediates.data();
 
     // FIXME: Remove reference.
-    auto& sp = _stack.sp();
+    auto sp = _stack.sp();
     const auto bottom = sp;
 
     while (true)
