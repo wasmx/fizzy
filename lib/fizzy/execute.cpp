@@ -482,18 +482,17 @@ void branch(const Code& code, Value*& sp, const Instr*& pc, const uint8_t*& imme
 
 template <class F>
 inline bool invoke_function(
-    const FuncType& func_type, const F& func, Instance& instance, OperandStack& stack, int depth)
+    const FuncType& func_type, const F& func, Instance& instance, Value*& sp, int depth)
 {
     const auto num_args = func_type.inputs.size();
-    assert(stack.size() >= num_args);
-    const auto call_args = stack.rend() - num_args;
+    const auto call_args = sp + 1 - num_args;
 
     const auto ret = func(instance, call_args, depth + 1);
     // Bubble up traps
     if (ret.trapped)
         return false;
 
-    stack.drop(num_args);
+    sp -= num_args;
 
     const auto num_outputs = func_type.outputs.size();
     // NOTE: we can assume these two from validation
@@ -501,18 +500,18 @@ inline bool invoke_function(
     assert(ret.has_value == (num_outputs == 1));
     // Push back the result
     if (num_outputs != 0)
-        stack.push(ret.value);
+        *++sp = (ret.value);
 
     return true;
 }
 
-inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
-    OperandStack& stack, int depth)
+inline bool invoke_function(
+    const FuncType& func_type, uint32_t func_idx, Instance& instance, Value*& sp, int depth)
 {
     const auto func = [func_idx](Instance& _instance, const Value* args, int _depth) {
         return execute(_instance, func_idx, args, _depth);
     };
-    return invoke_function(func_type, func, instance, stack, depth);
+    return invoke_function(func_type, func, instance, sp, depth);
 }
 }  // namespace
 
@@ -620,7 +619,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             const auto called_func_idx = read<uint32_t>(immediates);
             const auto& called_func_type = instance.module->get_function_type(called_func_idx);
 
-            if (!invoke_function(called_func_type, called_func_idx, instance, stack, depth))
+            if (!invoke_function(called_func_type, called_func_idx, instance, sp, depth))
                 goto trap;
             break;
         }
@@ -645,7 +644,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             if (expected_type != actual_type)
                 goto trap;
 
-            if (!invoke_function(actual_type, called_func->function, instance, stack, depth))
+            if (!invoke_function(actual_type, called_func->function, instance, sp, depth))
                 goto trap;
             break;
         }
