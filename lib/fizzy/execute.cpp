@@ -1034,16 +1034,16 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i32_div_s:
         {
-            auto const rhs = stack[0].as<int32_t>();
-            auto const lhs = stack[1].as<int32_t>();
+            const auto rhs = stack.pop().as<int32_t>();
+            const auto lhs = stack.top().as<int32_t>();
             if (rhs == 0 || (lhs == std::numeric_limits<int32_t>::min() && rhs == -1))
                 goto trap;
-            binary_op(stack, div<int32_t>);
+            stack.top() = div(lhs, rhs);
             break;
         }
         case Instr::i32_div_u:
         {
-            auto const rhs = stack.top().as<uint32_t>();
+            const auto rhs = stack.top().as<uint32_t>();
             if (rhs == 0)
                 goto trap;
             binary_op(stack, div<uint32_t>);
@@ -1051,22 +1051,19 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i32_rem_s:
         {
-            auto const rhs = stack.top().as<int32_t>();
+            const auto rhs = stack.pop().as<int32_t>();
             if (rhs == 0)
                 goto trap;
-            auto const lhs = stack[1].as<int32_t>();
+            const auto lhs = stack.top().as<int32_t>();
             if (lhs == std::numeric_limits<int32_t>::min() && rhs == -1)
-            {
-                stack.pop();
                 stack.top() = 0;
-            }
             else
-                binary_op(stack, rem<int32_t>);
+                stack.top() = rem(lhs, rhs);
             break;
         }
         case Instr::i32_rem_u:
         {
-            auto const rhs = stack.top().as<uint32_t>();
+            const auto rhs = stack.top().as<uint32_t>();
             if (rhs == 0)
                 goto trap;
             binary_op(stack, rem<uint32_t>);
@@ -1145,16 +1142,16 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i64_div_s:
         {
-            auto const rhs = stack[0].as<int64_t>();
-            auto const lhs = stack[1].as<int64_t>();
+            const auto rhs = stack.pop().as<int64_t>();
+            const auto lhs = stack.top().as<int64_t>();
             if (rhs == 0 || (lhs == std::numeric_limits<int64_t>::min() && rhs == -1))
                 goto trap;
-            binary_op(stack, div<int64_t>);
+            stack.top() = div(lhs, rhs);
             break;
         }
         case Instr::i64_div_u:
         {
-            auto const rhs = stack.top().i64;
+            const auto rhs = stack.top().i64;
             if (rhs == 0)
                 goto trap;
             binary_op(stack, div<uint64_t>);
@@ -1162,22 +1159,19 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i64_rem_s:
         {
-            auto const rhs = stack.top().as<int64_t>();
+            const auto rhs = stack.pop().as<int64_t>();
             if (rhs == 0)
                 goto trap;
-            auto const lhs = stack[1].as<int64_t>();
+            const auto lhs = stack.top().as<int64_t>();
             if (lhs == std::numeric_limits<int64_t>::min() && rhs == -1)
-            {
-                stack.pop();
                 stack.top() = 0;
-            }
             else
-                binary_op(stack, rem<int64_t>);
+                stack.top() = rem(lhs, rhs);
             break;
         }
         case Instr::i64_rem_u:
         {
-            auto const rhs = stack.top().i64;
+            const auto rhs = stack.top().i64;
             if (rhs == 0)
                 goto trap;
             binary_op(stack, rem<uint64_t>);
