@@ -1520,7 +1520,7 @@ end:
     assert(pc == &code.instructions[code.instructions.size()]);  // End of code must be reached.
     assert(stack.size() == instance.module.get_function_type(func_idx).outputs.size());
 
-    return stack.size() != 0 ? ExecutionResult{stack.pop()} : Void;
+    return stack.size() != 0 ? ExecutionResult{stack.top()} : Void;
 
 trap:
     return Trap;
