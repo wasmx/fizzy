@@ -84,13 +84,13 @@ bool FizzyEngine::instantiate(bytes_view wasm_binary)
 {
     try
     {
-        const auto module = fizzy::parse(wasm_binary);
+        auto module = fizzy::parse(wasm_binary);
         auto imports = fizzy::resolve_imported_functions(
             module, {
                         {"env", "adler32", {fizzy::ValType::i32, fizzy::ValType::i32},
                             fizzy::ValType::i32, env_adler32},
                     });
-        m_instance = fizzy::instantiate(module, imports);
+        m_instance = fizzy::instantiate(std::move(module), std::move(imports));
     }
     catch (...)
     {
