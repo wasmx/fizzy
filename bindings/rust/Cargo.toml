@@ -15,3 +15,8 @@ edition = "2018"
 [build-dependencies]
 bindgen = "0.54.0"
 cmake = "0.1"
+
+[badges]
+circle-ci = { repository = "wasmx/fizzy" }
+codecov = { repository = "wasmx/fizzy", service = "github" }
+maintenance = { status = "actively-developed" }
