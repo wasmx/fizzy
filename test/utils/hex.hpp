@@ -30,14 +30,14 @@ inline std::string hex(bytes_view data)
 /// Exceptions:
 /// - std::length_error when the input has invalid length (must be even).
 /// - std::out_of_range when invalid hex digit encountered.
-bytes from_hex(const std::string& hex);
+bytes from_hex(std::string_view hex);
 
 inline namespace literals
 {
 /// Operator for "" literals, e.g. "0a0b0c0d"_bytes.
-inline fizzy::bytes operator""_bytes(const char* literal, size_t /*length*/)
+inline fizzy::bytes operator""_bytes(const char* literal, size_t length)
 {
-    return from_hex(literal);
+    return from_hex({literal, length});
 }
 }  // namespace literals
 }  // namespace fizzy::test
