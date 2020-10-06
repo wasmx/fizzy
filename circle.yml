@@ -380,6 +380,22 @@ jobs:
           min_time: "0.01"
       - spectest
 
+  sanitizers-gcc:
+    executor: linux-gcc-latest
+    environment:
+      # TODO: Enable detect_stack_use_after_return=1 when https://bugs.llvm.org/show_bug.cgi?id=47626 is fixed.
+      ASAN_OPTIONS: detect_invalid_pointer_pairs=2
+      UBSAN_OPTIONS: halt_on_error=1
+    steps:
+      - checkout
+      - build:
+          build_type: RelWithDebInfo
+          cmake_options: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,pointer-compare,pointer-subtract,leak,undefined
+      - test
+      - benchmark:
+          min_time: "0.01"
+      - spectest
+
   sanitizers-macos:
     executor: macos
     environment:
@@ -594,6 +610,7 @@ workflows:
       - coverage-gcc
       - coverage-clang
       - sanitizers-clang
+      - sanitizers-gcc
       - sanitizers-macos
       - fuzzing
       - spectest:
