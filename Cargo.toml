@@ -1,5 +1,5 @@
 [workspace]
 members = [
     "bindings/rust",
-    "bindings/rust/compilation-test"
+    "test/rust-compilation"
 ]
