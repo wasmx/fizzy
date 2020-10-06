@@ -11,24 +11,7 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
-    // TODO: Improve this.
-    //
-    // Unfortunately there is no environment variable for the original (and not build-time)
-    // location of the manifest, and `env::current_dir()` points to the build-time directory.
-    //
-    // Tried also libgit2 to find the root, but that requires the root to begin with (unlike the commandline git command).
-    let current = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let src = current.parent().unwrap().parent().unwrap();
-    let src = if !src.join("LICENSE").exists() {
-        // Assume this run is within `cargo package` which has an extra directory depth.
-        //
-        // TODO: this may be wrong.
-        src.parent().unwrap()
-    } else {
-        src
-    };
-
-    let dst = Config::new(src).define("FIZZY_TESTING", "OFF").build();
+    let dst = Config::new("fizzy").define("FIZZY_TESTING", "OFF").build();
 
     println!("cargo:rustc-link-lib=static=fizzy");
     println!("cargo:rustc-link-search=native={}/lib", dst.display());
@@ -39,7 +22,7 @@ fn main() {
     }
 
     let bindings = bindgen::Builder::default()
-        .header(format!("{}/include/fizzy/fizzy.h", src.display()))
+        .header("fizzy/include/fizzy/fizzy.h")
         // See https://github.com/rust-lang-nursery/rust-bindgen/issues/947
         .trust_clang_mangling(false)
         .generate_comments(true)
