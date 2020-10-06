@@ -408,7 +408,7 @@ void branch(const Code& code, OperandStack& stack, const Instr*& pc, const uint8
     const auto imm_offset = read<uint32_t>(immediates);
     const auto stack_drop = read<uint32_t>(immediates);
 
-    pc = code.instructions.data() + code_offset;
+    pc = code.instructions.data() + code_offset - 1;
     immediates = code.immediates.data() + imm_offset;
 
     // When branch is taken, additional stack items must be dropped.
@@ -483,9 +483,9 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
     const Instr* pc = code.instructions.data();
     const uint8_t* immediates = code.immediates.data();
 
+    auto instruction = *pc;
     while (true)
     {
-        const auto instruction = *pc++;
         switch (instruction)
         {
         case Instr::unreachable:
@@ -503,7 +503,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
                 const auto target_pc = read<uint32_t>(immediates);
                 const auto target_imm = read<uint32_t>(immediates);
 
-                pc = code.instructions.data() + target_pc;
+                pc = code.instructions.data() + target_pc - 1;
                 immediates = code.immediates.data() + target_imm;
             }
             break;
@@ -515,7 +515,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             const auto target_pc = read<uint32_t>(immediates);
             const auto target_imm = read<uint32_t>(immediates);
 
-            pc = code.instructions.data() + target_pc;
+            pc = code.instructions.data() + target_pc - 1;
             immediates = code.immediates.data() + target_imm;
 
             break;
@@ -523,7 +523,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         case Instr::end:
         {
             // End execution if it's a final end instruction.
-            if (pc == &code.instructions[code.instructions.size()])
+            if (pc + 1 == &code.instructions[code.instructions.size()])
                 goto end;
             break;
         }
@@ -1507,10 +1507,12 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             assert(false);
             break;
         }
+
+        instruction = *++pc;
     }
 
 end:
-    assert(pc == &code.instructions[code.instructions.size()]);  // End of code must be reached.
+    assert(pc + 1 == &code.instructions[code.instructions.size()]);  // End of code must be reached.
     assert(stack.size() == instance.module.get_function_type(func_idx).outputs.size());
 
     return stack.size() != 0 ? ExecutionResult{stack.top()} : Void;
