@@ -118,7 +118,7 @@ commands:
             - ~/.hunter/_Base/Cache
       - run:
           name: "Build <<parameters.configuration_name>> (<<parameters.build_type>>)"
-          command: cmake --build ~/build --target <<parameters.target>> -- -j12
+          command: cmake --build ~/build --target <<parameters.target>> -- -j6
 
   test:
     description: "Test"
@@ -233,6 +233,7 @@ commands:
           working_directory: ~/build
           command: |
             set +e
+            export ASAN_OPTIONS=detect_invalid_pointer_pairs=1  # TODO: value 2 causes failures in standard library.
             expected="  PASSED <<parameters.expected_passed>>, FAILED <<parameters.expected_failed>>, SKIPPED <<parameters.expected_skipped>>."
             result=$(bin/fizzy-spectests <<#parameters.skip_validation>>--skip-validation<</parameters.skip_validation>> json | tail -1)
             echo $result
@@ -361,16 +362,19 @@ jobs:
           destination: coverage
       - upload_coverage_data
 
-  sanitizers:
+  sanitizers-clang:
     executor: linux-clang-latest
     environment:
+      # TODO: Enable detect_stack_use_after_return=1 when https://bugs.llvm.org/show_bug.cgi?id=47626 is fixed.
+      ASAN_OPTIONS: detect_invalid_pointer_pairs=2
       UBSAN_OPTIONS: halt_on_error=1
     steps:
       - install_testfloat
       - checkout
       - build:
           build_type: RelWithDebInfo
-          cmake_options: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
+          # TODO: pointer-compare produces failure in std::string operator+.
+          cmake_options: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,pointer-subtract,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
       - test
       - benchmark:
           min_time: "0.01"
@@ -379,13 +383,16 @@ jobs:
   sanitizers-macos:
     executor: macos
     environment:
+      # TODO: Enable detect_stack_use_after_return=1 when https://bugs.llvm.org/show_bug.cgi?id=47626 is fixed.
+      ASAN_OPTIONS: detect_invalid_pointer_pairs=2
       UBSAN_OPTIONS: halt_on_error=1
     steps:
       - install_macos_deps
       - checkout
       - build:
           build_type: RelWithDebInfo
-          cmake_options: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
+          # TODO: pointer-compare produces failure in std::string operator+.
+          cmake_options: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,pointer-subtract,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
       - test
       - benchmark:
           min_time: "0.01"
@@ -448,6 +455,8 @@ jobs:
   fuzzing:
     executor: linux-clang-latest
     environment:
+      # TODO: Enable detect_stack_use_after_return=1 when https://bugs.llvm.org/show_bug.cgi?id=47626 is fixed.
+      ASAN_OPTIONS: detect_invalid_pointer_pairs=2
       UBSAN_OPTIONS: halt_on_error=1
     steps:
       - checkout
@@ -474,7 +483,7 @@ jobs:
             MAX_LEN=100
 
             # Invisible background jobs:
-            bin/fizzy-fuzz-parser corpus-local -runs=$RUNS -max_len=$MAX_LEN -len_control=100000 -use_value_profile=1 -verbosity=0 -jobs=5 2>/dev/null &
+            bin/fizzy-fuzz-parser corpus-local -runs=$RUNS -max_len=$MAX_LEN -len_control=100000 -use_value_profile=1 -verbosity=0 -jobs=4 2>/dev/null &
 
             # Main job, to see logs:
             bin/fizzy-fuzz-parser corpus-local -runs=$RUNS -max_len=$MAX_LEN -len_control=100000 -use_value_profile=1 -print_final_stats=1
@@ -584,7 +593,7 @@ workflows:
             - sanitizers-macos
       - coverage-gcc
       - coverage-clang
-      - sanitizers
+      - sanitizers-clang
       - sanitizers-macos
       - fuzzing
       - spectest:
