@@ -7,7 +7,7 @@
 
 namespace fizzy::test
 {
-bytes from_hex(const std::string& hex)
+bytes from_hex(std::string_view hex)
 {
     if (hex.length() % 2 == 1)
         throw std::length_error{"the length of the input is odd"};

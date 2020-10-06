@@ -31,106 +31,109 @@ TEST(utf8, invalid_first_bytes)
 
 TEST(utf8, validate)
 {
-    std::vector<std::pair<bytes, bool>> testcases = {
+    std::vector<std::pair<std::string_view, bool>> testcases = {
         // ASCII
-        {"00"_bytes, true},
-        {"7f"_bytes, true},
+        {"00", true},
+        {"7f", true},
 
         // Missing next byte
-        {"80"_bytes, false},
+        {"80", false},
 
         // 80..C1
-        {"81"_bytes, false},
-        {"c1"_bytes, false},
+        {"81", false},
+        {"c1", false},
 
         // C2..DF
-        {"c2"_bytes, false},
-        {"c280"_bytes, true},
-        {"c2bf"_bytes, true},
-        {"c2c0"_bytes, false},
-        {"dfbf"_bytes, true},
+        {"c2", false},
+        {"c280", true},
+        {"c2bf", true},
+        {"c2c0", false},
+        {"dfbf", true},
 
         // E0
-        {"e0"_bytes, false},
-        {"e080"_bytes, false},
-        {"e09f80"_bytes, false},
-        {"e0a0"_bytes, false},
-        {"e0a080"_bytes, true},
-        {"e0a0bf"_bytes, true},
-        {"e0a0c0"_bytes, false},
-        {"e0bfbf"_bytes, true},
+        {"e0", false},
+        {"e080", false},
+        {"e09f80", false},
+        {"e0a0", false},
+        {"e0a080", true},
+        {"e0a0bf", true},
+        {"e0a0c0", false},
+        {"e0bfbf", true},
 
         // E1..EC
-        {"e1"_bytes, false},
-        {"e170"_bytes, false},
-        {"e180"_bytes, false},
-        {"e18080"_bytes, true},
-        {"e1807f"_bytes, false},
-        {"e1bfbf"_bytes, true},
+        {"e1", false},
+        {"e170", false},
+        {"e180", false},
+        {"e18080", true},
+        {"e1807f", false},
+        {"e1bfbf", true},
 
         // ED
-        {"ed"_bytes, false},
-        {"ed70"_bytes, false},
-        {"ed80"_bytes, false},
-        {"ed8070"_bytes, false},
-        {"ed8080"_bytes, true},
-        {"ed9fbf"_bytes, true},
-        {"edbfbf"_bytes, false},
-        {"eda080"_bytes, false},
-        {"ed80c0"_bytes, false},
+        {"ed", false},
+        {"ed70", false},
+        {"ed80", false},
+        {"ed8070", false},
+        {"ed8080", true},
+        {"ed9fbf", true},
+        {"edbfbf", false},
+        {"eda080", false},
+        {"ed80c0", false},
 
         // EE..EF
-        {"ee"_bytes, false},
-        {"ee70"_bytes, false},
-        {"ee80"_bytes, false},
-        {"ee8070"_bytes, false},
-        {"ee8080"_bytes, true},
-        {"ee80bf"_bytes, true},
-        {"eebfbf"_bytes, true},
-        {"eec080"_bytes, false},
-        {"ee80c0"_bytes, false},
+        {"ee", false},
+        {"ee70", false},
+        {"ee80", false},
+        {"ee8070", false},
+        {"ee8080", true},
+        {"ee80bf", true},
+        {"eebfbf", true},
+        {"eec080", false},
+        {"ee80c0", false},
 
         // F0
-        {"f0"_bytes, false},
-        {"f080"_bytes, false},
-        {"f090"_bytes, false},
-        {"f09070"_bytes, false},
-        {"f0908070"_bytes, false},
-        {"f0908080"_bytes, true},
-        {"f0bfbfbf"_bytes, true},
-        {"f0c0bfbf"_bytes, false},
-        {"f0bfc0bf"_bytes, false},
-        {"f0bfbfc0"_bytes, false},
+        {"f0", false},
+        {"f080", false},
+        {"f090", false},
+        {"f09070", false},
+        {"f0908070", false},
+        {"f0908080", true},
+        {"f0bfbfbf", true},
+        {"f0c0bfbf", false},
+        {"f0bfc0bf", false},
+        {"f0bfbfc0", false},
 
         // F1..F3
-        {"f1"_bytes, false},
-        {"f170"_bytes, false},
-        {"f180"_bytes, false},
-        {"f18070"_bytes, false},
-        {"f1808070"_bytes, false},
-        {"f1808080"_bytes, true},
-        {"f1bfbfbf"_bytes, true},
-        {"f1c0bfbf"_bytes, false},
-        {"f1bfc0bf"_bytes, false},
-        {"f1bfbfc0"_bytes, false},
+        {"f1", false},
+        {"f170", false},
+        {"f180", false},
+        {"f18070", false},
+        {"f1808070", false},
+        {"f1808080", true},
+        {"f1bfbfbf", true},
+        {"f1c0bfbf", false},
+        {"f1bfc0bf", false},
+        {"f1bfbfc0", false},
 
         // F4
-        {"f4"_bytes, false},
-        {"f470"_bytes, false},
-        {"f480"_bytes, false},
-        {"f48070"_bytes, false},
-        {"f4808070"_bytes, false},
-        {"f4808080"_bytes, true},
-        {"f48fbfbf"_bytes, true},
-        {"f490bfbf"_bytes, false},
-        {"f48fc0bf"_bytes, false},
-        {"f48fbfc0"_bytes, false},
+        {"f4", false},
+        {"f470", false},
+        {"f480", false},
+        {"f48070", false},
+        {"f4808070", false},
+        {"f4808080", true},
+        {"f48fbfbf", true},
+        {"f490bfbf", false},
+        {"f48fc0bf", false},
+        {"f48fbfc0", false},
 
         // Multi-character example
-        {"616263c2bfe0a080ecbabaed9fbfee8181efaa81f09081a0f1a0a081f4819f85"_bytes, true},
+        {"616263c2bfe0a080ecbabaed9fbfee8181efaa81f09081a0f1a0a081f4819f85", true},
     };
     for (const auto& testcase : testcases)
-        EXPECT_EQ(utf8_validate(testcase.first), testcase.second);
+    {
+        const auto input = fizzy::test::from_hex(testcase.first);
+        EXPECT_EQ(utf8_validate(input), testcase.second);
+    }
 }
 
 TEST(utf8, missing_second_byte)
