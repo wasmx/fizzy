@@ -536,6 +536,11 @@ jobs:
       - run:
           name: Test
           command: cargo test
+      - run:
+          name: Package
+          # The package must be run within the actual crate and not in the workspace.
+          working_directory: bindings/rust
+          command: cargo package
 
   bindings-rust-asan:
     docker:
