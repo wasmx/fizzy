@@ -401,7 +401,7 @@ int main(int argc, const char* argv[])
 
         const auto func = from_name(function_name);
 
-        auto instance = fizzy::instantiate(fizzy::parse(get_wasm_code()));
+        auto instance = fizzy::instantiate(std::move(fizzy::parse(get_wasm_code())));
 
         std::fesetround(rounding_direction);
 

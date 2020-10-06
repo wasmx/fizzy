@@ -90,7 +90,7 @@ bool FizzyEngine::instantiate(bytes_view wasm_binary)
                         {"env", "adler32", {fizzy::ValType::i32, fizzy::ValType::i32},
                             fizzy::ValType::i32, env_adler32},
                     });
-        m_instance = fizzy::instantiate(module, imports);
+        m_instance = fizzy::instantiate(std::move(module), imports);
     }
     catch (...)
     {

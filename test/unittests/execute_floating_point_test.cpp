@@ -990,7 +990,7 @@ TYPED_TEST(execute_floating_point_types, add_sub_neg_relation)
     constexpr auto sub_fn_idx = 0 + fn_offset;
     constexpr auto addneg_fn_idx = 1 + fn_offset;
 
-    auto instance = instantiate(std::move(module));
+    auto instance = instantiate(module);
     const auto sub = [&](auto a, auto b) { return execute(*instance, sub_fn_idx, {a, b}); };
     const auto addneg = [&](auto a, auto b) { return execute(*instance, addneg_fn_idx, {a, b}); };
 
