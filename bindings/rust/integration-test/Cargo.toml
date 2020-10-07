@@ -5,7 +5,9 @@
 [package]
 name = "fizzy-integration-test"
 version = "0.6.0-dev"
-authors = ["Alex Beregszaszi <alex@rtfs.hu>"]
+authors = ["The Fizzy Authors"]
+license = "Apache-2.0"
+repository = "https://github.com/wasmx/fizzy"
 edition = "2018"
 publish = false
 
