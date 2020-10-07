@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "execute.hpp"
+#include "cxx20/bit.hpp"
 #include "stack.hpp"
 #include "trunc_boundaries.hpp"
 #include "types.hpp"
@@ -18,6 +19,11 @@ namespace
 {
 // code_offset + imm_offset + stack_height
 constexpr auto BranchImmediateSize = 3 * sizeof(uint32_t);
+
+constexpr uint32_t F32AbsMask = 0x7fffffff;
+constexpr uint32_t F32SignMask = ~F32AbsMask;
+constexpr uint64_t F64AbsMask = 0x7fffffffffffffff;
+constexpr uint64_t F64SignMask = ~F64AbsMask;
 
 template <typename T>
 inline T read(const uint8_t*& input) noexcept
@@ -294,6 +300,36 @@ inline uint64_t popcnt64(uint64_t value) noexcept
 }
 
 template <typename T>
+T fabs(T value) noexcept = delete;
+
+template <>
+inline float fabs(float value) noexcept
+{
+    return bit_cast<float>(bit_cast<uint32_t>(value) & F32AbsMask);
+}
+
+template <>
+inline double fabs(double value) noexcept
+{
+    return bit_cast<double>(bit_cast<uint64_t>(value) & F64AbsMask);
+}
+
+template <typename T>
+T fneg(T value) noexcept = delete;
+
+template <>
+inline float fneg(float value) noexcept
+{
+    return bit_cast<float>(bit_cast<uint32_t>(value) ^ F32SignMask);
+}
+
+template <>
+inline double fneg(double value) noexcept
+{
+    return bit_cast<double>(bit_cast<uint64_t>(value) ^ F64SignMask);
+}
+
+template <typename T>
 inline T fceil(T value) noexcept
 {
     static_assert(std::is_floating_point_v<T>);
@@ -390,6 +426,25 @@ inline T fmax(T a, T b) noexcept
         return T{0};
 
     return a < b ? b : a;
+}
+
+template <typename T>
+T fcopysign(T a, T b) noexcept = delete;
+
+template <>
+inline float fcopysign(float a, float b) noexcept
+{
+    const auto a_u = bit_cast<uint32_t>(a);
+    const auto b_u = bit_cast<uint32_t>(b);
+    return bit_cast<float>((a_u & F32AbsMask) | (b_u & F32SignMask));
+}
+
+template <>
+inline double fcopysign(double a, double b) noexcept
+{
+    const auto a_u = bit_cast<uint64_t>(a);
+    const auto b_u = bit_cast<uint64_t>(b);
+    return bit_cast<double>((a_u & F64AbsMask) | (b_u & F64SignMask));
 }
 
 __attribute__((no_sanitize("float-cast-overflow"))) inline constexpr float demote(
@@ -1223,13 +1278,12 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
 
         case Instr::f32_abs:
         {
-            // TODO: This can be optimized https://godbolt.org/z/aPqvfo
-            unary_op(stack, static_cast<float (*)(float)>(std::fabs));
+            unary_op(stack, fabs<float>);
             break;
         }
         case Instr::f32_neg:
         {
-            unary_op(stack, std::negate<float>{});
+            unary_op(stack, fneg<float>);
             break;
         }
         case Instr::f32_ceil:
@@ -1290,24 +1344,18 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::f32_copysign:
         {
-            // TODO: This is not optimal implementation. The std::copysign() is inlined, but
-            //       it affects the compiler to still use SSE vectors (probably due to C++ ABI)
-            //       while this can be implemented with just generic registers and integer
-            //       instructions: (a & ABS_MASK) | (b & SIGN_MASK).
-            //       https://godbolt.org/z/aPqvfo
-            binary_op(stack, static_cast<float (*)(float, float)>(std::copysign));
+            binary_op(stack, fcopysign<float>);
             break;
         }
 
         case Instr::f64_abs:
         {
-            // TODO: This can be optimized https://godbolt.org/z/aPqvfo
-            unary_op(stack, static_cast<double (*)(double)>(std::fabs));
+            unary_op(stack, fabs<double>);
             break;
         }
         case Instr::f64_neg:
         {
-            unary_op(stack, std::negate<double>{});
+            unary_op(stack, fneg<double>);
             break;
         }
         case Instr::f64_ceil:
@@ -1368,7 +1416,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::f64_copysign:
         {
-            binary_op(stack, static_cast<double (*)(double, double)>(std::copysign));
+            binary_op(stack, fcopysign<double>);
             break;
         }
 
