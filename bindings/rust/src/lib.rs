@@ -2,10 +2,15 @@
 // Copyright 2019-2020 The Fizzy Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+//! This is a Rust interface to [Fizzy](https://github.com/wasmx/fizzy), a WebAssembly virtual machine.
+//!
+//! Currently it is only possible to validate inputs, but soon execution will be supported too.
+
 mod sys;
 
-pub fn validate(input: &[u8]) -> bool {
-    unsafe { sys::fizzy_validate(input.as_ptr(), input.len()) }
+/// Parse and validate the input according to WebAssembly 1.0 rules. Returns true if the supplied input is valid.
+pub fn validate<T: AsRef<[u8]>>(input: T) -> bool {
+    unsafe { sys::fizzy_validate(input.as_ref().as_ptr(), input.as_ref().len()) }
 }
 
 #[cfg(test)]
