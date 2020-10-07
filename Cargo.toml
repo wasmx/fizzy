@@ -1,4 +1,5 @@
 [workspace]
 members = [
-    "bindings/rust"
+    "bindings/rust",
+    "bindings/rust/integration-test"
 ]
