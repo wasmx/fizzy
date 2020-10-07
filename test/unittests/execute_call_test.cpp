@@ -518,7 +518,7 @@ TEST(execute_call, call_indirect_infinite_recursion)
     EXPECT_TRUE(execute(module, 0, {}).trapped);
 }
 
-constexpr int MaxDepth = 512;
+constexpr int MaxDepth = 2048;
 static_assert(MaxDepth == CallStackLimit);
 
 TEST(execute_call, call_max_depth)
