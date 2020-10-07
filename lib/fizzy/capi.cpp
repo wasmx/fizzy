@@ -115,6 +115,28 @@ inline fizzy::ExternalFunction unwrap(const FizzyExternalFunction& external_func
     return fizzy::ExternalFunction{
         unwrap(external_func.function, external_func.context), unwrap(external_func.type)};
 }
+
+inline fizzy::ImportedFunction unwrap(const FizzyImportedFunction& c_imported_func)
+{
+    fizzy::ImportedFunction imported_func;
+    imported_func.module =
+        c_imported_func.module ? std::string{c_imported_func.module} : std::string{};
+    imported_func.name = c_imported_func.name ? std::string{c_imported_func.name} : std::string{};
+
+    const auto& c_type = c_imported_func.external_function.type;
+    fizzy::ValType (*unwrap_valtype_fn)(FizzyValueType value) = &unwrap;
+    std::transform(c_type.inputs, c_type.inputs + c_type.inputs_size, imported_func.inputs.begin(),
+        unwrap_valtype_fn);
+    imported_func.output = c_type.output == FizzyValueTypeVoid ?
+                               std::nullopt :
+                               std::make_optional(unwrap(c_type.output));
+
+    imported_func.function = unwrap(
+        c_imported_func.external_function.function, c_imported_func.external_function.context);
+
+    return imported_func;
+}
+
 }  // namespace
 
 extern "C" {
@@ -177,6 +199,29 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 
         auto instance = fizzy::instantiate(
             std::unique_ptr<const fizzy::Module>(unwrap(module)), std::move(functions));
+
+        return wrap(instance.release());
+    }
+    catch (...)
+    {
+        return nullptr;
+    }
+}
+
+FizzyInstance* fizzy_resolve_instantiate(const FizzyModule* c_module,
+    const FizzyImportedFunction* c_imported_functions, size_t imported_functions_size)
+{
+    try
+    {
+        std::vector<fizzy::ImportedFunction> imported_functions(imported_functions_size);
+        fizzy::ImportedFunction (*unwrap_imported_func_fn)(const FizzyImportedFunction&) = &unwrap;
+        std::transform(c_imported_functions, c_imported_functions + imported_functions_size,
+            imported_functions.begin(), unwrap_imported_func_fn);
+
+        std::unique_ptr<const fizzy::Module> module{unwrap(c_module)};
+        auto resolved_imports = fizzy::resolve_imported_functions(*module, imported_functions);
+
+        auto instance = fizzy::instantiate(std::move(module), std::move(resolved_imports));
 
         return wrap(instance.release());
     }
