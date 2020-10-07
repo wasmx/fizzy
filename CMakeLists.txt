@@ -66,6 +66,13 @@ if(WEVERYTHING)
     )
 endif()
 
+if(SANITIZE MATCHES address)
+    # Enables ASan-powered checks in std::vector in libstdc++.
+    # For sanity, this may be applied for libstdc++ builds, but it is not easy to detect
+    # what standard library implementation is being used.
+    add_compile_definitions(_GLIBCXX_SANITIZE_VECTOR)
+endif()
+
 # An option to enable assertions in non-Debug build types.
 # Disabling assertions in Debug build type has no effect (assertions are still enabled).
 option(ENABLE_ASSERTIONS "Enable NDEBUG based assertions" OFF)
@@ -83,7 +90,7 @@ if(ENABLE_ASSERTIONS)
 endif()
 
 if(FIZZY_FUZZING)
-    set(fuzzing_flags -fsanitize=fuzzer-no-link,address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation)
+    set(fuzzing_flags -fsanitize=fuzzer-no-link,address,pointer-subtract,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation)
     add_compile_options(${fuzzing_flags})
     add_link_options(${fuzzing_flags})
 endif()
