@@ -60,7 +60,7 @@ template <typename DstT, typename SrcT = DstT>
 inline bool load_from_memory(
     bytes_view memory, OperandStack& stack, const uint8_t*& immediates) noexcept
 {
-    const auto address = stack.pop().as<uint32_t>();
+    const auto address = stack.top().as<uint32_t>();
     // NOTE: alignment is dropped by the parser
     const auto offset = read<uint32_t>(immediates);
     // Addressing is 32-bit, but we keep the value as 64-bit to detect overflows.
@@ -68,7 +68,7 @@ inline bool load_from_memory(
         return false;
 
     const auto ret = load<SrcT>(memory, address + offset);
-    stack.push(extend<DstT>(ret));
+    stack.top() = extend<DstT>(ret);
     return true;
 }
 
@@ -830,8 +830,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i32_eqz:
         {
-            const auto value = stack.pop().as<uint32_t>();
-            stack.push(uint32_t{value == 0});
+            stack.top() = uint32_t{stack.top().as<uint32_t>() == 0};
             break;
         }
         case Instr::i32_eq:
@@ -886,7 +885,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i64_eqz:
         {
-            stack.push(uint32_t{stack.pop().i64 == 0});
+            stack.top() = uint32_t{stack.top().i64 == 0};
             break;
         }
         case Instr::i64_eq:
@@ -1034,42 +1033,41 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i32_div_s:
         {
-            auto const rhs = stack[0].as<int32_t>();
-            auto const lhs = stack[1].as<int32_t>();
+            const auto rhs = stack.pop().as<int32_t>();
+            const auto lhs = stack.top().as<int32_t>();
             if (rhs == 0 || (lhs == std::numeric_limits<int32_t>::min() && rhs == -1))
                 goto trap;
-            binary_op(stack, div<int32_t>);
+            stack.top() = div(lhs, rhs);
             break;
         }
         case Instr::i32_div_u:
         {
-            auto const rhs = stack.top().as<uint32_t>();
+            const auto rhs = stack.pop().as<uint32_t>();
             if (rhs == 0)
                 goto trap;
-            binary_op(stack, div<uint32_t>);
+            const auto lhs = stack.top().as<uint32_t>();
+            stack.top() = div(lhs, rhs);
             break;
         }
         case Instr::i32_rem_s:
         {
-            auto const rhs = stack.top().as<int32_t>();
+            const auto rhs = stack.pop().as<int32_t>();
             if (rhs == 0)
                 goto trap;
-            auto const lhs = stack[1].as<int32_t>();
+            const auto lhs = stack.top().as<int32_t>();
             if (lhs == std::numeric_limits<int32_t>::min() && rhs == -1)
-            {
-                stack.pop();
                 stack.top() = 0;
-            }
             else
-                binary_op(stack, rem<int32_t>);
+                stack.top() = rem(lhs, rhs);
             break;
         }
         case Instr::i32_rem_u:
         {
-            auto const rhs = stack.top().as<uint32_t>();
+            const auto rhs = stack.pop().as<uint32_t>();
             if (rhs == 0)
                 goto trap;
-            binary_op(stack, rem<uint32_t>);
+            const auto lhs = stack.top().as<uint32_t>();
+            stack.top() = rem(lhs, rhs);
             break;
         }
         case Instr::i32_and:
@@ -1145,42 +1143,41 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i64_div_s:
         {
-            auto const rhs = stack[0].as<int64_t>();
-            auto const lhs = stack[1].as<int64_t>();
+            const auto rhs = stack.pop().as<int64_t>();
+            const auto lhs = stack.top().as<int64_t>();
             if (rhs == 0 || (lhs == std::numeric_limits<int64_t>::min() && rhs == -1))
                 goto trap;
-            binary_op(stack, div<int64_t>);
+            stack.top() = div(lhs, rhs);
             break;
         }
         case Instr::i64_div_u:
         {
-            auto const rhs = stack.top().i64;
+            const auto rhs = stack.pop().i64;
             if (rhs == 0)
                 goto trap;
-            binary_op(stack, div<uint64_t>);
+            const auto lhs = stack.top().i64;
+            stack.top() = div(lhs, rhs);
             break;
         }
         case Instr::i64_rem_s:
         {
-            auto const rhs = stack.top().as<int64_t>();
+            const auto rhs = stack.pop().as<int64_t>();
             if (rhs == 0)
                 goto trap;
-            auto const lhs = stack[1].as<int64_t>();
+            const auto lhs = stack.top().as<int64_t>();
             if (lhs == std::numeric_limits<int64_t>::min() && rhs == -1)
-            {
-                stack.pop();
                 stack.top() = 0;
-            }
             else
-                binary_op(stack, rem<int64_t>);
+                stack.top() = rem(lhs, rhs);
             break;
         }
         case Instr::i64_rem_u:
         {
-            auto const rhs = stack.top().i64;
+            const auto rhs = stack.pop().i64;
             if (rhs == 0)
                 goto trap;
-            binary_op(stack, rem<uint64_t>);
+            const auto lhs = stack.top().i64;
+            stack.top() = rem(lhs, rhs);
             break;
         }
         case Instr::i64_and:
@@ -1377,7 +1374,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
 
         case Instr::i32_wrap_i64:
         {
-            stack.push(stack.pop().as<uint32_t>());
+            stack.top() = stack.top().as<uint32_t>();
             break;
         }
         case Instr::i32_trunc_f32_s:
@@ -1406,8 +1403,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i64_extend_i32_s:
         {
-            const auto value = stack.pop().as<int32_t>();
-            stack.push(int64_t{value});
+            stack.top() = int64_t{stack.top().as<int32_t>()};
             break;
         }
         case Instr::i64_extend_i32_u:
@@ -1520,7 +1516,7 @@ end:
     assert(pc == &code.instructions[code.instructions.size()]);  // End of code must be reached.
     assert(stack.size() == instance.module.get_function_type(func_idx).outputs.size());
 
-    return stack.size() != 0 ? ExecutionResult{stack.pop()} : Void;
+    return stack.size() != 0 ? ExecutionResult{stack.top()} : Void;
 
 trap:
     return Trap;
