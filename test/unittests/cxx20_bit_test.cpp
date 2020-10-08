@@ -44,3 +44,23 @@ TEST(cxx20_bit, bit_cast_uint32_to_array)
     EXPECT_EQ(bytes[2], 0xbb);
     EXPECT_EQ(bytes[3], 0xaa);
 }
+
+TEST(cxx20_bit, popcount32)
+{
+    EXPECT_EQ(popcount(uint32_t{0}), 0);
+    EXPECT_EQ(popcount(uint32_t{0xffffffff}), 32);
+    EXPECT_EQ(popcount(uint32_t{0xffff0000}), 16);
+    EXPECT_EQ(popcount(uint32_t{0x0000ffff}), 16);
+    EXPECT_EQ(popcount(uint32_t{0x00ffff00}), 16);
+    EXPECT_EQ(popcount(uint32_t{0x00ff00ff}), 16);
+}
+
+TEST(cxx20_bit, popcount64)
+{
+    EXPECT_EQ(popcount(uint64_t{0}), 0);
+    EXPECT_EQ(popcount(uint64_t{0xffffffffffffffff}), 64);
+    EXPECT_EQ(popcount(uint64_t{0xffffffff00000000}), 32);
+    EXPECT_EQ(popcount(uint64_t{0x00000000ffffffff}), 32);
+    EXPECT_EQ(popcount(uint64_t{0x0000ffffffff0000}), 32);
+    EXPECT_EQ(popcount(uint64_t{0x00ff00ff00ff00ff}), 32);
+}
