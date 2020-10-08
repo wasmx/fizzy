@@ -451,7 +451,7 @@ T fnearest(T value) noexcept
 
     // This implementation is based on adjusting the result produced by trunc() by +-1 when needed.
     const auto t = std::trunc(value);
-    if (const auto diff = std::abs(value - t); diff > T{0.5} || (diff == T{0.5} && !is_even(t)))
+    if (const auto diff = fabs(value - t); diff > T{0.5} || (diff == T{0.5} && !is_even(t)))
         return t + fcopysign(T{1}, value);
     else
         return t;
