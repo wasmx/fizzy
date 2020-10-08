@@ -333,6 +333,19 @@ inline constexpr T popcnt(T value) noexcept
 }
 
 template <typename T>
+T signbit(T value) noexcept = delete;
+
+inline bool signbit(float value) noexcept
+{
+    return (bit_cast<uint32_t>(value) & F32SignMask) != 0;
+}
+
+inline bool signbit(double value) noexcept
+{
+    return (bit_cast<uint64_t>(value) & F64SignMask) != 0;
+}
+
+template <typename T>
 T fabs(T value) noexcept = delete;
 
 template <>
@@ -460,7 +473,7 @@ inline T fmin(T a, T b) noexcept
     if (std::isnan(a) || std::isnan(b))
         return std::numeric_limits<T>::quiet_NaN();  // Positive canonical NaN.
 
-    if (a == 0 && b == 0 && (std::signbit(a) == 1 || std::signbit(b) == 1))
+    if (a == 0 && b == 0 && (signbit(a) || signbit(b)))
         return -T{0};
 
     return b < a ? b : a;
@@ -474,7 +487,7 @@ inline T fmax(T a, T b) noexcept
     if (std::isnan(a) || std::isnan(b))
         return std::numeric_limits<T>::quiet_NaN();  // Positive canonical NaN.
 
-    if (a == 0 && b == 0 && (std::signbit(a) == 0 || std::signbit(b) == 0))
+    if (a == 0 && b == 0 && (!signbit(a) || !signbit(b)))
         return T{0};
 
     return a < b ? b : a;
