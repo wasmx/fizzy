@@ -10,31 +10,31 @@ using namespace fizzy;
 using namespace testing;
 
 
-TEST(bit_cast, double_to_uint64)
+TEST(cxx20_bit, bit_cast_double_to_uint64)
 {
     // A test case from https://en.cppreference.com/w/cpp/numeric/bit_cast#Example.
     EXPECT_EQ(bit_cast<uint64_t>(19880124.0), 0x4172f58bc0000000);
 }
 
-TEST(bit_cast, uint64_to_double)
+TEST(cxx20_bit, bit_cast_uint64_to_double)
 {
     // A test case from https://en.cppreference.com/w/cpp/numeric/bit_cast#Example.
     EXPECT_EQ(bit_cast<double>(uint64_t{0x3fe9000000000000}), 0.781250);
 }
 
-TEST(bit_cast, uint32_to_int32)
+TEST(cxx20_bit, bit_cast_uint32_to_int32)
 {
     EXPECT_EQ(bit_cast<int32_t>(uint32_t{0x80000000}), -2147483648);
     EXPECT_EQ(bit_cast<int32_t>(uint32_t{0xffffffff}), -1);
 }
 
-TEST(bit_cast, int32_to_uint32)
+TEST(cxx20_bit, bit_cast_int32_to_uint32)
 {
     EXPECT_EQ(bit_cast<uint32_t>(int32_t{-2}), 0xfffffffe);
     EXPECT_EQ(bit_cast<uint32_t>(int32_t{1}), 1);
 }
 
-TEST(bit_cast, uint32_to_array)
+TEST(cxx20_bit, bit_cast_uint32_to_array)
 {
     // Uses "byte-symmetric" value to avoid handling endianness.
     std::array<uint8_t, 4> bytes;
