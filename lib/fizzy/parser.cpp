@@ -430,14 +430,14 @@ inline parser_result<Data> parse(const uint8_t* pos, const uint8_t* end)
     return {{offset, std::move(init)}, pos};
 }
 
-Module parse(bytes_view input)
+std::unique_ptr<const Module> parse(bytes_view input)
 {
     if (input.substr(0, wasm_prefix.size()) != wasm_prefix)
         throw parser_error{"invalid wasm module prefix"};
 
     input.remove_prefix(wasm_prefix.size());
 
-    Module module;
+    auto module{std::make_unique<Module>()};
     std::vector<code_view> code_binaries;
     SectionId last_id = SectionId::custom;
     for (auto it = input.begin(); it != input.end();)
@@ -460,37 +460,37 @@ Module parse(bytes_view input)
         switch (id)
         {
         case SectionId::type:
-            std::tie(module.typesec, it) = parse_vec<FuncType>(it, input.end());
+            std::tie(module->typesec, it) = parse_vec<FuncType>(it, input.end());
             break;
         case SectionId::import:
-            std::tie(module.importsec, it) = parse_vec<Import>(it, input.end());
+            std::tie(module->importsec, it) = parse_vec<Import>(it, input.end());
             break;
         case SectionId::function:
-            std::tie(module.funcsec, it) = parse_vec<TypeIdx>(it, input.end());
+            std::tie(module->funcsec, it) = parse_vec<TypeIdx>(it, input.end());
             break;
         case SectionId::table:
-            std::tie(module.tablesec, it) = parse_vec<Table>(it, input.end());
+            std::tie(module->tablesec, it) = parse_vec<Table>(it, input.end());
             break;
         case SectionId::memory:
-            std::tie(module.memorysec, it) = parse_vec<Memory>(it, input.end());
+            std::tie(module->memorysec, it) = parse_vec<Memory>(it, input.end());
             break;
         case SectionId::global:
-            std::tie(module.globalsec, it) = parse_vec<Global>(it, input.end());
+            std::tie(module->globalsec, it) = parse_vec<Global>(it, input.end());
             break;
         case SectionId::export_:
-            std::tie(module.exportsec, it) = parse_vec<Export>(it, input.end());
+            std::tie(module->exportsec, it) = parse_vec<Export>(it, input.end());
             break;
         case SectionId::start:
-            std::tie(module.startfunc, it) = leb128u_decode<uint32_t>(it, input.end());
+            std::tie(module->startfunc, it) = leb128u_decode<uint32_t>(it, input.end());
             break;
         case SectionId::element:
-            std::tie(module.elementsec, it) = parse_vec<Element>(it, input.end());
+            std::tie(module->elementsec, it) = parse_vec<Element>(it, input.end());
             break;
         case SectionId::code:
             std::tie(code_binaries, it) = parse_vec<code_view>(it, input.end());
             break;
         case SectionId::data:
-            std::tie(module.datasec, it) = parse_vec<Data>(it, input.end());
+            std::tie(module->datasec, it) = parse_vec<Data>(it, input.end());
             break;
         case SectionId::custom:
             // NOTE: this section can be ignored, but the name must be parseable (and valid UTF-8)
@@ -513,80 +513,80 @@ Module parse(bytes_view input)
     // Validation checks
 
     // Split imports by kind
-    for (const auto& import : module.importsec)
+    for (const auto& import : module->importsec)
     {
         switch (import.kind)
         {
         case ExternalKind::Function:
-            if (import.desc.function_type_index >= module.typesec.size())
+            if (import.desc.function_type_index >= module->typesec.size())
                 throw validation_error{"invalid type index of an imported function"};
-            module.imported_function_types.emplace_back(
-                module.typesec[import.desc.function_type_index]);
+            module->imported_function_types.emplace_back(
+                module->typesec[import.desc.function_type_index]);
             break;
         case ExternalKind::Table:
-            module.imported_table_types.emplace_back(import.desc.table);
+            module->imported_table_types.emplace_back(import.desc.table);
             break;
         case ExternalKind::Memory:
-            module.imported_memory_types.emplace_back(import.desc.memory);
+            module->imported_memory_types.emplace_back(import.desc.memory);
             break;
         case ExternalKind::Global:
-            module.imported_global_types.emplace_back(import.desc.global);
+            module->imported_global_types.emplace_back(import.desc.global);
             break;
         default:
             assert(false);
         }
     }
 
-    for (const auto type_idx : module.funcsec)
+    for (const auto type_idx : module->funcsec)
     {
-        if (type_idx >= module.typesec.size())
+        if (type_idx >= module->typesec.size())
             throw validation_error{"invalid function type index"};
     }
 
-    if (module.tablesec.size() > 1)
+    if (module->tablesec.size() > 1)
         throw validation_error{"too many table sections (at most one is allowed)"};
 
-    if (module.memorysec.size() > 1)
+    if (module->memorysec.size() > 1)
         throw validation_error{"too many memory sections (at most one is allowed)"};
 
-    if (module.imported_memory_types.size() > 1)
+    if (module->imported_memory_types.size() > 1)
         throw validation_error{"too many imported memories (at most one is allowed)"};
 
-    if (!module.memorysec.empty() && !module.imported_memory_types.empty())
+    if (!module->memorysec.empty() && !module->imported_memory_types.empty())
     {
         throw validation_error{
             "both module memory and imported memory are defined (at most one of them is allowed)"};
     }
 
-    if (!module.datasec.empty() && !module.has_memory())
+    if (!module->datasec.empty() && !module->has_memory())
         throw validation_error{"data section encountered without a memory section"};
 
-    for (const auto& data : module.datasec)
+    for (const auto& data : module->datasec)
     {
         // Offset expression is required to have i32 result value
         // https://webassembly.github.io/spec/core/valid/modules.html#data-segments
-        validate_constant_expression(data.offset, module, ValType::i32);
+        validate_constant_expression(data.offset, *module, ValType::i32);
     }
 
-    if (module.imported_table_types.size() > 1)
+    if (module->imported_table_types.size() > 1)
         throw validation_error{"too many imported tables (at most one is allowed)"};
 
-    if (!module.tablesec.empty() && !module.imported_table_types.empty())
+    if (!module->tablesec.empty() && !module->imported_table_types.empty())
     {
         throw validation_error{
             "both module table and imported table are defined (at most one of them is allowed)"};
     }
 
-    if (!module.elementsec.empty() && !module.has_table())
+    if (!module->elementsec.empty() && !module->has_table())
         throw validation_error{"element section encountered without a table section"};
 
-    const auto total_func_count = module.get_function_count();
+    const auto total_func_count = module->get_function_count();
 
-    for (const auto& element : module.elementsec)
+    for (const auto& element : module->elementsec)
     {
         // Offset expression is required to have i32 result value
         // https://webassembly.github.io/spec/core/valid/modules.html#element-segments
-        validate_constant_expression(element.offset, module, ValType::i32);
+        validate_constant_expression(element.offset, *module, ValType::i32);
         for (const auto func_idx : element.init)
         {
             if (func_idx >= total_func_count)
@@ -594,15 +594,15 @@ Module parse(bytes_view input)
         }
     }
 
-    const auto total_global_count = module.get_global_count();
-    for (const auto& global : module.globalsec)
+    const auto total_global_count = module->get_global_count();
+    for (const auto& global : module->globalsec)
     {
-        validate_constant_expression(global.expression, module, global.type.value_type);
+        validate_constant_expression(global.expression, *module, global.type.value_type);
 
         // Wasm spec section 3.3.7 constrains initialization by another global to const imports only
         // https://webassembly.github.io/spec/core/valid/instructions.html#expressions
         if (global.expression.kind == ConstantExpression::Kind::GlobalGet &&
-            global.expression.value.global_index >= module.imported_global_types.size())
+            global.expression.value.global_index >= module->imported_global_types.size())
         {
             throw validation_error{
                 "global can be initialized by another const global only if it's imported"};
@@ -610,12 +610,12 @@ Module parse(bytes_view input)
     }
 
 
-    if (module.funcsec.size() != code_binaries.size())
+    if (module->funcsec.size() != code_binaries.size())
         throw parser_error{"malformed binary: number of function and code entries must match"};
 
     // Validate exports.
     std::unordered_set<std::string_view> export_names;
-    for (const auto& export_ : module.exportsec)
+    for (const auto& export_ : module->exportsec)
     {
         switch (export_.kind)
         {
@@ -624,11 +624,11 @@ Module parse(bytes_view input)
                 throw validation_error{"invalid index of an exported function"};
             break;
         case ExternalKind::Table:
-            if (export_.index != 0 || !module.has_table())
+            if (export_.index != 0 || !module->has_table())
                 throw validation_error{"invalid index of an exported table"};
             break;
         case ExternalKind::Memory:
-            if (export_.index != 0 || !module.has_memory())
+            if (export_.index != 0 || !module->has_memory())
                 throw validation_error{"invalid index of an exported memory"};
             break;
         case ExternalKind::Global:
@@ -642,22 +642,23 @@ Module parse(bytes_view input)
             throw validation_error{"duplicate export name " + export_.name};
     }
 
-    if (module.startfunc)
+    if (module->startfunc)
     {
-        if (*module.startfunc >= total_func_count)
+        if (*module->startfunc >= total_func_count)
             throw validation_error{"invalid start function index"};
 
-        const auto& func_type = module.get_function_type(*module.startfunc);
+        const auto& func_type = module->get_function_type(*module->startfunc);
         if (!func_type.inputs.empty() || !func_type.outputs.empty())
             throw validation_error{"invalid start function type"};
     }
 
     // Process code. TODO: This can be done lazily.
-    module.codesec.reserve(code_binaries.size());
+    module->codesec.reserve(code_binaries.size());
     for (size_t i = 0; i < code_binaries.size(); ++i)
-        module.codesec.emplace_back(parse_code(code_binaries[i], static_cast<FuncIdx>(i), module));
+        module->codesec.emplace_back(
+            parse_code(code_binaries[i], static_cast<FuncIdx>(i), *module));
 
-    return module;
+    return std::unique_ptr<const Module>(module.release());
 }
 
 parser_result<std::vector<uint32_t>> parse_vec_i32(const uint8_t* pos, const uint8_t* end)

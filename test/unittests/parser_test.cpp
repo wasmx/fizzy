@@ -37,13 +37,13 @@ TEST(parser, valtype)
     auto& valtype_bin = wasm_bin.back();
 
     valtype_bin = 0x7e;
-    EXPECT_EQ(parse(wasm_bin).typesec.front().outputs.front(), ValType::i64);
+    EXPECT_EQ(parse(wasm_bin)->typesec.front().outputs.front(), ValType::i64);
     valtype_bin = 0x7f;
-    EXPECT_EQ(parse(wasm_bin).typesec.front().outputs.front(), ValType::i32);
+    EXPECT_EQ(parse(wasm_bin)->typesec.front().outputs.front(), ValType::i32);
     valtype_bin = 0x7c;
-    EXPECT_EQ(parse(wasm_bin).typesec.front().outputs.front(), ValType::f64);
+    EXPECT_EQ(parse(wasm_bin)->typesec.front().outputs.front(), ValType::f64);
     valtype_bin = 0x7d;
-    EXPECT_EQ(parse(wasm_bin).typesec.front().outputs.front(), ValType::f32);
+    EXPECT_EQ(parse(wasm_bin)->typesec.front().outputs.front(), ValType::f32);
     valtype_bin = 0x7a;
     EXPECT_THROW_MESSAGE(parse(wasm_bin), parser_error, "invalid valtype 122");
 }
@@ -60,7 +60,7 @@ TEST(parser, limits_min)
 {
     const auto wasm = bytes{wasm_prefix} + make_section(5, make_vec({"007f"_bytes}));
     const auto module = parse(wasm);
-    const auto& limits = module.memorysec[0].limits;
+    const auto& limits = module->memorysec[0].limits;
     EXPECT_EQ(limits.min, 0x7f);
     EXPECT_FALSE(limits.max.has_value());
 }
@@ -69,7 +69,7 @@ TEST(parser, limits_minmax)
 {
     const auto wasm = bytes{wasm_prefix} + make_section(5, make_vec({"01207f"_bytes}));
     const auto module = parse(wasm);
-    const auto& limits = module.memorysec[0].limits;
+    const auto& limits = module->memorysec[0].limits;
     EXPECT_EQ(limits.min, 0x20);
     EXPECT_TRUE(limits.max.has_value());
     EXPECT_EQ(*limits.max, 0x7f);
@@ -96,9 +96,9 @@ TEST(parser, limits_invalid)
 TEST(parser, module_empty)
 {
     const auto module = parse(wasm_prefix);
-    EXPECT_EQ(module.typesec.size(), 0);
-    EXPECT_EQ(module.funcsec.size(), 0);
-    EXPECT_EQ(module.codesec.size(), 0);
+    EXPECT_EQ(module->typesec.size(), 0);
+    EXPECT_EQ(module->funcsec.size(), 0);
+    EXPECT_EQ(module->codesec.size(), 0);
 }
 
 TEST(parser, module_with_wrong_prefix)
@@ -126,9 +126,9 @@ TEST(parser, custom_section_empty)
     // Section consists of an empty name
     const auto bin = bytes{wasm_prefix} + make_section(0, "00"_bytes);
     const auto module = parse(bin);
-    EXPECT_EQ(module.typesec.size(), 0);
-    EXPECT_EQ(module.funcsec.size(), 0);
-    EXPECT_EQ(module.codesec.size(), 0);
+    EXPECT_EQ(module->typesec.size(), 0);
+    EXPECT_EQ(module->funcsec.size(), 0);
+    EXPECT_EQ(module->codesec.size(), 0);
 }
 
 TEST(parser, custom_section_nonempty_name_only)
@@ -136,9 +136,9 @@ TEST(parser, custom_section_nonempty_name_only)
     // Section consists of only the name "abc"
     const auto bin = bytes{wasm_prefix} + make_section(0, "03616263"_bytes);
     const auto module = parse(bin);
-    EXPECT_EQ(module.typesec.size(), 0);
-    EXPECT_EQ(module.funcsec.size(), 0);
-    EXPECT_EQ(module.codesec.size(), 0);
+    EXPECT_EQ(module->typesec.size(), 0);
+    EXPECT_EQ(module->funcsec.size(), 0);
+    EXPECT_EQ(module->codesec.size(), 0);
 }
 
 TEST(parser, custom_section_name_not_ascii)
@@ -146,9 +146,9 @@ TEST(parser, custom_section_name_not_ascii)
     // Section consists of only the name with some non-ascii characters.
     const auto bin = bytes{wasm_prefix} + make_section(0, "0670617765c582"_bytes);
     const auto module = parse(bin);
-    EXPECT_EQ(module.typesec.size(), 0);
-    EXPECT_EQ(module.funcsec.size(), 0);
-    EXPECT_EQ(module.codesec.size(), 0);
+    EXPECT_EQ(module->typesec.size(), 0);
+    EXPECT_EQ(module->funcsec.size(), 0);
+    EXPECT_EQ(module->codesec.size(), 0);
 }
 
 TEST(parser, custom_section_nonempty)
@@ -157,9 +157,9 @@ TEST(parser, custom_section_nonempty)
     const auto bin =
         bytes{wasm_prefix} + make_section(0, "036162630000112233445566778899000099"_bytes);
     const auto module = parse(bin);
-    EXPECT_EQ(module.typesec.size(), 0);
-    EXPECT_EQ(module.funcsec.size(), 0);
-    EXPECT_EQ(module.codesec.size(), 0);
+    EXPECT_EQ(module->typesec.size(), 0);
+    EXPECT_EQ(module->funcsec.size(), 0);
+    EXPECT_EQ(module->codesec.size(), 0);
 }
 
 TEST(parser, custom_section_size_out_of_bounds)
@@ -197,7 +197,7 @@ TEST(parser, type_section_empty)
 {
     const auto bin = bytes{wasm_prefix} + make_section(1, make_vec({}));
     const auto module = parse(bin);
-    EXPECT_EQ(module.typesec.size(), 0);
+    EXPECT_EQ(module->typesec.size(), 0);
 }
 
 TEST(parser, type_section_wrong_prefix)
@@ -235,12 +235,12 @@ TEST(parser, type_section_with_single_functype)
     const auto section_contents = make_vec({make_functype({}, {})});
     const auto bin = bytes{wasm_prefix} + make_section(1, section_contents);
     const auto module = parse(bin);
-    ASSERT_EQ(module.typesec.size(), 1);
-    const auto functype = module.typesec[0];
+    ASSERT_EQ(module->typesec.size(), 1);
+    const auto functype = module->typesec[0];
     EXPECT_EQ(functype.inputs.size(), 0);
     EXPECT_EQ(functype.outputs.size(), 0);
-    EXPECT_EQ(module.funcsec.size(), 0);
-    EXPECT_EQ(module.codesec.size(), 0);
+    EXPECT_EQ(module->funcsec.size(), 0);
+    EXPECT_EQ(module->codesec.size(), 0);
 }
 
 TEST(parser, type_section_with_single_functype_params)
@@ -249,16 +249,16 @@ TEST(parser, type_section_with_single_functype_params)
     const auto section_contents = make_vec({make_functype({i32, i64, i32}, {i32})});
     const auto bin = bytes{wasm_prefix} + make_section(1, section_contents);
     const auto module = parse(bin);
-    ASSERT_EQ(module.typesec.size(), 1);
-    const auto functype = module.typesec[0];
+    ASSERT_EQ(module->typesec.size(), 1);
+    const auto functype = module->typesec[0];
     ASSERT_EQ(functype.inputs.size(), 3);
     EXPECT_EQ(functype.inputs[0], ValType::i32);
     EXPECT_EQ(functype.inputs[1], ValType::i64);
     EXPECT_EQ(functype.inputs[2], ValType::i32);
     ASSERT_EQ(functype.outputs.size(), 1);
     EXPECT_EQ(functype.outputs[0], ValType::i32);
-    EXPECT_EQ(module.funcsec.size(), 0);
-    EXPECT_EQ(module.codesec.size(), 0);
+    EXPECT_EQ(module->funcsec.size(), 0);
+    EXPECT_EQ(module->codesec.size(), 0);
 }
 
 TEST(parser, type_section_with_multiple_functypes)
@@ -271,22 +271,22 @@ TEST(parser, type_section_with_multiple_functypes)
     const auto bin = bytes{wasm_prefix} + make_section(1, section_contents);
 
     const auto module = parse(bin);
-    ASSERT_EQ(module.typesec.size(), 3);
-    const auto functype0 = module.typesec[0];
+    ASSERT_EQ(module->typesec.size(), 3);
+    const auto functype0 = module->typesec[0];
     EXPECT_EQ(functype0.inputs.size(), 0);
     EXPECT_EQ(functype0.outputs.size(), 0);
-    const auto functype1 = module.typesec[1];
+    const auto functype1 = module->typesec[1];
     EXPECT_EQ(functype1.inputs.size(), 2);
     EXPECT_EQ(functype1.inputs[0], ValType::i32);
     EXPECT_EQ(functype1.inputs[1], ValType::i64);
     EXPECT_EQ(functype1.outputs.size(), 1);
     EXPECT_EQ(functype1.outputs[0], ValType::i32);
-    const auto functype2 = module.typesec[2];
+    const auto functype2 = module->typesec[2];
     EXPECT_EQ(functype2.inputs.size(), 1);
     EXPECT_EQ(functype2.inputs[0], ValType::i32);
     EXPECT_EQ(functype2.outputs.size(), 0);
-    EXPECT_EQ(module.funcsec.size(), 0);
-    EXPECT_EQ(module.codesec.size(), 0);
+    EXPECT_EQ(module->funcsec.size(), 0);
+    EXPECT_EQ(module->codesec.size(), 0);
 }
 
 TEST(parser, type_section_functype_out_of_bounds)
@@ -299,7 +299,7 @@ TEST(parser, import_section_empty)
 {
     const auto bin = bytes{wasm_prefix} + make_section(2, make_vec({}));
     const auto module = parse(bin);
-    EXPECT_EQ(module.importsec.size(), 0);
+    EXPECT_EQ(module->importsec.size(), 0);
 }
 
 TEST(parser, import_single_function)
@@ -310,11 +310,11 @@ TEST(parser, import_single_function)
         bytes{wasm_prefix} + make_section(1, type_section) + make_section(2, import_section);
 
     const auto module = parse(bin);
-    ASSERT_EQ(module.importsec.size(), 1);
-    EXPECT_EQ(module.importsec[0].module, "mod");
-    EXPECT_EQ(module.importsec[0].name, "foo");
-    EXPECT_EQ(module.importsec[0].kind, ExternalKind::Function);
-    EXPECT_EQ(module.importsec[0].desc.function_type_index, 1);
+    ASSERT_EQ(module->importsec.size(), 1);
+    EXPECT_EQ(module->importsec[0].module, "mod");
+    EXPECT_EQ(module->importsec[0].name, "foo");
+    EXPECT_EQ(module->importsec[0].kind, ExternalKind::Function);
+    EXPECT_EQ(module->importsec[0].desc.function_type_index, 1);
 }
 
 TEST(parser, import_multiple)
@@ -328,27 +328,27 @@ TEST(parser, import_multiple)
         bytes{wasm_prefix} + make_section(1, type_section) + make_section(2, import_section);
 
     const auto module = parse(bin);
-    ASSERT_EQ(module.importsec.size(), 4);
-    EXPECT_EQ(module.importsec[0].module, "m1");
-    EXPECT_EQ(module.importsec[0].name, "abc");
-    EXPECT_EQ(module.importsec[0].kind, ExternalKind::Function);
-    EXPECT_EQ(module.importsec[0].desc.function_type_index, 0x01);
-    EXPECT_EQ(module.importsec[1].module, "m2");
-    EXPECT_EQ(module.importsec[1].name, "foo");
-    EXPECT_EQ(module.importsec[1].kind, ExternalKind::Memory);
-    EXPECT_EQ(module.importsec[1].desc.memory.limits.min, 0x7f);
-    EXPECT_FALSE(module.importsec[1].desc.memory.limits.max);
-    EXPECT_EQ(module.importsec[2].module, "m3");
-    EXPECT_EQ(module.importsec[2].name, "bar");
-    EXPECT_EQ(module.importsec[2].kind, ExternalKind::Global);
-    EXPECT_FALSE(module.importsec[2].desc.global.is_mutable);
-    EXPECT_EQ(module.importsec[2].desc.global.value_type, ValType::i32);
-    EXPECT_EQ(module.importsec[3].module, "m4");
-    EXPECT_EQ(module.importsec[3].name, "tab");
-    EXPECT_EQ(module.importsec[3].kind, ExternalKind::Table);
-    EXPECT_EQ(module.importsec[3].desc.table.limits.min, 1);
-    ASSERT_TRUE(module.importsec[3].desc.table.limits.max.has_value());
-    EXPECT_EQ(*module.importsec[3].desc.table.limits.max, 0x42);
+    ASSERT_EQ(module->importsec.size(), 4);
+    EXPECT_EQ(module->importsec[0].module, "m1");
+    EXPECT_EQ(module->importsec[0].name, "abc");
+    EXPECT_EQ(module->importsec[0].kind, ExternalKind::Function);
+    EXPECT_EQ(module->importsec[0].desc.function_type_index, 0x01);
+    EXPECT_EQ(module->importsec[1].module, "m2");
+    EXPECT_EQ(module->importsec[1].name, "foo");
+    EXPECT_EQ(module->importsec[1].kind, ExternalKind::Memory);
+    EXPECT_EQ(module->importsec[1].desc.memory.limits.min, 0x7f);
+    EXPECT_FALSE(module->importsec[1].desc.memory.limits.max);
+    EXPECT_EQ(module->importsec[2].module, "m3");
+    EXPECT_EQ(module->importsec[2].name, "bar");
+    EXPECT_EQ(module->importsec[2].kind, ExternalKind::Global);
+    EXPECT_FALSE(module->importsec[2].desc.global.is_mutable);
+    EXPECT_EQ(module->importsec[2].desc.global.value_type, ValType::i32);
+    EXPECT_EQ(module->importsec[3].module, "m4");
+    EXPECT_EQ(module->importsec[3].name, "tab");
+    EXPECT_EQ(module->importsec[3].kind, ExternalKind::Table);
+    EXPECT_EQ(module->importsec[3].desc.table.limits.min, 1);
+    ASSERT_TRUE(module->importsec[3].desc.table.limits.max.has_value());
+    EXPECT_EQ(*module->importsec[3].desc.table.limits.max, 0x42);
 }
 
 TEST(parser, import_invalid_kind)
@@ -383,7 +383,7 @@ TEST(parser, function_section_empty)
 {
     const auto bin = bytes{wasm_prefix} + make_section(3, make_vec({}));
     const auto module = parse(bin);
-    EXPECT_EQ(module.funcsec.size(), 0);
+    EXPECT_EQ(module->funcsec.size(), 0);
 }
 
 TEST(parser, function_section_with_single_function)
@@ -394,8 +394,8 @@ TEST(parser, function_section_with_single_function)
     const auto bin = bytes{wasm_prefix} + make_section(1, type_section) +
                      make_section(3, function_section) + make_section(10, code_section);
     const auto module = parse(bin);
-    ASSERT_EQ(module.funcsec.size(), 1);
-    EXPECT_EQ(module.funcsec[0], 0);
+    ASSERT_EQ(module->funcsec.size(), 1);
+    EXPECT_EQ(module->funcsec[0], 0);
 }
 
 TEST(parser, function_section_with_multiple_functions)
@@ -409,11 +409,11 @@ TEST(parser, function_section_with_multiple_functions)
     const auto bin = bytes{wasm_prefix} + make_section(1, type_section) +
                      make_section(3, function_section) + make_section(10, code_section);
     const auto module = parse(bin);
-    ASSERT_EQ(module.funcsec.size(), 4);
-    EXPECT_EQ(module.funcsec[0], 0);
-    EXPECT_EQ(module.funcsec[1], 1);
-    EXPECT_EQ(module.funcsec[2], 3);
-    EXPECT_EQ(module.funcsec[3], 4);
+    ASSERT_EQ(module->funcsec.size(), 4);
+    EXPECT_EQ(module->funcsec[0], 0);
+    EXPECT_EQ(module->funcsec[1], 1);
+    EXPECT_EQ(module->funcsec[2], 3);
+    EXPECT_EQ(module->funcsec[3], 4);
 }
 
 TEST(parser, function_section_size_128)
@@ -427,7 +427,7 @@ TEST(parser, function_section_size_128)
     const auto wasm_bin = bytes{wasm_prefix} + make_section(1, type_section) +
                           make_section(3, function_section) + make_section(10, code_section);
     const auto module = parse(wasm_bin);
-    ASSERT_EQ(module.funcsec.size(), size);
+    ASSERT_EQ(module->funcsec.size(), size);
 }
 
 TEST(parser, function_section_end_out_of_bounds)
@@ -466,7 +466,7 @@ TEST(parser, table_section_empty)
 {
     const auto bin = bytes{wasm_prefix} + make_section(4, make_vec({}));
     const auto module = parse(bin);
-    EXPECT_EQ(module.tablesec.size(), 0);
+    EXPECT_EQ(module->tablesec.size(), 0);
 }
 
 TEST(parser, table_single_min_limit)
@@ -475,8 +475,8 @@ TEST(parser, table_single_min_limit)
     const auto bin = bytes{wasm_prefix} + make_section(4, section_contents);
 
     const auto module = parse(bin);
-    ASSERT_EQ(module.tablesec.size(), 1);
-    EXPECT_EQ(module.tablesec[0].limits.min, 0x7f);
+    ASSERT_EQ(module->tablesec.size(), 1);
+    EXPECT_EQ(module->tablesec[0].limits.min, 0x7f);
 }
 
 TEST(parser, table_single_minmax_limit)
@@ -485,9 +485,9 @@ TEST(parser, table_single_minmax_limit)
     const auto bin = bytes{wasm_prefix} + make_section(4, section_contents);
 
     const auto module = parse(bin);
-    ASSERT_EQ(module.tablesec.size(), 1);
-    EXPECT_EQ(module.tablesec[0].limits.min, 0x12);
-    EXPECT_EQ(module.tablesec[0].limits.max, 0x7f);
+    ASSERT_EQ(module->tablesec.size(), 1);
+    EXPECT_EQ(module->tablesec[0].limits.min, 0x12);
+    EXPECT_EQ(module->tablesec[0].limits.max, 0x7f);
 }
 
 // Where minimum exceeds maximum
@@ -516,7 +516,7 @@ TEST(parser, memory_section_empty)
 {
     const auto bin = bytes{wasm_prefix} + make_section(5, make_vec({}));
     const auto module = parse(bin);
-    EXPECT_EQ(module.memorysec.size(), 0);
+    EXPECT_EQ(module->memorysec.size(), 0);
 }
 
 TEST(parser, memory_single_min_limit)
@@ -525,8 +525,8 @@ TEST(parser, memory_single_min_limit)
     const auto bin = bytes{wasm_prefix} + make_section(5, section_contents);
 
     const auto module = parse(bin);
-    ASSERT_EQ(module.memorysec.size(), 1);
-    EXPECT_EQ(module.memorysec[0].limits.min, 0x7f);
+    ASSERT_EQ(module->memorysec.size(), 1);
+    EXPECT_EQ(module->memorysec[0].limits.min, 0x7f);
 }
 
 TEST(parser, memory_single_minmax_limit)
@@ -535,9 +535,9 @@ TEST(parser, memory_single_minmax_limit)
     const auto bin = bytes{wasm_prefix} + make_section(5, section_contents);
 
     const auto module = parse(bin);
-    ASSERT_EQ(module.memorysec.size(), 1);
-    EXPECT_EQ(module.memorysec[0].limits.min, 0x12);
-    EXPECT_EQ(module.memorysec[0].limits.max, 0x7f);
+    ASSERT_EQ(module->memorysec.size(), 1);
+    EXPECT_EQ(module->memorysec[0].limits.min, 0x12);
+    EXPECT_EQ(module->memorysec[0].limits.max, 0x7f);
 }
 
 // Where minimum exceeds maximum
@@ -578,7 +578,7 @@ TEST(parser, global_section_empty)
 {
     const auto bin = bytes{wasm_prefix} + make_section(6, make_vec({}));
     const auto module = parse(bin);
-    EXPECT_EQ(module.globalsec.size(), 0);
+    EXPECT_EQ(module->globalsec.size(), 0);
 }
 
 TEST(parser, global_single_mutable_const_inited)
@@ -587,11 +587,11 @@ TEST(parser, global_single_mutable_const_inited)
     const auto bin = bytes{wasm_prefix} + make_section(6, section_contents);
 
     const auto module = parse(bin);
-    ASSERT_EQ(module.globalsec.size(), 1);
-    EXPECT_TRUE(module.globalsec[0].type.is_mutable);
-    EXPECT_EQ(module.globalsec[0].type.value_type, ValType::i32);
-    EXPECT_EQ(module.globalsec[0].expression.kind, ConstantExpression::Kind::Constant);
-    EXPECT_EQ(as_uint32(module.globalsec[0].expression.value.constant), 0x10);
+    ASSERT_EQ(module->globalsec.size(), 1);
+    EXPECT_TRUE(module->globalsec[0].type.is_mutable);
+    EXPECT_EQ(module->globalsec[0].type.value_type, ValType::i32);
+    EXPECT_EQ(module->globalsec[0].expression.kind, ConstantExpression::Kind::Constant);
+    EXPECT_EQ(as_uint32(module->globalsec[0].expression.value.constant), 0x10);
 }
 
 TEST(parser, global_multi_global_inited)
@@ -605,11 +605,11 @@ TEST(parser, global_multi_global_inited)
         from_hex("0061736d01000000021102016d026731037f00016d026732037f000606017f0023010b");
     const auto module = parse(bin);
 
-    ASSERT_EQ(module.globalsec.size(), 1);
-    EXPECT_FALSE(module.globalsec[0].type.is_mutable);
-    EXPECT_EQ(module.globalsec[0].type.value_type, ValType::i32);
-    EXPECT_EQ(module.globalsec[0].expression.kind, ConstantExpression::Kind::GlobalGet);
-    EXPECT_EQ(module.globalsec[0].expression.value.global_index, 0x01);
+    ASSERT_EQ(module->globalsec.size(), 1);
+    EXPECT_FALSE(module->globalsec[0].type.is_mutable);
+    EXPECT_EQ(module->globalsec[0].type.value_type, ValType::i32);
+    EXPECT_EQ(module->globalsec[0].expression.kind, ConstantExpression::Kind::GlobalGet);
+    EXPECT_EQ(module->globalsec[0].expression.value.global_index, 0x01);
 }
 
 TEST(parser, global_multi_const_inited)
@@ -620,15 +620,15 @@ TEST(parser, global_multi_const_inited)
     const auto bin = bytes{wasm_prefix} + make_section(6, section_contents);
 
     const auto module = parse(bin);
-    ASSERT_EQ(module.globalsec.size(), 2);
-    EXPECT_FALSE(module.globalsec[0].type.is_mutable);
-    EXPECT_EQ(module.globalsec[0].type.value_type, ValType::i32);
-    EXPECT_EQ(module.globalsec[0].expression.kind, ConstantExpression::Kind::Constant);
-    EXPECT_EQ(as_uint32(module.globalsec[0].expression.value.constant), 1);
-    EXPECT_TRUE(module.globalsec[1].type.is_mutable);
-    EXPECT_EQ(module.globalsec[1].type.value_type, ValType::i32);
-    EXPECT_EQ(module.globalsec[1].expression.kind, ConstantExpression::Kind::Constant);
-    EXPECT_EQ(as_uint32(module.globalsec[1].expression.value.constant), uint32_t(-1));
+    ASSERT_EQ(module->globalsec.size(), 2);
+    EXPECT_FALSE(module->globalsec[0].type.is_mutable);
+    EXPECT_EQ(module->globalsec[0].type.value_type, ValType::i32);
+    EXPECT_EQ(module->globalsec[0].expression.kind, ConstantExpression::Kind::Constant);
+    EXPECT_EQ(as_uint32(module->globalsec[0].expression.value.constant), 1);
+    EXPECT_TRUE(module->globalsec[1].type.is_mutable);
+    EXPECT_EQ(module->globalsec[1].type.value_type, ValType::i32);
+    EXPECT_EQ(module->globalsec[1].expression.kind, ConstantExpression::Kind::Constant);
+    EXPECT_EQ(as_uint32(module->globalsec[1].expression.value.constant), uint32_t(-1));
 }
 
 TEST(parser, global_float)
@@ -645,31 +645,31 @@ TEST(parser, global_float)
         "33330b400b7c0023010b");
 
     const auto module = parse(bin);
-    ASSERT_EQ(module.importsec.size(), 2);
-    EXPECT_EQ(module.importsec[0].kind, ExternalKind::Global);
-    EXPECT_EQ(module.importsec[0].module, "m");
-    EXPECT_EQ(module.importsec[0].name, "g1");
-    EXPECT_TRUE(module.importsec[0].desc.global.is_mutable);
-    EXPECT_EQ(module.importsec[0].desc.global.value_type, ValType::f32);
-    EXPECT_EQ(module.importsec[1].kind, ExternalKind::Global);
-    EXPECT_EQ(module.importsec[1].module, "m");
-    EXPECT_EQ(module.importsec[1].name, "g2");
-    EXPECT_FALSE(module.importsec[1].desc.global.is_mutable);
-    EXPECT_EQ(module.importsec[1].desc.global.value_type, ValType::f64);
+    ASSERT_EQ(module->importsec.size(), 2);
+    EXPECT_EQ(module->importsec[0].kind, ExternalKind::Global);
+    EXPECT_EQ(module->importsec[0].module, "m");
+    EXPECT_EQ(module->importsec[0].name, "g1");
+    EXPECT_TRUE(module->importsec[0].desc.global.is_mutable);
+    EXPECT_EQ(module->importsec[0].desc.global.value_type, ValType::f32);
+    EXPECT_EQ(module->importsec[1].kind, ExternalKind::Global);
+    EXPECT_EQ(module->importsec[1].module, "m");
+    EXPECT_EQ(module->importsec[1].name, "g2");
+    EXPECT_FALSE(module->importsec[1].desc.global.is_mutable);
+    EXPECT_EQ(module->importsec[1].desc.global.value_type, ValType::f64);
 
-    ASSERT_EQ(module.globalsec.size(), 3);
-    EXPECT_FALSE(module.globalsec[0].type.is_mutable);
-    EXPECT_EQ(module.globalsec[0].type.value_type, ValType::f32);
-    EXPECT_EQ(module.globalsec[0].expression.kind, ConstantExpression::Kind::Constant);
-    EXPECT_EQ(module.globalsec[0].expression.value.constant.f32, 1.2f);
-    EXPECT_TRUE(module.globalsec[1].type.is_mutable);
-    EXPECT_EQ(module.globalsec[1].type.value_type, ValType::f64);
-    EXPECT_EQ(module.globalsec[1].expression.kind, ConstantExpression::Kind::Constant);
-    EXPECT_EQ(module.globalsec[1].expression.value.constant.f64, 3.4);
-    EXPECT_FALSE(module.globalsec[2].type.is_mutable);
-    EXPECT_EQ(module.globalsec[2].type.value_type, ValType::f64);
-    EXPECT_EQ(module.globalsec[2].expression.kind, ConstantExpression::Kind::GlobalGet);
-    EXPECT_EQ(module.globalsec[2].expression.value.global_index, 1);
+    ASSERT_EQ(module->globalsec.size(), 3);
+    EXPECT_FALSE(module->globalsec[0].type.is_mutable);
+    EXPECT_EQ(module->globalsec[0].type.value_type, ValType::f32);
+    EXPECT_EQ(module->globalsec[0].expression.kind, ConstantExpression::Kind::Constant);
+    EXPECT_EQ(module->globalsec[0].expression.value.constant.f32, 1.2f);
+    EXPECT_TRUE(module->globalsec[1].type.is_mutable);
+    EXPECT_EQ(module->globalsec[1].type.value_type, ValType::f64);
+    EXPECT_EQ(module->globalsec[1].expression.kind, ConstantExpression::Kind::Constant);
+    EXPECT_EQ(module->globalsec[1].expression.value.constant.f64, 3.4);
+    EXPECT_FALSE(module->globalsec[2].type.is_mutable);
+    EXPECT_EQ(module->globalsec[2].type.value_type, ValType::f64);
+    EXPECT_EQ(module->globalsec[2].expression.kind, ConstantExpression::Kind::GlobalGet);
+    EXPECT_EQ(module->globalsec[2].expression.value.global_index, 1);
 }
 
 TEST(parser, global_invalid_mutability)
@@ -730,7 +730,7 @@ TEST(parser, export_section_empty)
 {
     const auto bin = bytes{wasm_prefix} + make_section(7, make_vec({}));
     const auto module = parse(bin);
-    EXPECT_EQ(module.exportsec.size(), 0);
+    EXPECT_EQ(module->exportsec.size(), 0);
 }
 
 TEST(parser, export_single_function)
@@ -745,10 +745,10 @@ TEST(parser, export_single_function)
                      make_section(10, code_section);
 
     const auto module = parse(bin);
-    ASSERT_EQ(module.exportsec.size(), 1);
-    EXPECT_EQ(module.exportsec[0].name, "abc");
-    EXPECT_EQ(module.exportsec[0].kind, ExternalKind::Function);
-    EXPECT_EQ(module.exportsec[0].index, 0);
+    ASSERT_EQ(module->exportsec.size(), 1);
+    EXPECT_EQ(module->exportsec[0].name, "abc");
+    EXPECT_EQ(module->exportsec[0].kind, ExternalKind::Function);
+    EXPECT_EQ(module->exportsec[0].index, 0);
 }
 
 TEST(parser, export_multiple)
@@ -764,19 +764,19 @@ TEST(parser, export_multiple)
         "0003666f6f01000362617202000378797a03000a05010300010b");
 
     const auto module = parse(wasm);
-    ASSERT_EQ(module.exportsec.size(), 4);
-    EXPECT_EQ(module.exportsec[0].name, "abc");
-    EXPECT_EQ(module.exportsec[0].kind, ExternalKind::Function);
-    EXPECT_EQ(module.exportsec[0].index, 0);
-    EXPECT_EQ(module.exportsec[1].name, "foo");
-    EXPECT_EQ(module.exportsec[1].kind, ExternalKind::Table);
-    EXPECT_EQ(module.exportsec[1].index, 0);
-    EXPECT_EQ(module.exportsec[2].name, "bar");
-    EXPECT_EQ(module.exportsec[2].kind, ExternalKind::Memory);
-    EXPECT_EQ(module.exportsec[2].index, 0);
-    EXPECT_EQ(module.exportsec[3].name, "xyz");
-    EXPECT_EQ(module.exportsec[3].kind, ExternalKind::Global);
-    EXPECT_EQ(module.exportsec[3].index, 0);
+    ASSERT_EQ(module->exportsec.size(), 4);
+    EXPECT_EQ(module->exportsec[0].name, "abc");
+    EXPECT_EQ(module->exportsec[0].kind, ExternalKind::Function);
+    EXPECT_EQ(module->exportsec[0].index, 0);
+    EXPECT_EQ(module->exportsec[1].name, "foo");
+    EXPECT_EQ(module->exportsec[1].kind, ExternalKind::Table);
+    EXPECT_EQ(module->exportsec[1].index, 0);
+    EXPECT_EQ(module->exportsec[2].name, "bar");
+    EXPECT_EQ(module->exportsec[2].kind, ExternalKind::Memory);
+    EXPECT_EQ(module->exportsec[2].index, 0);
+    EXPECT_EQ(module->exportsec[3].name, "xyz");
+    EXPECT_EQ(module->exportsec[3].kind, ExternalKind::Global);
+    EXPECT_EQ(module->exportsec[3].index, 0);
 }
 
 TEST(parser, export_invalid_kind)
@@ -818,8 +818,8 @@ TEST(parser, start)
                      make_section(10, code_section);
 
     const auto module = parse(bin);
-    EXPECT_TRUE(module.startfunc);
-    EXPECT_EQ(*module.startfunc, 1);
+    EXPECT_TRUE(module->startfunc);
+    EXPECT_EQ(*module->startfunc, 1);
 }
 
 TEST(parser, start_invalid_index)
@@ -856,8 +856,8 @@ TEST(parser, start_module_with_imports)
                      make_section(8, start_section) + make_section(10, code_section);
 
     const auto module = parse(bin);
-    EXPECT_TRUE(module.startfunc);
-    EXPECT_EQ(*module.startfunc, 2);
+    EXPECT_TRUE(module->startfunc);
+    EXPECT_EQ(*module->startfunc, 2);
 }
 
 TEST(parser, start_module_with_imports_invalid_index)
@@ -885,7 +885,7 @@ TEST(parser, element_section_empty)
 {
     const auto bin = bytes{wasm_prefix} + make_section(9, make_vec({}));
     const auto module = parse(bin);
-    EXPECT_EQ(module.elementsec.size(), 0);
+    EXPECT_EQ(module->elementsec.size(), 0);
 }
 
 TEST(parser, element_section)
@@ -906,22 +906,22 @@ TEST(parser, element_section)
         "0200010041020b0202030023000b0200030a0d0402000b02000b02000b02000b");
     const auto module = parse(bin);
 
-    ASSERT_EQ(module.elementsec.size(), 3);
-    EXPECT_EQ(module.elementsec[0].offset.kind, ConstantExpression::Kind::Constant);
-    EXPECT_EQ(as_uint32(module.elementsec[0].offset.value.constant), 1);
-    ASSERT_EQ(module.elementsec[0].init.size(), 2);
-    EXPECT_EQ(module.elementsec[0].init[0], 0);
-    EXPECT_EQ(module.elementsec[0].init[1], 1);
-    EXPECT_EQ(module.elementsec[1].offset.kind, ConstantExpression::Kind::Constant);
-    EXPECT_EQ(as_uint32(module.elementsec[1].offset.value.constant), 2);
-    ASSERT_EQ(module.elementsec[1].init.size(), 2);
-    EXPECT_EQ(module.elementsec[1].init[0], 2);
-    EXPECT_EQ(module.elementsec[1].init[1], 3);
-    EXPECT_EQ(module.elementsec[2].offset.kind, ConstantExpression::Kind::GlobalGet);
-    EXPECT_EQ(module.elementsec[2].offset.value.global_index, 0);
-    ASSERT_EQ(module.elementsec[2].init.size(), 2);
-    EXPECT_EQ(module.elementsec[2].init[0], 0);
-    EXPECT_EQ(module.elementsec[2].init[1], 3);
+    ASSERT_EQ(module->elementsec.size(), 3);
+    EXPECT_EQ(module->elementsec[0].offset.kind, ConstantExpression::Kind::Constant);
+    EXPECT_EQ(as_uint32(module->elementsec[0].offset.value.constant), 1);
+    ASSERT_EQ(module->elementsec[0].init.size(), 2);
+    EXPECT_EQ(module->elementsec[0].init[0], 0);
+    EXPECT_EQ(module->elementsec[0].init[1], 1);
+    EXPECT_EQ(module->elementsec[1].offset.kind, ConstantExpression::Kind::Constant);
+    EXPECT_EQ(as_uint32(module->elementsec[1].offset.value.constant), 2);
+    ASSERT_EQ(module->elementsec[1].init.size(), 2);
+    EXPECT_EQ(module->elementsec[1].init[0], 2);
+    EXPECT_EQ(module->elementsec[1].init[1], 3);
+    EXPECT_EQ(module->elementsec[2].offset.kind, ConstantExpression::Kind::GlobalGet);
+    EXPECT_EQ(module->elementsec[2].offset.value.global_index, 0);
+    ASSERT_EQ(module->elementsec[2].init.size(), 2);
+    EXPECT_EQ(module->elementsec[2].init[0], 0);
+    EXPECT_EQ(module->elementsec[2].init[1], 3);
 }
 
 TEST(parser, element_section_tableidx_nonzero)
@@ -952,7 +952,7 @@ TEST(parser, code_section_empty)
 {
     const auto bin = bytes{wasm_prefix} + make_section(10, make_vec({}));
     const auto module = parse(bin);
-    EXPECT_EQ(module.codesec.size(), 0);
+    EXPECT_EQ(module->codesec.size(), 0);
 }
 
 TEST(parser, code_locals)
@@ -964,8 +964,8 @@ TEST(parser, code_locals)
         make_section(10, make_vec({add_size_prefix(make_vec({wasm_locals}) + "0b"_bytes)}));
 
     const auto module = parse(wasm);
-    ASSERT_EQ(module.codesec.size(), 1);
-    EXPECT_EQ(module.codesec[0].local_count, 0x81);
+    ASSERT_EQ(module->codesec.size(), 1);
+    EXPECT_EQ(module->codesec[0].local_count, 0x81);
 }
 
 TEST(parser, code_locals_2)
@@ -982,8 +982,8 @@ TEST(parser, code_locals_2)
                 make_vec({wasm_locals1, wasm_locals2, wasm_locals3, wasm_locals4}) + "0b"_bytes)}));
 
     const auto module = parse(wasm);
-    ASSERT_EQ(module.codesec.size(), 1);
-    EXPECT_EQ(module.codesec[0].local_count, 1 + 2 + 3 + 4);
+    ASSERT_EQ(module->codesec.size(), 1);
+    EXPECT_EQ(module->codesec[0].local_count, 1 + 2 + 3 + 4);
 }
 
 TEST(parser, code_locals_invalid_type)
@@ -1023,8 +1023,8 @@ TEST(parser, code_with_empty_expr_2_locals)
                           make_section(3, "0100"_bytes) + make_section(10, make_vec({code_bin}));
 
     const auto module = parse(wasm_bin);
-    ASSERT_EQ(module.codesec.size(), 1);
-    const auto& code_obj = module.codesec[0];
+    ASSERT_EQ(module->codesec.size(), 1);
+    const auto& code_obj = module->codesec[0];
     EXPECT_EQ(code_obj.local_count, 2);
     ASSERT_EQ(code_obj.instructions.size(), 1);
     EXPECT_EQ(code_obj.instructions[0], Instr::end);
@@ -1040,8 +1040,8 @@ TEST(parser, code_with_empty_expr_5_locals)
                           make_section(3, "0100"_bytes) + make_section(10, make_vec({code_bin}));
 
     const auto module = parse(wasm_bin);
-    ASSERT_EQ(module.codesec.size(), 1);
-    const auto& code_obj = module.codesec[0];
+    ASSERT_EQ(module->codesec.size(), 1);
+    const auto& code_obj = module->codesec[0];
     EXPECT_EQ(code_obj.local_count, 5);
     ASSERT_EQ(code_obj.instructions.size(), 1);
     EXPECT_EQ(code_obj.instructions[0], Instr::end);
@@ -1057,16 +1057,16 @@ TEST(parser, code_section_with_2_trivial_codes)
                      make_section(3, "020000"_bytes) + make_section(10, section_contents);
 
     const auto module = parse(bin);
-    ASSERT_EQ(module.typesec.size(), 1);
-    EXPECT_EQ(module.typesec[0].inputs.size(), 0);
-    EXPECT_EQ(module.typesec[0].outputs.size(), 0);
-    ASSERT_EQ(module.codesec.size(), 2);
-    EXPECT_EQ(module.codesec[0].local_count, 0);
-    ASSERT_EQ(module.codesec[0].instructions.size(), 1);
-    EXPECT_EQ(module.codesec[0].instructions[0], Instr::end);
-    EXPECT_EQ(module.codesec[1].local_count, 0);
-    ASSERT_EQ(module.codesec[1].instructions.size(), 1);
-    EXPECT_EQ(module.codesec[1].instructions[0], Instr::end);
+    ASSERT_EQ(module->typesec.size(), 1);
+    EXPECT_EQ(module->typesec[0].inputs.size(), 0);
+    EXPECT_EQ(module->typesec[0].outputs.size(), 0);
+    ASSERT_EQ(module->codesec.size(), 2);
+    EXPECT_EQ(module->codesec[0].local_count, 0);
+    ASSERT_EQ(module->codesec[0].instructions.size(), 1);
+    EXPECT_EQ(module->codesec[0].instructions[0], Instr::end);
+    EXPECT_EQ(module->codesec[1].local_count, 0);
+    ASSERT_EQ(module->codesec[1].instructions.size(), 1);
+    EXPECT_EQ(module->codesec[1].instructions[0], Instr::end);
 }
 
 TEST(parser, code_section_with_basic_instructions)
@@ -1086,21 +1086,21 @@ TEST(parser, code_section_with_basic_instructions)
                      make_section(3, "0100"_bytes) + make_section(10, section_contents);
 
     const auto module = parse(bin);
-    ASSERT_EQ(module.typesec.size(), 1);
-    EXPECT_EQ(module.typesec[0].inputs.size(), 0);
-    EXPECT_EQ(module.typesec[0].outputs.size(), 0);
-    ASSERT_EQ(module.codesec.size(), 1);
-    EXPECT_EQ(module.codesec[0].local_count, 4);
-    ASSERT_EQ(module.codesec[0].instructions.size(), 7);
-    EXPECT_EQ(module.codesec[0].instructions[0], Instr::local_get);
-    EXPECT_EQ(module.codesec[0].instructions[1], Instr::i32_const);
-    EXPECT_EQ(module.codesec[0].instructions[2], Instr::i32_add);
-    EXPECT_EQ(module.codesec[0].instructions[3], Instr::local_set);
-    EXPECT_EQ(module.codesec[0].instructions[4], Instr::nop);
-    EXPECT_EQ(module.codesec[0].instructions[5], Instr::unreachable);
-    EXPECT_EQ(module.codesec[0].instructions[6], Instr::end);
-    ASSERT_EQ(module.codesec[0].immediates.size(), 3 * 4);
-    EXPECT_EQ(module.codesec[0].immediates, "010000000200000003000000"_bytes);
+    ASSERT_EQ(module->typesec.size(), 1);
+    EXPECT_EQ(module->typesec[0].inputs.size(), 0);
+    EXPECT_EQ(module->typesec[0].outputs.size(), 0);
+    ASSERT_EQ(module->codesec.size(), 1);
+    EXPECT_EQ(module->codesec[0].local_count, 4);
+    ASSERT_EQ(module->codesec[0].instructions.size(), 7);
+    EXPECT_EQ(module->codesec[0].instructions[0], Instr::local_get);
+    EXPECT_EQ(module->codesec[0].instructions[1], Instr::i32_const);
+    EXPECT_EQ(module->codesec[0].instructions[2], Instr::i32_add);
+    EXPECT_EQ(module->codesec[0].instructions[3], Instr::local_set);
+    EXPECT_EQ(module->codesec[0].instructions[4], Instr::nop);
+    EXPECT_EQ(module->codesec[0].instructions[5], Instr::unreachable);
+    EXPECT_EQ(module->codesec[0].instructions[6], Instr::end);
+    ASSERT_EQ(module->codesec[0].immediates.size(), 3 * 4);
+    EXPECT_EQ(module->codesec[0].immediates, "010000000200000003000000"_bytes);
 }
 
 TEST(parser, code_section_with_memory_size)
@@ -1114,12 +1114,12 @@ TEST(parser, code_section_with_memory_size)
                      make_section(3, "0100"_bytes) + make_section(5, make_vec({"0000"_bytes})) +
                      make_section(10, section_contents);
     const auto module = parse(bin);
-    ASSERT_EQ(module.codesec.size(), 1);
-    EXPECT_EQ(module.codesec[0].local_count, 0);
-    ASSERT_EQ(module.codesec[0].instructions.size(), 2);
-    EXPECT_EQ(module.codesec[0].instructions[0], Instr::memory_size);
-    EXPECT_EQ(module.codesec[0].instructions[1], Instr::end);
-    EXPECT_TRUE(module.codesec[0].immediates.empty());
+    ASSERT_EQ(module->codesec.size(), 1);
+    EXPECT_EQ(module->codesec[0].local_count, 0);
+    ASSERT_EQ(module->codesec[0].instructions.size(), 2);
+    EXPECT_EQ(module->codesec[0].instructions[0], Instr::memory_size);
+    EXPECT_EQ(module->codesec[0].instructions[1], Instr::end);
+    EXPECT_TRUE(module->codesec[0].immediates.empty());
 
     const auto func_bin_invalid =
         "00"  // vec(locals)
@@ -1144,14 +1144,14 @@ TEST(parser, code_section_with_memory_grow)
                      make_section(10, code_section);
 
     const auto module = parse(bin);
-    ASSERT_EQ(module.codesec.size(), 1);
-    EXPECT_EQ(module.codesec[0].local_count, 0);
-    ASSERT_EQ(module.codesec[0].instructions.size(), 4);
-    EXPECT_EQ(module.codesec[0].instructions[0], Instr::i32_const);
-    EXPECT_EQ(module.codesec[0].instructions[1], Instr::memory_grow);
-    EXPECT_EQ(module.codesec[0].instructions[2], Instr::drop);
-    EXPECT_EQ(module.codesec[0].instructions[3], Instr::end);
-    EXPECT_EQ(module.codesec[0].immediates, "00000000"_bytes);
+    ASSERT_EQ(module->codesec.size(), 1);
+    EXPECT_EQ(module->codesec[0].local_count, 0);
+    ASSERT_EQ(module->codesec[0].instructions.size(), 4);
+    EXPECT_EQ(module->codesec[0].instructions[0], Instr::i32_const);
+    EXPECT_EQ(module->codesec[0].instructions[1], Instr::memory_grow);
+    EXPECT_EQ(module->codesec[0].instructions[2], Instr::drop);
+    EXPECT_EQ(module->codesec[0].instructions[3], Instr::end);
+    EXPECT_EQ(module->codesec[0].immediates, "00000000"_bytes);
 
     const auto func_bin_invalid = "00"_bytes +  // vec(locals)
                                   i32_const(0) + "40011a0b"_bytes;
@@ -1227,7 +1227,7 @@ TEST(parser, code_section_fp_instructions)
                          make_section(5, make_vec({"0000"_bytes})) + make_section(10, code_section);
 
         const auto module = parse(bin);
-        EXPECT_EQ(module.codesec.size(), 1);
+        EXPECT_EQ(module->codesec.size(), 1);
     }
 }
 
@@ -1310,7 +1310,7 @@ TEST(parser, data_section_empty)
     const auto bin = bytes{wasm_prefix} + make_section(5, make_vec({"0000"_bytes})) +
                      make_section(11, make_vec({}));
     const auto module = parse(bin);
-    EXPECT_EQ(module.datasec.size(), 0);
+    EXPECT_EQ(module->datasec.size(), 0);
 }
 
 TEST(parser, data_section)
@@ -1327,16 +1327,16 @@ TEST(parser, data_section)
         "2424");
     const auto module = parse(bin);
 
-    ASSERT_EQ(module.datasec.size(), 3);
-    EXPECT_EQ(module.datasec[0].offset.kind, ConstantExpression::Kind::Constant);
-    EXPECT_EQ(as_uint32(module.datasec[0].offset.value.constant), 1);
-    EXPECT_EQ(module.datasec[0].init, "aaff"_bytes);
-    EXPECT_EQ(module.datasec[1].offset.kind, ConstantExpression::Kind::Constant);
-    EXPECT_EQ(as_uint32(module.datasec[1].offset.value.constant), 2);
-    EXPECT_EQ(module.datasec[1].init, "5555"_bytes);
-    EXPECT_EQ(module.datasec[2].offset.kind, ConstantExpression::Kind::GlobalGet);
-    EXPECT_EQ(module.datasec[2].offset.value.global_index, 0);
-    EXPECT_EQ(module.datasec[2].init, "2424"_bytes);
+    ASSERT_EQ(module->datasec.size(), 3);
+    EXPECT_EQ(module->datasec[0].offset.kind, ConstantExpression::Kind::Constant);
+    EXPECT_EQ(as_uint32(module->datasec[0].offset.value.constant), 1);
+    EXPECT_EQ(module->datasec[0].init, "aaff"_bytes);
+    EXPECT_EQ(module->datasec[1].offset.kind, ConstantExpression::Kind::Constant);
+    EXPECT_EQ(as_uint32(module->datasec[1].offset.value.constant), 2);
+    EXPECT_EQ(module->datasec[1].init, "5555"_bytes);
+    EXPECT_EQ(module->datasec[2].offset.kind, ConstantExpression::Kind::GlobalGet);
+    EXPECT_EQ(module->datasec[2].offset.value.global_index, 0);
+    EXPECT_EQ(module->datasec[2].init, "2424"_bytes);
 }
 
 TEST(parser, data_section_memidx_nonzero)
@@ -1409,9 +1409,9 @@ TEST(parser, interleaved_custom_section)
                      make_section(10, code_section);
 
     const auto module = parse(bin);
-    EXPECT_EQ(module.typesec.size(), 1);
-    EXPECT_EQ(module.funcsec.size(), 1);
-    EXPECT_EQ(module.codesec.size(), 1);
+    EXPECT_EQ(module->typesec.size(), 1);
+    EXPECT_EQ(module->funcsec.size(), 1);
+    EXPECT_EQ(module->codesec.size(), 1);
 }
 
 TEST(parser, wrongly_ordered_sections)
@@ -1464,12 +1464,12 @@ TEST(parser, milestone1)
         "0061736d0100000001070160027f7f017f030201000a13011101017f200020016a20026a220220006a0b");
     const auto m = parse(wasm);
 
-    ASSERT_EQ(m.typesec.size(), 1);
-    EXPECT_EQ(m.typesec[0].inputs, (std::vector{ValType::i32, ValType::i32}));
-    EXPECT_EQ(m.typesec[0].outputs, (std::vector{ValType::i32}));
+    ASSERT_EQ(m->typesec.size(), 1);
+    EXPECT_EQ(m->typesec[0].inputs, (std::vector{ValType::i32, ValType::i32}));
+    EXPECT_EQ(m->typesec[0].outputs, (std::vector{ValType::i32}));
 
-    ASSERT_EQ(m.codesec.size(), 1);
-    const auto& c = m.codesec[0];
+    ASSERT_EQ(m->codesec.size(), 1);
+    const auto& c = m->codesec[0];
     EXPECT_EQ(c.local_count, 1);
     EXPECT_EQ(c.instructions,
         (std::vector{Instr::local_get, Instr::local_get, Instr::i32_add, Instr::local_get,

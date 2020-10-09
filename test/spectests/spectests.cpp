@@ -89,7 +89,8 @@ public:
     explicit test_runner(const test_settings& ts)
       : m_settings{ts}, m_registered_names{{spectest_name, spectest_name}}
     {
-        m_instances[spectest_name] = fizzy::instantiate(spectest_module);
+        m_instances[spectest_name] =
+            fizzy::instantiate(std::make_unique<fizzy::Module>(*spectest_module));
     }
 
     test_results run_from_file(const fs::path& path)
@@ -117,9 +118,9 @@ public:
                 const auto wasm_binary = load_wasm_file(path, filename);
                 try
                 {
-                    fizzy::Module module = fizzy::parse(wasm_binary);
+                    auto module = fizzy::parse(wasm_binary);
 
-                    auto [imports, error] = create_imports(module);
+                    auto [imports, error] = create_imports(*module);
                     if (!error.empty())
                     {
                         fail(error);
@@ -325,9 +326,9 @@ public:
                 const auto wasm_binary = load_wasm_file(path, filename);
                 try
                 {
-                    fizzy::Module module = fizzy::parse(wasm_binary);
+                    auto module = fizzy::parse(wasm_binary);
 
-                    auto [imports, error] = create_imports(module);
+                    auto [imports, error] = create_imports(*module);
                     if (!error.empty())
                     {
                         if (type == "assert_unlinkable")
@@ -463,7 +464,7 @@ private:
             return std::nullopt;
 
         const auto func_name = action.at("field").get<std::string>();
-        const auto func_idx = fizzy::find_exported_function(instance->module, func_name);
+        const auto func_idx = fizzy::find_exported_function(*instance->module, func_name);
         if (!func_idx.has_value())
         {
             skip("Function '" + func_name + "' not found.");
@@ -480,7 +481,7 @@ private:
             args.push_back(*arg_value);
         }
 
-        assert(args.size() == instance->module.get_function_type(*func_idx).inputs.size());
+        assert(args.size() == instance->module->get_function_type(*func_idx).inputs.size());
         return fizzy::execute(*instance, *func_idx, args.data());
     }
 

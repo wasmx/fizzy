@@ -137,11 +137,10 @@ TEST(execute, global_get_imported)
     */
     const auto wasm = from_hex(
         "0061736d010000000105016000017e020d01036d6f6404676c6f62037e00030201000a0601040023000b");
-    const auto module = parse(wasm);
 
     Value global_value = 42;
-    auto instance =
-        instantiate(module, {}, {}, {}, {ExternalGlobal{&global_value, {ValType::i64, false}}});
+    auto instance = instantiate(
+        parse(wasm), {}, {}, {}, {ExternalGlobal{&global_value, {ValType::i64, false}}});
 
     EXPECT_THAT(execute(*instance, 0, {}), Result(42));
 
@@ -169,11 +168,10 @@ TEST(execute, global_get_imported_and_internal)
     const auto wasm = from_hex(
         "0061736d010000000105016000017f021502036d6f64026731037f00036d6f64026732037f0003050400000000"
         "060b027f00412a0b7f00412b0b0a1504040023000b040023010b040023020b040023030b");
-    const auto module = parse(wasm);
 
     Value g1 = 40;
     Value g2 = 41;
-    auto instance = instantiate(module, {}, {}, {},
+    auto instance = instantiate(parse(wasm), {}, {}, {},
         {ExternalGlobal{&g1, {ValType::i32, false}}, ExternalGlobal{&g2, {ValType::i32, false}}});
 
     EXPECT_THAT(execute(*instance, 0, {}), Result(40));
@@ -380,11 +378,11 @@ TEST(execute, i32_load_all_variants)
     */
     const auto wasm =
         from_hex("0061736d0100000001060160017f017f030201000504010101010a0901070020002802000b");
-    auto module = parse(wasm);
+    const auto module = parse(wasm);
 
-    auto& load_instr = module.codesec[0].instructions[1];
+    auto& load_instr = const_cast<Instr&>(module->codesec[0].instructions[1]);
     ASSERT_EQ(load_instr, Instr::i32_load);
-    ASSERT_EQ(module.codesec[0].immediates.substr(4), "00000000"_bytes);  // load offset.
+    ASSERT_EQ(module->codesec[0].immediates.substr(4), "00000000"_bytes);  // load offset.
 
     const auto memory_fill = "deb0b1b2b3ed"_bytes;
 
@@ -399,7 +397,7 @@ TEST(execute, i32_load_all_variants)
     for (const auto& test_case : test_cases)
     {
         load_instr = std::get<0>(test_case);
-        auto instance = instantiate(module);
+        auto instance = instantiate(*module);
         std::copy(std::begin(memory_fill), std::end(memory_fill), std::begin(*instance->memory));
         EXPECT_THAT(execute(*instance, 0, {1}), Result(std::get<1>(test_case)));
 
@@ -418,11 +416,11 @@ TEST(execute, i64_load_all_variants)
     */
     const auto wasm =
         from_hex("0061736d0100000001060160017f017e030201000504010101010a0901070020002903000b");
-    auto module = parse(wasm);
+    const auto module = parse(wasm);
 
-    auto& load_instr = module.codesec[0].instructions[1];
+    auto& load_instr = const_cast<Instr&>(module->codesec[0].instructions[1]);
     ASSERT_EQ(load_instr, Instr::i64_load);
-    ASSERT_EQ(module.codesec[0].immediates.substr(4), "00000000"_bytes);  // load offset.
+    ASSERT_EQ(module->codesec[0].immediates.substr(4), "00000000"_bytes);  // load offset.
 
     const auto memory_fill = "deb0b1b2b3b4b5b6b7ed"_bytes;
 
@@ -439,7 +437,7 @@ TEST(execute, i64_load_all_variants)
     for (const auto& test_case : test_cases)
     {
         load_instr = std::get<0>(test_case);
-        auto instance = instantiate(module);
+        auto instance = instantiate(*module);
         std::copy(std::begin(memory_fill), std::end(memory_fill), std::begin(*instance->memory));
         EXPECT_THAT(execute(*instance, 0, {1}), Result(std::get<1>(test_case)));
 
@@ -529,11 +527,11 @@ TEST(execute, i32_store_all_variants)
     */
     const auto wasm =
         from_hex("0061736d0100000001060160027f7f00030201000504010101010a0b010900200120003602000b");
-    auto module = parse(wasm);
+    const auto module = parse(wasm);
 
-    auto& store_instr = module.codesec[0].instructions[2];
+    auto& store_instr = const_cast<Instr&>(module->codesec[0].instructions[2]);
     ASSERT_EQ(store_instr, Instr::i32_store);
-    ASSERT_EQ(module.codesec[0].immediates.substr(8), "00000000"_bytes);  // store offset
+    ASSERT_EQ(module->codesec[0].immediates.substr(8), "00000000"_bytes);  // store offset
 
     const std::tuple<Instr, bytes> test_cases[]{
         {Instr::i32_store8, "ccb0cccccccc"_bytes},
@@ -544,7 +542,7 @@ TEST(execute, i32_store_all_variants)
     for (const auto& test_case : test_cases)
     {
         store_instr = std::get<0>(test_case);
-        auto instance = instantiate(module);
+        auto instance = instantiate(*module);
         std::fill_n(instance->memory->begin(), 6, uint8_t{0xcc});
         EXPECT_THAT(execute(*instance, 0, {0xb3b2b1b0, 1}), Result());
         EXPECT_EQ(instance->memory->substr(0, 6), std::get<1>(test_case));
@@ -565,11 +563,11 @@ TEST(execute, i64_store_all_variants)
     */
     const auto wasm =
         from_hex("0061736d0100000001060160027e7f00030201000504010101010a0b010900200120003703000b");
-    auto module = parse(wasm);
+    const auto module = parse(wasm);
 
-    auto& store_instr = module.codesec[0].instructions[2];
+    auto& store_instr = const_cast<Instr&>(module->codesec[0].instructions[2]);
     ASSERT_EQ(store_instr, Instr::i64_store);
-    ASSERT_EQ(module.codesec[0].immediates.substr(8), "00000000"_bytes);  // store offset
+    ASSERT_EQ(module->codesec[0].immediates.substr(8), "00000000"_bytes);  // store offset
 
     const std::tuple<Instr, bytes> test_cases[]{
         {Instr::i64_store8, "ccb0cccccccccccccccc"_bytes},
@@ -581,7 +579,7 @@ TEST(execute, i64_store_all_variants)
     for (const auto& test_case : test_cases)
     {
         store_instr = std::get<0>(test_case);
-        auto instance = instantiate(module);
+        auto instance = instantiate(*module);
         std::fill_n(instance->memory->begin(), 10, uint8_t{0xcc});
         EXPECT_THAT(execute(*instance, 0, {0xb7b6b5b4b3b2b1b0, 1}), Result());
         EXPECT_EQ(instance->memory->substr(0, 10), std::get<1>(test_case));
@@ -655,7 +653,7 @@ TEST(execute, memory_grow_custom_hard_limit)
 
     for (const auto& test_case : test_cases)
     {
-        const auto instance = instantiate(module, {}, {}, {}, {}, 16);
+        const auto instance = instantiate(*module, {}, {}, {}, {}, 16);
         EXPECT_THAT(execute(*instance, 0, {test_case.first}), Result(test_case.second));
     }
 
@@ -672,7 +670,7 @@ TEST(execute, memory_grow_custom_hard_limit)
 
     for (const auto& test_case : test_cases)
     {
-        const auto instance = instantiate(module_max_limit, {}, {}, {}, {}, 32);
+        const auto instance = instantiate(*module_max_limit, {}, {}, {}, {}, 32);
         EXPECT_THAT(execute(*instance, 0, {test_case.first}), Result(test_case.second));
     }
 
@@ -691,12 +689,12 @@ TEST(execute, memory_grow_custom_hard_limit)
     {
         bytes memory(PageSize, 0);
         const auto instance =
-            instantiate(module_imported, {}, {}, {{&memory, {1, std::nullopt}}}, {}, 16);
+            instantiate(*module_imported, {}, {}, {{&memory, {1, std::nullopt}}}, {}, 16);
         EXPECT_THAT(execute(*instance, 0, {test_case.first}), Result(test_case.second));
 
         bytes memory_max_limit(PageSize, 0);
         const auto instance_max_limit =
-            instantiate(module_imported, {}, {}, {{&memory_max_limit, {1, 16}}}, {}, 32);
+            instantiate(*module_imported, {}, {}, {{&memory_max_limit, {1, 16}}}, {}, 32);
         EXPECT_THAT(execute(*instance_max_limit, 0, {test_case.first}), Result(test_case.second));
     }
 
@@ -716,7 +714,7 @@ TEST(execute, memory_grow_custom_hard_limit)
     {
         bytes memory(PageSize, 0);
         const auto instance =
-            instantiate(module_imported_max_limit, {}, {}, {{&memory, {1, 16}}}, {}, 32);
+            instantiate(*module_imported_max_limit, {}, {}, {{&memory, {1, 16}}}, {}, 32);
         EXPECT_THAT(execute(*instance, 0, {test_case.first}), Result(test_case.second));
     }
 
@@ -736,7 +734,7 @@ TEST(execute, memory_grow_custom_hard_limit)
     {
         bytes memory(PageSize, 0);
         const auto instance =
-            instantiate(module_imported_max_limit_narrowing, {}, {}, {{&memory, {1, 16}}}, {}, 32);
+            instantiate(*module_imported_max_limit_narrowing, {}, {}, {{&memory, {1, 16}}}, {}, 32);
         EXPECT_THAT(execute(*instance, 0, {test_case.first}), Result(test_case.second));
     }
 }
@@ -774,13 +772,13 @@ TEST(execute, imported_function)
     */
     const auto wasm = from_hex("0061736d0100000001070160027f7f017f020b01036d6f6403666f6f0000");
     const auto module = parse(wasm);
-    ASSERT_EQ(module.typesec.size(), 1);
+    ASSERT_EQ(module->typesec.size(), 1);
 
     constexpr auto host_foo = [](Instance&, span<const Value> args, int) {
         return Value{as_uint32(args[0]) + as_uint32(args[1])};
     };
 
-    auto instance = instantiate(module, {{host_foo, module.typesec[0]}});
+    auto instance = instantiate(*module, {{host_foo, module->typesec[0]}});
     EXPECT_THAT(execute(*instance, 0, {20, 22}), Result(42));
 }
 
@@ -794,7 +792,7 @@ TEST(execute, imported_two_functions)
     const auto wasm = from_hex(
         "0061736d0100000001070160027f7f017f021702036d6f6404666f6f310000036d6f6404666f6f320000");
     const auto module = parse(wasm);
-    ASSERT_EQ(module.typesec.size(), 1);
+    ASSERT_EQ(module->typesec.size(), 1);
 
     constexpr auto host_foo1 = [](Instance&, span<const Value> args, int) {
         return Value{as_uint32(args[0]) + as_uint32(args[1])};
@@ -804,7 +802,7 @@ TEST(execute, imported_two_functions)
     };
 
     auto instance =
-        instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[0]}});
+        instantiate(*module, {{host_foo1, module->typesec[0]}, {host_foo2, module->typesec[0]}});
     EXPECT_THAT(execute(*instance, 0, {20, 22}), Result(42));
     EXPECT_THAT(execute(*instance, 1, {20, 22}), Result(440));
 }
@@ -831,9 +829,9 @@ TEST(execute, imported_functions_and_regular_one)
     };
 
     const auto module = parse(wasm);
-    ASSERT_EQ(module.typesec.size(), 1);
+    ASSERT_EQ(module->typesec.size(), 1);
     auto instance =
-        instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[0]}});
+        instantiate(*module, {{host_foo1, module->typesec[0]}, {host_foo2, module->typesec[0]}});
     EXPECT_THAT(execute(*instance, 0, {20, 22}), Result(42));
     EXPECT_THAT(execute(*instance, 1, {20, 10}), Result(200));
 }
@@ -856,9 +854,9 @@ TEST(execute, imported_functions_count_args)
     };
 
     const auto module = parse(wasm);
-    ASSERT_EQ(module.typesec.size(), 2);
+    ASSERT_EQ(module->typesec.size(), 2);
     auto instance_counter =
-        instantiate(module, {{count_args, module.typesec[0]}, {count_args, module.typesec[1]}});
+        instantiate(*module, {{count_args, module->typesec[0]}, {count_args, module->typesec[1]}});
     EXPECT_THAT(execute(*instance_counter, 0, {20, 22}), Result(2));
     EXPECT_THAT(execute(*instance_counter, 1, {20}), Result(1));
 }
@@ -886,9 +884,9 @@ TEST(execute, imported_two_functions_different_type)
     };
 
     const auto module = parse(wasm);
-    ASSERT_EQ(module.typesec.size(), 2);
+    ASSERT_EQ(module->typesec.size(), 2);
     auto instance =
-        instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[1]}});
+        instantiate(*module, {{host_foo1, module->typesec[0]}, {host_foo2, module->typesec[1]}});
 
     EXPECT_THAT(execute(*instance, 0, {20, 22}), Result(42));
     EXPECT_THAT(execute(*instance, 1, {0x3000'0000}), Result(0x900'0000'0000'0000));
@@ -907,7 +905,7 @@ TEST(execute, imported_function_traps)
     };
 
     const auto module = parse(wasm);
-    auto instance = instantiate(module, {{host_foo, module.typesec[0]}});
+    auto instance = instantiate(*module, {{host_foo, module->typesec[0]}});
     EXPECT_THAT(execute(*instance, 0, {20, 22}), Traps());
 }
 
@@ -941,8 +939,7 @@ TEST(execute, memory_copy_32bytes)
         "0061736d0100000001060160027f7f000302010005030100010a2c012a00200020012903003703002000200129"
         "030837030820002001290310370310200020012903183703180b");
 
-    const auto module = parse(bin);
-    auto instance = instantiate(module);
+    auto instance = instantiate(parse(bin));
     ASSERT_EQ(instance->memory->size(), 65536);
     const auto input = from_hex("0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20");
     ASSERT_EQ(input.size(), 32);

@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 #include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
+#include <test/utils/instantiate_helpers.hpp>
 
 using namespace fizzy;
 using namespace fizzy::test;
@@ -30,8 +31,7 @@ TEST(end_to_end, milestone1)
     */
     const auto wasm = from_hex(
         "0061736d0100000001070160027f7f017f030201000a13011101017f200020016a20026a220220006a0b");
-    const auto module = parse(wasm);
-    auto instance = instantiate(module);
+    auto instance = instantiate(parse(wasm));
 
     EXPECT_THAT(execute(*instance, 0, {20, 22}), Result(20 + 22 + 20));
 }
@@ -69,9 +69,7 @@ TEST(end_to_end, milestone2)
         "2053742154204f20546a21552055204e3602002005280228215641012157"
         "205620576a2158200520583602280c00000b000b0b");
 
-    const auto module = parse(bin);
-
-    auto instance = instantiate(module);
+    auto instance = instantiate(parse(bin));
 
     auto& memory = *instance->memory;
     // This performs uint256 x uint256 -> uint512 multiplication.
@@ -126,10 +124,10 @@ TEST(end_to_end, nested_loops_in_c)
 
     const auto module = parse(bin);
 
-    const auto func_idx = find_exported_function(module, "test");
+    const auto func_idx = find_exported_function(*module, "test");
     ASSERT_TRUE(func_idx);
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(*module);
     EXPECT_THAT(execute(*instance, *func_idx, {10, 2, 5}), Result(4));
 }
 
@@ -168,10 +166,10 @@ TEST(end_to_end, memset)
 
     const auto module = parse(wasm);
 
-    const auto func_idx = find_exported_function(module, "test");
+    const auto func_idx = find_exported_function(*module, "test");
     ASSERT_TRUE(func_idx);
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(*module);
     EXPECT_THAT(execute(*instance, *func_idx, {0, 2}), Result());
     EXPECT_EQ(hex(instance->memory->substr(0, 2 * sizeof(int))), "d2040000d2040000");
 }

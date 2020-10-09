@@ -8,6 +8,7 @@
 #include <lib/fizzy/limits.hpp>
 #include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
+#include <test/utils/instantiate_helpers.hpp>
 
 using namespace fizzy;
 using namespace fizzy::test;
@@ -89,14 +90,14 @@ TEST(api, resolve_imported_functions)
     };
 
     const auto external_functions =
-        resolve_imported_functions(module, std::move(imported_functions));
+        resolve_imported_functions(*module, std::move(imported_functions));
 
     EXPECT_EQ(external_functions.size(), 4);
 
     Value global = 0;
     const std::vector<ExternalGlobal> external_globals{{&global, {ValType::i32, false}}};
     auto instance = instantiate(
-        module, external_functions, {}, {}, std::vector<ExternalGlobal>(external_globals));
+        *module, external_functions, {}, {}, std::vector<ExternalGlobal>(external_globals));
 
     EXPECT_THAT(execute(*instance, 0, {}), Result(0));
     EXPECT_THAT(execute(*instance, 1, {Value{0}}), Result(1));
@@ -112,10 +113,10 @@ TEST(api, resolve_imported_functions)
     };
 
     const auto external_functions_reordered =
-        resolve_imported_functions(module, std::move(imported_functions_reordered));
+        resolve_imported_functions(*module, std::move(imported_functions_reordered));
     EXPECT_EQ(external_functions_reordered.size(), 4);
 
-    auto instance_reordered = instantiate(module, external_functions_reordered, {}, {},
+    auto instance_reordered = instantiate(*module, external_functions_reordered, {}, {},
         std::vector<ExternalGlobal>(external_globals));
 
     EXPECT_THAT(execute(*instance_reordered, 0, {}), Result(0));
@@ -134,11 +135,11 @@ TEST(api, resolve_imported_functions)
     };
 
     const auto external_functions_extra =
-        resolve_imported_functions(module, std::move(imported_functions_extra));
+        resolve_imported_functions(*module, std::move(imported_functions_extra));
     EXPECT_EQ(external_functions_extra.size(), 4);
 
     auto instance_extra = instantiate(
-        module, external_functions_extra, {}, {}, std::vector<ExternalGlobal>(external_globals));
+        *module, external_functions_extra, {}, {}, std::vector<ExternalGlobal>(external_globals));
 
     EXPECT_THAT(execute(*instance_extra, 0, {}), Result(0));
     EXPECT_THAT(execute(*instance_extra, 1, {Value{0}}), Result(1));
@@ -152,7 +153,7 @@ TEST(api, resolve_imported_functions)
         {"mod2", "foo1", {ValType::i32}, ValType::i32, function_returning_value(2)},
     };
 
-    EXPECT_THROW_MESSAGE(resolve_imported_functions(module, std::move(imported_functions_missing)),
+    EXPECT_THROW_MESSAGE(resolve_imported_functions(*module, std::move(imported_functions_missing)),
         instantiate_error, "imported function mod2.foo2 is required");
 
 
@@ -164,7 +165,7 @@ TEST(api, resolve_imported_functions)
     };
 
     EXPECT_THROW_MESSAGE(
-        resolve_imported_functions(module, std::move(imported_functions_invalid_type1)),
+        resolve_imported_functions(*module, std::move(imported_functions_invalid_type1)),
         instantiate_error,
         "function mod1.foo1 input types don't match imported function in module");
 
@@ -176,7 +177,7 @@ TEST(api, resolve_imported_functions)
     };
 
     EXPECT_THROW_MESSAGE(
-        resolve_imported_functions(module, std::move(imported_functions_invalid_type2)),
+        resolve_imported_functions(*module, std::move(imported_functions_invalid_type2)),
         instantiate_error, "function mod2.foo2 has output but is defined void in module");
 
     std::vector<ImportedFunction> imported_functions_invalid_type3 = {
@@ -187,7 +188,7 @@ TEST(api, resolve_imported_functions)
     };
 
     EXPECT_THROW_MESSAGE(
-        resolve_imported_functions(module, std::move(imported_functions_invalid_type3)),
+        resolve_imported_functions(*module, std::move(imported_functions_invalid_type3)),
         instantiate_error,
         "function mod1.foo2 output type doesn't match imported function in module");
 }

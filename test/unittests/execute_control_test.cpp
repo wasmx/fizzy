@@ -668,7 +668,7 @@ TEST(execute_control, br_1_out_of_function_and_imported_function)
                                                 int) noexcept -> ExecutionResult { return Void; };
 
     const auto module = parse(bin);
-    auto instance = instantiate(module, {{fake_imported_function, module.typesec[0]}});
+    auto instance = instantiate(*module, {{fake_imported_function, module->typesec[0]}});
     EXPECT_THAT(execute(*instance, 1, {}), Result(1));
 }
 

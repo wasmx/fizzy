@@ -144,7 +144,7 @@ TEST(validation_stack, block_with_result)
     */
     const auto wasm = from_hex("0061736d01000000010401600000030201000a0a010800027f417f0b1a0b");
     const auto module = parse(wasm);
-    EXPECT_EQ(module.codesec[0].max_stack_height, 1);
+    EXPECT_EQ(module->codesec[0].max_stack_height, 1);
 }
 
 TEST(validation_stack, block_missing_result)
@@ -215,7 +215,7 @@ TEST(validation_stack, loop_with_result)
     */
     const auto wasm = from_hex("0061736d01000000010401600000030201000a0a010800037f417f0b1a0b");
     const auto module = parse(wasm);
-    EXPECT_EQ(module.codesec[0].max_stack_height, 1);
+    EXPECT_EQ(module->codesec[0].max_stack_height, 1);
 }
 
 TEST(validation_stack, loop_missing_result)
@@ -502,7 +502,7 @@ TEST(validation_stack, unreachable)
     */
     const auto wasm = from_hex("0061736d010000000105016000017f030201000a0601040000450b");
     const auto module = parse(wasm);
-    EXPECT_THAT(module.codesec[0].max_stack_height, 0);
+    EXPECT_THAT(module->codesec[0].max_stack_height, 0);
 }
 
 TEST(validation_stack, unreachable_2)
@@ -518,7 +518,7 @@ TEST(validation_stack, unreachable_2)
     */
     const auto wasm = from_hex("0061736d01000000010401600000030201000a09010700006a6a6a1a0b");
     const auto module = parse(wasm);
-    EXPECT_THAT(module.codesec[0].max_stack_height, 0);
+    EXPECT_THAT(module->codesec[0].max_stack_height, 0);
 }
 
 TEST(validation_stack, unreachable_3)
@@ -530,7 +530,7 @@ TEST(validation_stack, unreachable_3)
     */
     const auto wasm = from_hex("0061736d010000000105016000017f030201000a08010600027f000b0b");
     const auto module = parse(wasm);
-    EXPECT_THAT(module.codesec[0].max_stack_height, 1);
+    EXPECT_THAT(module->codesec[0].max_stack_height, 1);
 }
 
 TEST(validation_stack, unreachable_4)
@@ -544,7 +544,7 @@ TEST(validation_stack, unreachable_4)
     const auto wasm =
         from_hex("0061736d010000000105016000017f030201000a0d010b0000047f41000541010b0b");
     const auto module = parse(wasm);
-    EXPECT_THAT(module.codesec[0].max_stack_height, 1);
+    EXPECT_THAT(module->codesec[0].max_stack_height, 1);
 }
 
 TEST(validation_stack, unreachable_5)
@@ -558,7 +558,7 @@ TEST(validation_stack, unreachable_5)
     */
     const auto wasm = from_hex("0061736d010000000105016000017f030201000a08010600420000450b");
     const auto module = parse(wasm);
-    EXPECT_THAT(module.codesec[0].max_stack_height, 1);
+    EXPECT_THAT(module->codesec[0].max_stack_height, 1);
 }
 
 
@@ -710,7 +710,7 @@ TEST(validation_stack, br)
     */
     const auto wasm = from_hex("0061736d01000000010401600000030201000a0b01090002400c00451a0b0b");
     const auto module = parse(wasm);
-    EXPECT_THAT(module.codesec[0].max_stack_height, 0);
+    EXPECT_THAT(module->codesec[0].max_stack_height, 0);
 }
 
 TEST(validation_stack, br_table)
@@ -731,7 +731,7 @@ TEST(validation_stack, br_table)
     const auto wasm = from_hex(
         "0061736d0100000001050160017f00030201000a14011200024041e90720000e0100016c6c6c1a0b0b");
     const auto module = parse(wasm);
-    EXPECT_THAT(module.codesec[0].max_stack_height, 2);
+    EXPECT_THAT(module->codesec[0].max_stack_height, 2);
 }
 
 TEST(validation_stack, return_)
@@ -745,7 +745,7 @@ TEST(validation_stack, return_)
     */
     const auto wasm = from_hex("0061736d01000000010401600000030201000a070105000f451a0b");
     const auto module = parse(wasm);
-    EXPECT_THAT(module.codesec[0].max_stack_height, 0);
+    EXPECT_THAT(module->codesec[0].max_stack_height, 0);
 }
 
 TEST(validation_stack, if_stack_underflow)
@@ -984,7 +984,7 @@ TEST(validation_stack, if_else_stack_height)
     const auto wasm =
         from_hex("0061736d01000000010401600000030201000a1201100042014102047e42010542030b1a1a0b");
     const auto module = parse(wasm);
-    EXPECT_EQ(module.codesec[0].max_stack_height, 2);
+    EXPECT_EQ(module->codesec[0].max_stack_height, 2);
 }
 
 TEST(validation_stack, if_invalid_end_stack_height)

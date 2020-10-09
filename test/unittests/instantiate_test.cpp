@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 #include <test/utils/asserts.hpp>
 #include <test/utils/hex.hpp>
+#include <test/utils/instantiate_helpers.hpp>
 
 using namespace fizzy;
 using namespace fizzy::test;
@@ -32,7 +33,7 @@ TEST(instantiate, imported_functions)
     const auto module = parse(bin);
 
     auto host_foo = [](Instance&, span<const Value>, int) { return Trap; };
-    auto instance = instantiate(module, {{host_foo, module.typesec[0]}});
+    auto instance = instantiate(*module, {{host_foo, module->typesec[0]}});
 
     ASSERT_EQ(instance->imported_functions.size(), 1);
     EXPECT_EQ(*instance->imported_functions[0].function.target<decltype(host_foo)>(), host_foo);
@@ -55,7 +56,7 @@ TEST(instantiate, imported_functions_multiple)
     auto host_foo1 = [](Instance&, span<const Value>, int) { return Trap; };
     auto host_foo2 = [](Instance&, span<const Value>, int) { return Trap; };
     auto instance =
-        instantiate(module, {{host_foo1, module.typesec[0]}, {host_foo2, module.typesec[1]}});
+        instantiate(*module, {{host_foo1, module->typesec[0]}, {host_foo2, module->typesec[1]}});
 
     ASSERT_EQ(instance->imported_functions.size(), 2);
     EXPECT_EQ(*instance->imported_functions[0].function.target<decltype(host_foo1)>(), host_foo1);
@@ -74,9 +75,8 @@ TEST(instantiate, imported_functions_not_enough)
       (func (import "mod" "foo") (param i32) (result i32))
     */
     const auto bin = from_hex("0061736d0100000001060160017f017f020b01036d6f6403666f6f0000");
-    const auto module = parse(bin);
 
-    EXPECT_THROW_MESSAGE(instantiate(module, {}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(parse(bin), {}), instantiate_error,
         "module requires 1 imported functions, 0 provided");
 }
 
@@ -86,12 +86,11 @@ TEST(instantiate, imported_function_wrong_type)
       (func (import "mod" "foo") (param i32) (result i32))
     */
     const auto bin = from_hex("0061736d0100000001060160017f017f020b01036d6f6403666f6f0000");
-    const auto module = parse(bin);
 
     auto host_foo = [](Instance&, span<const Value>, int) { return Trap; };
     const auto host_foo_type = FuncType{{}, {}};
 
-    EXPECT_THROW_MESSAGE(instantiate(module, {{host_foo, host_foo_type}}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(parse(bin), {{host_foo, host_foo_type}}), instantiate_error,
         "function 0 type doesn't match module's imported function type");
 }
 
@@ -101,10 +100,9 @@ TEST(instantiate, imported_table)
       (table (import "m" "t") 10 30 funcref)
     */
     const auto bin = from_hex("0061736d01000000020a01016d01740170010a1e");
-    const auto module = parse(bin);
 
     table_elements table(10);
-    auto instance = instantiate(module, {}, {{&table, {10, 30}}});
+    auto instance = instantiate(parse(bin), {}, {{&table, {10, 30}}});
 
     ASSERT_TRUE(instance->table);
     EXPECT_EQ(instance->table->size(), 10);
@@ -117,10 +115,9 @@ TEST(instantiate, imported_table_stricter_limits)
       (table (import "m" "t") 10 30 funcref)
     */
     const auto bin = from_hex("0061736d01000000020a01016d01740170010a1e");
-    const auto module = parse(bin);
 
     table_elements table(20);
-    auto instance = instantiate(module, {}, {{&table, {20, 20}}});
+    auto instance = instantiate(parse(bin), {}, {{&table, {20, 20}}});
 
     ASSERT_TRUE(instance->table);
     EXPECT_EQ(instance->table->size(), 20);
@@ -138,7 +135,7 @@ TEST(instantiate, imported_table_invalid)
     table_elements table(10);
 
     // Providing more than 1 table
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table, {10, 30}}, {&table, {10, 10}}}),
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {{&table, {10, 30}}, {&table, {10, 10}}}),
         instantiate_error, "only 1 imported table is allowed");
 
     // Providing table when none expected
@@ -146,38 +143,37 @@ TEST(instantiate, imported_table_invalid)
       (module)
     */
     const auto bin_no_imported_table = from_hex("0061736d01000000");
-    const auto module_no_imported_table = parse(bin_no_imported_table);
-    EXPECT_THROW_MESSAGE(instantiate(module_no_imported_table, {}, {{&table, {10, 30}}}),
+    EXPECT_THROW_MESSAGE(instantiate(parse(bin_no_imported_table), {}, {{&table, {10, 30}}}),
         instantiate_error, "trying to provide imported table to a module that doesn't define one");
 
     // Not providing table when one is expected
-    EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(*module), instantiate_error,
         "module defines an imported table but none was provided");
 
     // Provided min too low
     table_elements table_empty;
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table_empty, {0, 3}}}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {{&table_empty, {0, 3}}}), instantiate_error,
         "provided import's min is below import's min defined in module");
 
     // Provided max too high
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table, {10, 40}}}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {{&table, {10, 40}}}), instantiate_error,
         "provided import's max is above import's max defined in module");
 
     // Provided max is unlimited
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table, {10, std::nullopt}}}), instantiate_error,
-        "provided import's max is above import's max defined in module");
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {{&table, {10, std::nullopt}}}),
+        instantiate_error, "provided import's max is above import's max defined in module");
 
     // Null pointer
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{nullptr, {10, 30}}}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {{nullptr, {10, 30}}}), instantiate_error,
         "provided imported table has a null pointer to data");
 
     // Allocated less than min
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table_empty, {10, 30}}}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {{&table_empty, {10, 30}}}), instantiate_error,
         "provided imported table doesn't fit provided limits");
 
     // Allocated more than max
     table_elements table_big(40);
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table_big, {10, 30}}}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {{&table_big, {10, 30}}}), instantiate_error,
         "provided imported table doesn't fit provided limits");
 }
 
@@ -187,10 +183,9 @@ TEST(instantiate, imported_memory)
       (memory (import "mod" "m") 1 3)
     */
     const auto bin = from_hex("0061736d01000000020b01036d6f64016d02010103");
-    const auto module = parse(bin);
 
     bytes memory(PageSize, 0);
-    auto instance = instantiate(module, {}, {}, {{&memory, {1, 3}}});
+    auto instance = instantiate(parse(bin), {}, {}, {{&memory, {1, 3}}});
 
     ASSERT_TRUE(instance->memory);
     EXPECT_EQ(instance->memory->size(), PageSize);
@@ -206,10 +201,9 @@ TEST(instantiate, imported_memory_unlimited)
       (memory (import "mod" "m") 1)
     */
     const auto bin = from_hex("0061736d01000000020a01036d6f64016d020001");
-    const auto module = parse(bin);
 
     bytes memory(PageSize, 0);
-    auto instance = instantiate(module, {}, {}, {{&memory, {1, std::nullopt}}});
+    auto instance = instantiate(parse(bin), {}, {}, {{&memory, {1, std::nullopt}}});
 
     ASSERT_TRUE(instance->memory);
     EXPECT_EQ(instance->memory->size(), PageSize);
@@ -224,10 +218,9 @@ TEST(instantiate, imported_memory_stricter_limits)
       (memory (import "mod" "m") 1 3)
     */
     const auto bin = from_hex("0061736d01000000020b01036d6f64016d02010103");
-    const auto module = parse(bin);
 
     bytes memory(PageSize * 2, 0);
-    auto instance = instantiate(module, {}, {}, {{&memory, {2, 2}}});
+    auto instance = instantiate(parse(bin), {}, {}, {{&memory, {2, 2}}});
 
     ASSERT_TRUE(instance->memory);
     EXPECT_EQ(instance->memory->size(), PageSize * 2);
@@ -248,7 +241,7 @@ TEST(instantiate, imported_memory_invalid)
     bytes memory(PageSize, 0);
 
     // Providing more than 1 memory
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {1, 3}}, {&memory, {1, 1}}}),
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{&memory, {1, 3}}, {&memory, {1, 1}}}),
         instantiate_error, "only 1 imported memory is allowed");
 
     // Providing memory when none expected
@@ -256,38 +249,37 @@ TEST(instantiate, imported_memory_invalid)
       (module)
     */
     const auto bin_no_imported_memory = from_hex("0061736d01000000");
-    const auto module_no_imported_memory = parse(bin_no_imported_memory);
-    EXPECT_THROW_MESSAGE(instantiate(module_no_imported_memory, {}, {}, {{&memory, {1, 3}}}),
+    EXPECT_THROW_MESSAGE(instantiate(parse(bin_no_imported_memory), {}, {}, {{&memory, {1, 3}}}),
         instantiate_error, "trying to provide imported memory to a module that doesn't define one");
 
     // Not providing memory when one is expected
-    EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(*module), instantiate_error,
         "module defines an imported memory but none was provided");
 
     // Provided min too low
     bytes memory_empty;
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory_empty, {0, 3}}}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{&memory_empty, {0, 3}}}), instantiate_error,
         "provided import's min is below import's min defined in module");
 
     // Provided max too high
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {1, 4}}}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{&memory, {1, 4}}}), instantiate_error,
         "provided import's max is above import's max defined in module");
 
     // Provided max is unlimited
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {1, std::nullopt}}}),
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{&memory, {1, std::nullopt}}}),
         instantiate_error, "provided import's max is above import's max defined in module");
 
     // Null pointer
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{nullptr, {1, 3}}}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{nullptr, {1, 3}}}), instantiate_error,
         "provided imported memory has a null pointer to data");
 
     // Allocated less than min
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory_empty, {1, 3}}}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{&memory_empty, {1, 3}}}), instantiate_error,
         "provided imported memory doesn't fit provided limits");
 
     // Allocated more than max
     bytes memory_big(PageSize * 4, 0);
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory_big, {1, 3}}}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{&memory_big, {1, 3}}}), instantiate_error,
         "provided imported memory doesn't fit provided limits");
 
     // Provided max exceeds the hard limit
@@ -295,9 +287,8 @@ TEST(instantiate, imported_memory_invalid)
       (memory (import "mod" "m") 1)
     */
     const auto bin_without_max = from_hex("0061736d01000000020a01036d6f64016d020001");
-    const auto module_without_max = parse(bin_without_max);
     EXPECT_THROW_MESSAGE(
-        instantiate(module_without_max, {}, {}, {{&memory, {1, DefaultMemoryPagesLimit + 1}}}),
+        instantiate(parse(bin_without_max), {}, {}, {{&memory, {1, DefaultMemoryPagesLimit + 1}}}),
         instantiate_error,
         "imported memory limits cannot exceed hard memory limit of 268435456 bytes");
 }
@@ -308,11 +299,10 @@ TEST(instantiate, imported_globals)
       (global (import "mod" "g") (mut i32))
     */
     const auto bin = from_hex("0061736d01000000020a01036d6f640167037f01");
-    const auto module = parse(bin);
 
     Value global_value = 42;
     ExternalGlobal g{&global_value, {ValType::i32, true}};
-    auto instance = instantiate(module, {}, {}, {}, {g});
+    auto instance = instantiate(parse(bin), {}, {}, {}, {g});
 
     ASSERT_EQ(instance->imported_globals.size(), 1);
     EXPECT_EQ(instance->imported_globals[0].type.value_type, ValType::i32);
@@ -328,13 +318,12 @@ TEST(instantiate, imported_globals_multiple)
       (global (import "mod" "g2") i32)
     */
     const auto bin = from_hex("0061736d01000000021502036d6f64026731037f01036d6f64026732037f00");
-    const auto module = parse(bin);
 
     Value global_value1 = 42;
     ExternalGlobal g1{&global_value1, {ValType::i32, true}};
     Value global_value2 = 43;
     ExternalGlobal g2{&global_value2, {ValType::i32, false}};
-    auto instance = instantiate(module, {}, {}, {}, {g1, g2});
+    auto instance = instantiate(parse(bin), {}, {}, {}, {g1, g2});
 
     ASSERT_EQ(instance->imported_globals.size(), 2);
     EXPECT_EQ(instance->imported_globals[0].type.value_type, ValType::i32);
@@ -353,11 +342,10 @@ TEST(instantiate, imported_globals_mismatched_count)
       (global (import "mod" "g2") i32)
     */
     const auto bin = from_hex("0061736d01000000021502036d6f64026731037f01036d6f64026732037f00");
-    const auto module = parse(bin);
 
     Value global_value = 42;
     ExternalGlobal g{&global_value, {ValType::i32, true}};
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {g}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(parse(bin), {}, {}, {}, {g}), instantiate_error,
         "module requires 2 imported globals, 1 provided");
 }
 
@@ -368,13 +356,12 @@ TEST(instantiate, imported_globals_mismatched_mutability)
       (global (import "mod" "g2") i32)
     */
     const auto bin = from_hex("0061736d01000000021502036d6f64026731037f01036d6f64026732037f00");
-    const auto module = parse(bin);
 
     Value global_value1 = 42;
     ExternalGlobal g1{&global_value1, {ValType::i32, false}};
     Value global_value2 = 42;
     ExternalGlobal g2{&global_value2, {ValType::i32, true}};
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {g1, g2}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(parse(bin), {}, {}, {}, {g1, g2}), instantiate_error,
         "global 0 mutability doesn't match module's global mutability");
 }
 
@@ -384,12 +371,11 @@ TEST(instantiate, imported_globals_mismatched_type)
       (global (import "mod" "g1") i32)
     */
     const auto bin1 = from_hex("0061736d01000000020b01036d6f64026731037f00");
-    const auto module1 = parse(bin1);
 
     Value global_value = 42;
     ExternalGlobal g{&global_value, {ValType::i64, false}};
 
-    EXPECT_THROW_MESSAGE(instantiate(module1, {}, {}, {}, {g}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(parse(bin1), {}, {}, {}, {g}), instantiate_error,
         "global 0 value type doesn't match module's global type");
 
     /* wat2wasm
@@ -397,9 +383,8 @@ TEST(instantiate, imported_globals_mismatched_type)
       (global (import "mod" "g2") i32)
     */
     const auto bin2 = from_hex("0061736d01000000021502036d6f64026731037e00036d6f64026732037f00");
-    const auto module2 = parse(bin2);
 
-    EXPECT_THROW_MESSAGE(instantiate(module2, {}, {}, {}, {g, g}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(parse(bin2), {}, {}, {}, {g, g}), instantiate_error,
         "global 1 value type doesn't match module's global type");
 }
 
@@ -418,9 +403,8 @@ TEST(instantiate, imported_global_from_another_module_mismatched_type)
       (global (import "mod" "g1") i32)
     */
     const auto bin2 = from_hex("0061736d01000000020b01036d6f64026731037f00");
-    const auto module2 = parse(bin2);
 
-    EXPECT_THROW_MESSAGE(instantiate(module2, {}, {}, {}, {*g}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(parse(bin2), {}, {}, {}, {*g}), instantiate_error,
         "global 0 value type doesn't match module's global type");
 }
 
@@ -431,28 +415,25 @@ TEST(instantiate, imported_globals_nullptr)
       (global (import "mod" "g2") i32)
     */
     const auto bin = from_hex("0061736d01000000021502036d6f64026731037f00036d6f64026732037f00");
-    const auto module = parse(bin);
 
     ExternalGlobal g{nullptr, {ValType::i32, false}};
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {g, g}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(parse(bin), {}, {}, {}, {g, g}), instantiate_error,
         "global 0 has a null pointer to value");
 }
 
 TEST(instantiate, memory_default)
 {
-    Module module;
-
-    auto instance = instantiate(module);
+    auto instance = instantiate(std::make_unique<Module>());
 
     EXPECT_FALSE(instance->memory);
 }
 
 TEST(instantiate, memory_single)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
+    const auto module{std::make_unique<Module>()};
+    module->memorysec.emplace_back(Memory{{1, 1}});
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(*module);
 
     ASSERT_EQ(instance->memory->size(), PageSize);
     EXPECT_EQ(instance->memory_limits.min, 1);
@@ -462,10 +443,10 @@ TEST(instantiate, memory_single)
 
 TEST(instantiate, memory_single_unspecified_maximum)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, std::nullopt}});
+    const auto module{std::make_unique<Module>()};
+    module->memorysec.emplace_back(Memory{{1, std::nullopt}});
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(*module);
 
     ASSERT_EQ(instance->memory->size(), PageSize);
     EXPECT_EQ(instance->memory_limits.min, 1);
@@ -474,19 +455,19 @@ TEST(instantiate, memory_single_unspecified_maximum)
 
 TEST(instantiate, memory_single_large_minimum)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{(1024 * 1024 * 1024) / PageSize, std::nullopt}});
+    const auto module{std::make_unique<Module>()};
+    module->memorysec.emplace_back(Memory{{(1024 * 1024 * 1024) / PageSize, std::nullopt}});
 
-    EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(*module), instantiate_error,
         "cannot exceed hard memory limit of 268435456 bytes");
 }
 
 TEST(instantiate, memory_single_large_maximum)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, (1024 * 1024 * 1024) / PageSize}});
+    const auto module{std::make_unique<Module>()};
+    module->memorysec.emplace_back(Memory{{1, (1024 * 1024 * 1024) / PageSize}});
 
-    EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(*module), instantiate_error,
         "cannot exceed hard memory limit of 268435456 bytes");
 }
 
@@ -498,13 +479,13 @@ TEST(instantiate, memory_single_custom_hard_limit)
     const auto bin = from_hex("0061736d01000000050401010204");
     const auto module = parse(bin);
 
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {}, 1), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {}, {}, 1), instantiate_error,
         "cannot exceed hard memory limit of 65536 bytes");
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {}, {}, 3), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {}, {}, 3), instantiate_error,
         "cannot exceed hard memory limit of 196608 bytes");
 
-    EXPECT_NO_THROW(instantiate(module, {}, {}, {}, {}, 4));
-    EXPECT_NO_THROW(instantiate(module, {}, {}, {}, {}, 8));
+    EXPECT_NO_THROW(instantiate(*module, {}, {}, {}, {}, 4));
+    EXPECT_NO_THROW(instantiate(*module, {}, {}, {}, {}, 8));
 }
 
 TEST(instantiate, imported_memory_custom_hard_limit)
@@ -517,17 +498,19 @@ TEST(instantiate, imported_memory_custom_hard_limit)
 
     bytes memory(PageSize * 3, 0);
 
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {3, 4}}}, {}, 1), instantiate_error,
-        "imported memory limits cannot exceed hard memory limit of 65536 bytes");
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {3, 4}}}, {}, 2), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{&memory, {3, 4}}}, {}, 1),
+        instantiate_error, "imported memory limits cannot exceed hard memory limit of 65536 bytes");
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{&memory, {3, 4}}}, {}, 2),
+        instantiate_error,
         "imported memory limits cannot exceed hard memory limit of 131072 bytes");
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {3, 4}}}, {}, 3), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{&memory, {3, 4}}}, {}, 3),
+        instantiate_error,
         "imported memory limits cannot exceed hard memory limit of 196608 bytes");
 
-    EXPECT_NO_THROW(instantiate(module, {}, {}, {{&memory, {3, std::nullopt}}}, {}, 3));
-    EXPECT_NO_THROW(instantiate(module, {}, {}, {{&memory, {3, std::nullopt}}}, {}, 4));
-    EXPECT_NO_THROW(instantiate(module, {}, {}, {{&memory, {3, 4}}}, {}, 4));
-    EXPECT_NO_THROW(instantiate(module, {}, {}, {{&memory, {3, 4}}}, {}, 8));
+    EXPECT_NO_THROW(instantiate(*module, {}, {}, {{&memory, {3, std::nullopt}}}, {}, 3));
+    EXPECT_NO_THROW(instantiate(*module, {}, {}, {{&memory, {3, std::nullopt}}}, {}, 4));
+    EXPECT_NO_THROW(instantiate(*module, {}, {}, {{&memory, {3, 4}}}, {}, 4));
+    EXPECT_NO_THROW(instantiate(*module, {}, {}, {{&memory, {3, 4}}}, {}, 8));
 
     /* wat2wasm
       (memory (import "mod" "mem") 2 6)
@@ -535,18 +518,18 @@ TEST(instantiate, imported_memory_custom_hard_limit)
     const auto bin_max_limit = from_hex("0061736d01000000020d01036d6f64036d656d02010206");
     const auto module_max_limit = parse(bin_max_limit);
 
-    EXPECT_THROW_MESSAGE(instantiate(module_max_limit, {}, {}, {{&memory, {3, 4}}}, {}, 1),
+    EXPECT_THROW_MESSAGE(instantiate(*module_max_limit, {}, {}, {{&memory, {3, 4}}}, {}, 1),
         instantiate_error, "imported memory limits cannot exceed hard memory limit of 65536 bytes");
-    EXPECT_THROW_MESSAGE(instantiate(module_max_limit, {}, {}, {{&memory, {3, 4}}}, {}, 2),
+    EXPECT_THROW_MESSAGE(instantiate(*module_max_limit, {}, {}, {{&memory, {3, 4}}}, {}, 2),
         instantiate_error,
         "imported memory limits cannot exceed hard memory limit of 131072 bytes");
-    EXPECT_THROW_MESSAGE(instantiate(module_max_limit, {}, {}, {{&memory, {3, 4}}}, {}, 3),
+    EXPECT_THROW_MESSAGE(instantiate(*module_max_limit, {}, {}, {{&memory, {3, 4}}}, {}, 3),
         instantiate_error,
         "imported memory limits cannot exceed hard memory limit of 196608 bytes");
 
-    EXPECT_NO_THROW(instantiate(module_max_limit, {}, {}, {{&memory, {3, 4}}}, {}, 4));
-    EXPECT_NO_THROW(instantiate(module_max_limit, {}, {}, {{&memory, {3, 6}}}, {}, 6));
-    EXPECT_NO_THROW(instantiate(module_max_limit, {}, {}, {{&memory, {3, 6}}}, {}, 8));
+    EXPECT_NO_THROW(instantiate(*module_max_limit, {}, {}, {{&memory, {3, 4}}}, {}, 4));
+    EXPECT_NO_THROW(instantiate(*module_max_limit, {}, {}, {{&memory, {3, 6}}}, {}, 6));
+    EXPECT_NO_THROW(instantiate(*module_max_limit, {}, {}, {{&memory, {3, 6}}}, {}, 8));
 }
 
 TEST(instantiate, element_section)
@@ -626,15 +609,15 @@ TEST(instantiate, element_section_offset_from_imported_global)
 
 TEST(instantiate, element_section_offset_too_large)
 {
-    Module module;
-    module.tablesec.emplace_back(Table{{3, std::nullopt}});
-    module.elementsec.emplace_back(
+    const auto module{std::make_unique<Module>()};
+    module->tablesec.emplace_back(Table{{3, std::nullopt}});
+    module->elementsec.emplace_back(
         Element{{ConstantExpression::Kind::Constant, {1}}, {0xaa, 0xff}});
-    module.elementsec.emplace_back(
+    module->elementsec.emplace_back(
         Element{{ConstantExpression::Kind::Constant, {2}}, {0x55, 0x55}});
 
     EXPECT_THROW_MESSAGE(
-        instantiate(module), instantiate_error, "element segment is out of table bounds");
+        instantiate(*module), instantiate_error, "element segment is out of table bounds");
 }
 
 TEST(instantiate, element_section_fills_imported_table)
@@ -680,15 +663,14 @@ TEST(instantiate, element_section_out_of_bounds_doesnt_change_imported_table)
     const auto bin = from_hex(
         "0061736d010000000105016000017f020b01016d037461620170000303020100090f020041000b020000004102"
         "0b0200000a0601040041010b");
-    Module module = parse(bin);
 
     auto f0 = [](Instance&, span<const Value>, int) { return Value{0}; };
 
     table_elements table(3);
     table[0] = ExternalFunction{f0, FuncType{{}, {ValType::i32}}};
 
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table, {3, std::nullopt}}}), instantiate_error,
-        "element segment is out of table bounds");
+    EXPECT_THROW_MESSAGE(instantiate(parse(bin), {}, {{&table, {3, std::nullopt}}}),
+        instantiate_error, "element segment is out of table bounds");
 
     ASSERT_EQ(table.size(), 3);
     EXPECT_EQ(*table[0]->function.target<decltype(f0)>(), f0);
@@ -698,28 +680,28 @@ TEST(instantiate, element_section_out_of_bounds_doesnt_change_imported_table)
 
 TEST(instantiate, data_section)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
+    const auto module{std::make_unique<Module>()};
+    module->memorysec.emplace_back(Memory{{1, 1}});
     // Memory contents: 0, 0xaa, 0xff, 0, ...
-    module.datasec.emplace_back(Data{{ConstantExpression::Kind::Constant, {1}}, {0xaa, 0xff}});
+    module->datasec.emplace_back(Data{{ConstantExpression::Kind::Constant, {1}}, {0xaa, 0xff}});
     // Memory contents: 0, 0xaa, 0x55, 0x55, 0, ...
-    module.datasec.emplace_back(Data{{ConstantExpression::Kind::Constant, {2}}, {0x55, 0x55}});
+    module->datasec.emplace_back(Data{{ConstantExpression::Kind::Constant, {2}}, {0x55, 0x55}});
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(*module);
 
     EXPECT_EQ(instance->memory->substr(0, 6), from_hex("00aa55550000"));
 }
 
 TEST(instantiate, data_section_offset_from_global)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.globalsec.emplace_back(
+    const auto module{std::make_unique<Module>()};
+    module->memorysec.emplace_back(Memory{{1, 1}});
+    module->globalsec.emplace_back(
         Global{{ValType::i32, false}, {ConstantExpression::Kind::Constant, {42}}});
     // Memory contents: 0, 0xaa, 0xff, 0, ...
-    module.datasec.emplace_back(Data{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
+    module->datasec.emplace_back(Data{{ConstantExpression::Kind::GlobalGet, {0}}, {0xaa, 0xff}});
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(*module);
 
     EXPECT_EQ(instance->memory->substr(42, 2), "aaff"_bytes);
 }
@@ -733,25 +715,24 @@ TEST(instantiate, data_section_offset_from_imported_global)
     */
     const auto bin =
         from_hex("0061736d01000000020a01036d6f640167037f000504010101010b08010023000b02aaff");
-    const auto module = parse(bin);
 
     Value global_value = 42;
     ExternalGlobal g{&global_value, {ValType::i32, false}};
 
-    auto instance = instantiate(module, {}, {}, {}, {g});
+    auto instance = instantiate(parse(bin), {}, {}, {}, {g});
 
     EXPECT_EQ(instance->memory->substr(42, 2), "aaff"_bytes);
 }
 
 TEST(instantiate, data_section_offset_too_large)
 {
-    Module module;
-    module.memorysec.emplace_back(Memory{{0, 1}});
+    const auto module{std::make_unique<Module>()};
+    module->memorysec.emplace_back(Memory{{0, 1}});
     // Memory contents: 0, 0xaa, 0xff, 0, ...
-    module.datasec.emplace_back(Data{{ConstantExpression::Kind::Constant, {1}}, {0xaa, 0xff}});
+    module->datasec.emplace_back(Data{{ConstantExpression::Kind::Constant, {1}}, {0xaa, 0xff}});
 
     EXPECT_THROW_MESSAGE(
-        instantiate(module), instantiate_error, "data segment is out of memory bounds");
+        instantiate(*module), instantiate_error, "data segment is out of memory bounds");
 }
 
 TEST(instantiate, data_section_fills_imported_memory)
@@ -763,10 +744,9 @@ TEST(instantiate, data_section_fills_imported_memory)
     */
     const auto bin =
         from_hex("0061736d01000000020b01036d6f64016d020101010b0f020041010b02aaff0041020b025555");
-    const auto module = parse(bin);
 
     bytes memory(PageSize, 0);
-    auto instance = instantiate(module, {}, {}, {{&memory, {1, 1}}});
+    auto instance = instantiate(parse(bin), {}, {}, {{&memory, {1, 1}}});
 
     EXPECT_EQ(memory.substr(0, 6), from_hex("00aa55550000"));
 }
@@ -782,10 +762,9 @@ TEST(instantiate, data_section_out_of_bounds_doesnt_change_imported_memory)
     */
     const auto bin =
         from_hex("0061736d01000000020a01016d036d656d0200010b0f020041000b016100418080040b0161");
-    Module module = parse(bin);
 
     bytes memory(PageSize, 0);
-    EXPECT_THROW_MESSAGE(instantiate(module, {}, {}, {{&memory, {1, 1}}}), instantiate_error,
+    EXPECT_THROW_MESSAGE(instantiate(parse(bin), {}, {}, {{&memory, {1, 1}}}), instantiate_error,
         "data segment is out of memory bounds");
 
     EXPECT_EQ(memory[0], 0);
@@ -806,12 +785,11 @@ TEST(instantiate, data_elem_section_errors_dont_change_imports)
     const auto bin_data_error = from_hex(
         "0061736d010000000105016000017f021402016d0374616201700003016d036d656d0200010302010009080100"
         "41000b0200000a0601040041010b0b0f020041000b016100418080040b0161");
-    Module module_data_error = parse(bin_data_error);
 
     table_elements table(3);
     bytes memory(PageSize, 0);
     EXPECT_THROW_MESSAGE(
-        instantiate(module_data_error, {}, {{&table, {3, std::nullopt}}}, {{&memory, {1, 1}}}),
+        instantiate(parse(bin_data_error), {}, {{&table, {3, std::nullopt}}}, {{&memory, {1, 1}}}),
         instantiate_error, "data segment is out of memory bounds");
 
     EXPECT_FALSE(table[0].has_value());
@@ -831,10 +809,9 @@ TEST(instantiate, data_elem_section_errors_dont_change_imports)
     const auto bin_elem_error = from_hex(
         "0061736d010000000105016000017f021402016d0374616201700003016d036d656d02000103020100090f0200"
         "41000b0200000041020b0200000a0601040041010b0b07010041000b0161");
-    Module module_elem_error = parse(bin_elem_error);
 
     EXPECT_THROW_MESSAGE(
-        instantiate(module_elem_error, {}, {{&table, {3, std::nullopt}}}, {{&memory, {1, 1}}}),
+        instantiate(parse(bin_elem_error), {}, {{&table, {3, std::nullopt}}}, {{&memory, {1, 1}}}),
         instantiate_error, "element segment is out of table bounds");
 
     EXPECT_FALSE(table[0].has_value());
@@ -845,11 +822,11 @@ TEST(instantiate, data_elem_section_errors_dont_change_imports)
 
 TEST(instantiate, globals_single)
 {
-    Module module;
-    module.globalsec.emplace_back(
+    const auto module{std::make_unique<Module>()};
+    module->globalsec.emplace_back(
         Global{{ValType::i32, true}, {ConstantExpression::Kind::Constant, {42}}});
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(*module);
 
     ASSERT_EQ(instance->globals.size(), 1);
     EXPECT_EQ(as_uint32(instance->globals[0]), 42);
@@ -857,13 +834,13 @@ TEST(instantiate, globals_single)
 
 TEST(instantiate, globals_multiple)
 {
-    Module module;
-    module.globalsec.emplace_back(
+    const auto module{std::make_unique<Module>()};
+    module->globalsec.emplace_back(
         Global{{ValType::i32, true}, {ConstantExpression::Kind::Constant, {42}}});
-    module.globalsec.emplace_back(
+    module->globalsec.emplace_back(
         Global{{ValType::i32, false}, {ConstantExpression::Kind::Constant, {43}}});
 
-    auto instance = instantiate(module);
+    auto instance = instantiate(*module);
 
     ASSERT_EQ(instance->globals.size(), 2);
     EXPECT_EQ(as_uint32(instance->globals[0]), 42);
@@ -879,12 +856,11 @@ TEST(instantiate, globals_with_imported)
     */
     const auto bin =
         from_hex("0061736d01000000020b01036d6f64026731037f01060b027f01412a0b7f00412b0b");
-    const auto module = parse(bin);
 
     Value global_value = 41;
     ExternalGlobal g{&global_value, {ValType::i32, true}};
 
-    auto instance = instantiate(module, {}, {}, {}, {g});
+    auto instance = instantiate(parse(bin), {}, {}, {}, {g});
 
     ASSERT_EQ(instance->imported_globals.size(), 1);
     EXPECT_EQ(as_uint32(*instance->imported_globals[0].value), 41);
@@ -901,12 +877,11 @@ TEST(instantiate, globals_initialized_from_imported)
       (global (mut i32) (global.get 0))
     */
     const auto bin = from_hex("0061736d01000000020b01036d6f64026731037f000606017f0123000b");
-    const auto module = parse(bin);
 
     Value global_value = 42;
     ExternalGlobal g{&global_value, {ValType::i32, false}};
 
-    auto instance = instantiate(module, {}, {}, {}, {g});
+    auto instance = instantiate(parse(bin), {}, {}, {}, {g});
 
     ASSERT_EQ(instance->globals.size(), 1);
     EXPECT_EQ(as_uint32(instance->globals[0]), 42);
@@ -924,14 +899,13 @@ TEST(instantiate, globals_float)
     const auto bin = from_hex(
         "0061736d01000000021102016d026731037d01016d026732037c00061a037d00439a99993f0b7c014433333333"
         "33330b400b7c0023010b");
-    const auto module = parse(bin);
 
     Value global_value1 = 5.6f;
     ExternalGlobal g1{&global_value1, {ValType::f32, true}};
     Value global_value2 = 7.8;
     ExternalGlobal g2{&global_value2, {ValType::f64, false}};
 
-    auto instance = instantiate(module, {}, {}, {}, {g1, g2});
+    auto instance = instantiate(parse(bin), {}, {}, {}, {g1, g2});
 
     ASSERT_EQ(instance->imported_globals.size(), 2);
     EXPECT_EQ(instance->imported_globals[0].value->f32, 5.6f);
