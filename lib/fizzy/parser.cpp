@@ -658,7 +658,7 @@ std::unique_ptr<const Module> parse(bytes_view input)
         module->codesec.emplace_back(
             parse_code(code_binaries[i], static_cast<FuncIdx>(i), *module));
 
-    return std::unique_ptr<const Module>(module.release());
+    return module;
 }
 
 parser_result<std::vector<uint32_t>> parse_vec_i32(const uint8_t* pos, const uint8_t* end)
