@@ -55,6 +55,17 @@ constexpr int countl_zero(uint64_t value) noexcept
 {
     return std::countl_zero(value);
 }
+
+constexpr int countr_zero(uint32_t value) noexcept
+{
+    return std::countr_zero(value);
+}
+
+constexpr int countr_zero(uint64_t value) noexcept
+{
+    return std::countr_zero(value);
+}
+
 }  // namespace fizzy
 
 #else
@@ -86,6 +97,20 @@ inline int countl_zero(uint64_t value) noexcept
     if (value == 0)
         return 64;
     return __builtin_clzll(value);
+}
+
+inline int countr_zero(uint32_t value) noexcept
+{
+    if (value == 0)
+        return 32;
+    return __builtin_ctz(value);
+}
+
+inline int countr_zero(uint64_t value) noexcept
+{
+    if (value == 0)
+        return 64;
+    return __builtin_ctzll(value);
 }
 }  // namespace fizzy
 
