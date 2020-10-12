@@ -75,6 +75,71 @@ TEST(capi, free_instance_null)
     fizzy_free_instance(nullptr);
 }
 
+TEST(capi, memory_access_no_memory)
+{
+    /* wat2wasm
+      (module)
+    */
+    const auto wasm = from_hex("0061736d01000000");
+    auto module = fizzy_parse(wasm.data(), wasm.size());
+    EXPECT_NE(module, nullptr);
+
+    auto instance = fizzy_instantiate(module, nullptr, 0);
+    EXPECT_NE(instance, nullptr);
+
+    EXPECT_EQ(fizzy_get_instance_memory_data(instance), nullptr);
+    EXPECT_EQ(fizzy_get_instance_memory_size(instance), 0);
+
+    fizzy_free_instance(instance);
+}
+
+TEST(capi, memory_access)
+{
+    /* wat2wasm
+      (memory 1)
+      (data (i32.const 1) "\11\22")
+      (func (result i32)
+        i32.const 0
+        i32.load
+      )
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000105016000017f0302010005030100010a0901070041002802000b0b08010041010b02112"
+        "2");
+    auto module = fizzy_parse(wasm.data(), wasm.size());
+    EXPECT_NE(module, nullptr);
+
+    auto instance = fizzy_instantiate(module, nullptr, 0);
+    EXPECT_NE(instance, nullptr);
+
+    uint8_t* memory = fizzy_get_instance_memory_data(instance);
+    EXPECT_NE(memory, nullptr);
+    EXPECT_EQ(memory[0], 0);
+    EXPECT_EQ(memory[1], 0x11);
+    EXPECT_EQ(memory[2], 0x22);
+    EXPECT_EQ(fizzy_get_instance_memory_size(instance), 65536);
+
+    memory[0] = 0xaa;
+    memory[1] = 0xbb;
+
+    EXPECT_EQ(fizzy_execute(instance, 0, nullptr, 0).value.i64, 0x22bbaa);
+
+    fizzy_free_instance(instance);
+}
+
+TEST(capi, imported_memory_access)
+{
+    /* wat2wasm
+      (memory (import "mod" "mem") 1)
+    */
+    const auto wasm = from_hex("0061736d01000000020c01036d6f64036d656d020001");
+    auto module = fizzy_parse(wasm.data(), wasm.size());
+    EXPECT_NE(module, nullptr);
+
+    auto instance = fizzy_instantiate(module, nullptr, 0);
+    EXPECT_EQ(instance, nullptr);
+}
+
 TEST(capi, execute)
 {
     /* wat2wasm
