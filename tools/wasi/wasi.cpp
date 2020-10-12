@@ -156,12 +156,12 @@ bool run(int argc, const char** argv)
         fizzy::bytes(std::istreambuf_iterator<char>{wasm_file}, std::istreambuf_iterator<char>{});
 
     auto module = fizzy::parse(wasm_binary);
-    auto imports = fizzy::resolve_imported_functions(module, wasi_functions);
+    auto imports = fizzy::resolve_imported_functions(*module, wasi_functions);
     auto instance = fizzy::instantiate(
         std::move(module), std::move(imports), {}, {}, {}, fizzy::MemoryPagesValidationLimit);
     assert(instance != nullptr);
 
-    const auto start_function = fizzy::find_exported_function(instance->module, "_start");
+    const auto start_function = fizzy::find_exported_function(*instance->module, "_start");
     if (!start_function.has_value())
     {
         std::cerr << "File is not WASI compatible (_start not found)\n";
@@ -170,7 +170,7 @@ bool run(int argc, const char** argv)
 
     // Manually validate type signature here
     // TODO: do this in find_exported_function
-    if (instance->module.get_function_type(*start_function) != fizzy::FuncType{})
+    if (instance->module->get_function_type(*start_function) != fizzy::FuncType{})
     {
         std::cerr << "File is not WASI compatible (_start has invalid signature)\n";
         return false;

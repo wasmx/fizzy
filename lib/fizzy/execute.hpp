@@ -43,7 +43,7 @@ ExecutionResult execute(
 inline ExecutionResult execute(
     Instance& instance, FuncIdx func_idx, std::initializer_list<Value> args) noexcept
 {
-    assert(args.size() == instance.module.get_function_type(func_idx).inputs.size());
+    assert(args.size() == instance.module->get_function_type(func_idx).inputs.size());
     return execute(instance, func_idx, args.begin());
 }
 }  // namespace fizzy

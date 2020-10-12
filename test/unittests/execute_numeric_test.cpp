@@ -16,25 +16,25 @@ namespace
 {
 ExecutionResult execute_unary_operation(Instr instr, uint64_t arg)
 {
-    Module module;
+    auto module{std::make_unique<Module>()};
     // type is currently needed only to get arity of function, so exact value types don't matter
-    module.typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(Code{1, 0, {Instr::local_get, instr, Instr::end}, {0, 0, 0, 0}});
+    module->typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
+    module->funcsec.emplace_back(TypeIdx{0});
+    module->codesec.emplace_back(Code{1, 0, {Instr::local_get, instr, Instr::end}, {0, 0, 0, 0}});
 
-    return execute(module, 0, {arg});
+    return execute(*instantiate(std::move(module)), 0, {arg});
 }
 
 ExecutionResult execute_binary_operation(Instr instr, uint64_t lhs, uint64_t rhs)
 {
-    Module module;
+    auto module{std::make_unique<Module>()};
     // type is currently needed only to get arity of function, so exact value types don't matter
-    module.typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
-    module.funcsec.emplace_back(TypeIdx{0});
-    module.codesec.emplace_back(Code{
+    module->typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
+    module->funcsec.emplace_back(TypeIdx{0});
+    module->codesec.emplace_back(Code{
         2, 0, {Instr::local_get, Instr::local_get, instr, Instr::end}, {0, 0, 0, 0, 1, 0, 0, 0}});
 
-    return execute(module, 0, {lhs, rhs});
+    return execute(*instantiate(std::move(module)), 0, {lhs, rhs});
 }
 }  // namespace
 

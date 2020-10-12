@@ -237,22 +237,22 @@ std::optional<uint32_t> find_export(const Module& module, ExternalKind kind, std
 
 }  // namespace
 
-std::unique_ptr<Instance> instantiate(Module module,
+std::unique_ptr<Instance> instantiate(std::unique_ptr<const Module> module,
     std::vector<ExternalFunction> imported_functions, std::vector<ExternalTable> imported_tables,
     std::vector<ExternalMemory> imported_memories, std::vector<ExternalGlobal> imported_globals,
     uint32_t memory_pages_limit /*= DefaultMemoryPagesLimit*/)
 {
-    assert(module.funcsec.size() == module.codesec.size());
+    assert(module->funcsec.size() == module->codesec.size());
 
-    match_imported_functions(module.imported_function_types, imported_functions);
-    match_imported_tables(module.imported_table_types, imported_tables);
-    match_imported_memories(module.imported_memory_types, imported_memories);
-    match_imported_globals(module.imported_global_types, imported_globals);
+    match_imported_functions(module->imported_function_types, imported_functions);
+    match_imported_tables(module->imported_table_types, imported_tables);
+    match_imported_memories(module->imported_memory_types, imported_memories);
+    match_imported_globals(module->imported_global_types, imported_globals);
 
     // Init globals
     std::vector<Value> globals;
-    globals.reserve(module.globalsec.size());
-    for (auto const& global : module.globalsec)
+    globals.reserve(module->globalsec.size());
+    for (auto const& global : module->globalsec)
     {
         // Constraint to use global.get only with imported globals is checked at validation.
         assert(global.expression.kind != ConstantExpression::Kind::GlobalGet ||
@@ -262,10 +262,10 @@ std::unique_ptr<Instance> instantiate(Module module,
         globals.emplace_back(value);
     }
 
-    auto [table, table_limits] = allocate_table(module.tablesec, imported_tables);
+    auto [table, table_limits] = allocate_table(module->tablesec, imported_tables);
 
     auto [memory, memory_limits] =
-        allocate_memory(module.memorysec, imported_memories, memory_pages_limit);
+        allocate_memory(module->memorysec, imported_memories, memory_pages_limit);
     // In case upper limit for local/imported memory is defined,
     // we adjust the hard memory limit, to ensure memory.grow will fail when exceeding it.
     // Note: allocate_memory ensures memory's max limit is always below memory_pages_limit.
@@ -278,8 +278,8 @@ std::unique_ptr<Instance> instantiate(Module module,
     // Before starting to fill memory and table,
     // check that data and element segments are within bounds.
     std::vector<uint64_t> datasec_offsets;
-    datasec_offsets.reserve(module.datasec.size());
-    for (const auto& data : module.datasec)
+    datasec_offsets.reserve(module->datasec.size());
+    for (const auto& data : module->datasec)
     {
         // Offset is validated to be i32, but it's used in 64-bit calculation below.
         const uint64_t offset =
@@ -291,10 +291,10 @@ std::unique_ptr<Instance> instantiate(Module module,
         datasec_offsets.emplace_back(offset);
     }
 
-    assert(module.elementsec.empty() || table != nullptr);
+    assert(module->elementsec.empty() || table != nullptr);
     std::vector<ptrdiff_t> elementsec_offsets;
-    elementsec_offsets.reserve(module.elementsec.size());
-    for (const auto& element : module.elementsec)
+    elementsec_offsets.reserve(module->elementsec.size());
+    for (const auto& element : module->elementsec)
     {
         // Offset is validated to be i32, but it's used in 64-bit calculation below.
         const uint64_t offset =
@@ -307,10 +307,10 @@ std::unique_ptr<Instance> instantiate(Module module,
     }
 
     // Fill out memory based on data segments
-    for (size_t i = 0; i < module.datasec.size(); ++i)
+    for (size_t i = 0; i < module->datasec.size(); ++i)
     {
         // NOTE: these instructions can overlap
-        std::copy(module.datasec[i].init.begin(), module.datasec[i].init.end(),
+        std::copy(module->datasec[i].init.begin(), module->datasec[i].init.end(),
             memory->data() + datasec_offsets[i]);
     }
 
@@ -321,41 +321,41 @@ std::unique_ptr<Instance> instantiate(Module module,
         std::move(imported_functions), std::move(imported_globals));
 
     // Fill the table based on elements segment
-    for (size_t i = 0; i < instance->module.elementsec.size(); ++i)
+    for (size_t i = 0; i < instance->module->elementsec.size(); ++i)
     {
         // Overwrite table[offset..] with element.init
         auto it_table = instance->table->begin() + elementsec_offsets[i];
-        for (const auto idx : instance->module.elementsec[i].init)
+        for (const auto idx : instance->module->elementsec[i].init)
         {
             auto func = [idx, &instance_ref = *instance](fizzy::Instance&, span<const Value> args,
                             int depth) { return execute(instance_ref, idx, args.data(), depth); };
 
             *it_table++ =
-                ExternalFunction{std::move(func), instance->module.get_function_type(idx)};
+                ExternalFunction{std::move(func), instance->module->get_function_type(idx)};
         }
     }
 
     // Run start function if present
-    if (instance->module.startfunc)
+    if (instance->module->startfunc)
     {
-        const auto funcidx = *instance->module.startfunc;
-        assert(funcidx < instance->imported_functions.size() + instance->module.funcsec.size());
+        const auto funcidx = *instance->module->startfunc;
+        assert(funcidx < instance->imported_functions.size() + instance->module->funcsec.size());
         if (execute(*instance, funcidx, {}).trapped)
         {
             // When element section modified imported table, and then start function trapped,
             // modifications to the table are not rolled back.
             // Instance in this case is not being returned to the user, so it needs to be kept alive
             // as long as functions using it are alive in the table.
-            if (!imported_tables.empty() && !instance->module.elementsec.empty())
+            if (!imported_tables.empty() && !instance->module->elementsec.empty())
             {
                 // Instance may be used by several functions added to the table,
                 // so we need a shared ownership here.
                 std::shared_ptr<Instance> shared_instance = std::move(instance);
 
-                for (size_t i = 0; i < shared_instance->module.elementsec.size(); ++i)
+                for (size_t i = 0; i < shared_instance->module->elementsec.size(); ++i)
                 {
                     auto it_table = shared_instance->table->begin() + elementsec_offsets[i];
-                    for ([[maybe_unused]] auto _ : shared_instance->module.elementsec[i].init)
+                    for ([[maybe_unused]] auto _ : shared_instance->module->elementsec[i].init)
                     {
                         // Wrap the function with the lambda capturing shared instance
                         auto& table_function = (*it_table)->function;
@@ -427,7 +427,7 @@ std::optional<FuncIdx> find_exported_function(const Module& module, std::string_
 
 std::optional<ExternalFunction> find_exported_function(Instance& instance, std::string_view name)
 {
-    const auto opt_index = find_export(instance.module, ExternalKind::Function, name);
+    const auto opt_index = find_export(*instance.module, ExternalKind::Function, name);
     if (!opt_index.has_value())
         return std::nullopt;
 
@@ -436,12 +436,12 @@ std::optional<ExternalFunction> find_exported_function(Instance& instance, std::
         return execute(instance, idx, args.data(), depth);
     };
 
-    return ExternalFunction{std::move(func), instance.module.get_function_type(idx)};
+    return ExternalFunction{std::move(func), instance.module->get_function_type(idx)};
 }
 
 std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::string_view name)
 {
-    const auto opt_index = find_export(instance.module, ExternalKind::Global, name);
+    const auto opt_index = find_export(*instance.module, ExternalKind::Global, name);
     if (!opt_index.has_value())
         return std::nullopt;
 
@@ -457,16 +457,14 @@ std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::stri
         // global owned by instance
         const auto module_global_idx = global_idx - instance.imported_globals.size();
         return ExternalGlobal{&instance.globals[module_global_idx],
-            instance.module.globalsec[module_global_idx].type};
+            instance.module->globalsec[module_global_idx].type};
     }
 }
 
 std::optional<ExternalTable> find_exported_table(Instance& instance, std::string_view name)
 {
-    const auto& module = instance.module;
-
     // Index returned from find_export is discarded, because there's no more than 1 table
-    if (!find_export(module, ExternalKind::Table, name))
+    if (!find_export(*instance.module, ExternalKind::Table, name))
         return std::nullopt;
 
     return ExternalTable{instance.table.get(), instance.table_limits};
@@ -474,10 +472,8 @@ std::optional<ExternalTable> find_exported_table(Instance& instance, std::string
 
 std::optional<ExternalMemory> find_exported_memory(Instance& instance, std::string_view name)
 {
-    const auto& module = instance.module;
-
     // Index returned from find_export is discarded, because there's no more than 1 memory
-    if (!find_export(module, ExternalKind::Memory, name))
+    if (!find_export(*instance.module, ExternalKind::Memory, name))
         return std::nullopt;
 
     return ExternalMemory{instance.memory.get(), instance.memory_limits};

@@ -86,10 +86,10 @@ bool FizzyEngine::instantiate(bytes_view wasm_binary)
     {
         auto module = fizzy::parse(wasm_binary);
         auto imports = fizzy::resolve_imported_functions(
-            module, {
-                        {"env", "adler32", {fizzy::ValType::i32, fizzy::ValType::i32},
-                            fizzy::ValType::i32, env_adler32},
-                    });
+            *module, {
+                         {"env", "adler32", {fizzy::ValType::i32, fizzy::ValType::i32},
+                             fizzy::ValType::i32, env_adler32},
+                     });
         m_instance = fizzy::instantiate(std::move(module), std::move(imports));
     }
     catch (...)
@@ -120,10 +120,10 @@ bytes_view FizzyEngine::get_memory() const
 std::optional<WasmEngine::FuncRef> FizzyEngine::find_function(
     std::string_view name, std::string_view signature) const
 {
-    const auto func_idx = fizzy::find_exported_function(m_instance->module, name);
+    const auto func_idx = fizzy::find_exported_function(*m_instance->module, name);
     if (func_idx.has_value())
     {
-        const auto func_type = m_instance->module.get_function_type(*func_idx);
+        const auto func_type = m_instance->module->get_function_type(*func_idx);
         const auto sig_type = translate_signature(signature);
         if (sig_type != func_type)
             return std::nullopt;
@@ -137,7 +137,7 @@ WasmEngine::Result FizzyEngine::execute(
     static_assert(sizeof(uint64_t) == sizeof(Value));
     const auto first_arg = reinterpret_cast<const Value*>(args.data());
     assert(args.size() ==
-           m_instance->module.get_function_type(static_cast<uint32_t>(func_ref)).inputs.size());
+           m_instance->module->get_function_type(static_cast<uint32_t>(func_ref)).inputs.size());
     const auto status = fizzy::execute(*m_instance, static_cast<uint32_t>(func_ref), first_arg);
     if (status.trapped)
         return {true, std::nullopt};

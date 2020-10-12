@@ -99,9 +99,9 @@ TEST(parser_expr, loop_br)
     const auto wasm = from_hex("0061736d01000000010401600000030201000a0901070003400c000b0b");
     const auto module = parse(wasm);
 
-    EXPECT_EQ(module.codesec[0].instructions,
+    EXPECT_EQ(module->codesec[0].instructions,
         (std::vector{Instr::loop, Instr::br, Instr::end, Instr::end}));
-    EXPECT_EQ(module.codesec[0].immediates,
+    EXPECT_EQ(module->codesec[0].immediates,
         "00000000"          // code_offset
         "00000000"          // imm_offset
         "00000000"          // stack_drop
@@ -118,10 +118,10 @@ TEST(parser_expr, loop_br)
         from_hex("0061736d01000000010401600000030201000a0c010a00410003400c000b1a0b");
     const auto module_parent_stack = parse(wasm_parent_stack);
 
-    EXPECT_EQ(module_parent_stack.codesec[0].instructions,
+    EXPECT_EQ(module_parent_stack->codesec[0].instructions,
         (std::vector{
             Instr::i32_const, Instr::loop, Instr::br, Instr::end, Instr::drop, Instr::end}));
-    EXPECT_EQ(module_parent_stack.codesec[0].immediates,
+    EXPECT_EQ(module_parent_stack->codesec[0].immediates,
         "00000000"          // i32.const
         "00000000"          // arity
         "01000000"          // code_offset
@@ -141,10 +141,10 @@ TEST(parser_expr, loop_br)
         from_hex("0061736d01000000010401600000030201000a0c010a00037f41000c000b1a0b");
     const auto module_arity = parse(wasm_arity);
 
-    EXPECT_EQ(
-        module_arity.codesec[0].instructions, (std::vector{Instr::loop, Instr::i32_const, Instr::br,
-                                                  Instr::end, Instr::drop, Instr::end}));
-    EXPECT_EQ(module_arity.codesec[0].immediates,
+    EXPECT_EQ(module_arity->codesec[0].instructions,
+        (std::vector{
+            Instr::loop, Instr::i32_const, Instr::br, Instr::end, Instr::drop, Instr::end}));
+    EXPECT_EQ(module_arity->codesec[0].immediates,
         "00000000"          // i32.const
         "00000000"          // arity - always 0 for loop
         "00000000"          // code_offset
@@ -160,9 +160,9 @@ TEST(parser_expr, loop_return)
     const auto wasm = from_hex("0061736d01000000010401600000030201000a0801060003400f0b0b");
     const auto module = parse(wasm);
 
-    EXPECT_EQ(module.codesec[0].instructions,
+    EXPECT_EQ(module->codesec[0].instructions,
         (std::vector{Instr::loop, Instr::return_, Instr::end, Instr::end}));
-    EXPECT_EQ(module.codesec[0].immediates,
+    EXPECT_EQ(module->codesec[0].immediates,
         "00000000"          // arity
         "03000000"          // code_offset
         "10000000"          // imm_offset
@@ -212,10 +212,10 @@ TEST(parser_expr, block_br)
         from_hex("0061736d01000000010401600000030201000a0c010a00410002400c000b1a0b");
     const auto module_parent_stack = parse(wasm_parent_stack);
 
-    EXPECT_EQ(module_parent_stack.codesec[0].instructions,
+    EXPECT_EQ(module_parent_stack->codesec[0].instructions,
         (std::vector{
             Instr::i32_const, Instr::block, Instr::br, Instr::end, Instr::drop, Instr::end}));
-    EXPECT_EQ(module_parent_stack.codesec[0].immediates,
+    EXPECT_EQ(module_parent_stack->codesec[0].immediates,
         "00000000"          // i32.const
         "00000000"          // arity
         "04000000"          // code_offset
@@ -235,10 +235,10 @@ TEST(parser_expr, block_br)
         from_hex("0061736d01000000010401600000030201000a0c010a00027f41000c000b1a0b");
     const auto module_arity = parse(wasm_arity);
 
-    EXPECT_EQ(
-        module_arity.codesec[0].instructions, (std::vector{Instr::block, Instr::i32_const,
-                                                  Instr::br, Instr::end, Instr::drop, Instr::end}));
-    EXPECT_EQ(module_arity.codesec[0].immediates,
+    EXPECT_EQ(module_arity->codesec[0].instructions,
+        (std::vector{
+            Instr::block, Instr::i32_const, Instr::br, Instr::end, Instr::drop, Instr::end}));
+    EXPECT_EQ(module_arity->codesec[0].immediates,
         "00000000"          // i32.const
         "01000000"          // arity
         "04000000"          // code_offset
@@ -254,9 +254,9 @@ TEST(parser_expr, block_return)
     const auto wasm = from_hex("0061736d01000000010401600000030201000a0801060002400f0b0b");
     const auto module = parse(wasm);
 
-    EXPECT_EQ(module.codesec[0].instructions,
+    EXPECT_EQ(module->codesec[0].instructions,
         (std::vector{Instr::block, Instr::return_, Instr::end, Instr::end}));
-    EXPECT_EQ(module.codesec[0].immediates,
+    EXPECT_EQ(module->codesec[0].immediates,
         "00000000"          // arity
         "03000000"          // code_offset
         "10000000"          // imm_offset
@@ -274,9 +274,9 @@ TEST(parser_expr, if_br)
     const auto wasm = from_hex("0061736d01000000010401600000030201000a0b010900410004400c000b0b");
     const auto module = parse(wasm);
 
-    EXPECT_EQ(module.codesec[0].instructions,
+    EXPECT_EQ(module->codesec[0].instructions,
         (std::vector{Instr::i32_const, Instr::if_, Instr::br, Instr::end, Instr::end}));
-    EXPECT_EQ(module.codesec[0].immediates,
+    EXPECT_EQ(module->codesec[0].immediates,
         "00000000"          // i32.const
         "04000000"          // else code offset
         "1c000000"          // else imm offset
@@ -297,10 +297,10 @@ TEST(parser_expr, if_br)
         from_hex("0061736d01000000010401600000030201000a0e010c004100410004400c000b1a0b");
     const auto module_parent_stack = parse(wasm_parent_stack);
 
-    EXPECT_EQ(module_parent_stack.codesec[0].instructions,
+    EXPECT_EQ(module_parent_stack->codesec[0].instructions,
         (std::vector{Instr::i32_const, Instr::i32_const, Instr::if_, Instr::br, Instr::end,
             Instr::drop, Instr::end}));
-    EXPECT_EQ(module_parent_stack.codesec[0].immediates,
+    EXPECT_EQ(module_parent_stack->codesec[0].immediates,
         "00000000"          // i32.const
         "00000000"          // i32.const
         "05000000"          // else code offset
@@ -339,8 +339,8 @@ TEST(parser_expr, instr_br_table)
         "e3000f0b41e4000f0b41e5000f0b41e6000f0b41e7000f0b41e8000b");
 
     const auto module = parse(wasm);
-    ASSERT_EQ(module.codesec.size(), 1);
-    const auto& code = module.codesec[0];
+    ASSERT_EQ(module->codesec.size(), 1);
+    const auto& code = module->codesec[0];
 
     EXPECT_EQ(code.instructions,
         (std::vector{Instr::block, Instr::block, Instr::block, Instr::block, Instr::block,
@@ -401,8 +401,8 @@ TEST(parser_expr, instr_br_table_empty_vector)
         "0061736d0100000001060160017f017f030201000a13011100024020000e000041e3000f0b41e4000b");
 
     const auto module = parse(wasm);
-    ASSERT_EQ(module.codesec.size(), 1);
-    const auto& code = module.codesec[0];
+    ASSERT_EQ(module->codesec.size(), 1);
+    const auto& code = module->codesec[0];
 
     EXPECT_EQ(code.instructions,
         (std::vector{Instr::block, Instr::local_get, Instr::br_table, Instr::i32_const,
@@ -575,9 +575,9 @@ TEST(parser_expr, call_0args_1result)
         from_hex("0061736d010000000105016000017f03030200000a0b02040041000b040010000b");
 
     const auto module = parse(wasm);
-    ASSERT_EQ(module.codesec.size(), 2);
-    EXPECT_EQ(module.codesec[0].max_stack_height, 1);
-    EXPECT_EQ(module.codesec[1].max_stack_height, 1);
+    ASSERT_EQ(module->codesec.size(), 2);
+    EXPECT_EQ(module->codesec[0].max_stack_height, 1);
+    EXPECT_EQ(module->codesec[1].max_stack_height, 1);
 }
 
 TEST(parser_expr, call_1arg_1result)
@@ -590,9 +590,9 @@ TEST(parser_expr, call_1arg_1result)
         "0061736d01000000010a0260017f017f6000017f03030200010a0d02040020000b0600410010000b");
 
     const auto module = parse(wasm);
-    ASSERT_EQ(module.codesec.size(), 2);
-    EXPECT_EQ(module.codesec[0].max_stack_height, 1);
-    EXPECT_EQ(module.codesec[1].max_stack_height, 1);
+    ASSERT_EQ(module->codesec.size(), 2);
+    EXPECT_EQ(module->codesec[0].max_stack_height, 1);
+    EXPECT_EQ(module->codesec[1].max_stack_height, 1);
 }
 TEST(parser_expr, call_nonexisting_typeidx)
 {

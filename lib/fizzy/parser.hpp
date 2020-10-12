@@ -7,6 +7,7 @@
 #include "exceptions.hpp"
 #include "leb128.hpp"
 #include "module.hpp"
+#include <memory>
 
 namespace fizzy
 {
@@ -16,7 +17,7 @@ constexpr bytes_view wasm_prefix{wasm_prefix_data, sizeof(wasm_prefix_data)};
 template <typename T>
 using parser_result = std::pair<T, const uint8_t*>;
 
-Module parse(bytes_view input);
+std::unique_ptr<const Module> parse(bytes_view input);
 
 inline parser_result<uint8_t> parse_byte(const uint8_t* pos, const uint8_t* end)
 {

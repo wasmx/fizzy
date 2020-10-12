@@ -62,6 +62,7 @@ if(WEVERYTHING)
         -Wno-double-promotion
         -Wno-float-equal
         -Wno-padded
+        -Wno-return-std-move-in-c++11
         -Wno-switch-enum
     )
 endif()

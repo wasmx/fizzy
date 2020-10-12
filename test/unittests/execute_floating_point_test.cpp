@@ -10,6 +10,7 @@
 #include <test/utils/asserts.hpp>
 #include <test/utils/floating_point_utils.hpp>
 #include <test/utils/hex.hpp>
+#include <test/utils/instantiate_helpers.hpp>
 #include <array>
 #include <cfenv>
 #include <cmath>
@@ -2016,7 +2017,7 @@ TEST(execute_floating_point, f32_store)
 
     for (const auto& [arg, expected] : test_cases)
     {
-        auto instance = instantiate(module);
+        auto instance = instantiate(*module);
 
         EXPECT_THAT(execute(*instance, 0, {arg, 1}), Result());
         EXPECT_EQ(instance->memory->substr(0, 6), expected);
@@ -2093,7 +2094,7 @@ TEST(execute_floating_point, f64_store)
 
     for (const auto& [arg, expected] : test_cases)
     {
-        auto instance = instantiate(module);
+        auto instance = instantiate(*module);
 
         EXPECT_THAT(execute(*instance, 0, {arg, 1}), Result());
         EXPECT_EQ(instance->memory->substr(0, 10), expected);

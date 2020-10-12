@@ -54,7 +54,7 @@ using bytes_ptr = std::unique_ptr<bytes, void (*)(bytes*)>;
 // The module instance.
 struct Instance
 {
-    Module module;
+    std::unique_ptr<const Module> module;
     // Memory is either allocated and owned by the instance or imported as already allocated bytes
     // and owned externally.
     // For these cases unique_ptr would either have a normal deleter or noop deleter respectively
@@ -70,9 +70,9 @@ struct Instance
     std::vector<ExternalFunction> imported_functions;
     std::vector<ExternalGlobal> imported_globals;
 
-    Instance(Module _module, bytes_ptr _memory, Limits _memory_limits, uint32_t _memory_pages_limit,
-        table_ptr _table, Limits _table_limits, std::vector<Value> _globals,
-        std::vector<ExternalFunction> _imported_functions,
+    Instance(std::unique_ptr<const Module> _module, bytes_ptr _memory, Limits _memory_limits,
+        uint32_t _memory_pages_limit, table_ptr _table, Limits _table_limits,
+        std::vector<Value> _globals, std::vector<ExternalFunction> _imported_functions,
         std::vector<ExternalGlobal> _imported_globals)
       : module(std::move(_module)),
         memory(std::move(_memory)),
@@ -87,13 +87,12 @@ struct Instance
 };
 
 // Instantiate a module.
-std::unique_ptr<Instance> instantiate(Module module,
+std::unique_ptr<Instance> instantiate(std::unique_ptr<const Module> module,
     std::vector<ExternalFunction> imported_functions = {},
     std::vector<ExternalTable> imported_tables = {},
     std::vector<ExternalMemory> imported_memories = {},
     std::vector<ExternalGlobal> imported_globals = {},
     uint32_t memory_pages_limit = DefaultMemoryPagesLimit);
-
 
 // Function that should be used by instantiate as imports, identified by module and function name.
 struct ImportedFunction

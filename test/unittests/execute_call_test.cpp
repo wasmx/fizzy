@@ -105,7 +105,7 @@ TEST(execute_call, call_indirect)
         "0061736d01000000010e036000017f6000017e60017f017f03070600000001000204050170010505090b010041"
         "000b0502010003040a2106040041010b040041020b040041030b040042040b0300000b070020001100000b");
 
-    const Module module = parse(bin);
+    const auto module = parse(bin);
 
     for (const auto param : {0u, 1u, 2u})
     {
@@ -146,7 +146,7 @@ TEST(execute_call, call_indirect_with_argument)
         "0061736d01000000010c0260027f7f017f60017f017f03050400000101040501700103030909010041000b0300"
         "01020a25040700200020016e0b0700200020016b0b0700200020006c0b0b00411f410720001100000b");
 
-    const Module module = parse(bin);
+    const auto module = parse(bin);
 
     EXPECT_THAT(execute(module, 3, {0}), Result(31 / 7));
     EXPECT_THAT(execute(module, 3, {1}), Result(31 - 7));
@@ -171,8 +171,6 @@ TEST(execute_call, call_indirect_imported_table)
         "0061736d01000000010a026000017f60017f017f020a01016d01740170010514030201010a0901070020001100"
         "000b");
 
-    const Module module = parse(bin);
-
     auto f1 = [](Instance&, span<const Value>, int) { return Value{1}; };
     auto f2 = [](Instance&, span<const Value>, int) { return Value{2}; };
     auto f3 = [](Instance&, span<const Value>, int) { return Value{3}; };
@@ -185,7 +183,7 @@ TEST(execute_call, call_indirect_imported_table)
     table_elements table{
         {{f3, out_i32}}, {{f2, out_i32}}, {{f1, out_i32}}, {{f4, out_i64}}, {{f5, out_i32}}};
 
-    auto instance = instantiate(module, {}, {{&table, {5, 20}}});
+    auto instance = instantiate(parse(bin), {}, {{&table, {5, 20}}});
 
     for (const auto param : {0u, 1u, 2u})
     {
@@ -224,7 +222,7 @@ TEST(execute_call, call_indirect_uninited_table)
         "0061736d01000000010a026000017f60017f017f030504000000010404017000050909010041000b030201000a"
         "1804040041010b040041020b040041030b070020001100000b");
 
-    const Module module = parse(bin);
+    const auto module = parse(bin);
 
     // elements 3 and 4 are not initialized
     EXPECT_THAT(execute(module, 3, {3}), Traps());
@@ -273,9 +271,9 @@ TEST(execute_call, imported_function_call)
     const auto module = parse(wasm);
 
     constexpr auto host_foo = [](Instance&, span<const Value>, int) { return Value{42}; };
-    const auto host_foo_type = module.typesec[0];
+    const auto host_foo_type = module->typesec[0];
 
-    auto instance = instantiate(module, {{host_foo, host_foo_type}});
+    auto instance = instantiate(*module, {{host_foo, host_foo_type}});
 
     EXPECT_THAT(execute(*instance, 1, {}), Result(42));
 }
@@ -300,9 +298,9 @@ TEST(execute_call, imported_function_call_with_arguments)
     auto host_foo = [](Instance&, span<const Value> args, int) {
         return Value{as_uint32(args[0]) * 2};
     };
-    const auto host_foo_type = module.typesec[0];
+    const auto host_foo_type = module->typesec[0];
 
-    auto instance = instantiate(module, {{host_foo, host_foo_type}});
+    auto instance = instantiate(*module, {{host_foo, host_foo_type}});
 
     EXPECT_THAT(execute(*instance, 1, {20}), Result(42));
 }
@@ -337,9 +335,9 @@ TEST(execute_call, imported_functions_call_indirect)
         "00000b");
 
     const auto module = parse(wasm);
-    ASSERT_EQ(module.typesec.size(), 2);
-    ASSERT_EQ(module.importsec.size(), 2);
-    ASSERT_EQ(module.codesec.size(), 2);
+    ASSERT_EQ(module->typesec.size(), 2);
+    ASSERT_EQ(module->importsec.size(), 2);
+    ASSERT_EQ(module->codesec.size(), 2);
 
     constexpr auto sqr = [](Instance&, span<const Value> args, int) {
         const auto x = as_uint32(args[0]);
@@ -350,7 +348,7 @@ TEST(execute_call, imported_functions_call_indirect)
         return Value{(11 + uint64_t{x} / 11) / 2};
     };
 
-    auto instance = instantiate(module, {{sqr, module.typesec[0]}, {isqrt, module.typesec[0]}});
+    auto instance = instantiate(*module, {{sqr, module->typesec[0]}, {isqrt, module->typesec[0]}});
     EXPECT_THAT(execute(*instance, 3, {0, 10}), Result(20));  // double(10)
     EXPECT_THAT(execute(*instance, 3, {1, 9}), Result(81));   // sqr(9)
     EXPECT_THAT(execute(*instance, 3, {2, 50}), Result(7));   // isqrt(50)
@@ -370,7 +368,7 @@ TEST(execute_call, imported_function_from_another_module)
     const auto bin1 = from_hex(
         "0061736d0100000001070160027f7f017f030201000707010373756200000a09010700200020016b0b");
     const auto module1 = parse(bin1);
-    auto instance1 = instantiate(module1);
+    auto instance1 = instantiate(*module1);
 
     /* wat2wasm
     (module
@@ -386,16 +384,15 @@ TEST(execute_call, imported_function_from_another_module)
     const auto bin2 = from_hex(
         "0061736d0100000001070160027f7f017f020a01026d31037375620000030201000a0a0108002000200110000"
         "b");
-    const auto module2 = parse(bin2);
 
-    const auto func_idx = fizzy::find_exported_function(module1, "sub");
+    const auto func_idx = fizzy::find_exported_function(*module1, "sub");
     ASSERT_TRUE(func_idx.has_value());
 
     auto sub = [&instance1, func_idx](Instance&, span<const Value> args, int) -> ExecutionResult {
         return fizzy::execute(*instance1, *func_idx, args.data());
     };
 
-    auto instance2 = instantiate(module2, {{sub, module1.typesec[0]}});
+    auto instance2 = instantiate(parse(bin2), {{sub, module1->typesec[0]}});
 
     EXPECT_THAT(execute(*instance2, 1, {44, 2}), Result(42));
 }
@@ -415,8 +412,7 @@ TEST(execute_call, imported_table_from_another_module)
     const auto bin1 = from_hex(
         "0061736d0100000001070160027f7f017f030201000404017000010707010374616201000907010041000b0100"
         "0a09010700200020016b0b");
-    const auto module1 = parse(bin1);
-    auto instance1 = instantiate(module1);
+    auto instance1 = instantiate(parse(bin1));
 
     /* wat2wasm
     (module
@@ -433,12 +429,11 @@ TEST(execute_call, imported_table_from_another_module)
     const auto bin2 = from_hex(
         "0061736d0100000001070160027f7f017f020c01026d310374616201700001030201000a0d010b002000200141"
         "001100000b");
-    const auto module2 = parse(bin2);
 
     const auto table = fizzy::find_exported_table(*instance1, "tab");
     ASSERT_TRUE(table.has_value());
 
-    auto instance2 = instantiate(module2, {}, {*table});
+    auto instance2 = instantiate(parse(bin2), {}, {*table});
 
     EXPECT_THAT(execute(*instance2, 0, {44, 2}), Result(42));
 }
@@ -459,8 +454,7 @@ TEST(execute_call, imported_table_modified_by_uninstantiable_module)
     const auto bin1 = from_hex(
         "0061736d0100000001070160027f7f017f030201000404017000010707010374616201000a0d010b0020002001"
         "41001100000b");
-    const auto module1 = parse(bin1);
-    auto instance1 = instantiate(module1);
+    auto instance1 = instantiate(parse(bin1));
 
     /* wat2wasm
     (module
@@ -477,13 +471,12 @@ TEST(execute_call, imported_table_modified_by_uninstantiable_module)
     const auto bin2 = from_hex(
         "0061736d01000000010a0260027f7f017f600000020c01026d3103746162017000010303020001080101090701"
         "0041000b01000a0d020700200020016b0b0300000b");
-    const auto module2 = parse(bin2);
 
     const auto table = fizzy::find_exported_table(*instance1, "tab");
     ASSERT_TRUE(table.has_value());
 
-    EXPECT_THROW_MESSAGE(
-        instantiate(module2, {}, {*table}), instantiate_error, "start function failed to execute");
+    EXPECT_THROW_MESSAGE(instantiate(parse(bin2), {}, {*table}), instantiate_error,
+        "start function failed to execute");
 
     EXPECT_THAT(execute(*instance1, 0, {44, 2}), Result(42));
 }
@@ -495,7 +488,7 @@ TEST(execute_call, call_infinite_recursion)
     */
     const auto bin = from_hex("0061736d01000000010401600000030201000a0601040010000b");
 
-    const Module module = parse(bin);
+    const auto module = parse(bin);
 
     EXPECT_THAT(execute(module, 0, {}), Traps());
 }
@@ -513,7 +506,7 @@ TEST(execute_call, call_indirect_infinite_recursion)
         "0061736d010000000105016000017f03020100040501700101010907010041000b01000a090107004100110000"
         "0b");
 
-    const Module module = parse(bin);
+    const auto module = parse(bin);
 
     EXPECT_TRUE(execute(module, 0, {}).trapped);
 }
@@ -530,8 +523,7 @@ TEST(execute_call, call_max_depth)
 
     const auto bin = from_hex("0061736d010000000105016000017f03030200000a0b020400412a0b040010000b");
 
-    const auto module = parse(bin);
-    auto instance = instantiate(module);
+    auto instance = instantiate(parse(bin));
 
     EXPECT_THAT(execute(*instance, 0, {}, MaxDepth), Result(42));
     EXPECT_THAT(execute(*instance, 1, {}, MaxDepth), Traps());
@@ -572,9 +564,9 @@ TEST(execute_call, call_imported_infinite_recursion)
         EXPECT_LE(depth, MaxDepth);
         return execute(instance, 0, {}, depth + 1);
     };
-    const auto host_foo_type = module.typesec[0];
+    const auto host_foo_type = module->typesec[0];
 
-    auto instance = instantiate(module, {{host_foo, host_foo_type}});
+    auto instance = instantiate(*module, {{host_foo, host_foo_type}});
 
     EXPECT_THAT(execute(*instance, 0, {}), Traps());
 }
@@ -596,9 +588,9 @@ TEST(execute_call, call_via_imported_infinite_recursion)
         EXPECT_LE(depth, MaxDepth - 1);
         return execute(instance, 1, {}, depth + 1);
     };
-    const auto host_foo_type = module.typesec[0];
+    const auto host_foo_type = module->typesec[0];
 
-    auto instance = instantiate(module, {{host_foo, host_foo_type}});
+    auto instance = instantiate(*module, {{host_foo, host_foo_type}});
 
     EXPECT_THAT(execute(*instance, 1, {}), Traps());
 }
@@ -616,9 +608,9 @@ TEST(execute_call, call_imported_max_depth_recursion)
             return Value{uint32_t{1}};  // Terminate recursion on the max depth.
         return execute(instance, 0, {}, depth + 1);
     };
-    const auto host_foo_type = module.typesec[0];
+    const auto host_foo_type = module->typesec[0];
 
-    auto instance = instantiate(module, {{host_foo, host_foo_type}});
+    auto instance = instantiate(*module, {{host_foo, host_foo_type}});
 
     EXPECT_THAT(execute(*instance, 0, {}), Result(uint32_t{1}));
 }
@@ -641,9 +633,9 @@ TEST(execute_call, call_via_imported_max_depth_recursion)
             return Value{uint32_t{1}};  // Terminate recursion on the max depth.
         return execute(instance, 1, {}, depth + 1);
     };
-    const auto host_foo_type = module.typesec[0];
+    const auto host_foo_type = module->typesec[0];
 
-    auto instance = instantiate(module, {{host_foo, host_foo_type}});
+    auto instance = instantiate(*module, {{host_foo, host_foo_type}});
 
     EXPECT_THAT(execute(*instance, 1, {}), Result(uint32_t{1}));
 }
@@ -663,8 +655,7 @@ TEST(execute_call, call_indirect_imported_table_infinite_recursion)
     const auto bin1 = from_hex(
         "0061736d010000000105016000017f030201000404017000020707010374616201000907010041000b01000a09"
         "01070041011100000b");
-    const auto module1 = parse(bin1);
-    auto instance1 = instantiate(module1);
+    auto instance1 = instantiate(parse(bin1));
 
     /* wat2wasm
     (module
@@ -679,12 +670,11 @@ TEST(execute_call, call_indirect_imported_table_infinite_recursion)
     const auto bin2 = from_hex(
         "0061736d010000000105016000017f020c01026d310374616201700001030201000907010041010b01000a0901"
         "070041001100000b");
-    const auto module2 = parse(bin2);
 
     const auto table = fizzy::find_exported_table(*instance1, "tab");
     ASSERT_TRUE(table.has_value());
 
-    auto instance2 = instantiate(module2, {}, {*table});
+    auto instance2 = instantiate(parse(bin2), {}, {*table});
 
     EXPECT_THAT(execute(*instance1, 0, {}), Traps());
 }
@@ -704,10 +694,10 @@ TEST(execute_call, drop_call_result)
         "0a0d02050041b2020b050010001a0b");
 
     const auto module = parse(wasm);
-    ASSERT_EQ(module.codesec.size(), 2);
-    EXPECT_EQ(module.codesec[0].max_stack_height, 1);
-    EXPECT_EQ(module.codesec[1].max_stack_height, 1);
-    const auto func_idx = find_exported_function(module, "drop_call_result");
-    auto instance = instantiate(module);
+    ASSERT_EQ(module->codesec.size(), 2);
+    EXPECT_EQ(module->codesec[0].max_stack_height, 1);
+    EXPECT_EQ(module->codesec[1].max_stack_height, 1);
+    const auto func_idx = find_exported_function(*module, "drop_call_result");
+    auto instance = instantiate(*module);
     EXPECT_THAT(fizzy::execute(*instance, *func_idx, {}), Result());
 }

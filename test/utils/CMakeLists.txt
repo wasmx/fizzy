@@ -18,6 +18,7 @@ target_sources(
     floating_point_utils.hpp
     hex.cpp
     hex.hpp
+    instantiate_helpers.hpp
     leb128_encode.cpp
     leb128_encode.hpp
     wabt_engine.cpp

@@ -522,14 +522,14 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
     if (depth > CallStackLimit)
         return Trap;
 
-    const auto& func_type = instance.module.get_function_type(func_idx);
+    const auto& func_type = instance.module->get_function_type(func_idx);
 
-    assert(instance.module.imported_function_types.size() == instance.imported_functions.size());
+    assert(instance.module->imported_function_types.size() == instance.imported_functions.size());
     if (func_idx < instance.imported_functions.size())
         return instance.imported_functions[func_idx].function(
             instance, {args, func_type.inputs.size()}, depth);
 
-    const auto& code = instance.module.get_code(func_idx);
+    const auto& code = instance.module->get_code(func_idx);
     auto* const memory = instance.memory.get();
 
     OperandStack stack(args, func_type.inputs.size(), code.local_count,
@@ -616,7 +616,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         case Instr::call:
         {
             const auto called_func_idx = read<uint32_t>(immediates);
-            const auto& called_func_type = instance.module.get_function_type(called_func_idx);
+            const auto& called_func_type = instance.module->get_function_type(called_func_idx);
 
             if (!invoke_function(called_func_type, called_func_idx, instance, stack, depth))
                 goto trap;
@@ -627,7 +627,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             assert(instance.table != nullptr);
 
             const auto expected_type_idx = read<uint32_t>(immediates);
-            assert(expected_type_idx < instance.module.typesec.size());
+            assert(expected_type_idx < instance.module->typesec.size());
 
             const auto elem_idx = stack.pop().as<uint32_t>();
             if (elem_idx >= instance.table->size())
@@ -639,7 +639,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
 
             // check actual type against expected type
             const auto& actual_type = called_func->type;
-            const auto& expected_type = instance.module.typesec[expected_type_idx];
+            const auto& expected_type = instance.module->typesec[expected_type_idx];
             if (expected_type != actual_type)
                 goto trap;
 
@@ -693,7 +693,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             else
             {
                 const auto module_global_idx = idx - instance.imported_globals.size();
-                assert(module_global_idx < instance.module.globalsec.size());
+                assert(module_global_idx < instance.module->globalsec.size());
                 stack.push(instance.globals[module_global_idx]);
             }
             break;
@@ -709,8 +709,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             else
             {
                 const auto module_global_idx = idx - instance.imported_globals.size();
-                assert(module_global_idx < instance.module.globalsec.size());
-                assert(instance.module.globalsec[module_global_idx].type.is_mutable);
+                assert(module_global_idx < instance.module->globalsec.size());
+                assert(instance.module->globalsec[module_global_idx].type.is_mutable);
                 instance.globals[module_global_idx] = stack.pop();
             }
             break;
@@ -1562,7 +1562,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
 
 end:
     assert(pc == &code.instructions[code.instructions.size()]);  // End of code must be reached.
-    assert(stack.size() == instance.module.get_function_type(func_idx).outputs.size());
+    assert(stack.size() == instance.module->get_function_type(func_idx).outputs.size());
 
     return stack.size() != 0 ? ExecutionResult{stack.top()} : Void;
 
