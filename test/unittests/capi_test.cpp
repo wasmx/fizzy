@@ -32,6 +32,35 @@ TEST(capi, free_module_null)
     fizzy_free_module(nullptr);
 }
 
+TEST(capi, find_exported_function)
+{
+    /* wat2wasm
+    (module
+      (func $f (export "foo") (result i32) (i32.const 42))
+      (global (export "g1") i32 (i32.const 0))
+      (table (export "tab") 0 anyfunc)
+      (memory (export "mem") 1 2)
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000105016000017f030201000404017000000504010101020606017f0041000b07180403666f"
+        "6f00000267310300037461620100036d656d02000a06010400412a0b");
+
+    auto module = fizzy_parse(wasm.data(), wasm.size());
+    EXPECT_NE(module, nullptr);
+
+    uint32_t func_idx;
+    EXPECT_TRUE(fizzy_find_exported_function(module, "foo", &func_idx));
+    EXPECT_EQ(func_idx, 0);
+
+    EXPECT_FALSE(fizzy_find_exported_function(module, "bar", &func_idx));
+    EXPECT_FALSE(fizzy_find_exported_function(module, "g1", &func_idx));
+    EXPECT_FALSE(fizzy_find_exported_function(module, "tab", &func_idx));
+    EXPECT_FALSE(fizzy_find_exported_function(module, "mem", &func_idx));
+
+    fizzy_free_module(module);
+}
+
 TEST(capi, instantiate)
 {
     uint8_t wasm_prefix[]{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00};

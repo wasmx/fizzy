@@ -75,6 +75,15 @@ const FizzyModule* fizzy_parse(const uint8_t* wasm_binary, size_t wasm_binary_si
 /// If passed pointer is NULL, has no effect.
 void fizzy_free_module(const FizzyModule* module);
 
+/// Find index of exported function by name.
+///
+/// @param  module          Pointer to module.
+/// @param  name            The function name. NULL-terminated string. Cannot be NULL.
+/// @param  out_func_idx    Pointer to output where function index will be stored. Cannot be NULL.
+/// @returns                true if function was found, false otherwise.
+bool fizzy_find_exported_function(
+    const FizzyModule* module, const char* name, uint32_t* out_func_idx);
+
 /// Instantiate a module.
 /// Takes ownership of module, i.e. @p module is invalidated after this call.
 ///
