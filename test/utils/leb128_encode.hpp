@@ -9,5 +9,5 @@
 namespace fizzy::test
 {
 /// Encodes the value as unsigned LEB128.
-fizzy::bytes leb128u_encode(uint64_t value) noexcept;
+fizzy::bytes leb128u_encode(uint64_t value);
 }  // namespace fizzy::test

@@ -6,7 +6,7 @@
 
 namespace fizzy::test
 {
-fizzy::bytes leb128u_encode(uint64_t value) noexcept
+fizzy::bytes leb128u_encode(uint64_t value)
 {
     // Adapted from LLVM.
     // https://github.com/llvm/llvm-project/blob/master/llvm/include/llvm/Support/LEB128.h#L80
