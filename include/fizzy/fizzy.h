@@ -96,6 +96,18 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 /// If passed pointer is NULL, has no effect.
 void fizzy_free_instance(FizzyInstance* instance);
 
+/// Get pointer to memory of an instance.
+///
+/// @returns Pointer to memory data or NULL in case instance doesn't have any memory.
+/// @note    Function returns pointer to memory regardless of whether memory is exported or not.
+uint8_t* fizzy_get_instance_memory_data(FizzyInstance* instance);
+
+/// Get size of memory of an instance.
+///
+/// @returns Size of memory in bytes or 0 in case instance doesn't have any memory.
+/// @note    Function returns memory size regardless of whether memory is exported or not.
+size_t fizzy_get_instance_memory_size(FizzyInstance* instance);
+
 /// Execute module function.
 ///
 /// @param instance     Pointer to module instance.

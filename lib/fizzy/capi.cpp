@@ -144,6 +144,24 @@ void fizzy_free_instance(FizzyInstance* instance)
     delete unwrap(instance);
 }
 
+uint8_t* fizzy_get_instance_memory_data(FizzyInstance* instance)
+{
+    auto& memory = unwrap(instance)->memory;
+    if (!memory)
+        return nullptr;
+
+    return memory->data();
+}
+
+size_t fizzy_get_instance_memory_size(FizzyInstance* instance)
+{
+    auto& memory = unwrap(instance)->memory;
+    if (!memory)
+        return 0;
+
+    return memory->size();
+}
+
 FizzyExecutionResult fizzy_execute(
     FizzyInstance* instance, uint32_t func_idx, const FizzyValue* args, int depth)
 {
