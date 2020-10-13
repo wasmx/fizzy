@@ -282,11 +282,11 @@ jobs:
       - build:
           configuration_name: "Tidy"
           build_type: Debug
-          cmake_options: -DWEVERYTHING=TRUE -DCMAKE_CXX_CLANG_TIDY=clang-tidy
+          cmake_options: -DCMAKE_TOOLCHAIN_FILE=~/project/cmake/toolchains/libc++.cmake -DWEVERYTHING=TRUE -DCMAKE_CXX_CLANG_TIDY=clang-tidy
       - build:
           configuration_name: "C++20"
           build_type: Debug
-          cmake_options: -DCMAKE_CXX_STANDARD=20
+          cmake_options: -DCMAKE_TOOLCHAIN_FILE=~/project/cmake/toolchains/libc++.cmake -DCMAKE_CXX_STANDARD=20
       - install_testfloat
       - test
 
