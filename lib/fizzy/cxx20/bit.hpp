@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <type_traits>
 
 namespace fizzy
@@ -24,3 +25,39 @@ template <class To, class From>
     return dst;
 }
 }  // namespace fizzy
+
+#ifdef __cpp_lib_bitops
+
+#include <bit>
+
+namespace fizzy
+{
+constexpr int popcount(uint32_t x) noexcept
+{
+    return std::popcount(x);
+}
+
+constexpr int popcount(uint64_t x) noexcept
+{
+    return std::popcount(x);
+}
+}  // namespace fizzy
+
+#else
+
+namespace fizzy
+{
+constexpr int popcount(uint32_t x) noexcept
+{
+    static_assert(sizeof(x) == sizeof(unsigned int));
+    return __builtin_popcount(x);
+}
+
+constexpr int popcount(uint64_t x) noexcept
+{
+    static_assert(sizeof(x) == sizeof(unsigned long long));
+    return __builtin_popcountll(x);
+}
+}  // namespace fizzy
+
+#endif /* __cpp_lib_bitops */

@@ -11,7 +11,7 @@
 using namespace fizzy;
 using namespace testing;
 
-TEST(span, vector)
+TEST(cxx20_span, vector)
 {
     std::vector<uint64_t> vec{1, 2, 3, 4, 5, 6};
     span<const uint64_t> s(&vec[1], 3);
@@ -31,7 +31,7 @@ TEST(span, vector)
         EXPECT_EQ(s2[i], vec[i]);
 }
 
-TEST(span, array)
+TEST(cxx20_span, array)
 {
     float a1[] = {1, 2, 3};
     span<const float> s1 = a1;
@@ -48,7 +48,7 @@ TEST(span, array)
     EXPECT_EQ(s2[2], 0.3f);
 }
 
-TEST(span, stack)
+TEST(cxx20_span, stack)
 {
     OperandStack stack(nullptr, 0, 0, 4);
     stack.push(10);
@@ -66,7 +66,7 @@ TEST(span, stack)
     EXPECT_EQ(s[1].i64, 0);
 }
 
-TEST(span, initializer_list)
+TEST(cxx20_span, initializer_list)
 {
     // This only works for lvalue initializer_lists, but not as `span{1, 2, 3}`.
     // Dangerous usage because user need to keep the initializer_list alive
@@ -84,7 +84,7 @@ TEST(span, initializer_list)
         EXPECT_EQ(x, ++i);
 }
 
-TEST(span, iterator)
+TEST(cxx20_span, iterator)
 {
     std::string str{"__abc__"};
     span<const char> slice{str.data() + 2, 3};
@@ -102,7 +102,7 @@ TEST(span, iterator)
     EXPECT_EQ(slice.end() - slice.begin(), slice.size());
 }
 
-TEST(span, iterator_range)
+TEST(cxx20_span, iterator_range)
 {
     std::string str{"__abc__"};
     span<const char> sp = str;
@@ -112,7 +112,7 @@ TEST(span, iterator_range)
     EXPECT_EQ(copy, str);
 }
 
-TEST(span, for_range)
+TEST(cxx20_span, for_range)
 {
     std::string str{"**xyz**"};
     span<const char> sp = str;
@@ -124,7 +124,7 @@ TEST(span, for_range)
     EXPECT_EQ(copy, str);
 }
 
-TEST(span, reverse_iterator)
+TEST(cxx20_span, reverse_iterator)
 {
     int a[] = {1, 2, 3, 4, 5, 6};
     span<const int> s{&a[1], 4};
