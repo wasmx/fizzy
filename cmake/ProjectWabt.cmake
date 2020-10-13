@@ -14,6 +14,10 @@ set(wabt_library ${binary_dir}/${CMAKE_STATIC_LIBRARY_PREFIX}wabt${CMAKE_STATIC_
 set(CPPFLAGS "-fvisibility=hidden")  # Flags for both C and C++ compilation.
 set(CXXFLAGS "")                     # Flags for C++ compilation only.
 
+if(CMAKE_CXX_FLAGS MATCHES "-stdlib=libc\\+\\+")
+    set(CXXFLAGS "-stdlib=libc++ ${CXXFLAGS}")
+endif()
+
 if(SANITIZE MATCHES address)
     # Instrument WABT with ASan - required for container-overflow checks.
     set(CPPFLAGS "-fsanitize=address ${CPPFLAGS}")
