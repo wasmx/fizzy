@@ -12,9 +12,9 @@ WasmEngine::~WasmEngine() noexcept = default;
 
 void validate_function_signature(std::string_view signature)
 {
-    if (signature.find_first_of(":") == std::string::npos)
+    if (signature.find_first_of(':') == std::string::npos)
         throw std::runtime_error{"Missing ':' delimiter"};
-    if (signature.find_first_of(":") != signature.find_last_of(":"))
+    if (signature.find_first_of(':') != signature.find_last_of(':'))
         throw std::runtime_error{"Multiple occurrences of ':' found in signature"};
     // Only allow i (i32) I (i64) as types
     if (signature.find_first_not_of(":iI") != std::string::npos)
