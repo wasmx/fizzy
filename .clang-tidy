@@ -6,6 +6,7 @@ Checks: >
   google-global-names-in-headers,
   google-runtime-int,
   misc-*,
+  -misc-no-recursion,
   -misc-non-private-member-variables-in-classes,
   performance-*,
   -performance-inefficient-string-concatenation,

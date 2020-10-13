@@ -40,7 +40,7 @@ ValType translate_valtype(char input)
 
 FuncType translate_signature(std::string_view signature)
 {
-    const auto delimiter_pos = signature.find(":");
+    const auto delimiter_pos = signature.find(':');
     assert(delimiter_pos != std::string_view::npos);
     const auto inputs = signature.substr(0, delimiter_pos);
     const auto outputs = signature.substr(delimiter_pos + 1);
