@@ -49,6 +49,9 @@ commands:
           working_directory: /tmp
           command: |
             if [ ! -f testfloat_gen ]; then
+              # GCC compiler is expected, create link from clang if gcc not available.
+              type gcc || (cd $(dirname $(which clang)) && ln -s clang gcc)
+
               git clone --depth=1 --single-branch https://github.com/ucb-bar/berkeley-softfloat-3.git
               git clone --depth=1 --single-branch https://github.com/ucb-bar/berkeley-testfloat-3.git
 
