@@ -486,7 +486,7 @@ inline bool invoke_function(
 {
     const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
-    span<const Value> call_args{stack.rend() - num_args, num_args};
+    const auto call_args = stack.rend() - num_args;
 
     const auto ret = func(instance, call_args, depth + 1);
     // Bubble up traps
@@ -509,8 +509,8 @@ inline bool invoke_function(
 inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
     OperandStack& stack, int depth)
 {
-    const auto func = [func_idx](Instance& _instance, span<const Value> args, int _depth) {
-        return execute(_instance, func_idx, args.data(), _depth);
+    const auto func = [func_idx](Instance& _instance, const Value* args, int _depth) {
+        return execute(_instance, func_idx, args, _depth);
     };
     return invoke_function(func_type, func, instance, stack, depth);
 }
@@ -526,8 +526,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
 
     assert(instance.module->imported_function_types.size() == instance.imported_functions.size());
     if (func_idx < instance.imported_functions.size())
-        return instance.imported_functions[func_idx].function(
-            instance, {args, func_type.inputs.size()}, depth);
+        return instance.imported_functions[func_idx].function(instance, args, depth);
 
     const auto& code = instance.module->get_code(func_idx);
     auto* const memory = instance.memory.get();

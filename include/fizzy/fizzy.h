@@ -44,11 +44,10 @@ typedef struct FizzyExecutionResult
 ///
 /// @param context      Opaque pointer to execution context.
 /// @param instance     Pointer to module instance.
-/// @param args         Pointer to the argument array. Can be NULL iff args_size equals 0.
-/// @param args_size    Size of the  argument array.
+/// @param args         Pointer to the argument array. Can be NULL iff function has no inputs.
 /// @param depth        Call stack depth.
-typedef FizzyExecutionResult (*FizzyExternalFn)(void* context, FizzyInstance* instance,
-    const union FizzyValue* args, size_t args_size, int depth);
+typedef FizzyExecutionResult (*FizzyExternalFn)(
+    void* context, FizzyInstance* instance, const union FizzyValue* args, int depth);
 
 /// External function.
 typedef struct FizzyExternalFunction

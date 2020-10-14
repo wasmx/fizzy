@@ -68,9 +68,9 @@ inline fizzy::ExecutionResult unwrap(const FizzyExecutionResult& result) noexcep
 
 inline auto unwrap(FizzyExternalFn func, void* context) noexcept
 {
-    return [func, context](fizzy::Instance& instance, fizzy::span<const fizzy::Value> args,
+    return [func, context](fizzy::Instance& instance, const fizzy::Value* args,
                int depth) noexcept -> fizzy::ExecutionResult {
-        const auto result = func(context, wrap(&instance), wrap(args.data()), args.size(), depth);
+        const auto result = func(context, wrap(&instance), wrap(args), depth);
         return unwrap(result);
     };
 }

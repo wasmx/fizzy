@@ -774,7 +774,7 @@ TEST(execute, imported_function)
     const auto module = parse(wasm);
     ASSERT_EQ(module->typesec.size(), 1);
 
-    constexpr auto host_foo = [](Instance&, span<const Value> args, int) {
+    constexpr auto host_foo = [](Instance&, const Value* args, int) {
         return Value{as_uint32(args[0]) + as_uint32(args[1])};
     };
 
@@ -794,10 +794,10 @@ TEST(execute, imported_two_functions)
     const auto module = parse(wasm);
     ASSERT_EQ(module->typesec.size(), 1);
 
-    constexpr auto host_foo1 = [](Instance&, span<const Value> args, int) {
+    constexpr auto host_foo1 = [](Instance&, const Value* args, int) {
         return Value{as_uint32(args[0]) + as_uint32(args[1])};
     };
-    constexpr auto host_foo2 = [](Instance&, span<const Value> args, int) {
+    constexpr auto host_foo2 = [](Instance&, const Value* args, int) {
         return Value{as_uint32(args[0]) * as_uint32(args[1])};
     };
 
@@ -821,10 +821,10 @@ TEST(execute, imported_functions_and_regular_one)
         "0061736d0100000001070160027f7f017f021702036d6f6404666f6f310000036d6f6404666f6f320000030201"
         "000a0901070041aa80a8010b");
 
-    constexpr auto host_foo1 = [](Instance&, span<const Value> args, int) {
+    constexpr auto host_foo1 = [](Instance&, const Value* args, int) {
         return Value{as_uint32(args[0]) + as_uint32(args[1])};
     };
-    constexpr auto host_foo2 = [](Instance&, span<const Value> args, int) {
+    constexpr auto host_foo2 = [](Instance&, const Value* args, int) {
         return Value{as_uint32(args[0]) * as_uint32(args[1])};
     };
 
@@ -834,31 +834,6 @@ TEST(execute, imported_functions_and_regular_one)
         instantiate(*module, {{host_foo1, module->typesec[0]}, {host_foo2, module->typesec[0]}});
     EXPECT_THAT(execute(*instance, 0, {20, 22}), Result(42));
     EXPECT_THAT(execute(*instance, 1, {20, 10}), Result(200));
-}
-
-TEST(execute, imported_functions_count_args)
-{
-    /* wat2wasm
-    (type (func (param i32 i32) (result i32)))
-    (type (func (param i32) (result i32)))
-    (import "mod" "foo1" (func (type 0)))
-    (import "mod" "foo2" (func (type 1)))
-    */
-    const auto wasm = from_hex(
-        "0061736d01000000010c0260027f7f017f60017f017f021702036d6f6404666f6f310000036d6f6404666f6f32"
-        "0001");
-
-    // Check if correct number of arguments is passed to host functions.
-    constexpr auto count_args = [](Instance&, span<const Value> args, int) {
-        return Value{args.size()};
-    };
-
-    const auto module = parse(wasm);
-    ASSERT_EQ(module->typesec.size(), 2);
-    auto instance_counter =
-        instantiate(*module, {{count_args, module->typesec[0]}, {count_args, module->typesec[1]}});
-    EXPECT_THAT(execute(*instance_counter, 0, {20, 22}), Result(2));
-    EXPECT_THAT(execute(*instance_counter, 1, {20}), Result(1));
 }
 
 TEST(execute, imported_two_functions_different_type)
@@ -876,10 +851,10 @@ TEST(execute, imported_two_functions_different_type)
         "0061736d01000000010c0260027f7f017f60017e017e021702036d6f6404666f6f310000036d6f6404666f6f32"
         "0001030201010a0901070042aa80a8010b");
 
-    constexpr auto host_foo1 = [](Instance&, span<const Value> args, int) {
+    constexpr auto host_foo1 = [](Instance&, const Value* args, int) {
         return Value{as_uint32(args[0]) + as_uint32(args[1])};
     };
-    constexpr auto host_foo2 = [](Instance&, span<const Value> args, int) {
+    constexpr auto host_foo2 = [](Instance&, const Value* args, int) {
         return Value{args[0].i64 * args[0].i64};
     };
 
@@ -900,9 +875,7 @@ TEST(execute, imported_function_traps)
     */
     const auto wasm = from_hex("0061736d0100000001070160027f7f017f020b01036d6f6403666f6f0000");
 
-    constexpr auto host_foo = [](Instance&, span<const Value>, int) -> ExecutionResult {
-        return Trap;
-    };
+    constexpr auto host_foo = [](Instance&, const Value*, int) -> ExecutionResult { return Trap; };
 
     const auto module = parse(wasm);
     auto instance = instantiate(*module, {{host_foo, module->typesec[0]}});
