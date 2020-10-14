@@ -379,8 +379,7 @@ jobs:
       - checkout
       - build:
           build_type: RelWithDebInfo
-          # TODO: pointer-compare produces failure in std::string operator+.
-          cmake_options: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,pointer-subtract,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
+          cmake_options: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
       - test
       - benchmark:
           min_time: "0.01"
@@ -417,7 +416,6 @@ jobs:
       - checkout
       - build:
           build_type: RelWithDebInfo
-          # TODO: Enable pointer-compare and pointer-subtract only for libfizzy.
           cmake_options: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
       - test
       - benchmark:
