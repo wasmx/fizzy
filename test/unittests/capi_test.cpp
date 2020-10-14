@@ -323,14 +323,19 @@ TEST(capi, imported_function_from_another_module)
     auto module2 = fizzy_parse(bin2.data(), bin2.size());
     ASSERT_NE(module2, nullptr);
 
-    // TODO fizzy_find_exported_function
+    uint32_t func_idx;
+    ASSERT_TRUE(fizzy_find_exported_function(module1, "sub", &func_idx));
+
+    auto host_context = std::make_pair(instance1, func_idx);
 
     auto sub = [](void* context, FizzyInstance*, const FizzyValue* args, size_t,
                    int depth) -> FizzyExecutionResult {
-        auto* called_instance = static_cast<FizzyInstance*>(context);
-        return fizzy_execute(called_instance, 0, args, depth + 1);
+        const auto* instance_and_func_idx =
+            static_cast<std::pair<FizzyInstance*, uint32_t>*>(context);
+        return fizzy_execute(
+            instance_and_func_idx->first, instance_and_func_idx->second, args, depth + 1);
     };
-    FizzyExternalFunction host_funcs[] = {{sub, instance1}};
+    FizzyExternalFunction host_funcs[] = {{sub, &host_context}};
 
     auto instance2 = fizzy_instantiate(module2, host_funcs, 1);
     ASSERT_NE(instance2, nullptr);
