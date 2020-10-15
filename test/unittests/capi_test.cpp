@@ -141,6 +141,26 @@ TEST(capi, free_instance_null)
     fizzy_free_instance(nullptr);
 }
 
+TEST(capi, get_instance_module)
+{
+    /* wat2wasm
+      (func (param i32 i32))
+    */
+    const auto wasm = from_hex("0061736d0100000001060160027f7f00030201000a040102000b");
+    auto module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+
+    auto instance = fizzy_instantiate(module, nullptr, 0);
+    ASSERT_NE(instance, nullptr);
+
+    auto instance_module = fizzy_get_instance_module(instance);
+    ASSERT_NE(instance_module, nullptr);
+
+    EXPECT_EQ(fizzy_get_function_type(instance_module, 0).inputs_size, 2);
+
+    fizzy_free_instance(instance);
+}
+
 TEST(capi, memory_access_no_memory)
 {
     /* wat2wasm

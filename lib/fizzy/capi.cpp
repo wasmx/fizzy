@@ -191,6 +191,11 @@ void fizzy_free_instance(FizzyInstance* instance)
     delete unwrap(instance);
 }
 
+const FizzyModule* fizzy_get_instance_module(FizzyInstance* instance)
+{
+    return wrap(unwrap(instance)->module.get());
+}
+
 uint8_t* fizzy_get_instance_memory_data(FizzyInstance* instance)
 {
     auto& memory = unwrap(instance)->memory;
