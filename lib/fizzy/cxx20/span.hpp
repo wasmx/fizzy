@@ -4,7 +4,11 @@
 
 #pragma once
 
-#if __cplusplus > 201703L
+#if __has_include(<version>)
+#include <version>
+#endif
+
+#ifdef __cpp_lib_span
 
 #include <span>
 
@@ -63,4 +67,4 @@ public:
 };
 }  // namespace fizzy
 
-#endif /* __cplusplus > 201703L */
+#endif /* __cpp_lib_span */

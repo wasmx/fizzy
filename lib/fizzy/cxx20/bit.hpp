@@ -7,6 +7,10 @@
 #include <cstdint>
 #include <type_traits>
 
+#if __has_include(<version>)
+#include <version>
+#endif
+
 namespace fizzy
 {
 /// The non-constexpr implementation of C++20's std::bit_cast.
