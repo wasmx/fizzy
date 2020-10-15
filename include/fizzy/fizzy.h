@@ -49,11 +49,31 @@ typedef struct FizzyExecutionResult
 typedef FizzyExecutionResult (*FizzyExternalFn)(
     void* context, FizzyInstance* instance, const union FizzyValue* args, int depth);
 
+/// Value type.
+typedef uint8_t FizzyValueType;
+static const FizzyValueType FizzyValueTypeI32 = 0x7f;
+static const FizzyValueType FizzyValueTypeI64 = 0x7e;
+static const FizzyValueType FizzyValueTypeF32 = 0x7d;
+static const FizzyValueType FizzyValueTypeF64 = 0x7c;
+/// Special value, can be used only as function output type.
+static const FizzyValueType FizzyValueTypeVoid = 0;
+
+/// Function type.
+typedef struct FizzyFunctionType
+{
+    /// Output type, equals to FizzyValueTypeVoid, iff function has no output.
+    FizzyValueType output;
+    /// Pointer to input types array.
+    const FizzyValueType* inputs;
+    /// Input types array size.
+    size_t inputs_size;
+} FizzyFunctionType;
+
 /// External function.
 typedef struct FizzyExternalFunction
 {
-    // TODO function type
-
+    /// Function type.
+    FizzyFunctionType type;
     /// Pointer to function.
     FizzyExternalFn function;
     /// Opaque pointer to execution context, that will be passed to function.
@@ -73,6 +93,16 @@ const FizzyModule* fizzy_parse(const uint8_t* wasm_binary, size_t wasm_binary_si
 /// Should be called unless @p module was passed to fizzy_instantiate.
 /// If passed pointer is NULL, has no effect.
 void fizzy_free_module(const FizzyModule* module);
+
+/// Get type of the function defined in the module.
+///
+/// @param module   Pointer to module.
+/// @param func_idx Function index. Can be either index of an imported function or of a function
+///                 defined in module. Behaviour is undefined, if index is not valid according to
+///                 module definition.
+///
+/// @note All module function indices are greater than all imported function indices.
+FizzyFunctionType fizzy_get_function_type(const FizzyModule* module, uint32_t func_idx);
 
 /// Find index of exported function by name.
 ///
