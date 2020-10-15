@@ -80,6 +80,17 @@ typedef struct FizzyExternalFunction
     void* context;
 } FizzyExternalFunction;
 
+/// Imported function.
+typedef struct FizzyImportedFunction
+{
+    /// Module name. NULL-terminated string. Cannot be NULL.
+    const char* module;
+    /// Function name. NULL-terminated string. Cannot be NULL.
+    const char* name;
+    /// External function, defining its type, pointer to function and context for calling it.
+    FizzyExternalFunction external_function;
+} FizzyImportedFunction;
+
 /// Validate binary module.
 bool fizzy_validate(const uint8_t* wasm_binary, size_t wasm_binary_size);
 
@@ -129,6 +140,22 @@ bool fizzy_find_exported_function(
 /// module, behaviour is undefined.
 FizzyInstance* fizzy_instantiate(const FizzyModule* module,
     const FizzyExternalFunction* imported_functions, size_t imported_functions_size);
+
+/// Instantiate a module resolving imported functions.
+/// Takes ownership of module, i.e. @p module is invalidated after this call.
+///
+/// @param      module                   Pointer to module.
+/// @param      imported_functions       Pointer to the imported function array. Can be NULL iff
+///                                      imported_functions_size equals 0.
+/// @param      imported_functions_size  Size of the imported function array. Can be zero.
+/// @returns    non-NULL pointer to instance in case of success, NULL otherwise.
+///
+/// @note
+/// Functions in @a imported_functions are allowed to be in any order and allowed to include some
+/// functions not required by the module.
+/// Functions are matched to module's imports based on their module and name strings.
+FizzyInstance* fizzy_resolve_instantiate(const FizzyModule* module,
+    const FizzyImportedFunction* imported_functions, size_t imported_functions_size);
 
 /// Free resources associated with the instance.
 /// If passed pointer is NULL, has no effect.

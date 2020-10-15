@@ -136,6 +136,99 @@ TEST(capi, instantiate_imported_function)
     fizzy_free_instance(instance);
 }
 
+TEST(capi, resolve_instantiate_no_imports)
+{
+    /* wat2wasm
+      (module)
+    */
+    const auto wasm = from_hex("0061736d01000000");
+    auto module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+
+    auto instance = fizzy_resolve_instantiate(module, nullptr, 0);
+    EXPECT_NE(instance, nullptr);
+
+    fizzy_free_instance(instance);
+
+    module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+
+    FizzyImportedFunction host_funcs[] = {{"mod", "foo",
+        {{FizzyValueTypeVoid, nullptr, 0},
+            [](void*, FizzyInstance*, const FizzyValue*, int) { return FizzyExecutionResult{}; },
+            nullptr}}};
+
+    instance = fizzy_resolve_instantiate(module, host_funcs, 1);
+    EXPECT_NE(instance, nullptr);
+
+    fizzy_free_instance(instance);
+}
+
+TEST(capi, resolve_instantiate)
+{
+    /* wat2wasm
+      (func (import "mod1" "foo1") (result i32))
+      (func (import "mod1" "foo2") (result i64))
+      (func (import "mod2" "foo1") (result f32))
+      (func (import "mod2" "foo2") (result f64))
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000111046000017f6000017e6000017d6000017c023104046d6f643104666f6f310000046d6f"
+        "643104666f6f320001046d6f643204666f6f310002046d6f643204666f6f320003");
+    auto module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+
+    EXPECT_EQ(fizzy_instantiate(module, nullptr, 0), nullptr);
+
+    module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+
+    FizzyExternalFn host_fn = [](void* context, FizzyInstance*, const FizzyValue*, int) {
+        return FizzyExecutionResult{true, false, *static_cast<FizzyValue*>(context)};
+    };
+
+    FizzyValue result_int{42};
+    FizzyExternalFunction mod1foo1 = {{FizzyValueTypeI32, nullptr, 0}, host_fn, &result_int};
+    FizzyExternalFunction mod1foo2 = {{FizzyValueTypeI64, nullptr, 0}, host_fn, &result_int};
+    FizzyValue result_f32;
+    result_f32.f32 = 42;
+    FizzyExternalFunction mod2foo1 = {{FizzyValueTypeF32, nullptr, 0}, host_fn, &result_f32};
+    FizzyValue result_f64;
+    result_f64.f64 = 42;
+    FizzyExternalFunction mod2foo2 = {{FizzyValueTypeF64, nullptr, 0}, host_fn, &result_f64};
+
+    FizzyImportedFunction host_funcs[] = {{"mod1", "foo1", mod1foo1}, {"mod1", "foo2", mod1foo2},
+        {"mod2", "foo1", mod2foo1}, {"mod2", "foo2", mod2foo2}};
+
+    auto instance = fizzy_resolve_instantiate(module, host_funcs, 4);
+    EXPECT_NE(instance, nullptr);
+    fizzy_free_instance(instance);
+
+    // reordered functions
+    module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+    FizzyImportedFunction host_funcs_reordered[] = {{"mod1", "foo2", mod1foo2},
+        {"mod2", "foo1", mod2foo1}, {"mod2", "foo2", mod2foo2}, {"mod1", "foo1", mod1foo1}};
+    instance = fizzy_resolve_instantiate(module, host_funcs_reordered, 4);
+    EXPECT_NE(instance, nullptr);
+    fizzy_free_instance(instance);
+
+    // extra functions
+    module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+    FizzyImportedFunction host_funcs_extra[] = {{"mod1", "foo1", mod1foo1},
+        {"mod1", "foo2", mod1foo2}, {"mod2", "foo1", mod2foo1}, {"mod2", "foo2", mod2foo2},
+        {"mod3", "foo1", mod1foo1}};
+    instance = fizzy_resolve_instantiate(module, host_funcs_extra, 4);
+    EXPECT_NE(instance, nullptr);
+    fizzy_free_instance(instance);
+
+    // not enough functions
+    module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+    EXPECT_EQ(fizzy_resolve_instantiate(module, host_funcs, 3), nullptr);
+}
+
 TEST(capi, free_instance_null)
 {
     fizzy_free_instance(nullptr);
