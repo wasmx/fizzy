@@ -30,6 +30,7 @@ struct EngineRegistryEntry
 
 constexpr EngineRegistryEntry engine_registry[] = {
     {"fizzy", fizzy::test::create_fizzy_engine},
+    {"fizzyc", fizzy::test::create_fizzy_c_engine},
     {" wabt", fizzy::test::create_wabt_engine},
     {"wasm3", fizzy::test::create_wasm3_engine},
 };

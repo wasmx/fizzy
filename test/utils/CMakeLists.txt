@@ -14,6 +14,7 @@ target_sources(
     asserts.cpp
     asserts.hpp
     execute_helpers.hpp
+    fizzy_c_engine.cpp
     fizzy_engine.cpp
     floating_point_utils.hpp
     hex.cpp
