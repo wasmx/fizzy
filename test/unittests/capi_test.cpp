@@ -167,14 +167,14 @@ TEST(capi, resolve_instantiate_no_imports)
 TEST(capi, resolve_instantiate)
 {
     /* wat2wasm
-      (func (import "mod1" "foo1") (result i32))
-      (func (import "mod1" "foo2") (result i64))
-      (func (import "mod2" "foo1") (result f32))
-      (func (import "mod2" "foo2") (result f64))
+      (func (import "mod1" "foo1") (param i32) (result i32))
+      (func (import "mod1" "foo2") (param i32) (result i64))
+      (func (import "mod2" "foo1") (param i32) (result f32))
+      (func (import "mod2" "foo2") (param i32) (result f64))
     */
     const auto wasm = from_hex(
-        "0061736d010000000111046000017f6000017e6000017d6000017c023104046d6f643104666f6f310000046d6f"
-        "643104666f6f320001046d6f643204666f6f310002046d6f643204666f6f320003");
+        "0061736d0100000001150460017f017f60017f017e60017f017d60017f017c023104046d6f643104666f6f3100"
+        "00046d6f643104666f6f320001046d6f643204666f6f310002046d6f643204666f6f320003");
     auto module = fizzy_parse(wasm.data(), wasm.size());
     ASSERT_NE(module, nullptr);
 
@@ -187,15 +187,16 @@ TEST(capi, resolve_instantiate)
         return FizzyExecutionResult{true, false, *static_cast<FizzyValue*>(context)};
     };
 
+    const FizzyValueType input_type = FizzyValueTypeI32;
     FizzyValue result_int{42};
-    FizzyExternalFunction mod1foo1 = {{FizzyValueTypeI32, nullptr, 0}, host_fn, &result_int};
-    FizzyExternalFunction mod1foo2 = {{FizzyValueTypeI64, nullptr, 0}, host_fn, &result_int};
+    FizzyExternalFunction mod1foo1 = {{FizzyValueTypeI32, &input_type, 1}, host_fn, &result_int};
+    FizzyExternalFunction mod1foo2 = {{FizzyValueTypeI64, &input_type, 1}, host_fn, &result_int};
     FizzyValue result_f32;
     result_f32.f32 = 42;
-    FizzyExternalFunction mod2foo1 = {{FizzyValueTypeF32, nullptr, 0}, host_fn, &result_f32};
+    FizzyExternalFunction mod2foo1 = {{FizzyValueTypeF32, &input_type, 1}, host_fn, &result_f32};
     FizzyValue result_f64;
     result_f64.f64 = 42;
-    FizzyExternalFunction mod2foo2 = {{FizzyValueTypeF64, nullptr, 0}, host_fn, &result_f64};
+    FizzyExternalFunction mod2foo2 = {{FizzyValueTypeF64, &input_type, 1}, host_fn, &result_f64};
 
     FizzyImportedFunction host_funcs[] = {{"mod1", "foo1", mod1foo1}, {"mod1", "foo2", mod1foo2},
         {"mod2", "foo1", mod2foo1}, {"mod2", "foo2", mod2foo2}};

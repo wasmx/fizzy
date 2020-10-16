@@ -124,6 +124,7 @@ inline fizzy::ImportedFunction unwrap(const FizzyImportedFunction& c_imported_fu
     imported_func.name = c_imported_func.name ? std::string{c_imported_func.name} : std::string{};
 
     const auto& c_type = c_imported_func.external_function.type;
+    imported_func.inputs.resize(c_type.inputs_size);
     fizzy::ValType (*unwrap_valtype_fn)(FizzyValueType value) = &unwrap;
     std::transform(c_type.inputs, c_type.inputs + c_type.inputs_size, imported_func.inputs.begin(),
         unwrap_valtype_fn);

@@ -12,7 +12,7 @@ using namespace fizzy;
 using namespace fizzy::test;
 
 static const decltype(&create_fizzy_engine) all_engines[]{
-    create_fizzy_engine, create_wabt_engine, create_wasm3_engine};
+    create_fizzy_engine, create_fizzy_c_engine, create_wabt_engine, create_wasm3_engine};
 
 TEST(wasm_engine, validate_function_signature)
 {
