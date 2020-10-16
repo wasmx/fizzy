@@ -435,6 +435,9 @@ TEST(execute_numeric, i32_rotr)
 
 TEST(execute_numeric, i32_wrap_i64)
 {
+    // <=32-bits set
+    EXPECT_THAT(execute_unary_operation(Instr::i32_wrap_i64, 0xffffffff), Result(0xffffffff));
+    // >32-bits set
     EXPECT_THAT(
         execute_unary_operation(Instr::i32_wrap_i64, 0xffffffffffffffff), Result(0xffffffff));
 }
