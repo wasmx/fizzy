@@ -455,7 +455,12 @@ TEST(end_to_end, milestone2)
         "4102215320522053742154204f20546a21552055204e3602002005280228215641012157205620576a21582005"
         "20583602280c00000b000b0f0b");
 
-    auto instance = instantiate(parse(bin));
+    const auto module = parse(wasm);
+
+    const auto func_idx = find_exported_function(*module, "mul256");
+    ASSERT_TRUE(func_idx);
+
+    auto instance = instantiate(*module);
 
     auto& memory = *instance->memory;
     // This performs uint256 x uint256 -> uint512 multiplication.
@@ -465,8 +470,7 @@ TEST(end_to_end, milestone2)
     // Arg2: 2^255 + 2^254 + 0xff
     memory[32] = 0xff;
     memory[63] = 0xc0;
-    // TODO: use find_exported_function
-    EXPECT_THAT(execute(*instance, 0, {64, 0, 32}), Result());
+    EXPECT_THAT(execute(*instance, *func_idx, {64, 0, 32}), Result());
     EXPECT_EQ(hex(memory.substr(64, 64)),
         "ff00000000000000000000000000000000000000000000000000000000000040"
         "8000000000000000000000000000000000000000000000000000000000000060");
