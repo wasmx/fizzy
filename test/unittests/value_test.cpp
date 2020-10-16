@@ -60,9 +60,7 @@ TEST(value, as_integer_64bit_value)
 {
     const Value v{0xfffffffffffffffe};
     EXPECT_EQ(v.as<uint64_t>(), 0xfffffffffffffffe);
-    EXPECT_EQ(v.as<uint32_t>(), 0xfffffffe);
     EXPECT_EQ(v.as<int64_t>(), -2);
-    EXPECT_EQ(v.as<int32_t>(), -2);
 }
 
 TEST(value, as_floating_point)

@@ -63,9 +63,6 @@ TEST(execute_numeric, i32_eqz)
 {
     EXPECT_THAT(execute_unary_operation(Instr::i32_eqz, 0), Result(1));
     EXPECT_THAT(execute_unary_operation(Instr::i32_eqz, 1), Result(0));
-    // Dirty stack
-    EXPECT_THAT(execute_unary_operation(fizzy::Instr::i32_eqz, 0xff00000000), Result(1));
-    EXPECT_THAT(execute_unary_operation(fizzy::Instr::i32_eqz, 0xff00000001), Result(0));
 }
 
 TEST(execute_numeric, i32_eq)
