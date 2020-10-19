@@ -63,9 +63,6 @@ TEST(execute_numeric, i32_eqz)
 {
     EXPECT_THAT(execute_unary_operation(Instr::i32_eqz, 0), Result(1));
     EXPECT_THAT(execute_unary_operation(Instr::i32_eqz, 1), Result(0));
-    // Dirty stack
-    EXPECT_THAT(execute_unary_operation(fizzy::Instr::i32_eqz, 0xff00000000), Result(1));
-    EXPECT_THAT(execute_unary_operation(fizzy::Instr::i32_eqz, 0xff00000001), Result(0));
 }
 
 TEST(execute_numeric, i32_eq)
@@ -435,6 +432,9 @@ TEST(execute_numeric, i32_rotr)
 
 TEST(execute_numeric, i32_wrap_i64)
 {
+    // <=32-bits set
+    EXPECT_THAT(execute_unary_operation(Instr::i32_wrap_i64, 0xffffffff), Result(0xffffffff));
+    // >32-bits set
     EXPECT_THAT(
         execute_unary_operation(Instr::i32_wrap_i64, 0xffffffffffffffff), Result(0xffffffff));
 }

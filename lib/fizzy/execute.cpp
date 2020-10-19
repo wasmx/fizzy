@@ -1421,7 +1421,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
 
         case Instr::i32_wrap_i64:
         {
-            stack.top() = stack.top().as<uint32_t>();
+            stack.top() = static_cast<uint32_t>(stack.top().i64);
             break;
         }
         case Instr::i32_trunc_f32_s:

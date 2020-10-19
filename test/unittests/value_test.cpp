@@ -47,13 +47,20 @@ TEST(value, constructor_from_floating_points)
     EXPECT_EQ(Value{123.456789001}.f64, 123.456789001);
 }
 
-TEST(value, as_integer)
+TEST(value, as_integer_32bit_value)
+{
+    const Value v{0xfffffffe};
+    EXPECT_EQ(v.as<uint64_t>(), 0xfffffffe);
+    EXPECT_EQ(v.as<uint32_t>(), 0xfffffffe);
+    EXPECT_EQ(v.as<int64_t>(), 0xfffffffe);
+    EXPECT_EQ(v.as<int32_t>(), -2);
+}
+
+TEST(value, as_integer_64bit_value)
 {
     const Value v{0xfffffffffffffffe};
     EXPECT_EQ(v.as<uint64_t>(), 0xfffffffffffffffe);
-    EXPECT_EQ(v.as<uint32_t>(), 0xfffffffe);
     EXPECT_EQ(v.as<int64_t>(), -2);
-    EXPECT_EQ(v.as<int32_t>(), -2);
 }
 
 TEST(value, as_floating_point)

@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <cassert>
 #include <cstdint>
 #include <limits>
 
@@ -53,6 +54,7 @@ constexpr uint64_t Value::as<uint64_t>() const noexcept
 template <>
 constexpr uint32_t Value::as<uint32_t>() const noexcept
 {
+    assert((i64 & 0xffffffff00000000) == 0);
     return static_cast<uint32_t>(i64);
 }
 
