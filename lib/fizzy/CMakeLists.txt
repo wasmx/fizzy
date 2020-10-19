@@ -10,6 +10,8 @@ target_include_directories(fizzy PUBLIC ${FIZZY_INCLUDE_DIR})
 target_sources(
     fizzy PRIVATE
     ${FIZZY_INCLUDE_DIR}/fizzy/fizzy.h
+    asserts.cpp
+    asserts.hpp
     cxx20/bit.hpp
     cxx20/span.hpp
     bytes.hpp
@@ -36,6 +38,10 @@ target_sources(
     utf8.hpp
     value.hpp
 )
+
+if(CMAKE_BUILD_TYPE STREQUAL Coverage AND CMAKE_CXX_COMPILER_ID MATCHES GNU)
+    set_source_files_properties(asserts.cpp PROPERTIES COMPILE_DEFINITIONS GCOV)
+endif()
 
 # The fizzy::fizzy-internal links fizzy::fizzy library with access to internal headers.
 add_library(fizzy-internal INTERFACE)
