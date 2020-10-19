@@ -340,11 +340,11 @@ TEST(capi, execute)
     auto instance = fizzy_instantiate(module, nullptr, 0);
     ASSERT_NE(instance, nullptr);
 
-    EXPECT_THAT(fizzy_execute(instance, 0, nullptr, 0), Result());
-    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, 0), Result(42));
+    EXPECT_THAT(fizzy_execute(instance, 0, nullptr, 0), CResult());
+    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, 0), CResult(42));
     FizzyValue args[] = {{42}, {2}};
-    EXPECT_THAT(fizzy_execute(instance, 2, args, 0), Result(21));
-    EXPECT_THAT(fizzy_execute(instance, 3, nullptr, 0), Traps());
+    EXPECT_THAT(fizzy_execute(instance, 2, args, 0), CResult(21));
+    EXPECT_THAT(fizzy_execute(instance, 3, nullptr, 0), CTraps());
 
     fizzy_free_instance(instance);
 }
@@ -377,10 +377,10 @@ TEST(capi, execute_with_host_function)
     auto instance = fizzy_instantiate(module, host_funcs, 2);
     ASSERT_NE(instance, nullptr);
 
-    EXPECT_THAT(fizzy_execute(instance, 0, nullptr, 0), Result(42));
+    EXPECT_THAT(fizzy_execute(instance, 0, nullptr, 0), CResult(42));
 
     FizzyValue args[] = {{42}, {2}};
-    EXPECT_THAT(fizzy_execute(instance, 1, args, 0), Result(21));
+    EXPECT_THAT(fizzy_execute(instance, 1, args, 0), CResult(21));
 
     fizzy_free_instance(instance);
 }
@@ -407,7 +407,7 @@ TEST(capi, imported_function_traps)
     auto instance = fizzy_instantiate(module, host_funcs, 1);
     ASSERT_NE(instance, nullptr);
 
-    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, 0), Traps());
+    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, 0), CTraps());
 
     fizzy_free_instance(instance);
 }
@@ -436,7 +436,7 @@ TEST(capi, imported_function_void)
     auto instance = fizzy_instantiate(module, host_funcs, 1);
     ASSERT_NE(instance, nullptr);
 
-    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, 0), Result());
+    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, 0), CResult());
     EXPECT_TRUE(called);
 
     fizzy_free_instance(instance);
@@ -498,7 +498,7 @@ TEST(capi, imported_function_from_another_module)
     ASSERT_NE(instance2, nullptr);
 
     FizzyValue args[] = {{44}, {2}};
-    EXPECT_THAT(fizzy_execute(instance2, 1, args, 0), Result(42));
+    EXPECT_THAT(fizzy_execute(instance2, 1, args, 0), CResult(42));
 
     fizzy_free_instance(instance2);
     fizzy_free_instance(instance1);
