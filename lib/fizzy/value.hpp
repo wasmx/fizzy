@@ -67,6 +67,7 @@ constexpr int64_t Value::as<int64_t>() const noexcept
 template <>
 constexpr int32_t Value::as<int32_t>() const noexcept
 {
+    assert((i64 & 0xffffffff00000000) == 0);
     return static_cast<int32_t>(i64);
 }
 
