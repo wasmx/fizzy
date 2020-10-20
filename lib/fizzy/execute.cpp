@@ -528,7 +528,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         {
         case Instr::unreachable:
             goto trap;
-        case Instr::nop:
         case Instr::block:
         case Instr::loop:
             break;
@@ -560,7 +559,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::br:
         case Instr::br_if:
-        case Instr::return_:
+        case Instr::return_:  // TODO: Replace return with br
         {
             const auto arity = read<uint32_t>(pc);
 

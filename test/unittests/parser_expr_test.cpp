@@ -64,8 +64,7 @@ TEST(parser_expr, instr_block)
 
     const auto empty = "010102400b0b"_bytes;
     const auto [code1, pos1] = parse_expr(empty);
-    EXPECT_THAT(code1.instructions,
-        ElementsAre(Instr::nop, Instr::nop, Instr::block, Instr::end, Instr::end));
+    EXPECT_THAT(code1.instructions, ElementsAre(Instr::block, Instr::end, Instr::end));
 
     const auto block_i64 = "027e42000b1a0b"_bytes;
     const auto [code2, pos2] = parse_expr(block_i64);
@@ -163,9 +162,9 @@ TEST(parser_expr, block_br)
     const auto code_bin = "010240410a21010c00410b21010b20011a0b"_bytes;
     const auto [code, pos] = parse_expr(code_bin, 0, {{2, ValType::i32}});
     EXPECT_THAT(
-        code.instructions, ElementsAre(Instr::nop, Instr::block, Instr::i32_const, 0x0a, 0, 0, 0,
+        code.instructions, ElementsAre(Instr::block, Instr::i32_const, 0x0a, 0, 0, 0,
                                Instr::local_set, 1, 0, 0, 0, Instr::br, /*arity:*/ 0, 0, 0, 0,
-                               /*code_offset:*/ 36, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+                               /*code_offset:*/ 35, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
                                Instr::i32_const, 0x0b, 0, 0, 0, Instr::local_set, 1, 0, 0, 0,
                                Instr::end, Instr::local_get, 1, 0, 0, 0, Instr::drop, Instr::end));
     EXPECT_EQ(code.max_stack_height, 1);

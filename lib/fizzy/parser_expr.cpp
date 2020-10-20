@@ -329,6 +329,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         }
 
         case Instr::nop:
+            continue;
+
         case Instr::i32_eqz:
         case Instr::i32_eq:
         case Instr::i32_ne:
