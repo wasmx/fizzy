@@ -531,7 +531,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
             if (frame.instruction != Instr::loop)  // If end of block/if/else instruction.
             {
-                // Jump on the matching end instruction.
+                // The position of the "end":
+                // for the outermost implicit function block this is the function's end instruction,
+                // otherwise this is the next instruction after the block's end.
                 const auto target_pc = static_cast<uint32_t>(code.instructions.size());
 
                 if (frame.instruction == Instr::if_ || frame.instruction == Instr::else_)
