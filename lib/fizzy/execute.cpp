@@ -63,10 +63,9 @@ inline constexpr DstT extend(SrcT in) noexcept
 }
 
 template <typename DstT, typename SrcT = DstT>
-inline bool load_from_memory(
-    bytes_view memory, OperandStack& stack, const uint8_t*& immediates) noexcept
+inline bool load_from_memory(bytes_view memory, Value* sp, const uint8_t*& immediates) noexcept
 {
-    const auto address = stack.top().as<uint32_t>();
+    const auto address = sp->as<uint32_t>();
     // NOTE: alignment is dropped by the parser
     const auto offset = read<uint32_t>(immediates);
     // Addressing is 32-bit, but we keep the value as 64-bit to detect overflows.
@@ -74,7 +73,7 @@ inline bool load_from_memory(
         return false;
 
     const auto ret = load<SrcT>(memory, address + offset);
-    stack.top() = extend<DstT>(ret);
+    *sp = extend<DstT>(ret);
     return true;
 }
 
@@ -93,11 +92,10 @@ inline constexpr DstT shrink(Value value) noexcept
 }
 
 template <typename DstT>
-inline bool store_into_memory(
-    bytes& memory, OperandStack& stack, const uint8_t*& immediates) noexcept
+inline bool store_into_memory(bytes& memory, Value*& sp, const uint8_t*& immediates) noexcept
 {
-    const auto value = shrink<DstT>(stack.pop());
-    const auto address = stack.pop().as<uint32_t>();
+    const auto value = shrink<DstT>(*sp--);
+    const auto address = sp--->as<uint32_t>();
     // NOTE: alignment is dropped by the parser
     const auto offset = read<uint32_t>(immediates);
     // Addressing is 32-bit, but we keep the value as 64-bit to detect overflows.
@@ -110,19 +108,19 @@ inline bool store_into_memory(
 
 /// Converts the top stack item by truncating a float value to an integer value.
 template <typename SrcT, typename DstT>
-inline bool trunc(OperandStack& stack) noexcept
+inline bool trunc(Value* sp) noexcept
 {
     static_assert(std::is_floating_point_v<SrcT>);
     static_assert(std::is_integral_v<DstT>);
     using boundaries = trunc_boundaries<SrcT, DstT>;
 
-    const auto input = stack.top().as<SrcT>();
+    const auto input = sp->as<SrcT>();
     if (input > boundaries::lower && input < boundaries::upper)
     {
         assert(!std::isnan(input));
         assert(input != std::numeric_limits<SrcT>::infinity());
         assert(input != -std::numeric_limits<SrcT>::infinity());
-        stack.top() = static_cast<DstT>(input);
+        *sp = static_cast<DstT>(input);
         return true;
     }
     return false;
@@ -130,11 +128,11 @@ inline bool trunc(OperandStack& stack) noexcept
 
 /// Converts the top stack item from an integer value to a float value.
 template <typename SrcT, typename DstT>
-inline void convert(OperandStack& stack) noexcept
+inline void convert(Value* sp) noexcept
 {
     static_assert(std::is_integral_v<SrcT>);
     static_assert(std::is_floating_point_v<DstT>);
-    stack.top() = static_cast<DstT>(stack.top().as<SrcT>());
+    *sp = static_cast<DstT>(sp->as<SrcT>());
 }
 
 /// Performs a bit_cast from SrcT type to DstT type.
@@ -142,41 +140,43 @@ inline void convert(OperandStack& stack) noexcept
 /// This should be optimized to empty function in assembly. Except for f32 -> i32 where pushing
 /// the result i32 value to the stack requires zero-extension to 64-bit.
 template <typename SrcT, typename DstT>
-inline void reinterpret(OperandStack& stack) noexcept
+inline void reinterpret(Value* sp) noexcept
 {
     static_assert(std::is_integral_v<SrcT> == std::is_floating_point_v<DstT> ||
                   std::is_floating_point_v<SrcT> == std::is_integral_v<DstT>);
     static_assert(sizeof(SrcT) == sizeof(DstT));
-    const auto src = stack.top().as<SrcT>();
+    const auto src = sp->as<SrcT>();
     DstT dst;
     __builtin_memcpy(&dst, &src, sizeof(dst));
-    stack.top() = dst;
+    *sp = dst;
 }
 
 template <typename Op>
-inline void unary_op(OperandStack& stack, Op op) noexcept
+inline void unary_op(Value* sp, Op op) noexcept
 {
     using T = decltype(op({}));
-    const auto result = op(stack.top().as<T>());
-    stack.top() = Value{result};  // Convert to Value, also from signed integer types.
+    const auto result = op(sp->as<T>());
+    *sp = Value{result};  // Convert to Value, also from signed integer types.
 }
 
 template <typename Op>
-inline void binary_op(OperandStack& stack, Op op) noexcept
+inline void binary_op(Value*& sp, Op op) noexcept
 {
     using T = decltype(op({}, {}));
-    const auto val2 = stack.pop().as<T>();
-    const auto val1 = stack.top().as<T>();
+    const auto val2 = sp->as<T>();
+    --sp;
+    const auto val1 = sp->as<T>();
     const auto result = op(val1, val2);
-    stack.top() = Value{result};  // Convert to Value, also from signed integer types.
+    *sp = Value{result};  // Convert to Value, also from signed integer types.
 }
 
 template <typename T, template <typename> class Op>
-inline void comparison_op(OperandStack& stack, Op<T> op) noexcept
+inline void comparison_op(Value*& sp, Op<T> op) noexcept
 {
-    const auto val2 = stack.pop().as<T>();
-    const auto val1 = stack.top().as<T>();
-    stack.top() = uint32_t{op(val1, val2)};
+    const auto val2 = sp->as<T>();
+    --sp;
+    const auto val1 = sp->as<T>();
+    *sp = uint32_t{op(val1, val2)};
 }
 
 template <typename T>
@@ -456,7 +456,7 @@ __attribute__((no_sanitize("float-cast-overflow"))) inline constexpr float demot
     return static_cast<float>(value);
 }
 
-void branch(const Code& code, OperandStack& stack, const Instr*& pc, const uint8_t*& immediates,
+void branch(const Code& code, Value*& sp, const Instr*& pc, const uint8_t*& immediates,
     uint32_t arity) noexcept
 {
     const auto code_offset = read<uint32_t>(immediates);
@@ -468,32 +468,31 @@ void branch(const Code& code, OperandStack& stack, const Instr*& pc, const uint8
 
     // When branch is taken, additional stack items must be dropped.
     assert(static_cast<int>(stack_drop) >= 0);
-    assert(stack.size() >= stack_drop + arity);
+    //    assert(stack.size() >= stack_drop + arity);
     if (arity != 0)
     {
         assert(arity == 1);
-        const auto result = stack.top();
-        stack.drop(stack_drop);
-        stack.top() = result;
+        const auto result = *sp;
+        sp -= stack_drop;
+        *sp = result;
     }
     else
-        stack.drop(stack_drop);
+        sp -= stack_drop;
 }
 
 template <class F>
 inline bool invoke_function(
-    const FuncType& func_type, const F& func, Instance& instance, OperandStack& stack, int depth)
+    const FuncType& func_type, const F& func, Instance& instance, Value*& sp, int depth)
 {
     const auto num_args = func_type.inputs.size();
-    assert(stack.size() >= num_args);
-    const auto call_args = stack.rend() - num_args;
+    const auto call_args = sp + 1 - num_args;
 
     const auto ret = func(instance, call_args, depth + 1);
     // Bubble up traps
     if (ret.trapped)
         return false;
 
-    stack.drop(num_args);
+    sp -= num_args;
 
     const auto num_outputs = func_type.outputs.size();
     // NOTE: we can assume these two from validation
@@ -501,18 +500,18 @@ inline bool invoke_function(
     assert(ret.has_value == (num_outputs == 1));
     // Push back the result
     if (num_outputs != 0)
-        stack.push(ret.value);
+        *++sp = (ret.value);
 
     return true;
 }
 
-inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
-    OperandStack& stack, int depth)
+inline bool invoke_function(
+    const FuncType& func_type, uint32_t func_idx, Instance& instance, Value*& sp, int depth)
 {
     const auto func = [func_idx](Instance& _instance, const Value* args, int _depth) {
         return execute(_instance, func_idx, args, _depth);
     };
-    return invoke_function(func_type, func, instance, stack, depth);
+    return invoke_function(func_type, func, instance, sp, depth);
 }
 }  // namespace
 
@@ -531,11 +530,15 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
     const auto& code = instance.module->get_code(func_idx);
     auto* const memory = instance.memory.get();
 
-    OperandStack stack(args, func_type.inputs.size(), code.local_count,
+    OperandStack _stack(args, func_type.inputs.size(), code.local_count,
         static_cast<size_t>(code.max_stack_height));
 
     const Instr* pc = code.instructions.data();
     const uint8_t* immediates = code.immediates.data();
+
+    // FIXME: Remove reference.
+    auto sp = _stack.sp();
+    const auto bottom = sp;
 
     while (true)
     {
@@ -550,7 +553,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             break;
         case Instr::if_:
         {
-            if (stack.pop().as<uint32_t>() != 0)
+            if (sp--->as<uint32_t>() != 0)
                 immediates += 2 * sizeof(uint32_t);  // Skip the immediates for else instruction.
             else
             {
@@ -588,13 +591,13 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             const auto arity = read<uint32_t>(immediates);
 
             // Check condition for br_if.
-            if (instruction == Instr::br_if && stack.pop().as<uint32_t>() == 0)
+            if (instruction == Instr::br_if && sp--->as<uint32_t>() == 0)
             {
                 immediates += BranchImmediateSize;
                 break;
             }
 
-            branch(code, stack, pc, immediates, arity);
+            branch(code, sp, pc, immediates, arity);
             break;
         }
         case Instr::br_table:
@@ -602,14 +605,14 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             const auto br_table_size = read<uint32_t>(immediates);
             const auto arity = read<uint32_t>(immediates);
 
-            const auto br_table_idx = stack.pop().as<uint32_t>();
+            const auto br_table_idx = sp--->as<uint32_t>();
 
             const auto label_idx_offset = br_table_idx < br_table_size ?
                                               br_table_idx * BranchImmediateSize :
                                               br_table_size * BranchImmediateSize;
             immediates += label_idx_offset;
 
-            branch(code, stack, pc, immediates, arity);
+            branch(code, sp, pc, immediates, arity);
             break;
         }
         case Instr::call:
@@ -617,7 +620,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             const auto called_func_idx = read<uint32_t>(immediates);
             const auto& called_func_type = instance.module->get_function_type(called_func_idx);
 
-            if (!invoke_function(called_func_type, called_func_idx, instance, stack, depth))
+            if (!invoke_function(called_func_type, called_func_idx, instance, sp, depth))
                 goto trap;
             break;
         }
@@ -628,7 +631,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             const auto expected_type_idx = read<uint32_t>(immediates);
             assert(expected_type_idx < instance.module->typesec.size());
 
-            const auto elem_idx = stack.pop().as<uint32_t>();
+            const auto elem_idx = sp--->as<uint32_t>();
             if (elem_idx >= instance.table->size())
                 goto trap;
 
@@ -642,43 +645,43 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             if (expected_type != actual_type)
                 goto trap;
 
-            if (!invoke_function(actual_type, called_func->function, instance, stack, depth))
+            if (!invoke_function(actual_type, called_func->function, instance, sp, depth))
                 goto trap;
             break;
         }
         case Instr::drop:
         {
-            stack.pop();
+            --sp;
             break;
         }
         case Instr::select:
         {
-            const auto condition = stack.pop().as<uint32_t>();
+            const auto condition = sp--->as<uint32_t>();
             // NOTE: these two are the same type (ensured by validation)
-            const auto val2 = stack.pop();
-            const auto val1 = stack.pop();
+            const auto val2 = *sp--;
+            const auto val1 = *sp--;
             if (condition == 0)
-                stack.push(val2);
+                *++sp = (val2);
             else
-                stack.push(val1);
+                *++sp = (val1);
             break;
         }
         case Instr::local_get:
         {
             const auto idx = read<uint32_t>(immediates);
-            stack.push(stack.local(idx));
+            *++sp = (_stack.local(idx));
             break;
         }
         case Instr::local_set:
         {
             const auto idx = read<uint32_t>(immediates);
-            stack.local(idx) = stack.pop();
+            _stack.local(idx) = *sp--;
             break;
         }
         case Instr::local_tee:
         {
             const auto idx = read<uint32_t>(immediates);
-            stack.local(idx) = stack.top();
+            _stack.local(idx) = *sp;
             break;
         }
         case Instr::global_get:
@@ -687,13 +690,13 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             assert(idx < instance.imported_globals.size() + instance.globals.size());
             if (idx < instance.imported_globals.size())
             {
-                stack.push(*instance.imported_globals[idx].value);
+                *++sp = (*instance.imported_globals[idx].value);
             }
             else
             {
                 const auto module_global_idx = idx - instance.imported_globals.size();
                 assert(module_global_idx < instance.module->globalsec.size());
-                stack.push(instance.globals[module_global_idx]);
+                *++sp = (instance.globals[module_global_idx]);
             }
             break;
         }
@@ -703,153 +706,153 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             if (idx < instance.imported_globals.size())
             {
                 assert(instance.imported_globals[idx].type.is_mutable);
-                *instance.imported_globals[idx].value = stack.pop();
+                *instance.imported_globals[idx].value = *sp--;
             }
             else
             {
                 const auto module_global_idx = idx - instance.imported_globals.size();
                 assert(module_global_idx < instance.module->globalsec.size());
                 assert(instance.module->globalsec[module_global_idx].type.is_mutable);
-                instance.globals[module_global_idx] = stack.pop();
+                instance.globals[module_global_idx] = *sp--;
             }
             break;
         }
         case Instr::i32_load:
         {
-            if (!load_from_memory<uint32_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint32_t>(*memory, sp, immediates))
                 goto trap;
             break;
         }
         case Instr::i64_load:
         {
-            if (!load_from_memory<uint64_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint64_t>(*memory, sp, immediates))
                 goto trap;
             break;
         }
         case Instr::f32_load:
         {
-            if (!load_from_memory<float>(*memory, stack, immediates))
+            if (!load_from_memory<float>(*memory, sp, immediates))
                 goto trap;
             break;
         }
         case Instr::f64_load:
         {
-            if (!load_from_memory<double>(*memory, stack, immediates))
+            if (!load_from_memory<double>(*memory, sp, immediates))
                 goto trap;
             break;
         }
         case Instr::i32_load8_s:
         {
-            if (!load_from_memory<uint32_t, int8_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint32_t, int8_t>(*memory, sp, immediates))
                 goto trap;
             break;
         }
         case Instr::i32_load8_u:
         {
-            if (!load_from_memory<uint32_t, uint8_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint32_t, uint8_t>(*memory, sp, immediates))
                 goto trap;
             break;
         }
         case Instr::i32_load16_s:
         {
-            if (!load_from_memory<uint32_t, int16_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint32_t, int16_t>(*memory, sp, immediates))
                 goto trap;
             break;
         }
         case Instr::i32_load16_u:
         {
-            if (!load_from_memory<uint32_t, uint16_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint32_t, uint16_t>(*memory, sp, immediates))
                 goto trap;
             break;
         }
         case Instr::i64_load8_s:
         {
-            if (!load_from_memory<uint64_t, int8_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint64_t, int8_t>(*memory, sp, immediates))
                 goto trap;
             break;
         }
         case Instr::i64_load8_u:
         {
-            if (!load_from_memory<uint64_t, uint8_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint64_t, uint8_t>(*memory, sp, immediates))
                 goto trap;
             break;
         }
         case Instr::i64_load16_s:
         {
-            if (!load_from_memory<uint64_t, int16_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint64_t, int16_t>(*memory, sp, immediates))
                 goto trap;
             break;
         }
         case Instr::i64_load16_u:
         {
-            if (!load_from_memory<uint64_t, uint16_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint64_t, uint16_t>(*memory, sp, immediates))
                 goto trap;
             break;
         }
         case Instr::i64_load32_s:
         {
-            if (!load_from_memory<uint64_t, int32_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint64_t, int32_t>(*memory, sp, immediates))
                 goto trap;
             break;
         }
         case Instr::i64_load32_u:
         {
-            if (!load_from_memory<uint64_t, uint32_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint64_t, uint32_t>(*memory, sp, immediates))
                 goto trap;
             break;
         }
         case Instr::i32_store:
         {
-            if (!store_into_memory<uint32_t>(*memory, stack, immediates))
+            if (!store_into_memory<uint32_t>(*memory, sp, immediates))
                 goto trap;
             break;
         }
         case Instr::i64_store:
         {
-            if (!store_into_memory<uint64_t>(*memory, stack, immediates))
+            if (!store_into_memory<uint64_t>(*memory, sp, immediates))
                 goto trap;
             break;
         }
         case Instr::f32_store:
         {
-            if (!store_into_memory<float>(*memory, stack, immediates))
+            if (!store_into_memory<float>(*memory, sp, immediates))
                 goto trap;
             break;
         }
         case Instr::f64_store:
         {
-            if (!store_into_memory<double>(*memory, stack, immediates))
+            if (!store_into_memory<double>(*memory, sp, immediates))
                 goto trap;
             break;
         }
         case Instr::i32_store8:
         case Instr::i64_store8:
         {
-            if (!store_into_memory<uint8_t>(*memory, stack, immediates))
+            if (!store_into_memory<uint8_t>(*memory, sp, immediates))
                 goto trap;
             break;
         }
         case Instr::i32_store16:
         case Instr::i64_store16:
         {
-            if (!store_into_memory<uint16_t>(*memory, stack, immediates))
+            if (!store_into_memory<uint16_t>(*memory, sp, immediates))
                 goto trap;
             break;
         }
         case Instr::i64_store32:
         {
-            if (!store_into_memory<uint32_t>(*memory, stack, immediates))
+            if (!store_into_memory<uint32_t>(*memory, sp, immediates))
                 goto trap;
             break;
         }
         case Instr::memory_size:
         {
-            stack.push(static_cast<uint32_t>(memory->size() / PageSize));
+            *++sp = (static_cast<uint32_t>(memory->size() / PageSize));
             break;
         }
         case Instr::memory_grow:
         {
-            const auto delta = stack.pop().as<uint32_t>();
+            const auto delta = sp--->as<uint32_t>();
             const auto cur_pages = memory->size() / PageSize;
             assert(cur_pages <= size_t(std::numeric_limits<int32_t>::max()));
             const auto new_pages = cur_pages + delta;
@@ -865,592 +868,598 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             {
                 ret = static_cast<uint32_t>(-1);
             }
-            stack.push(ret);
+            *++sp = (ret);
             break;
         }
         case Instr::i32_const:
         case Instr::f32_const:
         {
             const auto value = read<uint32_t>(immediates);
-            stack.push(value);
+            *++sp = (value);
             break;
         }
         case Instr::i64_const:
         case Instr::f64_const:
         {
             const auto value = read<uint64_t>(immediates);
-            stack.push(value);
+            *++sp = (value);
             break;
         }
         case Instr::i32_eqz:
         {
-            stack.top() = uint32_t{stack.top().as<uint32_t>() == 0};
+            *sp = uint32_t{sp->as<uint32_t>() == 0};
             break;
         }
         case Instr::i32_eq:
         {
-            comparison_op(stack, std::equal_to<uint32_t>());
+            asm("/*i32_eq*/");
+            comparison_op(sp, std::equal_to<uint32_t>());
             break;
         }
         case Instr::i32_ne:
         {
-            comparison_op(stack, std::not_equal_to<uint32_t>());
+            comparison_op(sp, std::not_equal_to<uint32_t>());
             break;
         }
         case Instr::i32_lt_s:
         {
-            comparison_op(stack, std::less<int32_t>());
+            comparison_op(sp, std::less<int32_t>());
             break;
         }
         case Instr::i32_lt_u:
         {
-            comparison_op(stack, std::less<uint32_t>());
+            comparison_op(sp, std::less<uint32_t>());
             break;
         }
         case Instr::i32_gt_s:
         {
-            comparison_op(stack, std::greater<int32_t>());
+            comparison_op(sp, std::greater<int32_t>());
             break;
         }
         case Instr::i32_gt_u:
         {
-            comparison_op(stack, std::greater<uint32_t>());
+            comparison_op(sp, std::greater<uint32_t>());
             break;
         }
         case Instr::i32_le_s:
         {
-            comparison_op(stack, std::less_equal<int32_t>());
+            comparison_op(sp, std::less_equal<int32_t>());
             break;
         }
         case Instr::i32_le_u:
         {
-            comparison_op(stack, std::less_equal<uint32_t>());
+            comparison_op(sp, std::less_equal<uint32_t>());
             break;
         }
         case Instr::i32_ge_s:
         {
-            comparison_op(stack, std::greater_equal<int32_t>());
+            comparison_op(sp, std::greater_equal<int32_t>());
             break;
         }
         case Instr::i32_ge_u:
         {
-            comparison_op(stack, std::greater_equal<uint32_t>());
+            comparison_op(sp, std::greater_equal<uint32_t>());
             break;
         }
         case Instr::i64_eqz:
         {
-            stack.top() = uint32_t{stack.top().i64 == 0};
+            *sp = uint32_t{sp->i64 == 0};
             break;
         }
         case Instr::i64_eq:
         {
-            comparison_op(stack, std::equal_to<uint64_t>());
+            asm("/*i64_eq*/");
+            comparison_op(sp, std::equal_to<uint64_t>());
             break;
         }
         case Instr::i64_ne:
         {
-            comparison_op(stack, std::not_equal_to<uint64_t>());
+            comparison_op(sp, std::not_equal_to<uint64_t>());
             break;
         }
         case Instr::i64_lt_s:
         {
-            comparison_op(stack, std::less<int64_t>());
+            comparison_op(sp, std::less<int64_t>());
             break;
         }
         case Instr::i64_lt_u:
         {
-            comparison_op(stack, std::less<uint64_t>());
+            comparison_op(sp, std::less<uint64_t>());
             break;
         }
         case Instr::i64_gt_s:
         {
-            comparison_op(stack, std::greater<int64_t>());
+            comparison_op(sp, std::greater<int64_t>());
             break;
         }
         case Instr::i64_gt_u:
         {
-            comparison_op(stack, std::greater<uint64_t>());
+            comparison_op(sp, std::greater<uint64_t>());
             break;
         }
         case Instr::i64_le_s:
         {
-            comparison_op(stack, std::less_equal<int64_t>());
+            comparison_op(sp, std::less_equal<int64_t>());
             break;
         }
         case Instr::i64_le_u:
         {
-            comparison_op(stack, std::less_equal<uint64_t>());
+            comparison_op(sp, std::less_equal<uint64_t>());
             break;
         }
         case Instr::i64_ge_s:
         {
-            comparison_op(stack, std::greater_equal<int64_t>());
+            comparison_op(sp, std::greater_equal<int64_t>());
             break;
         }
         case Instr::i64_ge_u:
         {
-            comparison_op(stack, std::greater_equal<uint64_t>());
+            comparison_op(sp, std::greater_equal<uint64_t>());
             break;
         }
 
         case Instr::f32_eq:
         {
-            comparison_op(stack, std::equal_to<float>());
+            comparison_op(sp, std::equal_to<float>());
             break;
         }
         case Instr::f32_ne:
         {
-            comparison_op(stack, std::not_equal_to<float>());
+            comparison_op(sp, std::not_equal_to<float>());
             break;
         }
         case Instr::f32_lt:
         {
-            comparison_op(stack, std::less<float>());
+            comparison_op(sp, std::less<float>());
             break;
         }
         case Instr::f32_gt:
         {
-            comparison_op<float>(stack, std::greater<float>());
+            comparison_op<float>(sp, std::greater<float>());
             break;
         }
         case Instr::f32_le:
         {
-            comparison_op(stack, std::less_equal<float>());
+            comparison_op(sp, std::less_equal<float>());
             break;
         }
         case Instr::f32_ge:
         {
-            comparison_op(stack, std::greater_equal<float>());
+            comparison_op(sp, std::greater_equal<float>());
             break;
         }
 
         case Instr::f64_eq:
         {
-            comparison_op(stack, std::equal_to<double>());
+            comparison_op(sp, std::equal_to<double>());
             break;
         }
         case Instr::f64_ne:
         {
-            comparison_op(stack, std::not_equal_to<double>());
+            comparison_op(sp, std::not_equal_to<double>());
             break;
         }
         case Instr::f64_lt:
         {
-            comparison_op(stack, std::less<double>());
+            comparison_op(sp, std::less<double>());
             break;
         }
         case Instr::f64_gt:
         {
-            comparison_op<double>(stack, std::greater<double>());
+            comparison_op<double>(sp, std::greater<double>());
             break;
         }
         case Instr::f64_le:
         {
-            comparison_op(stack, std::less_equal<double>());
+            comparison_op(sp, std::less_equal<double>());
             break;
         }
         case Instr::f64_ge:
         {
-            comparison_op(stack, std::greater_equal<double>());
+            comparison_op(sp, std::greater_equal<double>());
             break;
         }
 
         case Instr::i32_clz:
         {
-            unary_op(stack, clz32);
+            asm("/*i32_clz*/");
+            unary_op(sp, clz32);
             break;
         }
         case Instr::i32_ctz:
         {
-            unary_op(stack, ctz32);
+            unary_op(sp, ctz32);
             break;
         }
         case Instr::i32_popcnt:
         {
-            unary_op(stack, popcnt32);
+            unary_op(sp, popcnt32);
             break;
         }
         case Instr::i32_add:
         {
-            binary_op(stack, add<uint32_t>);
+            asm("/*i32_add*/");
+            binary_op(sp, add<uint32_t>);
             break;
         }
         case Instr::i32_sub:
         {
-            binary_op(stack, sub<uint32_t>);
+            binary_op(sp, sub<uint32_t>);
             break;
         }
         case Instr::i32_mul:
         {
-            binary_op(stack, mul<uint32_t>);
+            binary_op(sp, mul<uint32_t>);
             break;
         }
         case Instr::i32_div_s:
         {
-            const auto rhs = stack.pop().as<int32_t>();
-            const auto lhs = stack.top().as<int32_t>();
+            const auto rhs = sp--->as<int32_t>();
+            const auto lhs = sp->as<int32_t>();
             if (rhs == 0 || (lhs == std::numeric_limits<int32_t>::min() && rhs == -1))
                 goto trap;
-            stack.top() = div(lhs, rhs);
+            *sp = div(lhs, rhs);
             break;
         }
         case Instr::i32_div_u:
         {
-            const auto rhs = stack.pop().as<uint32_t>();
+            const auto rhs = sp--->as<uint32_t>();
             if (rhs == 0)
                 goto trap;
-            const auto lhs = stack.top().as<uint32_t>();
-            stack.top() = div(lhs, rhs);
+            const auto lhs = sp->as<uint32_t>();
+            *sp = div(lhs, rhs);
             break;
         }
         case Instr::i32_rem_s:
         {
-            const auto rhs = stack.pop().as<int32_t>();
+            const auto rhs = sp--->as<int32_t>();
             if (rhs == 0)
                 goto trap;
-            const auto lhs = stack.top().as<int32_t>();
+            const auto lhs = sp->as<int32_t>();
             if (lhs == std::numeric_limits<int32_t>::min() && rhs == -1)
-                stack.top() = 0;
+                *sp = 0;
             else
-                stack.top() = rem(lhs, rhs);
+                *sp = rem(lhs, rhs);
             break;
         }
         case Instr::i32_rem_u:
         {
-            const auto rhs = stack.pop().as<uint32_t>();
+            const auto rhs = sp--->as<uint32_t>();
             if (rhs == 0)
                 goto trap;
-            const auto lhs = stack.top().as<uint32_t>();
-            stack.top() = rem(lhs, rhs);
+            const auto lhs = sp->as<uint32_t>();
+            *sp = rem(lhs, rhs);
             break;
         }
         case Instr::i32_and:
         {
-            binary_op(stack, std::bit_and<uint32_t>());
+            binary_op(sp, std::bit_and<uint32_t>());
             break;
         }
         case Instr::i32_or:
         {
-            binary_op(stack, std::bit_or<uint32_t>());
+            binary_op(sp, std::bit_or<uint32_t>());
             break;
         }
         case Instr::i32_xor:
         {
-            binary_op(stack, std::bit_xor<uint32_t>());
+            binary_op(sp, std::bit_xor<uint32_t>());
             break;
         }
         case Instr::i32_shl:
         {
-            binary_op(stack, shift_left<uint32_t>);
+            binary_op(sp, shift_left<uint32_t>);
             break;
         }
         case Instr::i32_shr_s:
         {
-            binary_op(stack, shift_right<int32_t>);
+            binary_op(sp, shift_right<int32_t>);
             break;
         }
         case Instr::i32_shr_u:
         {
-            binary_op(stack, shift_right<uint32_t>);
+            binary_op(sp, shift_right<uint32_t>);
             break;
         }
         case Instr::i32_rotl:
         {
-            binary_op(stack, rotl<uint32_t>);
+            binary_op(sp, rotl<uint32_t>);
             break;
         }
         case Instr::i32_rotr:
         {
-            binary_op(stack, rotr<uint32_t>);
+            binary_op(sp, rotr<uint32_t>);
             break;
         }
 
         case Instr::i64_clz:
         {
-            unary_op(stack, clz64);
+            asm("/*i64_clz*/");
+            unary_op(sp, clz64);
             break;
         }
         case Instr::i64_ctz:
         {
-            unary_op(stack, ctz64);
+            unary_op(sp, ctz64);
             break;
         }
         case Instr::i64_popcnt:
         {
-            unary_op(stack, popcnt64);
+            unary_op(sp, popcnt64);
             break;
         }
         case Instr::i64_add:
         {
-            binary_op(stack, add<uint64_t>);
+            asm("/*i64_add*/");
+            binary_op(sp, add<uint64_t>);
             break;
         }
         case Instr::i64_sub:
         {
-            binary_op(stack, sub<uint64_t>);
+            binary_op(sp, sub<uint64_t>);
             break;
         }
         case Instr::i64_mul:
         {
-            binary_op(stack, mul<uint64_t>);
+            binary_op(sp, mul<uint64_t>);
             break;
         }
         case Instr::i64_div_s:
         {
-            const auto rhs = stack.pop().as<int64_t>();
-            const auto lhs = stack.top().as<int64_t>();
+            const auto rhs = sp--->as<int64_t>();
+            const auto lhs = sp->as<int64_t>();
             if (rhs == 0 || (lhs == std::numeric_limits<int64_t>::min() && rhs == -1))
                 goto trap;
-            stack.top() = div(lhs, rhs);
+            *sp = div(lhs, rhs);
             break;
         }
         case Instr::i64_div_u:
         {
-            const auto rhs = stack.pop().i64;
+            const auto rhs = sp--->i64;
             if (rhs == 0)
                 goto trap;
-            const auto lhs = stack.top().i64;
-            stack.top() = div(lhs, rhs);
+            const auto lhs = sp->i64;
+            *sp = div(lhs, rhs);
             break;
         }
         case Instr::i64_rem_s:
         {
-            const auto rhs = stack.pop().as<int64_t>();
+            const auto rhs = sp--->as<int64_t>();
             if (rhs == 0)
                 goto trap;
-            const auto lhs = stack.top().as<int64_t>();
+            const auto lhs = sp->as<int64_t>();
             if (lhs == std::numeric_limits<int64_t>::min() && rhs == -1)
-                stack.top() = 0;
+                *sp = 0;
             else
-                stack.top() = rem(lhs, rhs);
+                *sp = rem(lhs, rhs);
             break;
         }
         case Instr::i64_rem_u:
         {
-            const auto rhs = stack.pop().i64;
+            const auto rhs = sp--->i64;
             if (rhs == 0)
                 goto trap;
-            const auto lhs = stack.top().i64;
-            stack.top() = rem(lhs, rhs);
+            const auto lhs = sp->i64;
+            *sp = rem(lhs, rhs);
             break;
         }
         case Instr::i64_and:
         {
-            binary_op(stack, std::bit_and<uint64_t>());
+            binary_op(sp, std::bit_and<uint64_t>());
             break;
         }
         case Instr::i64_or:
         {
-            binary_op(stack, std::bit_or<uint64_t>());
+            binary_op(sp, std::bit_or<uint64_t>());
             break;
         }
         case Instr::i64_xor:
         {
-            binary_op(stack, std::bit_xor<uint64_t>());
+            binary_op(sp, std::bit_xor<uint64_t>());
             break;
         }
         case Instr::i64_shl:
         {
-            binary_op(stack, shift_left<uint64_t>);
+            binary_op(sp, shift_left<uint64_t>);
             break;
         }
         case Instr::i64_shr_s:
         {
-            binary_op(stack, shift_right<int64_t>);
+            binary_op(sp, shift_right<int64_t>);
             break;
         }
         case Instr::i64_shr_u:
         {
-            binary_op(stack, shift_right<uint64_t>);
+            binary_op(sp, shift_right<uint64_t>);
             break;
         }
         case Instr::i64_rotl:
         {
-            binary_op(stack, rotl<uint64_t>);
+            binary_op(sp, rotl<uint64_t>);
             break;
         }
         case Instr::i64_rotr:
         {
-            binary_op(stack, rotr<uint64_t>);
+            binary_op(sp, rotr<uint64_t>);
             break;
         }
 
         case Instr::f32_abs:
         {
-            unary_op(stack, fabs<float>);
+            unary_op(sp, fabs<float>);
             break;
         }
         case Instr::f32_neg:
         {
-            unary_op(stack, fneg<float>);
+            unary_op(sp, fneg<float>);
             break;
         }
         case Instr::f32_ceil:
         {
-            unary_op(stack, fceil<float>);
+            unary_op(sp, fceil<float>);
             break;
         }
         case Instr::f32_floor:
         {
-            unary_op(stack, ffloor<float>);
+            unary_op(sp, ffloor<float>);
             break;
         }
         case Instr::f32_trunc:
         {
-            unary_op(stack, ftrunc<float>);
+            unary_op(sp, ftrunc<float>);
             break;
         }
         case Instr::f32_nearest:
         {
-            unary_op(stack, fnearest<float>);
+            unary_op(sp, fnearest<float>);
             break;
         }
         case Instr::f32_sqrt:
         {
-            unary_op(stack, static_cast<float (*)(float)>(std::sqrt));
+            unary_op(sp, static_cast<float (*)(float)>(std::sqrt));
             break;
         }
 
         case Instr::f32_add:
         {
-            binary_op(stack, add<float>);
+            binary_op(sp, add<float>);
             break;
         }
         case Instr::f32_sub:
         {
-            binary_op(stack, sub<float>);
+            binary_op(sp, sub<float>);
             break;
         }
         case Instr::f32_mul:
         {
-            binary_op(stack, mul<float>);
+            binary_op(sp, mul<float>);
             break;
         }
         case Instr::f32_div:
         {
-            binary_op(stack, fdiv<float>);
+            binary_op(sp, fdiv<float>);
             break;
         }
         case Instr::f32_min:
         {
-            binary_op(stack, fmin<float>);
+            binary_op(sp, fmin<float>);
             break;
         }
         case Instr::f32_max:
         {
-            binary_op(stack, fmax<float>);
+            binary_op(sp, fmax<float>);
             break;
         }
         case Instr::f32_copysign:
         {
-            binary_op(stack, fcopysign<float>);
+            binary_op(sp, fcopysign<float>);
             break;
         }
 
         case Instr::f64_abs:
         {
-            unary_op(stack, fabs<double>);
+            unary_op(sp, fabs<double>);
             break;
         }
         case Instr::f64_neg:
         {
-            unary_op(stack, fneg<double>);
+            unary_op(sp, fneg<double>);
             break;
         }
         case Instr::f64_ceil:
         {
-            unary_op(stack, fceil<double>);
+            unary_op(sp, fceil<double>);
             break;
         }
         case Instr::f64_floor:
         {
-            unary_op(stack, ffloor<double>);
+            unary_op(sp, ffloor<double>);
             break;
         }
         case Instr::f64_trunc:
         {
-            unary_op(stack, ftrunc<double>);
+            unary_op(sp, ftrunc<double>);
             break;
         }
         case Instr::f64_nearest:
         {
-            unary_op(stack, fnearest<double>);
+            unary_op(sp, fnearest<double>);
             break;
         }
         case Instr::f64_sqrt:
         {
-            unary_op(stack, static_cast<double (*)(double)>(std::sqrt));
+            unary_op(sp, static_cast<double (*)(double)>(std::sqrt));
             break;
         }
 
         case Instr::f64_add:
         {
-            binary_op(stack, add<double>);
+            binary_op(sp, add<double>);
             break;
         }
         case Instr::f64_sub:
         {
-            binary_op(stack, sub<double>);
+            binary_op(sp, sub<double>);
             break;
         }
         case Instr::f64_mul:
         {
-            binary_op(stack, mul<double>);
+            binary_op(sp, mul<double>);
             break;
         }
         case Instr::f64_div:
         {
-            binary_op(stack, fdiv<double>);
+            binary_op(sp, fdiv<double>);
             break;
         }
         case Instr::f64_min:
         {
-            binary_op(stack, fmin<double>);
+            binary_op(sp, fmin<double>);
             break;
         }
         case Instr::f64_max:
         {
-            binary_op(stack, fmax<double>);
+            binary_op(sp, fmax<double>);
             break;
         }
         case Instr::f64_copysign:
         {
-            binary_op(stack, fcopysign<double>);
+            binary_op(sp, fcopysign<double>);
             break;
         }
 
         case Instr::i32_wrap_i64:
         {
-            stack.top() = static_cast<uint32_t>(stack.top().i64);
+            *sp = static_cast<uint32_t>(sp->i64);
             break;
         }
         case Instr::i32_trunc_f32_s:
         {
-            if (!trunc<float, int32_t>(stack))
+            if (!trunc<float, int32_t>(sp))
                 goto trap;
             break;
         }
         case Instr::i32_trunc_f32_u:
         {
-            if (!trunc<float, uint32_t>(stack))
+            if (!trunc<float, uint32_t>(sp))
                 goto trap;
             break;
         }
         case Instr::i32_trunc_f64_s:
         {
-            if (!trunc<double, int32_t>(stack))
+            if (!trunc<double, int32_t>(sp))
                 goto trap;
             break;
         }
         case Instr::i32_trunc_f64_u:
         {
-            if (!trunc<double, uint32_t>(stack))
+            if (!trunc<double, uint32_t>(sp))
                 goto trap;
             break;
         }
         case Instr::i64_extend_i32_s:
         {
-            stack.top() = int64_t{stack.top().as<int32_t>()};
+            *sp = int64_t{sp->as<int32_t>()};
             break;
         }
         case Instr::i64_extend_i32_u:
@@ -1460,96 +1469,96 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i64_trunc_f32_s:
         {
-            if (!trunc<float, int64_t>(stack))
+            if (!trunc<float, int64_t>(sp))
                 goto trap;
             break;
         }
         case Instr::i64_trunc_f32_u:
         {
-            if (!trunc<float, uint64_t>(stack))
+            if (!trunc<float, uint64_t>(sp))
                 goto trap;
             break;
         }
         case Instr::i64_trunc_f64_s:
         {
-            if (!trunc<double, int64_t>(stack))
+            if (!trunc<double, int64_t>(sp))
                 goto trap;
             break;
         }
         case Instr::i64_trunc_f64_u:
         {
-            if (!trunc<double, uint64_t>(stack))
+            if (!trunc<double, uint64_t>(sp))
                 goto trap;
             break;
         }
         case Instr::f32_convert_i32_s:
         {
-            convert<int32_t, float>(stack);
+            convert<int32_t, float>(sp);
             break;
         }
         case Instr::f32_convert_i32_u:
         {
-            convert<uint32_t, float>(stack);
+            convert<uint32_t, float>(sp);
             break;
         }
         case Instr::f32_convert_i64_s:
         {
-            convert<int64_t, float>(stack);
+            convert<int64_t, float>(sp);
             break;
         }
         case Instr::f32_convert_i64_u:
         {
-            convert<uint64_t, float>(stack);
+            convert<uint64_t, float>(sp);
             break;
         }
         case Instr::f32_demote_f64:
         {
-            stack.top() = demote(stack.top().f64);
+            *sp = demote(sp->f64);
             break;
         }
         case Instr::f64_convert_i32_s:
         {
-            convert<int32_t, double>(stack);
+            convert<int32_t, double>(sp);
             break;
         }
         case Instr::f64_convert_i32_u:
         {
-            convert<uint32_t, double>(stack);
+            convert<uint32_t, double>(sp);
             break;
         }
         case Instr::f64_convert_i64_s:
         {
-            convert<int64_t, double>(stack);
+            convert<int64_t, double>(sp);
             break;
         }
         case Instr::f64_convert_i64_u:
         {
-            convert<uint64_t, double>(stack);
+            convert<uint64_t, double>(sp);
             break;
         }
         case Instr::f64_promote_f32:
         {
-            stack.top() = double{stack.top().f32};
+            *sp = double{sp->f32};
             break;
         }
         case Instr::i32_reinterpret_f32:
         {
-            reinterpret<float, uint32_t>(stack);
+            reinterpret<float, uint32_t>(sp);
             break;
         }
         case Instr::i64_reinterpret_f64:
         {
-            reinterpret<double, uint64_t>(stack);
+            reinterpret<double, uint64_t>(sp);
             break;
         }
         case Instr::f32_reinterpret_i32:
         {
-            reinterpret<uint32_t, float>(stack);
+            reinterpret<uint32_t, float>(sp);
             break;
         }
         case Instr::f64_reinterpret_i64:
         {
-            reinterpret<uint64_t, double>(stack);
+            reinterpret<uint64_t, double>(sp);
             break;
         }
 
@@ -1561,9 +1570,9 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
 
 end:
     assert(pc == &code.instructions[code.instructions.size()]);  // End of code must be reached.
-    assert(stack.size() == instance.module->get_function_type(func_idx).outputs.size());
+    // assert(stack.size() == instance.module->get_function_type(func_idx).outputs.size());
 
-    return stack.size() != 0 ? ExecutionResult{stack.top()} : Void;
+    return sp != bottom ? ExecutionResult{*sp} : Void;
 
 trap:
     return Trap;
