@@ -528,9 +528,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         {
         case Instr::unreachable:
             goto trap;
-        case Instr::block:
-        case Instr::loop:
-            break;
         case Instr::if_:
         {
             if (stack.pop().as<uint32_t>() != 0)
