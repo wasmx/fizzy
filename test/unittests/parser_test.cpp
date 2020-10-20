@@ -1088,7 +1088,7 @@ TEST(parser, code_section_with_basic_instructions)
     EXPECT_EQ(module->codesec[0].local_count, 4);
     EXPECT_THAT(module->codesec[0].instructions,
         ElementsAre(Instr::local_get, 1, 0, 0, 0, Instr::i32_const, 2, 0, 0, 0, Instr::i32_add,
-            Instr::local_set, 3, 0, 0, 0, Instr::nop, Instr::unreachable, Instr::end));
+            Instr::local_set, 3, 0, 0, 0, Instr::unreachable, Instr::end));
 }
 
 TEST(parser, code_section_with_memory_size)
