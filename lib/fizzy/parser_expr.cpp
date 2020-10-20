@@ -466,7 +466,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             // Push label with immediates offset after arity.
             control_stack.emplace(Instr::block, block_type, static_cast<int>(operand_stack.size()),
                 code.instructions.size(), code.immediates.size());
-            break;
+            continue;
         }
 
         case Instr::loop:
@@ -476,7 +476,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
             control_stack.emplace(Instr::loop, loop_type, static_cast<int>(operand_stack.size()),
                 code.instructions.size(), code.immediates.size());
-            break;
+            continue;
         }
 
         case Instr::if_:
