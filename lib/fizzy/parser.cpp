@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "parser.hpp"
+#include "asserts.hpp"
 #include "leb128.hpp"
 #include "limits.hpp"
 #include "types.hpp"
@@ -532,8 +533,8 @@ std::unique_ptr<const Module> parse(bytes_view input)
         case ExternalKind::Global:
             module->imported_global_types.emplace_back(import.desc.global);
             break;
-        default:
-            assert(false);
+        default:                  // LCOV_EXCL_LINE
+            FIZZY_UNREACHABLE();  // LCOV_EXCL_LINE
         }
     }
 
@@ -635,8 +636,8 @@ std::unique_ptr<const Module> parse(bytes_view input)
             if (export_.index >= total_global_count)
                 throw validation_error{"invalid index of an exported global"};
             break;
-        default:
-            assert(false);
+        default:                  // LCOV_EXCL_LINE
+            FIZZY_UNREACHABLE();  // LCOV_EXCL_LINE
         }
         if (!export_names.emplace(export_.name).second)
             throw validation_error{"duplicate export name " + export_.name};

@@ -10,6 +10,7 @@ target_link_libraries(fizzy-unittests PRIVATE fizzy::fizzy-internal fizzy::test-
 target_sources(
     fizzy-unittests PRIVATE
     api_test.cpp
+    asserts_test.cpp
     capi_test.cpp
     constexpr_vector_test.cpp
     cxx20_bit_test.cpp
@@ -17,6 +18,7 @@ target_sources(
     end_to_end_test.cpp
     execute_call_test.cpp
     execute_control_test.cpp
+    execute_death_test.cpp
     execute_floating_point_test.cpp
     execute_numeric_test.cpp
     execute_test.cpp

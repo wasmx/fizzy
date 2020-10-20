@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "execute.hpp"
+#include "asserts.hpp"
 #include "cxx20/bit.hpp"
 #include "stack.hpp"
 #include "trunc_boundaries.hpp"
@@ -1554,8 +1555,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
 
         default:
-            assert(false);
-            break;
+            FIZZY_UNREACHABLE();
         }
     }
 
