@@ -147,11 +147,7 @@ inline void reinterpret(OperandStack& stack) noexcept
 {
     static_assert(std::is_integral_v<SrcT> == std::is_floating_point_v<DstT> ||
                   std::is_floating_point_v<SrcT> == std::is_integral_v<DstT>);
-    static_assert(sizeof(SrcT) == sizeof(DstT));
-    const auto src = stack.top().as<SrcT>();
-    DstT dst;
-    __builtin_memcpy(&dst, &src, sizeof(dst));
-    stack.top() = dst;
+    stack.top() = bit_cast<DstT>(stack.top().as<SrcT>());
 }
 
 template <typename Op>
