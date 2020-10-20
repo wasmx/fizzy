@@ -556,10 +556,14 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             control_stack.pop();  // Pop the current frame.
 
             if (control_stack.empty())
+            {
                 continue_parsing = false;
-            else if (frame_type.has_value())
+                break;
+            }
+
+            if (frame_type.has_value())
                 push_operand(operand_stack, *frame_type);
-            break;
+            continue;
         }
 
         case Instr::br:
