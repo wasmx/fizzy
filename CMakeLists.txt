@@ -94,7 +94,7 @@ if(ENABLE_ASSERTIONS)
 endif()
 
 if(FIZZY_FUZZING)
-    set(fuzzing_flags -fsanitize=fuzzer-no-link,address,pointer-subtract,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation)
+    set(fuzzing_flags -fsanitize=fuzzer-no-link,address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation)
     add_compile_options(${fuzzing_flags})
     add_link_options(${fuzzing_flags})
 endif()
