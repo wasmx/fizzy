@@ -540,7 +540,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
 
     while (true)
     {
-        const auto instruction = *pc++;
+        const auto instruction = *pc;
         switch (instruction)
         {
         case Instr::unreachable:
@@ -552,7 +552,10 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         case Instr::if_:
         {
             if (stack.pop().as<uint32_t>() != 0)
+            {
                 immediates += 2 * sizeof(uint32_t);  // Skip the immediates for else instruction.
+                break;
+            }
             else
             {
                 const auto target_pc = read<uint32_t>(immediates);
@@ -560,8 +563,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
 
                 pc = code.instructions.data() + target_pc;
                 immediates = code.immediates.data() + target_imm;
+                continue;
             }
-            break;
         }
         case Instr::else_:
         {
@@ -573,12 +576,12 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             pc = code.instructions.data() + target_pc;
             immediates = code.immediates.data() + target_imm;
 
-            break;
+            continue;
         }
         case Instr::end:
         {
             // End execution if it's a final end instruction.
-            if (pc == &code.instructions[code.instructions.size()])
+            if (pc == &code.instructions[code.instructions.size() - 1])
                 goto end;
             break;
         }
@@ -596,7 +599,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             }
 
             branch(code, stack, pc, immediates, arity);
-            break;
+            continue;
         }
         case Instr::br_table:
         {
@@ -611,7 +614,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             immediates += label_idx_offset;
 
             branch(code, stack, pc, immediates, arity);
-            break;
+            continue;
         }
         case Instr::call:
         {
@@ -1557,10 +1560,12 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         default:
             FIZZY_UNREACHABLE();
         }
+
+        ++pc;
     }
 
 end:
-    assert(pc == &code.instructions[code.instructions.size()]);  // End of code must be reached.
+    assert(pc == &code.instructions[code.instructions.size() - 1]);  // End of code must be reached.
     assert(stack.size() == instance.module->get_function_type(func_idx).outputs.size());
 
     return stack.size() != 0 ? ExecutionResult{stack.top()} : Void;
