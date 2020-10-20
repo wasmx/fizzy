@@ -576,10 +576,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::end:
         {
-            // End execution if it's a final end instruction.
-            if (pc == &code.instructions[code.instructions.size() - 1])
-                goto end;
-            break;
+            assert(pc == &code.instructions[code.instructions.size() - 1]);
+            goto end;
         }
         case Instr::br:
         case Instr::br_if:
