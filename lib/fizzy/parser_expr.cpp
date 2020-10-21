@@ -861,11 +861,12 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
             uint32_t offset;
             std::tie(offset, pos) = leb128u_decode<uint32_t>(pos, end);
-            push(code.immediates, offset);
+            code.instructions.push_back(opcode);
+            push(code.instructions, offset);
 
             if (!module.has_memory())
                 throw validation_error{"memory instructions require imported or defined memory"};
-            break;
+            continue;
         }
 
         case Instr::memory_size:
