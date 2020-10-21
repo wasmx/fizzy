@@ -733,8 +733,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
             push_operand(operand_stack, find_local_type(func_inputs, locals, local_idx));
 
-            push(code.immediates, local_idx);
-            break;
+            code.instructions.push_back(opcode);
+            push(code.instructions, local_idx);
+            continue;
         }
 
         case Instr::local_set:
@@ -744,8 +745,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
             drop_operand(frame, operand_stack, find_local_type(func_inputs, locals, local_idx));
 
-            push(code.immediates, local_idx);
-            break;
+            code.instructions.push_back(opcode);
+            push(code.instructions, local_idx);
+            continue;
         }
 
         case Instr::local_tee:
@@ -757,8 +759,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             drop_operand(frame, operand_stack, local_type);
             push_operand(operand_stack, local_type);
 
-            push(code.immediates, local_idx);
-            break;
+            code.instructions.push_back(opcode);
+            push(code.instructions, local_idx);
+            continue;
         }
 
         case Instr::global_get:
@@ -771,8 +774,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
             push_operand(operand_stack, module.get_global_type(global_idx).value_type);
 
-            push(code.immediates, global_idx);
-            break;
+            code.instructions.push_back(opcode);
+            push(code.instructions, global_idx);
+            continue;
         }
 
         case Instr::global_set:
@@ -788,8 +792,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
             drop_operand(frame, operand_stack, module.get_global_type(global_idx).value_type);
 
-            push(code.immediates, global_idx);
-            break;
+            code.instructions.push_back(opcode);
+            push(code.instructions, global_idx);
+            continue;
         }
 
         case Instr::i32_const:
