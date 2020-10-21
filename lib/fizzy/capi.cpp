@@ -111,19 +111,19 @@ inline fizzy::ExecutionResult unwrap(const FizzyExecutionResult& result) noexcep
         return unwrap(result.value);
 }
 
-inline auto unwrap(FizzyExternalFn func, void* context) noexcept
+fizzy::ExecutionResult unwrapped_external_function(
+    void* context, fizzy::Instance& instance, const fizzy::Value* args, int depth)
 {
-    return [func, context](fizzy::Instance& instance, const fizzy::Value* args,
-               int depth) noexcept -> fizzy::ExecutionResult {
-        const auto result = func(context, wrap(&instance), wrap(args), depth);
-        return unwrap(result);
-    };
+    const auto* c_external_function = static_cast<const FizzyExternalFunction*>(context);
+    return unwrap(c_external_function->function(
+        c_external_function->context, wrap(&instance), wrap(args), depth));
 }
+
 
 inline fizzy::ExternalFunction unwrap(const FizzyExternalFunction& external_func)
 {
-    return fizzy::ExternalFunction{
-        unwrap(external_func.function, external_func.context), unwrap(external_func.type)};
+    return fizzy::ExternalFunction{unwrapped_external_function,
+        const_cast<FizzyExternalFunction*>(&external_func), unwrap(external_func.type)};
 }
 
 inline std::vector<fizzy::ExternalFunction> unwrap(
@@ -152,8 +152,8 @@ inline fizzy::ImportedFunction unwrap(const FizzyImportedFunction& c_imported_fu
                                std::nullopt :
                                std::make_optional(unwrap(c_type.output));
 
-    imported_func.function = unwrap(
-        c_imported_func.external_function.function, c_imported_func.external_function.context);
+    imported_func.function = unwrapped_external_function;
+    imported_func.context = const_cast<FizzyExternalFunction*>(&c_imported_func.external_function);
 
     return imported_func;
 }

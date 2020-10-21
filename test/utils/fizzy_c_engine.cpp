@@ -11,6 +11,24 @@
 
 namespace fizzy::test
 {
+namespace
+{
+FizzyExecutionResult env_adler32(void*, FizzyInstance* instance, const FizzyValue* args, int)
+{
+    auto* memory = fizzy_get_instance_memory_data(instance);
+    assert(memory != nullptr);
+    const auto size = fizzy_get_instance_memory_size(instance);
+    const auto ret = fizzy::test::adler32(
+        bytes_view(memory, size)
+            .substr(static_cast<uint32_t>(args[0].i64), static_cast<uint32_t>(args[1].i64)));
+    return {false, true, {ret}};
+}
+
+FizzyValueType EnvAdler32Inputs[] = {FizzyValueTypeI32, FizzyValueTypeI32};
+FizzyImportedFunction Imports[] = {
+    {"env", "adler32", {{FizzyValueTypeI32, EnvAdler32Inputs, 2}, env_adler32, nullptr}}};
+}  // namespace
+
 class FizzyCEngine final : public WasmEngine
 {
     std::unique_ptr<FizzyInstance, void (*)(FizzyInstance*)> m_instance = {
@@ -25,20 +43,6 @@ public:
     bytes_view get_memory() const final;
     Result execute(FuncRef func_ref, const std::vector<uint64_t>& args) final;
 };
-
-namespace
-{
-FizzyExecutionResult env_adler32(void*, FizzyInstance* instance, const FizzyValue* args, int)
-{
-    auto* memory = fizzy_get_instance_memory_data(instance);
-    assert(memory != nullptr);
-    const auto size = fizzy_get_instance_memory_size(instance);
-    const auto ret = fizzy::test::adler32(
-        bytes_view(memory, size)
-            .substr(static_cast<uint32_t>(args[0].i64), static_cast<uint32_t>(args[1].i64)));
-    return {false, true, {ret}};
-}
-}  // namespace
 
 std::unique_ptr<WasmEngine> create_fizzy_c_engine()
 {
@@ -61,10 +65,7 @@ bool FizzyCEngine::instantiate(bytes_view wasm_binary)
     if (!module)
         return false;
 
-    FizzyValueType inputs[] = {FizzyValueTypeI32, FizzyValueTypeI32};
-    FizzyImportedFunction imports[] = {
-        {"env", "adler32", {{FizzyValueTypeI32, inputs, 2}, env_adler32, nullptr}}};
-    m_instance.reset(fizzy_resolve_instantiate(module, imports, 1, nullptr, nullptr, nullptr, 0));
+    m_instance.reset(fizzy_resolve_instantiate(module, Imports, 1, nullptr, nullptr, nullptr, 0));
 
     return (m_instance != nullptr);
 }

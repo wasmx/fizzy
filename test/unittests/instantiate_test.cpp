@@ -32,11 +32,11 @@ TEST(instantiate, imported_functions)
     const auto bin = from_hex("0061736d0100000001060160017f017f020b01036d6f6403666f6f0000");
     const auto module = parse(bin);
 
-    auto host_foo = [](Instance&, const Value*, int) { return Trap; };
-    auto instance = instantiate(*module, {{host_foo, module->typesec[0]}});
+    auto host_foo = [](void*, Instance&, const Value*, int) { return Trap; };
+    auto instance = instantiate(*module, {{host_foo, nullptr, module->typesec[0]}});
 
     ASSERT_EQ(instance->imported_functions.size(), 1);
-    EXPECT_EQ(*instance->imported_functions[0].function.target<decltype(host_foo)>(), host_foo);
+    //    EXPECT_EQ(*instance->imported_functions[0].function, &host_foo);
     ASSERT_EQ(instance->imported_functions[0].type.inputs.size(), 1);
     EXPECT_EQ(instance->imported_functions[0].type.inputs[0], ValType::i32);
     ASSERT_EQ(instance->imported_functions[0].type.outputs.size(), 1);
@@ -53,18 +53,18 @@ TEST(instantiate, imported_functions_multiple)
         "0061736d0100000001090260017f017f600000021702036d6f6404666f6f310000036d6f6404666f6f320001");
     const auto module = parse(bin);
 
-    auto host_foo1 = [](Instance&, const Value*, int) { return Trap; };
-    auto host_foo2 = [](Instance&, const Value*, int) { return Trap; };
-    auto instance =
-        instantiate(*module, {{host_foo1, module->typesec[0]}, {host_foo2, module->typesec[1]}});
+    auto host_foo1 = [](void*, Instance&, const Value*, int) { return Trap; };
+    auto host_foo2 = [](void*, Instance&, const Value*, int) { return Trap; };
+    auto instance = instantiate(*module,
+        {{host_foo1, nullptr, module->typesec[0]}, {host_foo2, nullptr, module->typesec[1]}});
 
     ASSERT_EQ(instance->imported_functions.size(), 2);
-    EXPECT_EQ(*instance->imported_functions[0].function.target<decltype(host_foo1)>(), host_foo1);
+    //    EXPECT_EQ(*instance->imported_functions[0].function, host_foo1);
     ASSERT_EQ(instance->imported_functions[0].type.inputs.size(), 1);
     EXPECT_EQ(instance->imported_functions[0].type.inputs[0], ValType::i32);
     ASSERT_EQ(instance->imported_functions[0].type.outputs.size(), 1);
     EXPECT_EQ(instance->imported_functions[0].type.outputs[0], ValType::i32);
-    EXPECT_EQ(*instance->imported_functions[1].function.target<decltype(host_foo2)>(), host_foo2);
+    //    EXPECT_EQ(*instance->imported_functions[1].function, host_foo2);
     EXPECT_TRUE(instance->imported_functions[1].type.inputs.empty());
     EXPECT_TRUE(instance->imported_functions[1].type.outputs.empty());
 }
@@ -87,11 +87,11 @@ TEST(instantiate, imported_function_wrong_type)
     */
     const auto bin = from_hex("0061736d0100000001060160017f017f020b01036d6f6403666f6f0000");
 
-    auto host_foo = [](Instance&, const Value*, int) { return Trap; };
+    auto host_foo = [](void*, Instance&, const Value*, int) { return Trap; };
     const auto host_foo_type = FuncType{{}, {}};
 
-    EXPECT_THROW_MESSAGE(instantiate(parse(bin), {{host_foo, host_foo_type}}), instantiate_error,
-        "function 0 type doesn't match module's imported function type");
+    EXPECT_THROW_MESSAGE(instantiate(parse(bin), {{host_foo, nullptr, host_foo_type}}),
+        instantiate_error, "function 0 type doesn't match module's imported function type");
 }
 
 TEST(instantiate, imported_table)

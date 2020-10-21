@@ -77,7 +77,7 @@ struct test_results
 
 struct imports
 {
-    std::vector<fizzy::ExternalFunction> functions;
+    std::vector<fizzy::ExportedFunction> functions;
     std::vector<fizzy::ExternalTable> tables;
     std::vector<fizzy::ExternalMemory> memories;
     std::vector<fizzy::ExternalGlobal> globals;
@@ -128,8 +128,17 @@ public:
                         continue;
                     }
 
+
+                    std::vector<fizzy::ExternalFunction> external_functions(
+                        imports.functions.size());
+                    std::transform(imports.functions.begin(), imports.functions.end(),
+                        external_functions.begin(),
+                        [](const auto& imported_func) { return imported_func.external_function; });
+
+                    m_instances_external_functions[name] = std::move(imports.functions);
+
                     m_instances[name] =
-                        fizzy::instantiate(std::move(module), std::move(imports.functions),
+                        fizzy::instantiate(std::move(module), std::move(external_functions),
                             std::move(imports.tables), std::move(imports.memories),
                             std::move(imports.globals), TestMemoryPagesLimit);
 
@@ -139,6 +148,7 @@ public:
                 {
                     fail(std::string{"Parsing failed with error: "} + ex.what());
                     m_instances.erase(name);
+                    m_instances_external_functions.erase(name);
                     m_last_module_name.clear();
                     continue;
                 }
@@ -146,6 +156,7 @@ public:
                 {
                     fail(std::string{"Validation failed with error: "} + ex.what());
                     m_instances.erase(name);
+                    m_instances_external_functions.erase(name);
                     m_last_module_name.clear();
                     continue;
                 }
@@ -153,6 +164,7 @@ public:
                 {
                     fail(std::string{"Instantiation failed with error: "} + ex.what());
                     m_instances.erase(name);
+                    m_instances_external_functions.erase(name);
                     m_last_module_name.clear();
                     continue;
                 }
@@ -338,7 +350,13 @@ public:
                         continue;
                     }
 
-                    fizzy::instantiate(std::move(module), std::move(imports.functions),
+                    std::vector<fizzy::ExternalFunction> external_functions(
+                        imports.functions.size());
+                    std::transform(imports.functions.begin(), imports.functions.end(),
+                        external_functions.begin(),
+                        [](const auto& imported_func) { return imported_func.external_function; });
+
+                    fizzy::instantiate(std::move(module), std::move(external_functions),
                         std::move(imports.tables), std::move(imports.memories),
                         std::move(imports.globals));
                 }
@@ -564,32 +582,41 @@ private:
         {
             const auto it_registered = m_registered_names.find(import.module);
             if (it_registered == m_registered_names.end())
-                return {{}, "Module \"" + import.module + "\" not registered."};
+            {
+                imports empty_imports;
+                return {
+                    std::move(empty_imports), "Module \"" + import.module + "\" not registered."};
+            }
 
             const auto module_name = it_registered->second;
             const auto it_instance = m_instances.find(module_name);
             if (it_instance == m_instances.end())
-                return {{}, "Module not instantiated."};
+            {
+                imports empty_imports;
+                return {std::move(empty_imports), "Module not instantiated."};
+            }
 
             auto& instance = it_instance->second;
 
             if (import.kind == fizzy::ExternalKind::Function)
             {
-                const auto func = fizzy::find_exported_function(*instance, import.name);
+                auto func = fizzy::find_exported_function(*instance, import.name);
                 if (!func.has_value())
                 {
-                    return {{},
+                    imports empty_imports;
+                    return {std::move(empty_imports),
                         "Function \"" + import.name + "\" not found in \"" + import.module + "\"."};
                 }
 
-                result.functions.emplace_back(*func);
+                result.functions.emplace_back(std::move(*func));
             }
             else if (import.kind == fizzy::ExternalKind::Table)
             {
                 const auto table = fizzy::find_exported_table(*instance, import.name);
                 if (!table.has_value())
                 {
-                    return {{},
+                    imports empty_imports;
+                    return {std::move(empty_imports),
                         "Table \"" + import.name + "\" not found in \"" + import.module + "\"."};
                 }
 
@@ -600,7 +627,8 @@ private:
                 const auto memory = fizzy::find_exported_memory(*instance, import.name);
                 if (!memory.has_value())
                 {
-                    return {{},
+                    imports empty_imports;
+                    return {std::move(empty_imports),
                         "Memory \"" + import.name + "\" not found in \"" + import.module + "\"."};
                 }
 
@@ -611,7 +639,8 @@ private:
                 const auto global = fizzy::find_exported_global(*instance, import.name);
                 if (!global.has_value())
                 {
-                    return {{},
+                    imports empty_imports;
+                    return {std::move(empty_imports),
                         "Global \"" + import.name + "\" not found in \"" + import.module + "\"."};
                 }
 
@@ -619,7 +648,7 @@ private:
             }
         }
 
-        return {result, ""};
+        return {std::move(result), ""};
     }
 
     void pass()
@@ -661,6 +690,8 @@ private:
 
     test_settings m_settings;
     std::unordered_map<std::string, std::unique_ptr<fizzy::Instance>> m_instances;
+    std::unordered_map<std::string, std::vector<fizzy::ExportedFunction>>
+        m_instances_external_functions;
     std::unordered_map<std::string, std::string> m_registered_names;
     std::string m_last_module_name;
     test_results m_results;

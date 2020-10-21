@@ -12,9 +12,25 @@
 
 namespace fizzy::test
 {
+namespace
+{
+fizzy::ExecutionResult env_adler32(void*, Instance& instance, const Value* args, int)
+{
+    assert(instance.memory != nullptr);
+    const auto ret = fizzy::test::adler32(
+        bytes_view{*instance.memory}.substr(args[0].as<uint32_t>(), args[1].as<uint32_t>()));
+    return Value{ret};
+}
+}  // namespace
+
 class FizzyEngine final : public WasmEngine
 {
     std::unique_ptr<Instance> m_instance;
+
+    std::vector<ImportedFunction> m_imported_functions{
+        {"env", "adler32", {fizzy::ValType::i32, fizzy::ValType::i32}, fizzy::ValType::i32,
+            &env_adler32, nullptr},
+    };
 
 public:
     bool parse(bytes_view input) const final;
@@ -52,14 +68,6 @@ FuncType translate_signature(std::string_view signature)
         translate_valtype);
     return func_type;
 }
-
-fizzy::ExecutionResult env_adler32(fizzy::Instance& instance, const fizzy::Value* args, int)
-{
-    assert(instance.memory != nullptr);
-    const auto ret = fizzy::test::adler32(
-        bytes_view{*instance.memory}.substr(args[0].as<uint32_t>(), args[1].as<uint32_t>()));
-    return Value{ret};
-}
 }  // namespace
 
 std::unique_ptr<WasmEngine> create_fizzy_engine()
@@ -85,11 +93,7 @@ bool FizzyEngine::instantiate(bytes_view wasm_binary)
     try
     {
         auto module = fizzy::parse(wasm_binary);
-        auto imports = fizzy::resolve_imported_functions(
-            *module, {
-                         {"env", "adler32", {fizzy::ValType::i32, fizzy::ValType::i32},
-                             fizzy::ValType::i32, env_adler32},
-                     });
+        auto imports = fizzy::resolve_imported_functions(*module, m_imported_functions);
         m_instance = fizzy::instantiate(std::move(module), std::move(imports));
     }
     catch (...)

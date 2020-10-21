@@ -22,9 +22,12 @@ namespace fizzy
 struct ExecutionResult;
 struct Instance;
 
+using ExternalFunctionPtr = ExecutionResult (*)(void* context, Instance&, const Value*, int depth);
+
 struct ExternalFunction
 {
-    std::function<ExecutionResult(Instance&, const Value*, int depth)> function;
+    ExternalFunctionPtr function;
+    void* context;
     FuncType type;
 };
 
@@ -114,7 +117,8 @@ struct ImportedFunction
     std::string name;
     std::vector<ValType> inputs;
     std::optional<ValType> output;
-    std::function<ExecutionResult(Instance&, const Value*, int depth)> function;
+    ExternalFunctionPtr function;
+    void* context;
 };
 
 // Create vector of ExternalFunctions ready to be passed to instantiate.
@@ -126,8 +130,14 @@ std::vector<ExternalFunction> resolve_imported_functions(
 // Find exported function index by name.
 std::optional<FuncIdx> find_exported_function(const Module& module, std::string_view name);
 
+struct ExportedFunction
+{
+    std::unique_ptr<std::pair<Instance*, FuncIdx>> context;
+    ExternalFunction external_function;
+};
+
 // Find exported function by name.
-std::optional<ExternalFunction> find_exported_function(Instance& instance, std::string_view name);
+std::optional<ExportedFunction> find_exported_function(Instance& instance, std::string_view name);
 
 // Find exported global by name.
 std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::string_view name);

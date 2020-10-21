@@ -15,12 +15,13 @@ using namespace fizzy::test;
 
 namespace
 {
-auto function_returning_value(Value value) noexcept
+template <int N>
+ExecutionResult function_returning_value(void*, Instance&, const Value*, int)
 {
-    return [value](Instance&, const Value*, int) { return value; };
+    return Value{N};
 }
 
-ExecutionResult function_returning_void(Instance&, const Value*, int) noexcept
+ExecutionResult function_returning_void(void*, Instance&, const Value*, int)
 {
     return Void;
 }
@@ -83,10 +84,11 @@ TEST(api, resolve_imported_functions)
     const auto module = parse(wasm);
 
     std::vector<ImportedFunction> imported_functions = {
-        {"mod1", "foo1", {}, ValType::i32, function_returning_value(0)},
-        {"mod1", "foo2", {ValType::i32}, ValType::i32, function_returning_value(1)},
-        {"mod2", "foo1", {ValType::i32}, ValType::i32, function_returning_value(2)},
-        {"mod2", "foo2", {ValType::i64, ValType::i32}, std::nullopt, function_returning_void},
+        {"mod1", "foo1", {}, ValType::i32, &function_returning_value<0>, nullptr},
+        {"mod1", "foo2", {ValType::i32}, ValType::i32, &function_returning_value<1>, nullptr},
+        {"mod2", "foo1", {ValType::i32}, ValType::i32, &function_returning_value<2>, nullptr},
+        {"mod2", "foo2", {ValType::i64, ValType::i32}, std::nullopt, &function_returning_void,
+            nullptr},
     };
 
     const auto external_functions =
@@ -106,10 +108,11 @@ TEST(api, resolve_imported_functions)
 
 
     std::vector<ImportedFunction> imported_functions_reordered = {
-        {"mod2", "foo1", {ValType::i32}, ValType::i32, function_returning_value(2)},
-        {"mod1", "foo2", {ValType::i32}, ValType::i32, function_returning_value(1)},
-        {"mod1", "foo1", {}, ValType::i32, function_returning_value(0)},
-        {"mod2", "foo2", {ValType::i64, ValType::i32}, std::nullopt, function_returning_void},
+        {"mod2", "foo1", {ValType::i32}, ValType::i32, function_returning_value<2>, nullptr},
+        {"mod1", "foo2", {ValType::i32}, ValType::i32, function_returning_value<1>, nullptr},
+        {"mod1", "foo1", {}, ValType::i32, function_returning_value<0>, nullptr},
+        {"mod2", "foo2", {ValType::i64, ValType::i32}, std::nullopt, function_returning_void,
+            nullptr},
     };
 
     const auto external_functions_reordered =
@@ -126,12 +129,13 @@ TEST(api, resolve_imported_functions)
 
 
     std::vector<ImportedFunction> imported_functions_extra = {
-        {"mod1", "foo1", {}, ValType::i32, function_returning_value(0)},
-        {"mod1", "foo2", {ValType::i32}, ValType::i32, function_returning_value(1)},
-        {"mod2", "foo1", {ValType::i32}, ValType::i32, function_returning_value(2)},
-        {"mod2", "foo2", {ValType::i64, ValType::i32}, std::nullopt, function_returning_void},
-        {"mod3", "foo1", {}, std::nullopt, function_returning_value(4)},
-        {"mod3", "foo2", {}, std::nullopt, function_returning_value(5)},
+        {"mod1", "foo1", {}, ValType::i32, function_returning_value<0>, nullptr},
+        {"mod1", "foo2", {ValType::i32}, ValType::i32, function_returning_value<1>, nullptr},
+        {"mod2", "foo1", {ValType::i32}, ValType::i32, function_returning_value<2>, nullptr},
+        {"mod2", "foo2", {ValType::i64, ValType::i32}, std::nullopt, function_returning_void,
+            nullptr},
+        {"mod3", "foo1", {}, std::nullopt, function_returning_value<4>, nullptr},
+        {"mod3", "foo2", {}, std::nullopt, function_returning_value<5>, nullptr},
     };
 
     const auto external_functions_extra =
@@ -148,9 +152,9 @@ TEST(api, resolve_imported_functions)
 
 
     std::vector<ImportedFunction> imported_functions_missing = {
-        {"mod1", "foo1", {}, ValType::i32, function_returning_value(0)},
-        {"mod1", "foo2", {ValType::i32}, ValType::i32, function_returning_value(1)},
-        {"mod2", "foo1", {ValType::i32}, ValType::i32, function_returning_value(2)},
+        {"mod1", "foo1", {}, ValType::i32, function_returning_value<0>, nullptr},
+        {"mod1", "foo2", {ValType::i32}, ValType::i32, function_returning_value<1>, nullptr},
+        {"mod2", "foo1", {ValType::i32}, ValType::i32, function_returning_value<2>, nullptr},
     };
 
     EXPECT_THROW_MESSAGE(resolve_imported_functions(*module, std::move(imported_functions_missing)),
@@ -158,10 +162,11 @@ TEST(api, resolve_imported_functions)
 
 
     std::vector<ImportedFunction> imported_functions_invalid_type1 = {
-        {"mod1", "foo1", {ValType::i32}, ValType::i32, function_returning_value(0)},
-        {"mod1", "foo2", {ValType::i32}, ValType::i32, function_returning_value(1)},
-        {"mod2", "foo1", {ValType::i32}, ValType::i32, function_returning_value(2)},
-        {"mod2", "foo2", {ValType::i64, ValType::i32}, std::nullopt, function_returning_void},
+        {"mod1", "foo1", {ValType::i32}, ValType::i32, function_returning_value<0>, nullptr},
+        {"mod1", "foo2", {ValType::i32}, ValType::i32, function_returning_value<1>, nullptr},
+        {"mod2", "foo1", {ValType::i32}, ValType::i32, function_returning_value<2>, nullptr},
+        {"mod2", "foo2", {ValType::i64, ValType::i32}, std::nullopt, function_returning_void,
+            nullptr},
     };
 
     EXPECT_THROW_MESSAGE(
@@ -170,10 +175,11 @@ TEST(api, resolve_imported_functions)
         "function mod1.foo1 input types don't match imported function in module");
 
     std::vector<ImportedFunction> imported_functions_invalid_type2 = {
-        {"mod1", "foo1", {}, ValType::i32, function_returning_value(0)},
-        {"mod1", "foo2", {ValType::i32}, ValType::i32, function_returning_value(1)},
-        {"mod2", "foo1", {ValType::i32}, ValType::i32, function_returning_value(2)},
-        {"mod2", "foo2", {ValType::i64, ValType::i32}, ValType::i64, function_returning_value(3)},
+        {"mod1", "foo1", {}, ValType::i32, function_returning_value<0>, nullptr},
+        {"mod1", "foo2", {ValType::i32}, ValType::i32, function_returning_value<1>, nullptr},
+        {"mod2", "foo1", {ValType::i32}, ValType::i32, function_returning_value<2>, nullptr},
+        {"mod2", "foo2", {ValType::i64, ValType::i32}, ValType::i64, function_returning_value<3>,
+            nullptr},
     };
 
     EXPECT_THROW_MESSAGE(
@@ -181,10 +187,11 @@ TEST(api, resolve_imported_functions)
         instantiate_error, "function mod2.foo2 has output but is defined void in module");
 
     std::vector<ImportedFunction> imported_functions_invalid_type3 = {
-        {"mod1", "foo1", {}, ValType::i32, function_returning_value(0)},
-        {"mod1", "foo2", {ValType::i32}, ValType::i64, function_returning_value(1)},
-        {"mod2", "foo1", {ValType::i32}, ValType::i32, function_returning_value(2)},
-        {"mod2", "foo2", {ValType::i64, ValType::i32}, std::nullopt, function_returning_void},
+        {"mod1", "foo1", {}, ValType::i32, function_returning_value<0>, nullptr},
+        {"mod1", "foo2", {ValType::i32}, ValType::i64, function_returning_value<1>, nullptr},
+        {"mod2", "foo1", {ValType::i32}, ValType::i32, function_returning_value<2>, nullptr},
+        {"mod2", "foo2", {ValType::i64, ValType::i32}, std::nullopt, function_returning_void,
+            nullptr},
     };
 
     EXPECT_THROW_MESSAGE(
@@ -244,10 +251,12 @@ TEST(api, find_exported_function)
 
     auto opt_function = find_exported_function(*instance, "foo");
     ASSERT_TRUE(opt_function);
-    EXPECT_THAT(opt_function->function(*instance, {}, 0), Result(42));
-    EXPECT_TRUE(opt_function->type.inputs.empty());
-    ASSERT_EQ(opt_function->type.outputs.size(), 1);
-    EXPECT_EQ(opt_function->type.outputs[0], ValType::i32);
+    EXPECT_THAT(opt_function->external_function.function(
+                    opt_function->external_function.context, *instance, {}, 0),
+        Result(42));
+    EXPECT_TRUE(opt_function->external_function.type.inputs.empty());
+    ASSERT_EQ(opt_function->external_function.type.outputs.size(), 1);
+    EXPECT_EQ(opt_function->external_function.type.outputs[0], ValType::i32);
 
     EXPECT_FALSE(find_exported_function(*instance, "bar").has_value());
 
@@ -263,18 +272,20 @@ TEST(api, find_exported_function)
         "0061736d010000000105016000017f021001087370656374657374036261720000040401700000050401010102"
         "0606017f0041000b07170403666f6f000001670300037461620100036d656d0200");
 
-    auto bar = [](Instance&, const Value*, int) { return Value{42}; };
+    auto bar = [](void*, Instance&, const Value*, int) -> ExecutionResult { return Value{42}; };
     const auto bar_type = FuncType{{}, {ValType::i32}};
 
     auto instance_reexported_function =
-        instantiate(parse(wasm_reexported_function), {{bar, bar_type}});
+        instantiate(parse(wasm_reexported_function), {{bar, nullptr, bar_type}});
 
     opt_function = find_exported_function(*instance_reexported_function, "foo");
     ASSERT_TRUE(opt_function);
-    EXPECT_THAT(opt_function->function(*instance, {}, 0), Result(42));
-    EXPECT_TRUE(opt_function->type.inputs.empty());
-    ASSERT_EQ(opt_function->type.outputs.size(), 1);
-    EXPECT_EQ(opt_function->type.outputs[0], ValType::i32);
+    EXPECT_THAT(opt_function->external_function.function(
+                    opt_function->external_function.context, *instance, {}, 0),
+        Result(42));
+    EXPECT_TRUE(opt_function->external_function.type.inputs.empty());
+    ASSERT_EQ(opt_function->external_function.type.outputs.size(), 1);
+    EXPECT_EQ(opt_function->external_function.type.outputs[0], ValType::i32);
 
     EXPECT_FALSE(find_exported_function(*instance, "bar").has_value());
 

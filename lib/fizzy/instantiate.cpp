@@ -409,7 +409,7 @@ std::vector<ExternalFunction> resolve_imported_functions(
         }
 
         external_functions.emplace_back(
-            ExternalFunction{std::move(it->function), module_func_type});
+            ExternalFunction{it->function, it->context, module_func_type});
     }
 
     return external_functions;
@@ -420,18 +420,23 @@ std::optional<FuncIdx> find_exported_function(const Module& module, std::string_
     return find_export(module, ExternalKind::Function, name);
 }
 
-std::optional<ExternalFunction> find_exported_function(Instance& instance, std::string_view name)
+std::optional<ExportedFunction> find_exported_function(Instance& instance, std::string_view name)
 {
     const auto opt_index = find_export(*instance.module, ExternalKind::Function, name);
     if (!opt_index.has_value())
         return std::nullopt;
 
     const auto idx = *opt_index;
-    auto func = [idx, &instance](fizzy::Instance&, const Value* args, int depth) {
-        return execute(instance, idx, args, depth);
+    auto func = [](void* context, fizzy::Instance&, const Value* args, int depth) {
+        auto* instance_and_idx = static_cast<std::pair<Instance*, FuncIdx>*>(context);
+        return execute(*instance_and_idx->first, instance_and_idx->second, args, depth);
     };
 
-    return ExternalFunction{std::move(func), instance.module->get_function_type(idx)};
+    ExportedFunction exported_func;
+    exported_func.context.reset(new std::pair<Instance*, FuncIdx>(&instance, idx));
+    exported_func.external_function = {
+        std::move(func), exported_func.context.get(), instance.module->get_function_type(idx)};
+    return exported_func;
 }
 
 std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::string_view name)
