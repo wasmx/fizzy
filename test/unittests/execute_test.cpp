@@ -380,7 +380,7 @@ TEST(execute, i32_load_all_variants)
         from_hex("0061736d0100000001060160017f017f030201000504010101010a0901070020002802000b");
     const auto module = parse(wasm);
 
-    auto* const load_instr = const_cast<uint8_t*>(&module->codesec[0].instructions[1]);
+    auto* const load_instr = const_cast<uint8_t*>(&module->codesec[0].instructions[5]);
     ASSERT_EQ(*load_instr, Instr::i32_load);
     ASSERT_EQ(bytes_view(load_instr + 1, 4), "00000000"_bytes);  // load offset.
 
@@ -418,7 +418,7 @@ TEST(execute, i64_load_all_variants)
         from_hex("0061736d0100000001060160017f017e030201000504010101010a0901070020002903000b");
     const auto module = parse(wasm);
 
-    auto* const load_instr = const_cast<uint8_t*>(&module->codesec[0].instructions[1]);
+    auto* const load_instr = const_cast<uint8_t*>(&module->codesec[0].instructions[5]);
     ASSERT_EQ(*load_instr, Instr::i64_load);
     ASSERT_EQ(bytes_view(load_instr + 1, 4), "00000000"_bytes);  // load offset.
 
@@ -529,7 +529,7 @@ TEST(execute, i32_store_all_variants)
         from_hex("0061736d0100000001060160027f7f00030201000504010101010a0b010900200120003602000b");
     const auto module = parse(wasm);
 
-    auto* const store_instr = const_cast<uint8_t*>(&module->codesec[0].instructions[2]);
+    auto* const store_instr = const_cast<uint8_t*>(&module->codesec[0].instructions[10]);
     ASSERT_EQ(*store_instr, Instr::i32_store);
     ASSERT_EQ(bytes_view(store_instr + 1, 4), "00000000"_bytes);  // store offset
 
@@ -565,7 +565,7 @@ TEST(execute, i64_store_all_variants)
         from_hex("0061736d0100000001060160027e7f00030201000504010101010a0b010900200120003703000b");
     const auto module = parse(wasm);
 
-    auto* const store_instr = const_cast<uint8_t*>(&module->codesec[0].instructions[2]);
+    auto* const store_instr = const_cast<uint8_t*>(&module->codesec[0].instructions[10]);
     ASSERT_EQ(*store_instr, Instr::i64_store);
     ASSERT_EQ(bytes_view(store_instr + 1, 4), "00000000"_bytes);  // store offset
 

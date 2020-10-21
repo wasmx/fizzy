@@ -662,25 +662,25 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::local_get:
         {
-            const auto idx = read<uint32_t>(immediates);
+            const auto idx = read<uint32_t>(pc);
             stack.push(stack.local(idx));
             break;
         }
         case Instr::local_set:
         {
-            const auto idx = read<uint32_t>(immediates);
+            const auto idx = read<uint32_t>(pc);
             stack.local(idx) = stack.pop();
             break;
         }
         case Instr::local_tee:
         {
-            const auto idx = read<uint32_t>(immediates);
+            const auto idx = read<uint32_t>(pc);
             stack.local(idx) = stack.top();
             break;
         }
         case Instr::global_get:
         {
-            const auto idx = read<uint32_t>(immediates);
+            const auto idx = read<uint32_t>(pc);
             assert(idx < instance.imported_globals.size() + instance.globals.size());
             if (idx < instance.imported_globals.size())
             {
@@ -696,7 +696,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::global_set:
         {
-            const auto idx = read<uint32_t>(immediates);
+            const auto idx = read<uint32_t>(pc);
             if (idx < instance.imported_globals.size())
             {
                 assert(instance.imported_globals[idx].type.is_mutable);
