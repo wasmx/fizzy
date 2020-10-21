@@ -360,8 +360,8 @@ struct Code
 
     uint32_t local_count = 0;
 
-    // The instructions bytecode without immediate values.
-    // https://webassembly.github.io/spec/core/binary/instructions.html
+    /// The instructions bytecode interleaved with decoded immediate values.
+    /// https://webassembly.github.io/spec/core/binary/instructions.html
     std::vector<uint8_t> instructions;
 
     // The decoded instructions' immediate values.

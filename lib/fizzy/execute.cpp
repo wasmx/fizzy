@@ -861,14 +861,14 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         case Instr::i32_const:
         case Instr::f32_const:
         {
-            const auto value = read<uint32_t>(immediates);
+            const auto value = read<uint32_t>(pc);
             stack.push(value);
             break;
         }
         case Instr::i64_const:
         case Instr::f64_const:
         {
-            const auto value = read<uint64_t>(immediates);
+            const auto value = read<uint64_t>(pc);
             stack.push(value);
             break;
         }
