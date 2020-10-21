@@ -27,6 +27,14 @@ inline void push(bytes& b, T value)
     b.append(storage, sizeof(storage));
 }
 
+template <typename T>
+inline void push(std::vector<uint8_t>& b, T value)
+{
+    uint8_t storage[sizeof(T)];
+    store(storage, value);
+    b.insert(b.end(), std::begin(storage), std::end(storage));
+}
+
 /// The control frame to keep information about labels and blocks as defined in
 /// Wasm Validation Algorithm https://webassembly.github.io/spec/core/appendix/algorithm.html.
 struct ControlFrame
@@ -788,32 +796,36 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         {
             int32_t value;
             std::tie(value, pos) = leb128s_decode<int32_t>(pos, end);
-            push(code.immediates, static_cast<uint32_t>(value));
-            break;
+            code.instructions.push_back(opcode);
+            push(code.instructions, static_cast<uint32_t>(value));
+            continue;
         }
 
         case Instr::i64_const:
         {
             int64_t value;
             std::tie(value, pos) = leb128s_decode<int64_t>(pos, end);
-            push(code.immediates, static_cast<uint64_t>(value));
-            break;
+            code.instructions.push_back(opcode);
+            push(code.instructions, static_cast<uint64_t>(value));
+            continue;
         }
 
         case Instr::f32_const:
         {
             uint32_t value;
             std::tie(value, pos) = parse_value<uint32_t>(pos, end);
-            push(code.immediates, value);
-            break;
+            code.instructions.push_back(opcode);
+            push(code.instructions, value);
+            continue;
         }
 
         case Instr::f64_const:
         {
             uint64_t value;
             std::tie(value, pos) = parse_value<uint64_t>(pos, end);
-            push(code.immediates, value);
-            break;
+            code.instructions.push_back(opcode);
+            push(code.instructions, value);
+            continue;
         }
 
         case Instr::i32_load:

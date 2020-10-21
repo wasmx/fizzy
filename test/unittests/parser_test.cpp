@@ -1088,11 +1088,10 @@ TEST(parser, code_section_with_basic_instructions)
     EXPECT_EQ(module->typesec[0].outputs.size(), 0);
     ASSERT_EQ(module->codesec.size(), 1);
     EXPECT_EQ(module->codesec[0].local_count, 4);
-
     EXPECT_THAT(module->codesec[0].instructions,
-        ElementsAre(Instr::local_get, Instr::i32_const, Instr::i32_add, Instr::local_set,
-            Instr::nop, Instr::unreachable, Instr::end));
-    EXPECT_EQ(module->codesec[0].immediates, "010000000200000003000000"_bytes);
+        ElementsAre(Instr::local_get, Instr::i32_const, 2, 0, 0, 0, Instr::i32_add,
+            Instr::local_set, Instr::nop, Instr::unreachable, Instr::end));
+    EXPECT_EQ(module->codesec[0].immediates, "0100000003000000"_bytes);
 }
 
 TEST(parser, code_section_with_memory_size)
@@ -1137,8 +1136,8 @@ TEST(parser, code_section_with_memory_grow)
     ASSERT_EQ(module->codesec.size(), 1);
     EXPECT_EQ(module->codesec[0].local_count, 0);
     EXPECT_THAT(module->codesec[0].instructions,
-        ElementsAre(Instr::i32_const, Instr::memory_grow, Instr::drop, Instr::end));
-    EXPECT_EQ(module->codesec[0].immediates, "00000000"_bytes);
+        ElementsAre(Instr::i32_const, 0, 0, 0, 0, Instr::memory_grow, Instr::drop, Instr::end));
+    EXPECT_EQ(module->codesec[0].immediates.size(), 0);
 
     const auto func_bin_invalid = "00"_bytes +  // vec(locals)
                                   i32_const(0) + "40011a0b"_bytes;
