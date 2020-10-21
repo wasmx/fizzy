@@ -31,15 +31,17 @@ struct ExternalFunction
 // Table element, which references a function in any instance.
 struct TableElement
 {
-    Instance* instance;
-    FuncIdx func_idx;
+    // Pointer to function's instance or nullptr when table element is not initialized.
+    Instance* instance = nullptr;
+    // Index of the function in instance.
+    FuncIdx func_idx = 0;
     // This pointer is empty most of the time and is used only to keep instance alive in one edge
     // case, when start function traps, but instantiate has already modified some elements of a
     // shared (imported) table.
     std::shared_ptr<Instance> shared_instance;
 };
 
-using table_elements = std::vector<std::optional<TableElement>>;
+using table_elements = std::vector<TableElement>;
 using table_ptr = std::unique_ptr<table_elements, void (*)(table_elements*)>;
 
 struct ExternalTable

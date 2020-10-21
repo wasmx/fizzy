@@ -621,18 +621,18 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
                 goto trap;
 
             const auto called_func = (*instance.table)[elem_idx];
-            if (!called_func.has_value())
+            if (!called_func.instance)  // Table element not initialized.
                 goto trap;
 
             // check actual type against expected type
             const auto& actual_type =
-                called_func->instance->module->get_function_type(called_func->func_idx);
+                called_func.instance->module->get_function_type(called_func.func_idx);
             const auto& expected_type = instance.module->typesec[expected_type_idx];
             if (expected_type != actual_type)
                 goto trap;
 
             if (!invoke_function(
-                    actual_type, called_func->func_idx, *called_func->instance, stack, depth))
+                    actual_type, called_func.func_idx, *called_func.instance, stack, depth))
                 goto trap;
             break;
         }

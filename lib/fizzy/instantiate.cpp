@@ -357,7 +357,7 @@ std::unique_ptr<Instance> instantiate(std::unique_ptr<const Module> module,
                     for ([[maybe_unused]] auto _ : shared_instance->module->elementsec[i].init)
                     {
                         // Capture shared instance in table element.
-                        (*it_table++)->shared_instance = shared_instance;
+                        (*it_table++).shared_instance = shared_instance;
                     }
                 }
             }

@@ -18,7 +18,7 @@ namespace
 uint32_t call_table_func(Instance& instance, size_t idx)
 {
     const auto& elem = (*instance.table)[idx];
-    const auto res = execute(*elem->instance, elem->func_idx, {}, 0);
+    const auto res = execute(*elem.instance, elem.func_idx, {}, 0);
     EXPECT_TRUE(res.has_value);
     return as_uint32(res.value);
 }
@@ -551,7 +551,7 @@ TEST(instantiate, element_section)
     auto instance = instantiate(parse(bin));
 
     ASSERT_EQ(instance->table->size(), 4);
-    EXPECT_FALSE((*instance->table)[0].has_value());
+    EXPECT_EQ((*instance->table)[0].instance, nullptr);
     EXPECT_EQ(call_table_func(*instance, 1), 1);
     EXPECT_EQ(call_table_func(*instance, 2), 3);
     EXPECT_EQ(call_table_func(*instance, 3), 3);
@@ -576,10 +576,10 @@ TEST(instantiate, element_section_offset_from_global)
     auto instance = instantiate(parse(bin));
 
     ASSERT_EQ(instance->table->size(), 4);
-    EXPECT_FALSE((*instance->table)[0].has_value());
+    EXPECT_EQ((*instance->table)[0].instance, nullptr);
     EXPECT_EQ(call_table_func(*instance, 1), 1);
     EXPECT_EQ(call_table_func(*instance, 2), 2);
-    EXPECT_FALSE((*instance->table)[3].has_value());
+    EXPECT_EQ((*instance->table)[3].instance, nullptr);
 }
 
 TEST(instantiate, element_section_offset_from_imported_global)
@@ -601,10 +601,10 @@ TEST(instantiate, element_section_offset_from_imported_global)
     auto instance = instantiate(parse(bin), {}, {}, {}, {g});
 
     ASSERT_EQ(instance->table->size(), 4);
-    EXPECT_FALSE((*instance->table)[0].has_value());
+    EXPECT_EQ((*instance->table)[0].instance, nullptr);
     EXPECT_EQ(call_table_func(*instance, 1), 1);
     EXPECT_EQ(call_table_func(*instance, 2), 2);
-    EXPECT_FALSE((*instance->table)[3].has_value());
+    EXPECT_EQ((*instance->table)[3].instance, nullptr);
 }
 
 TEST(instantiate, element_section_offset_too_large)
@@ -695,10 +695,10 @@ TEST(instantiate, element_section_out_of_bounds_doesnt_change_imported_table)
 
     const auto& table_elements = *table->table;
     ASSERT_EQ(table_elements.size(), 3);
-    EXPECT_EQ(table_elements[0]->instance, instance_exported_table.get());
-    EXPECT_EQ(table_elements[0]->func_idx, 0);
-    EXPECT_FALSE(table_elements[1].has_value());
-    EXPECT_FALSE(table_elements[2].has_value());
+    EXPECT_EQ(table_elements[0].instance, instance_exported_table.get());
+    EXPECT_EQ(table_elements[0].func_idx, 0);
+    EXPECT_EQ(table_elements[1].instance, nullptr);
+    EXPECT_EQ(table_elements[2].instance, nullptr);
 }
 
 TEST(instantiate, data_section)
@@ -815,8 +815,8 @@ TEST(instantiate, data_elem_section_errors_dont_change_imports)
         instantiate(parse(bin_data_error), {}, {{&table, {3, std::nullopt}}}, {{&memory, {1, 1}}}),
         instantiate_error, "data segment is out of memory bounds");
 
-    EXPECT_FALSE(table[0].has_value());
-    EXPECT_FALSE(table[1].has_value());
+    EXPECT_EQ(table[0].instance, nullptr);
+    EXPECT_EQ(table[1].instance, nullptr);
     EXPECT_EQ(memory[0], 0);
 
     /* wat2wasm
@@ -837,9 +837,9 @@ TEST(instantiate, data_elem_section_errors_dont_change_imports)
         instantiate(parse(bin_elem_error), {}, {{&table, {3, std::nullopt}}}, {{&memory, {1, 1}}}),
         instantiate_error, "element segment is out of table bounds");
 
-    EXPECT_FALSE(table[0].has_value());
-    EXPECT_FALSE(table[1].has_value());
-    EXPECT_FALSE(table[2].has_value());
+    EXPECT_EQ(table[0].instance, nullptr);
+    EXPECT_EQ(table[1].instance, nullptr);
+    EXPECT_EQ(table[2].instance, nullptr);
     EXPECT_EQ(memory[0], 0);
 }
 

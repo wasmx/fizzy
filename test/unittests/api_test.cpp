@@ -412,12 +412,10 @@ TEST(api, find_exported_table)
     ASSERT_TRUE(opt_table);
     EXPECT_EQ(opt_table->table, instance->table.get());
     EXPECT_EQ(opt_table->table->size(), 2);
-    ASSERT_TRUE((*opt_table->table)[0].has_value());
-    EXPECT_EQ((*opt_table->table)[0]->instance, instance.get());
-    EXPECT_EQ((*opt_table->table)[0]->func_idx, 1);
-    ASSERT_TRUE((*opt_table->table)[1].has_value());
-    EXPECT_EQ((*opt_table->table)[1]->instance, instance.get());
-    EXPECT_EQ((*opt_table->table)[1]->func_idx, 0);
+    EXPECT_EQ((*opt_table->table)[0].instance, instance.get());
+    EXPECT_EQ((*opt_table->table)[0].func_idx, 1);
+    EXPECT_EQ((*opt_table->table)[1].instance, instance.get());
+    EXPECT_EQ((*opt_table->table)[1].func_idx, 0);
     EXPECT_EQ(opt_table->limits.min, 2);
     ASSERT_TRUE(opt_table->limits.max.has_value());
     EXPECT_EQ(opt_table->limits.max, 20);
