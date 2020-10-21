@@ -18,7 +18,7 @@ namespace
 uint32_t call_table_func(Instance& instance, size_t idx)
 {
     const auto& elem = (*instance.table)[idx];
-    const auto res = elem->function(instance, {}, 0);
+    const auto res = execute(*elem->instance, elem->func_idx, {}, 0);
     EXPECT_TRUE(res.has_value);
     return as_uint32(res.value);
 }
@@ -624,6 +624,21 @@ TEST(instantiate, element_section_fills_imported_table)
 {
     /* wat2wasm
     (module
+     (table 4 anyfunc)
+     (export "t" (table 0))
+     (elem (i32.const 0) $f0)
+     (func $f0 (result i32) (i32.const 0))
+    )
+    */
+    const auto bin_exported_table = from_hex(
+        "0061736d010000000105016000017f03020100040401700004070501017401000907010041000b01000a060104"
+        "0041000b");
+    auto instance_exported_table = instantiate(parse(bin_exported_table));
+    auto table = find_exported_table(*instance_exported_table, "t");
+    ASSERT_TRUE(table.has_value());
+
+    /* wat2wasm
+    (module
       (table (import "m" "tab") 4 funcref)
       (elem (i32.const 1) $f1 $f2) ;; Table contents: uninit, f1, f2, uninit
       (elem (i32.const 2) $f3 $f4) ;; Table contents: uninit, f1, f3, f4
@@ -637,11 +652,7 @@ TEST(instantiate, element_section_fills_imported_table)
         "0061736d010000000105016000017f020b01016d037461620170000403050400000000090f020041010b020001"
         "0041020b0202030a1504040041010b040041020b040041030b040041040b");
 
-    auto f0 = [](Instance&, const Value*, int) { return Value{0}; };
-
-    table_elements table(4);
-    table[0] = ExternalFunction{f0, FuncType{{}, {ValType::i32}}};
-    auto instance = instantiate(parse(bin), {}, {{&table, {4, std::nullopt}}});
+    auto instance = instantiate(parse(bin), {}, {*table});
 
     ASSERT_EQ(instance->table->size(), 4);
     EXPECT_EQ(call_table_func(*instance, 0), 0);
@@ -654,6 +665,21 @@ TEST(instantiate, element_section_out_of_bounds_doesnt_change_imported_table)
 {
     /* wat2wasm
     (module
+     (table 3 anyfunc)
+     (export "t" (table 0))
+     (elem (i32.const 0) $f0)
+     (func $f0 (result i32) (i32.const 0))
+    )
+    */
+    const auto bin_exported_table = from_hex(
+        "0061736d010000000105016000017f03020100040401700003070501017401000907010041000b01000a060104"
+        "0041000b");
+    auto instance_exported_table = instantiate(parse(bin_exported_table));
+    auto table = find_exported_table(*instance_exported_table, "t");
+    ASSERT_TRUE(table.has_value());
+
+    /* wat2wasm
+    (module
       (table (import "m" "tab") 3 funcref)
       (elem (i32.const 0) $f1 $f1)
       (elem (i32.const 2) $f1 $f1)
@@ -664,18 +690,15 @@ TEST(instantiate, element_section_out_of_bounds_doesnt_change_imported_table)
         "0061736d010000000105016000017f020b01016d037461620170000303020100090f020041000b020000004102"
         "0b0200000a0601040041010b");
 
-    auto f0 = [](Instance&, const Value*, int) { return Value{0}; };
+    EXPECT_THROW_MESSAGE(instantiate(parse(bin), {}, {*table}), instantiate_error,
+        "element segment is out of table bounds");
 
-    table_elements table(3);
-    table[0] = ExternalFunction{f0, FuncType{{}, {ValType::i32}}};
-
-    EXPECT_THROW_MESSAGE(instantiate(parse(bin), {}, {{&table, {3, std::nullopt}}}),
-        instantiate_error, "element segment is out of table bounds");
-
-    ASSERT_EQ(table.size(), 3);
-    EXPECT_EQ(*table[0]->function.target<decltype(f0)>(), f0);
-    EXPECT_FALSE(table[1].has_value());
-    EXPECT_FALSE(table[2].has_value());
+    const auto& table_elements = *table->table;
+    ASSERT_EQ(table_elements.size(), 3);
+    EXPECT_EQ(table_elements[0]->instance, instance_exported_table.get());
+    EXPECT_EQ(table_elements[0]->func_idx, 0);
+    EXPECT_FALSE(table_elements[1].has_value());
+    EXPECT_FALSE(table_elements[2].has_value());
 }
 
 TEST(instantiate, data_section)

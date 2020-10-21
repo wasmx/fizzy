@@ -330,11 +330,7 @@ std::unique_ptr<Instance> instantiate(std::unique_ptr<const Module> module,
         auto it_table = instance->table->begin() + elementsec_offsets[i];
         for (const auto idx : instance->module->elementsec[i].init)
         {
-            auto func = [idx, &instance_ref = *instance](fizzy::Instance&, const Value* args,
-                            int depth) { return execute(instance_ref, idx, args, depth); };
-
-            *it_table++ =
-                ExternalFunction{std::move(func), instance->module->get_function_type(idx)};
+            *it_table++ = {instance.get(), idx, {}};
         }
     }
 
@@ -360,12 +356,8 @@ std::unique_ptr<Instance> instantiate(std::unique_ptr<const Module> module,
                     auto it_table = shared_instance->table->begin() + elementsec_offsets[i];
                     for ([[maybe_unused]] auto _ : shared_instance->module->elementsec[i].init)
                     {
-                        // Wrap the function with the lambda capturing shared instance
-                        auto& table_function = (*it_table)->function;
-                        table_function = [shared_instance, func = std::move(table_function)](
-                                             fizzy::Instance& _instance, const Value* args,
-                                             int depth) { return func(_instance, args, depth); };
-                        ++it_table;
+                        // Capture shared instance in table element.
+                        (*it_table++)->shared_instance = shared_instance;
                     }
                 }
             }

@@ -477,15 +477,14 @@ void branch(const Code& code, OperandStack& stack, const uint8_t*& pc, const uin
         stack.drop(stack_drop);
 }
 
-template <class F>
-inline bool invoke_function(
-    const FuncType& func_type, const F& func, Instance& instance, OperandStack& stack, int depth)
+inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
+    OperandStack& stack, int depth)
 {
     const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
     const auto call_args = stack.rend() - num_args;
 
-    const auto ret = func(instance, call_args, depth + 1);
+    const auto ret = execute(instance, func_idx, call_args, depth + 1);
     // Bubble up traps
     if (ret.trapped)
         return false;
@@ -503,14 +502,6 @@ inline bool invoke_function(
     return true;
 }
 
-inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
-    OperandStack& stack, int depth)
-{
-    const auto func = [func_idx](Instance& _instance, const Value* args, int _depth) {
-        return execute(_instance, func_idx, args, _depth);
-    };
-    return invoke_function(func_type, func, instance, stack, depth);
-}
 }  // namespace
 
 ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args, int depth)
@@ -634,12 +625,14 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
                 goto trap;
 
             // check actual type against expected type
-            const auto& actual_type = called_func->type;
+            const auto& actual_type =
+                called_func->instance->module->get_function_type(called_func->func_idx);
             const auto& expected_type = instance.module->typesec[expected_type_idx];
             if (expected_type != actual_type)
                 goto trap;
 
-            if (!invoke_function(actual_type, called_func->function, instance, stack, depth))
+            if (!invoke_function(
+                    actual_type, called_func->func_idx, *called_func->instance, stack, depth))
                 goto trap;
             break;
         }
