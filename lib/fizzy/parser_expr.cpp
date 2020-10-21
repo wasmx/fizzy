@@ -20,14 +20,6 @@ inline void store(uint8_t* dst, T value) noexcept
 }
 
 template <typename T>
-inline void push(bytes& b, T value)
-{
-    uint8_t storage[sizeof(T)];
-    store(storage, value);
-    b.append(storage, sizeof(storage));
-}
-
-template <typename T>
 inline void push(std::vector<uint8_t>& b, T value)
 {
     uint8_t storage[sizeof(T)];
@@ -48,9 +40,6 @@ struct ControlFrame
     /// The target instruction code offset.
     const size_t code_offset{0};
 
-    /// The immediates offset for block instructions.
-    const size_t immediates_offset{0};
-
     /// The frame stack height of the parent frame.
     const int parent_stack_height{0};
 
@@ -62,11 +51,10 @@ struct ControlFrame
     std::vector<size_t> br_immediate_offsets{};
 
     ControlFrame(Instr _instruction, std::optional<ValType> _type, int _parent_stack_height,
-        size_t _code_offset = 0, size_t _immediates_offset = 0) noexcept
+        size_t _code_offset = 0) noexcept
       : instruction{_instruction},
         type{_type},
         code_offset{_code_offset},
-        immediates_offset{_immediates_offset},
         parent_stack_height{_parent_stack_height}
     {}
 };
@@ -210,16 +198,16 @@ inline void update_branch_stack(const ControlFrame& current_frame, const Control
         drop_operand(current_frame, operand_stack, from_valtype(*branch_frame_type));
 }
 
-void push_branch_immediates(const ControlFrame& branch_frame, int stack_height, bytes& immediates)
+void push_branch_immediates(
+    const ControlFrame& branch_frame, int stack_height, std::vector<uint8_t>& instructions)
 {
     // How many stack items to drop when taking the branch.
     const auto stack_drop = stack_height - branch_frame.parent_stack_height;
 
     // Push frame start location as br immediates - these are final if frame is loop,
     // but for block/if/else these are just placeholders, to be filled at end instruction.
-    push(immediates, static_cast<uint32_t>(branch_frame.code_offset));
-    push(immediates, static_cast<uint32_t>(branch_frame.immediates_offset));
-    push(immediates, static_cast<uint32_t>(stack_drop));
+    push(instructions, static_cast<uint32_t>(branch_frame.code_offset));
+    push(instructions, static_cast<uint32_t>(stack_drop));
 }
 
 inline void mark_frame_unreachable(
@@ -473,7 +461,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
             // Push label with immediates offset after arity.
             control_stack.emplace(Instr::block, block_type, static_cast<int>(operand_stack.size()),
-                code.instructions.size(), code.immediates.size());
+                code.instructions.size());
             break;
         }
 
@@ -483,7 +471,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             std::tie(loop_type, pos) = parse_blocktype(pos, end);
 
             control_stack.emplace(Instr::loop, loop_type, static_cast<int>(operand_stack.size()),
-                code.instructions.size(), code.immediates.size());
+                code.instructions.size());
             break;
         }
 
@@ -493,12 +481,12 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             std::tie(if_type, pos) = parse_blocktype(pos, end);
 
             control_stack.emplace(Instr::if_, if_type, static_cast<int>(operand_stack.size()),
-                code.instructions.size(), code.immediates.size());
+                code.instructions.size());
 
             // Placeholders for immediate values, filled at the matching end or else instructions.
-            push(code.immediates, uint32_t{0});  // Diff to the else instruction
-            push(code.immediates, uint32_t{0});  // Diff for the immediates.
-            break;
+            code.instructions.push_back(opcode);
+            push(code.instructions, uint32_t{0});  // Diff to the else instruction
+            continue;
         }
 
         case Instr::else_:
@@ -508,30 +496,28 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
             update_result_stack(frame, operand_stack);  // else is the end of if.
 
-            const auto if_imm_offset = frame.immediates_offset;
+            const auto if_imm_offset = frame.code_offset + 1;
             const auto frame_type = frame.type;
             auto frame_br_immediate_offsets = std::move(frame.br_immediate_offsets);
 
             control_stack.pop();
             control_stack.emplace(Instr::else_, frame_type, static_cast<int>(operand_stack.size()),
-                code.instructions.size(), code.immediates.size());
+                code.instructions.size());
             // br immediates from `then` branch will need to be filled at the end of `else`
             control_stack.top().br_immediate_offsets = std::move(frame_br_immediate_offsets);
 
-            // Placeholders for immediate values, filled at the matching end instructions.
-            push(code.immediates, uint32_t{0});  // Diff to the end instruction.
-            push(code.immediates, uint32_t{0});  // Diff for the immediates
+            code.instructions.push_back(opcode);
 
-            // Fill in if's immediates with offsets of first instruction in else block.
-            const auto target_pc = static_cast<uint32_t>(code.instructions.size() + 1);
-            const auto target_imm = static_cast<uint32_t>(code.immediates.size());
+            // Placeholder for the immediate value, filled at the matching end instructions.
+            push(code.instructions, uint32_t{0});  // Diff to the end instruction.
 
-            // Set the imm values for else instruction.
-            auto* if_imm = code.immediates.data() + if_imm_offset;
+            // Fill in if's immediate with the offset of first instruction in else block.
+            const auto target_pc = static_cast<uint32_t>(code.instructions.size());
+
+            // Set the imm values for if instruction.
+            auto* if_imm = code.instructions.data() + if_imm_offset;
             store(if_imm, target_pc);
-            if_imm += sizeof(target_pc);
-            store(if_imm, target_imm);
-            break;
+            continue;
         }
 
         case Instr::end:
@@ -549,26 +535,21 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
                 const auto target_pc = control_stack.size() == 1 ?
                                            static_cast<uint32_t>(code.instructions.size()) :
                                            static_cast<uint32_t>(code.instructions.size() + 1);
-                const auto target_imm = static_cast<uint32_t>(code.immediates.size());
 
                 if (frame.instruction == Instr::if_ || frame.instruction == Instr::else_)
                 {
                     // We're at the end instruction of the if block without else or at the end of
-                    // else block. Fill in if/else's immediates with offsets of first instruction
+                    // else block. Fill in if/else's immediate with the offset of first instruction
                     // after if/else block.
-                    auto* if_imm = code.immediates.data() + frame.immediates_offset;
+                    auto* if_imm = code.instructions.data() + frame.code_offset + 1;
                     store(if_imm, target_pc);
-                    if_imm += sizeof(target_pc);
-                    store(if_imm, target_imm);
                 }
 
                 // Fill in immediates all br/br_table instructions jumping out of this block.
                 for (const auto br_imm_offset : frame.br_immediate_offsets)
                 {
-                    auto* br_imm = code.immediates.data() + br_imm_offset;
+                    auto* br_imm = code.instructions.data() + br_imm_offset;
                     store(br_imm, static_cast<uint32_t>(target_pc));
-                    br_imm += sizeof(uint32_t);
-                    store(br_imm, static_cast<uint32_t>(target_imm));
                     // stack drop and arity were already stored in br handler
                 }
             }
@@ -596,13 +577,14 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
             update_branch_stack(frame, branch_frame, operand_stack);
 
-            push(code.immediates, get_branch_arity(branch_frame));
+            code.instructions.push_back(opcode);
+            push(code.instructions, get_branch_arity(branch_frame));
 
             // Remember this br immediates offset to fill it at end instruction.
-            branch_frame.br_immediate_offsets.push_back(code.immediates.size());
+            branch_frame.br_immediate_offsets.push_back(code.instructions.size());
 
             push_branch_immediates(
-                branch_frame, static_cast<int>(operand_stack.size()), code.immediates);
+                branch_frame, static_cast<int>(operand_stack.size()), code.instructions);
 
             if (instr == Instr::br)
                 mark_frame_unreachable(frame, operand_stack);
@@ -615,7 +597,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
                     push_operand(operand_stack, *branch_frame.type);
             }
 
-            break;
+            continue;
         }
 
         case Instr::br_table:
@@ -653,13 +635,13 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
                 if (get_branch_frame_type(branch_frame) != default_branch_type)
                     throw validation_error{"br_table labels have inconsistent types"};
 
-                branch_frame.br_immediate_offsets.push_back(code.immediates.size());
+                branch_frame.br_immediate_offsets.push_back(code.instructions.size());
                 push_branch_immediates(
-                    branch_frame, static_cast<int>(operand_stack.size()), code.immediates);
+                    branch_frame, static_cast<int>(operand_stack.size()), code.instructions);
             }
-            default_branch_frame.br_immediate_offsets.push_back(code.immediates.size());
+            default_branch_frame.br_immediate_offsets.push_back(code.instructions.size());
             push_branch_immediates(
-                default_branch_frame, static_cast<int>(operand_stack.size()), code.immediates);
+                default_branch_frame, static_cast<int>(operand_stack.size()), code.instructions);
 
             mark_frame_unreachable(frame, operand_stack);
 
@@ -676,15 +658,16 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
             update_branch_stack(frame, branch_frame, operand_stack);
 
-            push(code.immediates, get_branch_arity(branch_frame));
+            code.instructions.push_back(opcode);
+            push(code.instructions, get_branch_arity(branch_frame));
 
-            branch_frame.br_immediate_offsets.push_back(code.immediates.size());
+            branch_frame.br_immediate_offsets.push_back(code.instructions.size());
 
             push_branch_immediates(
-                branch_frame, static_cast<int>(operand_stack.size()), code.immediates);
+                branch_frame, static_cast<int>(operand_stack.size()), code.instructions);
 
             mark_frame_unreachable(frame, operand_stack);
-            break;
+            continue;
         }
 
         case Instr::call:

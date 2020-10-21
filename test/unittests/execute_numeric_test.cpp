@@ -22,8 +22,7 @@ ExecutionResult execute_unary_operation(Instr instr, uint64_t arg)
     module->funcsec.emplace_back(TypeIdx{0});
     module->codesec.emplace_back(Code{1, 0,
         {static_cast<uint8_t>(Instr::local_get), 0, 0, 0, 0, static_cast<uint8_t>(instr),
-            static_cast<uint8_t>(Instr::end)},
-        {}});
+            static_cast<uint8_t>(Instr::end)}});
 
     return execute(*instantiate(std::move(module)), 0, {arg});
 }
@@ -36,8 +35,7 @@ ExecutionResult execute_binary_operation(Instr instr, uint64_t lhs, uint64_t rhs
     module->funcsec.emplace_back(TypeIdx{0});
     module->codesec.emplace_back(Code{2, 0,
         {static_cast<uint8_t>(Instr::local_get), 0, 0, 0, 0, static_cast<uint8_t>(Instr::local_get),
-            1, 0, 0, 0, static_cast<uint8_t>(instr), static_cast<uint8_t>(Instr::end)},
-        {}});
+            1, 0, 0, 0, static_cast<uint8_t>(instr), static_cast<uint8_t>(Instr::end)}});
 
     return execute(*instantiate(std::move(module)), 0, {lhs, rhs});
 }
