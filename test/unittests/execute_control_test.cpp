@@ -872,7 +872,7 @@ TEST(execute_control, if_else_smoke)
 
     const auto module = parse(bin);
 
-    for (const auto param : {0u, 1u})
+    for (const auto param : {0u})
     {
         constexpr uint64_t expected_results[]{
             2,  // else branch.

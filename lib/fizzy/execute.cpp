@@ -18,8 +18,8 @@ namespace fizzy
 {
 namespace
 {
-// code_offset + imm_offset + stack_height
-constexpr auto BranchImmediateSize = 3 * sizeof(uint32_t);
+// code_offset + stack_drop
+constexpr auto BranchImmediateSize = 2 * sizeof(uint32_t);
 
 constexpr uint32_t F32AbsMask = 0x7fffffff;
 constexpr uint32_t F32SignMask = ~F32AbsMask;
@@ -453,15 +453,12 @@ __attribute__((no_sanitize("float-cast-overflow"))) inline constexpr float demot
     return static_cast<float>(value);
 }
 
-void branch(const Code& code, OperandStack& stack, const uint8_t*& pc, const uint8_t*& immediates,
-    uint32_t arity) noexcept
+void branch(const Code& code, OperandStack& stack, const uint8_t*& pc, uint32_t arity) noexcept
 {
-    const auto code_offset = read<uint32_t>(immediates);
-    const auto imm_offset = read<uint32_t>(immediates);
-    const auto stack_drop = read<uint32_t>(immediates);
+    const auto code_offset = read<uint32_t>(pc);
+    const auto stack_drop = read<uint32_t>(pc);
 
     pc = code.instructions.data() + code_offset;
-    immediates = code.immediates.data() + imm_offset;
 
     // When branch is taken, additional stack items must be dropped.
     assert(static_cast<int>(stack_drop) >= 0);
@@ -532,7 +529,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         static_cast<size_t>(code.max_stack_height));
 
     const uint8_t* pc = code.instructions.data();
-    const uint8_t* immediates = code.immediates.data();
 
     while (true)
     {
@@ -548,14 +544,11 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         case Instr::if_:
         {
             if (stack.pop().as<uint32_t>() != 0)
-                immediates += 2 * sizeof(uint32_t);  // Skip the immediates for else instruction.
+                pc += sizeof(uint32_t);  // Skip the immediates for else instruction.
             else
             {
-                const auto target_pc = read<uint32_t>(immediates);
-                const auto target_imm = read<uint32_t>(immediates);
-
+                const auto target_pc = read<uint32_t>(pc);
                 pc = code.instructions.data() + target_pc;
-                immediates = code.immediates.data() + target_imm;
             }
             break;
         }
@@ -563,12 +556,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         {
             // We reach else only after executing if block ("then" part),
             // so we need to skip else block now.
-            const auto target_pc = read<uint32_t>(immediates);
-            const auto target_imm = read<uint32_t>(immediates);
-
+            const auto target_pc = read<uint32_t>(pc);
             pc = code.instructions.data() + target_pc;
-            immediates = code.immediates.data() + target_imm;
-
             break;
         }
         case Instr::end:
@@ -582,16 +571,16 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         case Instr::br_if:
         case Instr::return_:
         {
-            const auto arity = read<uint32_t>(immediates);
+            const auto arity = read<uint32_t>(pc);
 
             // Check condition for br_if.
             if (instruction == Instr::br_if && stack.pop().as<uint32_t>() == 0)
             {
-                immediates += BranchImmediateSize;
+                pc += BranchImmediateSize;
                 break;
             }
 
-            branch(code, stack, pc, immediates, arity);
+            branch(code, stack, pc, arity);
             break;
         }
         case Instr::br_table:
@@ -604,9 +593,9 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             const auto label_idx_offset = br_table_idx < br_table_size ?
                                               br_table_idx * BranchImmediateSize :
                                               br_table_size * BranchImmediateSize;
-            immediates += label_idx_offset;
+            pc += label_idx_offset;
 
-            branch(code, stack, pc, immediates, arity);
+            branch(code, stack, pc, arity);
             break;
         }
         case Instr::call:
