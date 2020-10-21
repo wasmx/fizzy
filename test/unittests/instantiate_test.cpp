@@ -32,7 +32,7 @@ TEST(instantiate, imported_functions)
     const auto bin = from_hex("0061736d0100000001060160017f017f020b01036d6f6403666f6f0000");
     const auto module = parse(bin);
 
-    auto host_foo = [](void*, Instance&, const Value*, int) { return Trap; };
+    auto host_foo = [](void*, Instance&, const Value*, int) noexcept { return Trap; };
     auto instance = instantiate(*module, {{host_foo, nullptr, module->typesec[0]}});
 
     ASSERT_EQ(instance->imported_functions.size(), 1);
@@ -53,8 +53,8 @@ TEST(instantiate, imported_functions_multiple)
         "0061736d0100000001090260017f017f600000021702036d6f6404666f6f310000036d6f6404666f6f320001");
     const auto module = parse(bin);
 
-    auto host_foo1 = [](void*, Instance&, const Value*, int) { return Trap; };
-    auto host_foo2 = [](void*, Instance&, const Value*, int) { return Trap; };
+    auto host_foo1 = [](void*, Instance&, const Value*, int) noexcept { return Trap; };
+    auto host_foo2 = [](void*, Instance&, const Value*, int) noexcept { return Trap; };
     auto instance = instantiate(*module,
         {{host_foo1, nullptr, module->typesec[0]}, {host_foo2, nullptr, module->typesec[1]}});
 
@@ -87,7 +87,7 @@ TEST(instantiate, imported_function_wrong_type)
     */
     const auto bin = from_hex("0061736d0100000001060160017f017f020b01036d6f6403666f6f0000");
 
-    auto host_foo = [](void*, Instance&, const Value*, int) { return Trap; };
+    auto host_foo = [](void*, Instance&, const Value*, int) noexcept { return Trap; };
     const auto host_foo_type = FuncType{{}, {}};
 
     EXPECT_THROW_MESSAGE(instantiate(parse(bin), {{host_foo, nullptr, host_foo_type}}),

@@ -427,7 +427,7 @@ std::optional<ExportedFunction> find_exported_function(Instance& instance, std::
         return std::nullopt;
 
     const auto idx = *opt_index;
-    auto func = [](void* context, fizzy::Instance&, const Value* args, int depth) {
+    auto func = [](void* context, fizzy::Instance&, const Value* args, int depth) noexcept {
         auto* instance_and_idx = static_cast<std::pair<Instance*, FuncIdx>*>(context);
         return execute(*instance_and_idx->first, instance_and_idx->second, args, depth);
     };

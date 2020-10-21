@@ -22,7 +22,8 @@ namespace fizzy
 struct ExecutionResult;
 struct Instance;
 
-using ExternalFunctionPtr = ExecutionResult (*)(void* context, Instance&, const Value*, int depth);
+using ExternalFunctionPtr = ExecutionResult (*)(
+    void* context, Instance&, const Value*, int depth) noexcept;
 
 struct ExternalFunction
 {

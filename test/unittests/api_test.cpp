@@ -16,12 +16,12 @@ using namespace fizzy::test;
 namespace
 {
 template <int N>
-ExecutionResult function_returning_value(void*, Instance&, const Value*, int)
+ExecutionResult function_returning_value(void*, Instance&, const Value*, int) noexcept
 {
     return Value{N};
 }
 
-ExecutionResult function_returning_void(void*, Instance&, const Value*, int)
+ExecutionResult function_returning_void(void*, Instance&, const Value*, int) noexcept
 {
     return Void;
 }
@@ -272,7 +272,9 @@ TEST(api, find_exported_function)
         "0061736d010000000105016000017f021001087370656374657374036261720000040401700000050401010102"
         "0606017f0041000b07170403666f6f000001670300037461620100036d656d0200");
 
-    auto bar = [](void*, Instance&, const Value*, int) -> ExecutionResult { return Value{42}; };
+    auto bar = [](void*, Instance&, const Value*, int) noexcept -> ExecutionResult {
+        return Value{42};
+    };
     const auto bar_type = FuncType{{}, {ValType::i32}};
 
     auto instance_reexported_function =

@@ -112,7 +112,7 @@ inline fizzy::ExecutionResult unwrap(const FizzyExecutionResult& result) noexcep
 }
 
 fizzy::ExecutionResult unwrapped_external_function(
-    void* context, fizzy::Instance& instance, const fizzy::Value* args, int depth)
+    void* context, fizzy::Instance& instance, const fizzy::Value* args, int depth) noexcept
 {
     const auto* c_external_function = static_cast<const FizzyExternalFunction*>(context);
     return unwrap(c_external_function->function(

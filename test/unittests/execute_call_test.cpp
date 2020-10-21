@@ -277,7 +277,7 @@ TEST(execute_call, imported_function_call)
 
     const auto module = parse(wasm);
 
-    constexpr auto host_foo = [](void*, Instance&, const Value*, int) -> ExecutionResult {
+    constexpr auto host_foo = [](void*, Instance&, const Value*, int) noexcept -> ExecutionResult {
         return Value{42};
     };
     const auto host_foo_type = module->typesec[0];
@@ -304,7 +304,7 @@ TEST(execute_call, imported_function_call_with_arguments)
 
     const auto module = parse(wasm);
 
-    auto host_foo = [](void*, Instance&, const Value* args, int) -> ExecutionResult {
+    auto host_foo = [](void*, Instance&, const Value* args, int) noexcept -> ExecutionResult {
         return Value{as_uint32(args[0]) * 2};
     };
     const auto host_foo_type = module->typesec[0];
@@ -348,11 +348,12 @@ TEST(execute_call, imported_functions_call_indirect)
     ASSERT_EQ(module->importsec.size(), 2);
     ASSERT_EQ(module->codesec.size(), 2);
 
-    constexpr auto sqr = [](void*, Instance&, const Value* args, int) -> ExecutionResult {
+    constexpr auto sqr = [](void*, Instance&, const Value* args, int) noexcept -> ExecutionResult {
         const auto x = as_uint32(args[0]);
         return Value{uint64_t{x} * uint64_t{x}};
     };
-    constexpr auto isqrt = [](void*, Instance&, const Value* args, int) -> ExecutionResult {
+    constexpr auto isqrt = [](void*, Instance&, const Value* args,
+                               int) noexcept -> ExecutionResult {
         const auto x = as_uint32(args[0]);
         return Value{(11 + uint64_t{x} / 11) / 2};
     };
@@ -571,7 +572,8 @@ TEST(execute_call, call_imported_infinite_recursion)
     const auto wasm = from_hex("0061736d010000000105016000017f020b01036d6f6403666f6f0000");
 
     const auto module = parse(wasm);
-    auto host_foo = [](void*, Instance& instance, const Value* args, int depth) -> ExecutionResult {
+    auto host_foo = [](void*, Instance& instance, const Value* args,
+                        int depth) noexcept -> ExecutionResult {
         EXPECT_LE(depth, MaxDepth);
         return execute(instance, 0, args, depth + 1);
     };
@@ -594,7 +596,8 @@ TEST(execute_call, call_via_imported_infinite_recursion)
         "0061736d010000000105016000017f020b01036d6f6403666f6f0000030201000a0601040010000b");
 
     const auto module = parse(wasm);
-    auto host_foo = [](void*, Instance& instance, const Value* args, int depth) -> ExecutionResult {
+    auto host_foo = [](void*, Instance& instance, const Value* args,
+                        int depth) noexcept -> ExecutionResult {
         // Function $f will increase depth. This means each iteration goes 2 steps deeper.
         EXPECT_LE(depth, MaxDepth - 1);
         return execute(instance, 1, args, depth + 1);
@@ -614,7 +617,8 @@ TEST(execute_call, call_imported_max_depth_recursion)
     const auto wasm = from_hex("0061736d010000000105016000017f020b01036d6f6403666f6f0000");
 
     const auto module = parse(wasm);
-    auto host_foo = [](void*, Instance& instance, const Value* args, int depth) -> ExecutionResult {
+    auto host_foo = [](void*, Instance& instance, const Value* args,
+                        int depth) noexcept -> ExecutionResult {
         if (depth == MaxDepth)
             return Value{uint32_t{1}};  // Terminate recursion on the max depth.
         return execute(instance, 0, args, depth + 1);
@@ -638,7 +642,8 @@ TEST(execute_call, call_via_imported_max_depth_recursion)
         "0061736d010000000105016000017f020b01036d6f6403666f6f0000030201000a0601040010000b");
 
     const auto module = parse(wasm);
-    auto host_foo = [](void*, Instance& instance, const Value* args, int depth) -> ExecutionResult {
+    auto host_foo = [](void*, Instance& instance, const Value* args,
+                        int depth) noexcept -> ExecutionResult {
         // Function $f will increase depth. This means each iteration goes 2 steps deeper.
         if (depth == (MaxDepth - 1))
             return Value{uint32_t{1}};  // Terminate recursion on the max depth.

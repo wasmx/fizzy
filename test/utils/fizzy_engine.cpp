@@ -14,7 +14,7 @@ namespace fizzy::test
 {
 namespace
 {
-fizzy::ExecutionResult env_adler32(void*, Instance& instance, const Value* args, int)
+fizzy::ExecutionResult env_adler32(void*, Instance& instance, const Value* args, int) noexcept
 {
     assert(instance.memory != nullptr);
     const auto ret = fizzy::test::adler32(
