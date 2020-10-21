@@ -713,129 +713,129 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i32_load:
         {
-            if (!load_from_memory<uint32_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint32_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i64_load:
         {
-            if (!load_from_memory<uint64_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint64_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::f32_load:
         {
-            if (!load_from_memory<float>(*memory, stack, immediates))
+            if (!load_from_memory<float>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::f64_load:
         {
-            if (!load_from_memory<double>(*memory, stack, immediates))
+            if (!load_from_memory<double>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i32_load8_s:
         {
-            if (!load_from_memory<uint32_t, int8_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint32_t, int8_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i32_load8_u:
         {
-            if (!load_from_memory<uint32_t, uint8_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint32_t, uint8_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i32_load16_s:
         {
-            if (!load_from_memory<uint32_t, int16_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint32_t, int16_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i32_load16_u:
         {
-            if (!load_from_memory<uint32_t, uint16_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint32_t, uint16_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i64_load8_s:
         {
-            if (!load_from_memory<uint64_t, int8_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint64_t, int8_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i64_load8_u:
         {
-            if (!load_from_memory<uint64_t, uint8_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint64_t, uint8_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i64_load16_s:
         {
-            if (!load_from_memory<uint64_t, int16_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint64_t, int16_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i64_load16_u:
         {
-            if (!load_from_memory<uint64_t, uint16_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint64_t, uint16_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i64_load32_s:
         {
-            if (!load_from_memory<uint64_t, int32_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint64_t, int32_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i64_load32_u:
         {
-            if (!load_from_memory<uint64_t, uint32_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint64_t, uint32_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i32_store:
         {
-            if (!store_into_memory<uint32_t>(*memory, stack, immediates))
+            if (!store_into_memory<uint32_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i64_store:
         {
-            if (!store_into_memory<uint64_t>(*memory, stack, immediates))
+            if (!store_into_memory<uint64_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::f32_store:
         {
-            if (!store_into_memory<float>(*memory, stack, immediates))
+            if (!store_into_memory<float>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::f64_store:
         {
-            if (!store_into_memory<double>(*memory, stack, immediates))
+            if (!store_into_memory<double>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i32_store8:
         case Instr::i64_store8:
         {
-            if (!store_into_memory<uint8_t>(*memory, stack, immediates))
+            if (!store_into_memory<uint8_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i32_store16:
         case Instr::i64_store16:
         {
-            if (!store_into_memory<uint16_t>(*memory, stack, immediates))
+            if (!store_into_memory<uint16_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i64_store32:
         {
-            if (!store_into_memory<uint32_t>(*memory, stack, immediates))
+            if (!store_into_memory<uint32_t>(*memory, stack, pc))
                 goto trap;
             break;
         }

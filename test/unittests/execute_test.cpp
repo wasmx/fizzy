@@ -380,9 +380,9 @@ TEST(execute, i32_load_all_variants)
         from_hex("0061736d0100000001060160017f017f030201000504010101010a0901070020002802000b");
     const auto module = parse(wasm);
 
-    auto& load_instr = const_cast<uint8_t&>(module->codesec[0].instructions[1]);
-    ASSERT_EQ(load_instr, Instr::i32_load);
-    ASSERT_EQ(module->codesec[0].immediates.substr(4), "00000000"_bytes);  // load offset.
+    auto* const load_instr = const_cast<uint8_t*>(&module->codesec[0].instructions[1]);
+    ASSERT_EQ(*load_instr, Instr::i32_load);
+    ASSERT_EQ(bytes_view(load_instr + 1, 4), "00000000"_bytes);  // load offset.
 
     const auto memory_fill = "deb0b1b2b3ed"_bytes;
 
@@ -394,12 +394,12 @@ TEST(execute, i32_load_all_variants)
         {Instr::i32_load, 0xb3b2b1b0},
     };
 
-    for (const auto& test_case : test_cases)
+    for (const auto& [instr, expected] : test_cases)
     {
-        load_instr = static_cast<uint8_t>(std::get<0>(test_case));
+        *load_instr = static_cast<uint8_t>(instr);
         auto instance = instantiate(*module);
         std::copy(std::begin(memory_fill), std::end(memory_fill), std::begin(*instance->memory));
-        EXPECT_THAT(execute(*instance, 0, {1}), Result(std::get<1>(test_case)));
+        EXPECT_THAT(execute(*instance, 0, {1}), Result(expected));
 
         EXPECT_THAT(execute(*instance, 0, {65537}), Traps());
     }
@@ -418,9 +418,9 @@ TEST(execute, i64_load_all_variants)
         from_hex("0061736d0100000001060160017f017e030201000504010101010a0901070020002903000b");
     const auto module = parse(wasm);
 
-    auto& load_instr = const_cast<uint8_t&>(module->codesec[0].instructions[1]);
-    ASSERT_EQ(load_instr, Instr::i64_load);
-    ASSERT_EQ(module->codesec[0].immediates.substr(4), "00000000"_bytes);  // load offset.
+    auto* const load_instr = const_cast<uint8_t*>(&module->codesec[0].instructions[1]);
+    ASSERT_EQ(*load_instr, Instr::i64_load);
+    ASSERT_EQ(bytes_view(load_instr + 1, 4), "00000000"_bytes);  // load offset.
 
     const auto memory_fill = "deb0b1b2b3b4b5b6b7ed"_bytes;
 
@@ -436,7 +436,7 @@ TEST(execute, i64_load_all_variants)
 
     for (const auto& test_case : test_cases)
     {
-        load_instr = static_cast<uint8_t>(std::get<0>(test_case));
+        *load_instr = static_cast<uint8_t>(std::get<0>(test_case));
         auto instance = instantiate(*module);
         std::copy(std::begin(memory_fill), std::end(memory_fill), std::begin(*instance->memory));
         EXPECT_THAT(execute(*instance, 0, {1}), Result(std::get<1>(test_case)));
@@ -529,9 +529,9 @@ TEST(execute, i32_store_all_variants)
         from_hex("0061736d0100000001060160027f7f00030201000504010101010a0b010900200120003602000b");
     const auto module = parse(wasm);
 
-    auto& store_instr = const_cast<uint8_t&>(module->codesec[0].instructions[2]);
-    ASSERT_EQ(store_instr, Instr::i32_store);
-    ASSERT_EQ(module->codesec[0].immediates.substr(8), "00000000"_bytes);  // store offset
+    auto* const store_instr = const_cast<uint8_t*>(&module->codesec[0].instructions[2]);
+    ASSERT_EQ(*store_instr, Instr::i32_store);
+    ASSERT_EQ(bytes_view(store_instr + 1, 4), "00000000"_bytes);  // store offset
 
     const std::tuple<Instr, bytes> test_cases[]{
         {Instr::i32_store8, "ccb0cccccccc"_bytes},
@@ -541,7 +541,7 @@ TEST(execute, i32_store_all_variants)
 
     for (const auto& test_case : test_cases)
     {
-        store_instr = static_cast<uint8_t>(std::get<0>(test_case));
+        *store_instr = static_cast<uint8_t>(std::get<0>(test_case));
         auto instance = instantiate(*module);
         std::fill_n(instance->memory->begin(), 6, uint8_t{0xcc});
         EXPECT_THAT(execute(*instance, 0, {0xb3b2b1b0, 1}), Result());
@@ -565,9 +565,9 @@ TEST(execute, i64_store_all_variants)
         from_hex("0061736d0100000001060160027e7f00030201000504010101010a0b010900200120003703000b");
     const auto module = parse(wasm);
 
-    auto& store_instr = const_cast<uint8_t&>(module->codesec[0].instructions[2]);
-    ASSERT_EQ(store_instr, Instr::i64_store);
-    ASSERT_EQ(module->codesec[0].immediates.substr(8), "00000000"_bytes);  // store offset
+    auto* const store_instr = const_cast<uint8_t*>(&module->codesec[0].instructions[2]);
+    ASSERT_EQ(*store_instr, Instr::i64_store);
+    ASSERT_EQ(bytes_view(store_instr + 1, 4), "00000000"_bytes);  // store offset
 
     const std::tuple<Instr, bytes> test_cases[]{
         {Instr::i64_store8, "ccb0cccccccccccccccc"_bytes},
@@ -578,7 +578,7 @@ TEST(execute, i64_store_all_variants)
 
     for (const auto& test_case : test_cases)
     {
-        store_instr = static_cast<uint8_t>(std::get<0>(test_case));
+        *store_instr = static_cast<uint8_t>(std::get<0>(test_case));
         auto instance = instantiate(*module);
         std::fill_n(instance->memory->begin(), 10, uint8_t{0xcc});
         EXPECT_THAT(execute(*instance, 0, {0xb7b6b5b4b3b2b1b0, 1}), Result());
