@@ -20,7 +20,10 @@ ExecutionResult execute_unary_operation(Instr instr, uint64_t arg)
     // type is currently needed only to get arity of function, so exact value types don't matter
     module->typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
     module->funcsec.emplace_back(TypeIdx{0});
-    module->codesec.emplace_back(Code{1, 0, {Instr::local_get, instr, Instr::end}, {0, 0, 0, 0}});
+    module->codesec.emplace_back(Code{1, 0,
+        {static_cast<uint8_t>(Instr::local_get), static_cast<uint8_t>(instr),
+            static_cast<uint8_t>(Instr::end)},
+        {0, 0, 0, 0}});
 
     return execute(*instantiate(std::move(module)), 0, {arg});
 }
@@ -31,8 +34,10 @@ ExecutionResult execute_binary_operation(Instr instr, uint64_t lhs, uint64_t rhs
     // type is currently needed only to get arity of function, so exact value types don't matter
     module->typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
     module->funcsec.emplace_back(TypeIdx{0});
-    module->codesec.emplace_back(Code{
-        2, 0, {Instr::local_get, Instr::local_get, instr, Instr::end}, {0, 0, 0, 0, 1, 0, 0, 0}});
+    module->codesec.emplace_back(Code{2, 0,
+        {static_cast<uint8_t>(Instr::local_get), static_cast<uint8_t>(Instr::local_get),
+            static_cast<uint8_t>(instr), static_cast<uint8_t>(Instr::end)},
+        {0, 0, 0, 0, 1, 0, 0, 0}});
 
     return execute(*instantiate(std::move(module)), 0, {lhs, rhs});
 }

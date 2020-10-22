@@ -53,8 +53,14 @@ MATCHER_P(Result, value, "")  // NOLINT(readability-redundant-string-init)
 
 namespace fizzy
 {
-std::ostream& operator<<(std::ostream& os, ExecutionResult);
+/// Equal operator for Instr and uint8_t. Convenient for unit tests.
+inline constexpr bool operator==(uint8_t a, Instr b) noexcept
+{
+    return a == static_cast<uint8_t>(b);
 }
+
+std::ostream& operator<<(std::ostream& os, ExecutionResult);
+}  // namespace fizzy
 
 namespace fizzy::test
 {

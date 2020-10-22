@@ -362,7 +362,7 @@ struct Code
 
     // The instructions bytecode without immediate values.
     // https://webassembly.github.io/spec/core/binary/instructions.html
-    std::vector<Instr> instructions;
+    std::vector<uint8_t> instructions;
 
     // The decoded instructions' immediate values.
     // These are instruction-type dependent fixed size value in the order of instructions.
