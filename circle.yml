@@ -118,7 +118,7 @@ commands:
             - ~/.hunter/_Base/Cache
       - run:
           name: "Build <<parameters.configuration_name>> (<<parameters.build_type>>)"
-          command: cmake --build ~/build --target <<parameters.target>> -- -j6
+          command: cmake --build ~/build --target <<parameters.target>> -- -j4
 
   test:
     description: "Test"
