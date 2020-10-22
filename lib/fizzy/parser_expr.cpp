@@ -634,7 +634,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             if (default_label_idx >= control_stack.size())
                 throw validation_error{"invalid label index"};
 
-            push(code.immediates, static_cast<uint32_t>(label_indices.size()));
+            code.instructions.push_back(opcode);
+            push(code.instructions, static_cast<uint32_t>(label_indices.size()));
 
             auto& default_branch_frame = control_stack[default_label_idx];
             const auto default_branch_type = get_branch_frame_type(default_branch_frame);
@@ -642,7 +643,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             update_branch_stack(frame, default_branch_frame, operand_stack);
 
             // arity is the same for all indices, so we push it once
-            push(code.immediates, get_branch_arity(default_branch_frame));
+            push(code.instructions, get_branch_arity(default_branch_frame));
 
             // Remember immediates offset for all br items to fill them at end instruction.
             for (const auto idx : label_indices)
@@ -662,7 +663,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
             mark_frame_unreachable(frame, operand_stack);
 
-            break;
+            continue;
         }
 
         case Instr::return_:

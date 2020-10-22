@@ -587,8 +587,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::br_table:
         {
-            const auto br_table_size = read<uint32_t>(immediates);
-            const auto arity = read<uint32_t>(immediates);
+            const auto br_table_size = read<uint32_t>(pc);
+            const auto arity = read<uint32_t>(pc);
 
             const auto br_table_idx = stack.pop().as<uint32_t>();
 

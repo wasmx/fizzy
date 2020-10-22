@@ -334,11 +334,12 @@ TEST(parser_expr, instr_br_table)
 
     EXPECT_THAT(code.instructions,
         ElementsAre(Instr::block, Instr::block, Instr::block, Instr::block, Instr::block,
-            Instr::local_get, 0, 0, 0, 0, Instr::br_table, Instr::i32_const, 0x41, 0, 0, 0,
-            Instr::return_, Instr::end, Instr::i32_const, 0x42, 0, 0, 0, Instr::return_, Instr::end,
-            Instr::i32_const, 0x43, 0, 0, 0, Instr::return_, Instr::end, Instr::i32_const, 0x44, 0,
-            0, 0, Instr::return_, Instr::end, Instr::i32_const, 0x45, 0, 0, 0, Instr::return_,
-            Instr::end, Instr::i32_const, 0x46, 0, 0, 0, Instr::end));
+            Instr::local_get, 0, 0, 0, 0, Instr::br_table, /*label_count:*/ 4, 0, 0, 0,
+            /*arity:*/ 0, 0, 0, 0, Instr::i32_const, 0x41, 0, 0, 0, Instr::return_, Instr::end,
+            Instr::i32_const, 0x42, 0, 0, 0, Instr::return_, Instr::end, Instr::i32_const, 0x43, 0,
+            0, 0, Instr::return_, Instr::end, Instr::i32_const, 0x44, 0, 0, 0, Instr::return_,
+            Instr::end, Instr::i32_const, 0x45, 0, 0, 0, Instr::return_, Instr::end,
+            Instr::i32_const, 0x46, 0, 0, 0, Instr::end));
 
     // br_imm_size = 12
     // return_imm_size = br_imm_size + arity_size = 16
@@ -348,27 +349,24 @@ TEST(parser_expr, instr_br_table)
     // br_3_offset = br_2_offset + 4 + return_imm_size = 0x98
     // br_4_offset = br_3_offset + 4 + return_imm_size = 0xac
     const auto expected_br_imm =
-        "04000000"  // label_count
-        "00000000"  // arity
-
-        "27000000"  // code_offset
-        "84000000"  // imm_offset
+        "2f000000"  // code_offset
+        "7c000000"  // imm_offset
         "00000000"  // stack_drop
 
-        "20000000"  // code_offset
-        "74000000"  // imm_offset
+        "28000000"  // code_offset
+        "6c000000"  // imm_offset
         "00000000"  // stack_drop
 
-        "19000000"  // code_offset
-        "64000000"  // imm_offset
+        "21000000"  // code_offset
+        "5c000000"  // imm_offset
         "00000000"  // stack_drop
 
-        "12000000"  // code_offset
-        "54000000"  // imm_offset
+        "1a000000"  // code_offset
+        "4c000000"  // imm_offset
         "00000000"  // stack_drop
 
-        "2e000000"         // code_offset
-        "94000000"         // imm_offset
+        "36000000"         // code_offset
+        "8c000000"         // imm_offset
         "00000000"_bytes;  // stack_drop
 
     EXPECT_EQ(code.immediates.substr(0, expected_br_imm.size()), expected_br_imm);
@@ -393,16 +391,14 @@ TEST(parser_expr, instr_br_table_empty_vector)
     ASSERT_EQ(module->codesec.size(), 1);
     const auto& code = module->codesec[0];
 
-    EXPECT_THAT(
-        code.instructions, ElementsAre(Instr::block, Instr::local_get, 0, 0, 0, 0, Instr::br_table,
-                               Instr::i32_const, 0x63, 0, 0, 0, Instr::return_, Instr::end,
-                               Instr::i32_const, 0x64, 0, 0, 0, Instr::end));
+    EXPECT_THAT(code.instructions,
+        ElementsAre(Instr::block, Instr::local_get, 0, 0, 0, 0, Instr::br_table,
+            /*label_count:*/ 0, 0, 0, 0, /*arity:*/ 0, 0, 0, 0, Instr::i32_const, 0x63, 0, 0, 0,
+            Instr::return_, Instr::end, Instr::i32_const, 0x64, 0, 0, 0, Instr::end));
 
     const auto expected_br_imm =
-        "00000000"         // label_count
-        "00000000"         // arity
-        "0e000000"         // code_offset
-        "24000000"         // imm_offset
+        "16000000"         // code_offset
+        "1c000000"         // imm_offset
         "00000000"_bytes;  // stack_drop
     EXPECT_EQ(code.immediates.substr(0, expected_br_imm.size()), expected_br_imm);
     EXPECT_EQ(code.max_stack_height, 1);
@@ -417,8 +413,9 @@ TEST(parser_expr, instr_br_table_as_return)
 
     const auto code_bin = i32_const(0) + "0e00000b"_bytes;
     const auto [code, _] = parse_expr(code_bin);
-    EXPECT_THAT(
-        code.instructions, ElementsAre(Instr::i32_const, 0, 0, 0, 0, Instr::br_table, Instr::end));
+    EXPECT_THAT(code.instructions,
+        ElementsAre(Instr::i32_const, 0, 0, 0, 0, Instr::br_table, /*label_count:*/ 0, 0, 0, 0,
+            /*arity:*/ 0, 0, 0, 0, Instr::end));
     EXPECT_EQ(code.max_stack_height, 1);
 }
 
