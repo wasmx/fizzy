@@ -455,7 +455,7 @@ TEST(parser_expr, call_indirect_table_index)
     const auto code1_bin = i32_const(0) + "1100000b"_bytes;
     const auto [code, pos] = parse_expr(code1_bin, 0, {}, module);
     EXPECT_THAT(code.instructions,
-        ElementsAre(Instr::i32_const, 0, 0, 0, 0, Instr::call_indirect, Instr::end));
+        ElementsAre(Instr::i32_const, 0, 0, 0, 0, Instr::call_indirect, 0, 0, 0, 0, Instr::end));
 
     const auto code2_bin = i32_const(0) + "1100010b"_bytes;
     EXPECT_THROW_MESSAGE(parse_expr(code2_bin, 0, {}, module), parser_error,
