@@ -602,7 +602,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::call:
         {
-            const auto called_func_idx = read<uint32_t>(immediates);
+            const auto called_func_idx = read<uint32_t>(pc);
             const auto& called_func_type = instance.module->get_function_type(called_func_idx);
 
             if (!invoke_function(called_func_type, called_func_idx, instance, stack, depth))
@@ -613,7 +613,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         {
             assert(instance.table != nullptr);
 
-            const auto expected_type_idx = read<uint32_t>(immediates);
+            const auto expected_type_idx = read<uint32_t>(pc);
             assert(expected_type_idx < instance.module->typesec.size());
 
             const auto elem_idx = stack.pop().as<uint32_t>();

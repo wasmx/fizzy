@@ -698,8 +698,9 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             update_operand_stack(
                 frame, operand_stack, callee_func_type.inputs, callee_func_type.outputs);
 
-            push(code.immediates, callee_func_idx);
-            break;
+            code.instructions.push_back(opcode);
+            push(code.instructions, callee_func_idx);
+            continue;
         }
 
         case Instr::call_indirect:
@@ -717,13 +718,14 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             update_operand_stack(
                 frame, operand_stack, callee_func_type.inputs, callee_func_type.outputs);
 
-            push(code.immediates, callee_type_idx);
-
             uint8_t table_idx;
             std::tie(table_idx, pos) = parse_byte(pos, end);
             if (table_idx != 0)
                 throw parser_error{"invalid tableidx encountered with call_indirect"};
-            break;
+
+            code.instructions.push_back(opcode);
+            push(code.instructions, callee_type_idx);
+            continue;
         }
 
         case Instr::local_get:
