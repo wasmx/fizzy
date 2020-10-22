@@ -453,7 +453,7 @@ __attribute__((no_sanitize("float-cast-overflow"))) inline constexpr float demot
     return static_cast<float>(value);
 }
 
-void branch(const Code& code, OperandStack& stack, const Instr*& pc, const uint8_t*& immediates,
+void branch(const Code& code, OperandStack& stack, const uint8_t*& pc, const uint8_t*& immediates,
     uint32_t arity) noexcept
 {
     const auto code_offset = read<uint32_t>(immediates);
@@ -531,12 +531,12 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
     OperandStack stack(args, func_type.inputs.size(), code.local_count,
         static_cast<size_t>(code.max_stack_height));
 
-    const Instr* pc = code.instructions.data();
+    const uint8_t* pc = code.instructions.data();
     const uint8_t* immediates = code.immediates.data();
 
     while (true)
     {
-        const auto instruction = *pc++;
+        const auto instruction = static_cast<Instr>(*pc++);
         switch (instruction)
         {
         case Instr::unreachable:

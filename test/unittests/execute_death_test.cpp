@@ -11,11 +11,11 @@ using namespace fizzy;
 #if !defined(NDEBUG) || __has_feature(undefined_behavior_sanitizer)
 TEST(execute_death, malformed_instruction_opcode)
 {
-    constexpr auto malformed_opcode = static_cast<Instr>(6);
+    constexpr uint8_t malformed_opcode = 6;
 
     Code code;
     code.instructions.emplace_back(malformed_opcode);
-    code.instructions.emplace_back(Instr::end);
+    code.instructions.emplace_back(static_cast<uint8_t>(Instr::end));
 
     auto module = std::make_unique<Module>();
     module->typesec.emplace_back(FuncType{});

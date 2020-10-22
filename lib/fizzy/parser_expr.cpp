@@ -869,7 +869,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             break;
         }
         }
-        code.instructions.emplace_back(instr);
+        code.instructions.emplace_back(opcode);
     }
     assert(control_stack.empty());
     return {code, pos};
