@@ -8,7 +8,6 @@
 #include "parser.hpp"
 #include "stack.hpp"
 #include <cassert>
-#include <iostream>
 
 namespace fizzy
 {
@@ -253,8 +252,6 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
     const std::vector<Locals>& locals, const Module& module)
 {
     Code code;
-
-    const auto code_length = end - pos;
 
     // The stack of control frames allowing to distinguish between block/if/else and label
     // instructions as defined in Wasm Validation Algorithm.
@@ -878,10 +875,6 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         code.instructions.emplace_back(opcode);
     }
     assert(control_stack.empty());
-
-    std::cerr << code.instructions.size() << " " << code_length << " "
-              << (double(code.instructions.size()) / double(code_length)) << "\n";
-
     return {code, pos};
 }
 }  // namespace fizzy
