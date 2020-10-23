@@ -602,30 +602,30 @@ workflows:
   testing:
     unless: <<pipeline.parameters.benchmark>>
     jobs:
-      - lint
-      - release-linux:
-          requires:
-            - release-native-linux
-      - release-native-linux
-      - release-macos:
-          requires:
-            - release-native-macos
-      - release-native-macos:
-          requires:
-            - sanitizers-macos
-      - coverage-gcc
-      - coverage-clang
-      - sanitizers-clang
+#      - lint
+#      - release-linux:
+#          requires:
+#            - release-native-linux
+#      - release-native-linux
+#      - release-macos:
+#          requires:
+#            - release-native-macos
+#      - release-native-macos:
+#          requires:
+#            - sanitizers-macos
+#      - coverage-gcc
+#      - coverage-clang
+#      - sanitizers-clang
       - sanitizers-gcc
-      - sanitizers-macos
-      - fuzzing
-      - spectest:
-          requires:
-            - coverage-clang
-      - bindings-rust
-      - bindings-rust-asan:
-          requires:
-            - bindings-rust
+#      - sanitizers-macos
+#      - fuzzing
+#      - spectest:
+#          requires:
+#            - coverage-clang
+#      - bindings-rust
+#      - bindings-rust-asan:
+#          requires:
+#            - bindings-rust
 
   benchmarking:
     when: <<pipeline.parameters.benchmark>>
