@@ -272,6 +272,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
     const auto type_table = get_instruction_type_table();
     const auto max_align_table = get_instruction_max_align_table();
 
+    code.instructions.reserve(static_cast<size_t>(end - pos) * 3);
+
     bool continue_parsing = true;
     while (continue_parsing)
     {
