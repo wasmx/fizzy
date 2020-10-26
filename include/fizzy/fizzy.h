@@ -20,12 +20,12 @@ typedef struct FizzyInstance FizzyInstance;
 /// The data type representing numeric values.
 ///
 /// i64 member is used to represent values of both i32 and i64 type.
-union FizzyValue
+typedef union FizzyValue
 {
     uint64_t i64;
     float f32;
     double f64;
-};
+} FizzyValue;
 
 /// Result of execution of a function.
 typedef struct FizzyExecutionResult
@@ -36,7 +36,7 @@ typedef struct FizzyExecutionResult
     bool has_value;
     /// Value returned from a function.
     /// Valid only if trapped equals false and has_value equals true.
-    union FizzyValue value;
+    FizzyValue value;
 } FizzyExecutionResult;
 
 
@@ -47,7 +47,7 @@ typedef struct FizzyExecutionResult
 /// @param args         Pointer to the argument array. Can be NULL iff function has no inputs.
 /// @param depth        Call stack depth.
 typedef FizzyExecutionResult (*FizzyExternalFn)(
-    void* context, FizzyInstance* instance, const union FizzyValue* args, int depth);
+    void* context, FizzyInstance* instance, const FizzyValue* args, int depth);
 
 /// Value type.
 typedef uint8_t FizzyValueType;
@@ -190,7 +190,7 @@ size_t fizzy_get_instance_memory_size(FizzyInstance* instance);
 /// When number of passed arguments or their types are different from the ones defined by the
 /// function type, behaviour is undefined.
 FizzyExecutionResult fizzy_execute(
-    FizzyInstance* instance, uint32_t func_idx, const union FizzyValue* args, int depth);
+    FizzyInstance* instance, uint32_t func_idx, const FizzyValue* args, int depth);
 
 #ifdef __cplusplus
 }
