@@ -118,7 +118,9 @@ commands:
             - ~/.hunter/_Base/Cache
       - run:
           name: "Build <<parameters.configuration_name>> (<<parameters.build_type>>)"
-          command: cmake --build ~/build --target <<parameters.target>> -- -j6
+          command: |
+            export CMAKE_BUILD_PARALLEL_LEVEL=${CMAKE_BUILD_PARALLEL_LEVEL:-8}
+            cmake --build ~/build --target <<parameters.target>>
 
   test:
     description: "Test"
