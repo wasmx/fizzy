@@ -136,6 +136,76 @@ TEST(capi, instantiate_imported_function)
     fizzy_free_instance(instance);
 }
 
+TEST(capi, instantiate_imported_globals)
+{
+    /* wat2wasm
+      (global (import "mod1" "g1") (mut i32))
+      (global (import "mod1" "g2") i64)
+      (global (import "mod1" "g3") f32)
+      (global (import "mod1" "g4") (mut f64))
+      (func (result i32) (get_global 0))
+      (func (result i64) (get_global 1))
+      (func (result f32) (get_global 2))
+      (func (result f64) (get_global 3))
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000111046000017f6000017e6000017d6000017c022d04046d6f6431026731037f01046d6f64"
+        "31026732037e00046d6f6431026733037d00046d6f6431026734037c01030504000102030a1504040023000b04"
+        "0023010b040023020b040023030b");
+    auto module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+
+    FizzyValue g1{42};
+    FizzyValue g2{43};
+    FizzyValue g3;
+    g3.f32 = 44.4f;
+    FizzyValue g4;
+    g4.f64 = 45.5;
+    FizzyExternalGlobal globals[] = {{&g1, {FizzyValueTypeI32, true}},
+        {&g2, {FizzyValueTypeI64, false}}, {&g3, {FizzyValueTypeF32, false}},
+        {&g4, {FizzyValueTypeF64, true}}};
+
+    auto instance = fizzy_instantiate(module, nullptr, 0, globals, 4);
+    EXPECT_NE(instance, nullptr);
+
+    EXPECT_THAT(fizzy_execute(instance, 0, nullptr, 0), CResult(42));
+    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, 0), CResult(uint64_t{43}));
+    EXPECT_THAT(fizzy_execute(instance, 2, nullptr, 0), CResult(float(44.4)));
+    EXPECT_THAT(fizzy_execute(instance, 3, nullptr, 0), CResult(45.5));
+
+    fizzy_free_instance(instance);
+
+    // No globals provided.
+    module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+    EXPECT_EQ(fizzy_instantiate(module, nullptr, 0, nullptr, 0), nullptr);
+
+    // Not enough globals provided.
+    module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+    EXPECT_EQ(fizzy_instantiate(module, nullptr, 0, globals, 3), nullptr);
+
+    // Incorrect order or globals.
+    module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+
+    FizzyExternalGlobal globals_incorrect_order[] = {{&g1, {FizzyValueTypeI32, true}},
+        {&g2, {FizzyValueTypeI64, false}}, {&g4, {FizzyValueTypeF64, true}},
+        {&g3, {FizzyValueTypeF32, false}}};
+
+    EXPECT_EQ(fizzy_instantiate(module, nullptr, 0, globals_incorrect_order, 4), nullptr);
+
+    // Global type mismatch.
+    module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+
+    FizzyExternalGlobal globals_type_mismatch[] = {{&g1, {FizzyValueTypeI64, true}},
+        {&g2, {FizzyValueTypeI64, false}}, {&g3, {FizzyValueTypeF32, false}},
+        {&g4, {FizzyValueTypeF64, true}}};
+
+    EXPECT_EQ(fizzy_instantiate(module, nullptr, 0, globals_type_mismatch, 4), nullptr);
+}
+
 TEST(capi, resolve_instantiate_no_imports)
 {
     /* wat2wasm
