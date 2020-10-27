@@ -118,7 +118,9 @@ commands:
             - ~/.hunter/_Base/Cache
       - run:
           name: "Build <<parameters.configuration_name>> (<<parameters.build_type>>)"
-          command: cmake --build ~/build --target <<parameters.target>> -- -j6
+          command: |
+            export CMAKE_BUILD_PARALLEL_LEVEL=${CMAKE_BUILD_PARALLEL_LEVEL:-8}
+            cmake --build ~/build --target <<parameters.target>>
 
   test:
     description: "Test"
@@ -388,6 +390,7 @@ jobs:
   sanitizers-gcc:
     executor: linux-gcc-latest
     environment:
+      CMAKE_BUILD_PARALLEL_LEVEL: 6
       # TODO: Enable detect_stack_use_after_return=1 when https://gcc.gnu.org/bugzilla/show_bug.cgi?id=97414 is fixed.
       ASAN_OPTIONS: detect_invalid_pointer_pairs=2:check_initialization_order=1
       UBSAN_OPTIONS: halt_on_error=1
