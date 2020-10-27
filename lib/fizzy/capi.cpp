@@ -76,6 +76,11 @@ inline const fizzy::Value* unwrap(const FizzyValue* values) noexcept
     return reinterpret_cast<const fizzy::Value*>(values);
 }
 
+inline fizzy::Value* unwrap(FizzyValue* value) noexcept
+{
+    return reinterpret_cast<fizzy::Value*>(value);
+}
+
 inline FizzyInstance* wrap(fizzy::Instance* instance) noexcept
 {
     return reinterpret_cast<FizzyInstance*>(instance);
@@ -157,6 +162,26 @@ inline std::vector<fizzy::ImportedFunction> unwrap(
         imported_functions.begin(), unwrap_imported_func_fn);
     return imported_functions;
 }
+
+inline fizzy::GlobalType unwrap(const FizzyGlobalType& global_type) noexcept
+{
+    return {unwrap(global_type.value_type), global_type.is_mutable};
+}
+
+inline fizzy::ExternalGlobal unwrap(const FizzyExternalGlobal& external_global) noexcept
+{
+    return fizzy::ExternalGlobal{unwrap(external_global.value), unwrap(external_global.type)};
+}
+
+inline std::vector<fizzy::ExternalGlobal> unwrap(
+    const FizzyExternalGlobal* c_external_globals, size_t external_globals_size)
+{
+    std::vector<fizzy::ExternalGlobal> external_globals(external_globals_size);
+    fizzy::ExternalGlobal (*unwrap_external_global_fn)(const FizzyExternalGlobal&) = &unwrap;
+    std::transform(c_external_globals, c_external_globals + external_globals_size,
+        external_globals.begin(), unwrap_external_global_fn);
+    return external_globals;
+}
 }  // namespace
 
 extern "C" {
@@ -208,14 +233,16 @@ bool fizzy_find_exported_function(
 }
 
 FizzyInstance* fizzy_instantiate(const FizzyModule* module,
-    const FizzyExternalFunction* imported_functions, size_t imported_functions_size)
+    const FizzyExternalFunction* imported_functions, size_t imported_functions_size,
+    const FizzyExternalGlobal* imported_globals, size_t imported_globals_size)
 {
     try
     {
         auto functions = unwrap(imported_functions, imported_functions_size);
+        auto globals = unwrap(imported_globals, imported_globals_size);
 
-        auto instance = fizzy::instantiate(
-            std::unique_ptr<const fizzy::Module>(unwrap(module)), std::move(functions));
+        auto instance = fizzy::instantiate(std::unique_ptr<const fizzy::Module>(unwrap(module)),
+            std::move(functions), {}, {}, std::move(globals));
 
         return wrap(instance.release());
     }
@@ -226,16 +253,19 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 }
 
 FizzyInstance* fizzy_resolve_instantiate(const FizzyModule* c_module,
-    const FizzyImportedFunction* c_imported_functions, size_t imported_functions_size)
+    const FizzyImportedFunction* c_imported_functions, size_t imported_functions_size,
+    const FizzyExternalGlobal* imported_globals, size_t imported_globals_size)
 {
     try
     {
         auto imported_functions = unwrap(c_imported_functions, imported_functions_size);
+        auto globals = unwrap(imported_globals, imported_globals_size);
 
         std::unique_ptr<const fizzy::Module> module{unwrap(c_module)};
         auto resolved_imports = fizzy::resolve_imported_functions(*module, imported_functions);
 
-        auto instance = fizzy::instantiate(std::move(module), std::move(resolved_imports));
+        auto instance = fizzy::instantiate(
+            std::move(module), std::move(resolved_imports), {}, {}, std::move(globals));
 
         return wrap(instance.release());
     }
