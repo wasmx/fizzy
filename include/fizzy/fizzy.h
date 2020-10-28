@@ -20,12 +20,12 @@ typedef struct FizzyInstance FizzyInstance;
 /// The data type representing numeric values.
 ///
 /// i64 member is used to represent values of both i32 and i64 type.
-union FizzyValue
+typedef union FizzyValue
 {
     uint64_t i64;
     float f32;
     double f64;
-};
+} FizzyValue;
 
 /// Result of execution of a function.
 typedef struct FizzyExecutionResult
@@ -36,7 +36,7 @@ typedef struct FizzyExecutionResult
     bool has_value;
     /// Value returned from a function.
     /// Valid only if trapped equals false and has_value equals true.
-    union FizzyValue value;
+    FizzyValue value;
 } FizzyExecutionResult;
 
 
@@ -47,7 +47,7 @@ typedef struct FizzyExecutionResult
 /// @param args         Pointer to the argument array. Can be NULL iff function has no inputs.
 /// @param depth        Call stack depth.
 typedef FizzyExecutionResult (*FizzyExternalFn)(
-    void* context, FizzyInstance* instance, const union FizzyValue* args, int depth);
+    void* context, FizzyInstance* instance, const FizzyValue* args, int depth);
 
 /// Value type.
 typedef uint8_t FizzyValueType;
@@ -79,6 +79,22 @@ typedef struct FizzyExternalFunction
     /// Opaque pointer to execution context, that will be passed to function.
     void* context;
 } FizzyExternalFunction;
+
+/// Global type.
+typedef struct FizzyGlobalType
+{
+    FizzyValueType value_type;
+    bool is_mutable;
+} FizzyGlobalType;
+
+/// External global.
+typedef struct FizzyExternalGlobal
+{
+    /// Pointer to global value. Cannot be NULL.
+    FizzyValue* value;
+    /// Type of global.
+    FizzyGlobalType type;
+} FizzyExternalGlobal;
 
 /// Imported function.
 typedef struct FizzyImportedFunction
@@ -131,6 +147,9 @@ bool fizzy_find_exported_function(
 /// @param      imported_functions       Pointer to the imported function array. Can be NULL iff
 ///                                      imported_functions_size equals 0.
 /// @param      imported_functions_size  Size of the imported function array. Can be zero.
+/// @param      imported_globals         Pointer to the imported globals array. Can be NULL iff
+///                                      imported_globals_size equals 0.
+/// @param      imported_globals_size    Size of the imported global array. Can be zero.
 /// @returns    non-NULL pointer to instance in case of success, NULL otherwise.
 ///
 /// @note
@@ -138,8 +157,14 @@ bool fizzy_find_exported_function(
 /// No validation is done on the number of functions passed in, nor on their order.
 /// When number of passed functions or their order is different from the one defined by the
 /// module, behaviour is undefined.
+/// @note
+/// Function expects @a imported_globals to be in the order of imports defined in the module.
+/// No validation is done on the number of globals passed in, nor on their order.
+/// When number of passed globals or their order is different from the one defined by the
+/// module, behaviour is undefined.
 FizzyInstance* fizzy_instantiate(const FizzyModule* module,
-    const FizzyExternalFunction* imported_functions, size_t imported_functions_size);
+    const FizzyExternalFunction* imported_functions, size_t imported_functions_size,
+    const FizzyExternalGlobal* imported_globals, size_t imported_globals_size);
 
 /// Instantiate a module resolving imported functions.
 /// Takes ownership of module, i.e. @p module is invalidated after this call.
@@ -148,14 +173,23 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 /// @param      imported_functions       Pointer to the imported function array. Can be NULL iff
 ///                                      imported_functions_size equals 0.
 /// @param      imported_functions_size  Size of the imported function array. Can be zero.
+/// @param      imported_globals         Pointer to the imported globals array. Can be NULL iff
+///                                      imported_globals_size equals 0.
+/// @param      imported_globals_size    Size of the imported global array. Can be zero.
 /// @returns    non-NULL pointer to instance in case of success, NULL otherwise.
 ///
 /// @note
 /// Functions in @a imported_functions are allowed to be in any order and allowed to include some
 /// functions not required by the module.
 /// Functions are matched to module's imports based on their module and name strings.
+/// @note
+/// Function expects @a imported_globals to be in the order of imports defined in the module.
+/// No validation is done on the number of globals passed in, nor on their order.
+/// When number of passed globals or their order is different from the one defined by the
+/// module, behaviour is undefined.
 FizzyInstance* fizzy_resolve_instantiate(const FizzyModule* module,
-    const FizzyImportedFunction* imported_functions, size_t imported_functions_size);
+    const FizzyImportedFunction* imported_functions, size_t imported_functions_size,
+    const FizzyExternalGlobal* imported_globals, size_t imported_globals_size);
 
 /// Free resources associated with the instance.
 /// If passed pointer is NULL, has no effect.
@@ -190,7 +224,7 @@ size_t fizzy_get_instance_memory_size(FizzyInstance* instance);
 /// When number of passed arguments or their types are different from the ones defined by the
 /// function type, behaviour is undefined.
 FizzyExecutionResult fizzy_execute(
-    FizzyInstance* instance, uint32_t func_idx, const union FizzyValue* args, int depth);
+    FizzyInstance* instance, uint32_t func_idx, const FizzyValue* args, int depth);
 
 #ifdef __cplusplus
 }
