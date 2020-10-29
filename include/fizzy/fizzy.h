@@ -243,6 +243,15 @@ uint8_t* fizzy_get_instance_memory_data(FizzyInstance* instance);
 /// @note    Function returns memory size regardless of whether memory is exported or not.
 size_t fizzy_get_instance_memory_size(FizzyInstance* instance);
 
+/// Find exported table by name.
+///
+/// @param  instance        Pointer to instance.
+/// @param  name            The table name. NULL-terminated string. Cannot be NULL.
+/// @param  out_table       Pointer to output struct to store found table. Cannot be NULL.
+/// @returns                true if table was found, false otherwise.
+bool fizzy_find_exported_table(
+    FizzyInstance* instance, const char* name, FizzyExternalTable* out_table);
+
 /// Find exported global by name.
 ///
 /// @param  instance        Pointer to instance.

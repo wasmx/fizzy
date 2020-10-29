@@ -168,14 +168,29 @@ inline std::vector<fizzy::ImportedFunction> unwrap(
     return imported_functions;
 }
 
+inline FizzyTable* wrap(fizzy::table_elements* table) noexcept
+{
+    return reinterpret_cast<FizzyTable*>(table);
+}
+
 inline fizzy::table_elements* unwrap(FizzyTable* table) noexcept
 {
     return reinterpret_cast<fizzy::table_elements*>(table);
 }
 
+inline FizzyLimits wrap(const fizzy::Limits& limits) noexcept
+{
+    return {limits.min, (limits.max.has_value() ? *limits.max : 0), limits.max.has_value()};
+}
+
 inline fizzy::Limits unwrap(const FizzyLimits& limits) noexcept
 {
     return {limits.min, limits.has_max ? std::make_optional(limits.max) : std::nullopt};
+}
+
+inline FizzyExternalTable wrap(const fizzy::ExternalTable& external_table) noexcept
+{
+    return {wrap(external_table.table), wrap(external_table.limits)};
 }
 
 inline fizzy::ExternalTable unwrap(const FizzyExternalTable& external_table) noexcept
@@ -265,6 +280,17 @@ bool fizzy_find_exported_function(
         return false;
 
     *out_func_idx = *optional_func_idx;
+    return true;
+}
+
+bool fizzy_find_exported_table(
+    FizzyInstance* instance, const char* name, FizzyExternalTable* out_table)
+{
+    const auto optional_external_table = fizzy::find_exported_table(*unwrap(instance), name);
+    if (!optional_external_table)
+        return false;
+
+    *out_table = wrap(*optional_external_table);
     return true;
 }
 
