@@ -21,7 +21,6 @@ endif()
 if(SANITIZE MATCHES address)
     # Instrument WABT with ASan - required for container-overflow checks.
     set(CPPFLAGS "-fsanitize=address ${CPPFLAGS}")
-    set(CXXFLAGS "-D_GLIBCXX_SANITIZE_VECTOR ${CXXFLAGS}")
 endif()
 
 set(CXXFLAGS "${CPPFLAGS} ${CXXFLAGS}")
