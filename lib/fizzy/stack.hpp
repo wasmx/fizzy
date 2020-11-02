@@ -101,7 +101,10 @@ public:
         const Value* args, size_t num_args, size_t num_local_variables, size_t max_stack_height)
     {
         const auto num_locals = num_args + num_local_variables;
-        const auto storage_size_required = num_locals + max_stack_height;
+        // To avoid potential UB when there are no locals and the stack pointer is set to
+        // m_bottom - 1 (i.e. before storage array), we allocate one additional unused stack item.
+        const auto num_locals_adjusted = num_locals + (num_locals == 0);  // Bump to 1 if 0.
+        const auto storage_size_required = num_locals_adjusted + max_stack_height;
 
         if (storage_size_required <= small_storage_size)
         {
@@ -113,7 +116,7 @@ public:
             m_locals = &m_large_storage[0];
         }
 
-        m_bottom = m_locals + num_locals;
+        m_bottom = m_locals + num_locals_adjusted;
         m_top = m_bottom - 1;
 
         const auto local_variables = std::copy_n(args, num_args, m_locals);

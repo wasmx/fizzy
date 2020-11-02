@@ -231,6 +231,7 @@ TEST(operand_stack, large)
     constexpr auto max_height = 33;
     OperandStack stack(nullptr, 0, 0, max_height);
     ASSERT_GT(address_diff(&stack, stack.rbegin()), 100) << "not allocated on the heap";
+    EXPECT_EQ(stack.size(), 0);
 
     for (unsigned i = 0; i < max_height; ++i)
         stack.push(i);
@@ -325,4 +326,18 @@ TEST(operand_stack, to_vector)
     EXPECT_EQ(result[0].i32, 1);
     EXPECT_EQ(result[1].i32, 2);
     EXPECT_EQ(result[2].i32, 3);
+}
+
+TEST(operand_stack, hidden_stack_item)
+{
+    constexpr auto max_height = 33;
+    OperandStack stack(nullptr, 0, 0, max_height);
+    ASSERT_GT(address_diff(&stack, stack.rbegin()), 100) << "not allocated on the heap";
+    EXPECT_EQ(stack.size(), 0);
+    EXPECT_EQ(stack.rbegin(), stack.rend());
+
+    // Even when stack is empty, there exists a single hidden item slot.
+    const_cast<fizzy::Value*>(stack.rbegin())->i64 = 1;
+    EXPECT_EQ(stack.rbegin()->i64, 1);
+    EXPECT_EQ(stack.rend()->i64, 1);
 }
