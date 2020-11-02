@@ -381,7 +381,7 @@ jobs:
       - checkout
       - build:
           build_type: RelWithDebInfo
-          cmake_options: -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
+          cmake_options: -DCMAKE_TOOLCHAIN_FILE=~/project/cmake/toolchains/libc++.cmake -DENABLE_ASSERTIONS=ON -DSANITIZE=address,undefined,nullability,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation
       - test
       - benchmark:
           min_time: "0.01"

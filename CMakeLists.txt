@@ -70,13 +70,6 @@ if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
     endif()
 endif()
 
-if(SANITIZE MATCHES address)
-    # Enables ASan-powered checks in std::vector in libstdc++.
-    # For sanity, this may be applied for libstdc++ builds, but it is not easy to detect
-    # what standard library implementation is being used.
-    add_compile_definitions(_GLIBCXX_SANITIZE_VECTOR)
-endif()
-
 # An option to enable assertions in non-Debug build types.
 # Disabling assertions in Debug build type has no effect (assertions are still enabled).
 option(ENABLE_ASSERTIONS "Enable NDEBUG based assertions" OFF)
