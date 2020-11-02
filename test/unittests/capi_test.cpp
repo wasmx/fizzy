@@ -157,6 +157,65 @@ TEST(capi, find_exported_table_no_max)
     fizzy_free_instance(instance);
 }
 
+TEST(capi, find_exported_memory)
+{
+    /* wat2wasm
+    (module
+      (func (export "foo") (result i32) (i32.const 42))
+      (global (export "g1") i32 (i32.const 42))
+      (table (export "tab") 10 30 anyfunc)
+      (memory (export "mem") 1 2)
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000105016000017f0302010004050170010a1e0504010101020606017f00412a0b0718040366"
+        "6f6f00000267310300037461620100036d656d02000a06010400412a0b");
+
+    auto module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+
+    auto instance = fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0);
+    ASSERT_NE(instance, nullptr);
+
+    FizzyExternalMemory memory;
+    ASSERT_TRUE(fizzy_find_exported_memory(instance, "mem", &memory));
+    EXPECT_NE(memory.memory, nullptr);
+    EXPECT_EQ(memory.limits.min, 1);
+    EXPECT_TRUE(memory.limits.has_max);
+    EXPECT_EQ(memory.limits.max, 2);
+
+    EXPECT_FALSE(fizzy_find_exported_memory(instance, "mem2", &memory));
+    EXPECT_FALSE(fizzy_find_exported_memory(instance, "foo", &memory));
+    EXPECT_FALSE(fizzy_find_exported_memory(instance, "g1", &memory));
+    EXPECT_FALSE(fizzy_find_exported_memory(instance, "tab", &memory));
+
+    fizzy_free_instance(instance);
+}
+
+TEST(capi, find_exported_memory_no_max)
+{
+    /* wat2wasm
+    (module
+      (memory (export "mem") 1)
+    )
+    */
+    const auto wasm = from_hex("0061736d010000000503010001070701036d656d0200");
+
+    auto module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+
+    auto instance = fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0);
+    ASSERT_NE(instance, nullptr);
+
+    FizzyExternalMemory memory;
+    ASSERT_TRUE(fizzy_find_exported_memory(instance, "mem", &memory));
+    EXPECT_NE(memory.memory, nullptr);
+    EXPECT_EQ(memory.limits.min, 1);
+    EXPECT_FALSE(memory.limits.has_max);
+
+    fizzy_free_instance(instance);
+}
+
 TEST(capi, find_exported_global)
 {
     /* wat2wasm
@@ -705,6 +764,42 @@ TEST(capi, imported_table_from_another_module)
     ASSERT_NE(instance2, nullptr);
 
     EXPECT_THAT(fizzy_execute(instance2, 0, nullptr, 0), CResult(42));
+
+    fizzy_free_instance(instance2);
+    fizzy_free_instance(instance1);
+}
+
+TEST(capi, imported_memory_from_another_module)
+{
+    /* wat2wasm
+      (memory (export "m") 1)
+      (data (i32.const 10) "\aa\ff")
+    */
+    const auto bin1 = from_hex("0061736d010000000503010001070501016d02000b080100410a0b02aaff");
+    auto module1 = fizzy_parse(bin1.data(), bin1.size());
+    ASSERT_NE(module1, nullptr);
+    auto instance1 = fizzy_instantiate(module1, nullptr, 0, nullptr, nullptr, nullptr, 0);
+    ASSERT_NE(instance1, nullptr);
+
+    /* wat2wasm
+      (memory (import "m1" "m") 1)
+      (func (result i32)
+        (i32.const 9)
+        (i32.load)
+      )
+    */
+    const auto bin2 = from_hex(
+        "0061736d010000000105016000017f020901026d31016d020001030201000a0901070041092802000b");
+    auto module2 = fizzy_parse(bin2.data(), bin2.size());
+    ASSERT_NE(module2, nullptr);
+
+    FizzyExternalMemory memory;
+    ASSERT_TRUE(fizzy_find_exported_memory(instance1, "m", &memory));
+
+    auto instance2 = fizzy_instantiate(module2, nullptr, 0, nullptr, &memory, nullptr, 0);
+    ASSERT_NE(instance2, nullptr);
+
+    EXPECT_THAT(fizzy_execute(instance2, 0, nullptr, 0), CResult(0x00ffaa00));
 
     fizzy_free_instance(instance2);
     fizzy_free_instance(instance1);
