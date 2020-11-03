@@ -19,7 +19,9 @@ target_sources(
     execute_call_test.cpp
     execute_control_test.cpp
     execute_death_test.cpp
+    execute_floating_point_conversion_test.cpp
     execute_floating_point_test.cpp
+    execute_floating_point_test.hpp
     execute_numeric_test.cpp
     execute_test.cpp
     floating_point_utils_test.cpp
