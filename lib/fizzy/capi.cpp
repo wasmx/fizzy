@@ -66,6 +66,11 @@ inline fizzy::Value unwrap(FizzyValue value) noexcept
     return fizzy::bit_cast<fizzy::Value>(value);
 }
 
+inline FizzyValue* wrap(fizzy::Value* values) noexcept
+{
+    return reinterpret_cast<FizzyValue*>(values);
+}
+
 inline const FizzyValue* wrap(const fizzy::Value* values) noexcept
 {
     return reinterpret_cast<const FizzyValue*>(values);
@@ -163,14 +168,24 @@ inline std::vector<fizzy::ImportedFunction> unwrap(
     return imported_functions;
 }
 
+inline FizzyGlobalType wrap(const fizzy::GlobalType& global_type) noexcept
+{
+    return {wrap(global_type.value_type), global_type.is_mutable};
+}
+
 inline fizzy::GlobalType unwrap(const FizzyGlobalType& global_type) noexcept
 {
     return {unwrap(global_type.value_type), global_type.is_mutable};
 }
 
+inline FizzyExternalGlobal wrap(const fizzy::ExternalGlobal& external_global) noexcept
+{
+    return {wrap(external_global.value), wrap(external_global.type)};
+}
+
 inline fizzy::ExternalGlobal unwrap(const FizzyExternalGlobal& external_global) noexcept
 {
-    return fizzy::ExternalGlobal{unwrap(external_global.value), unwrap(external_global.type)};
+    return {unwrap(external_global.value), unwrap(external_global.type)};
 }
 
 inline std::vector<fizzy::ExternalGlobal> unwrap(
@@ -229,6 +244,17 @@ bool fizzy_find_exported_function(
         return false;
 
     *out_func_idx = *optional_func_idx;
+    return true;
+}
+
+bool fizzy_find_exported_global(
+    FizzyInstance* instance, const char* name, FizzyExternalGlobal* out_global)
+{
+    const auto optional_external_global = fizzy::find_exported_global(*unwrap(instance), name);
+    if (!optional_external_global)
+        return false;
+
+    *out_global = wrap(*optional_external_global);
     return true;
 }
 

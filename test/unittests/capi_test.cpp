@@ -98,6 +98,40 @@ TEST(capi, find_exported_function)
     fizzy_free_module(module);
 }
 
+TEST(capi, find_exported_global)
+{
+    /* wat2wasm
+    (module
+      (func $f (export "foo") (result i32) (i32.const 42))
+      (global (export "g1") i32 (i32.const 42))
+      (table (export "tab") 0 anyfunc)
+      (memory (export "mem") 1 2)
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000105016000017f030201000404017000000504010101020606017f00412a0b07180403666f"
+        "6f00000267310300037461620100036d656d02000a06010400412a0b");
+
+    auto module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+
+    auto instance = fizzy_instantiate(module, nullptr, 0, nullptr, 0);
+    ASSERT_NE(instance, nullptr);
+
+    FizzyExternalGlobal global;
+    ASSERT_TRUE(fizzy_find_exported_global(instance, "g1", &global));
+    EXPECT_EQ(global.type.value_type, FizzyValueTypeI32);
+    EXPECT_FALSE(global.type.is_mutable);
+    EXPECT_EQ(global.value->i64, 42);
+
+    EXPECT_FALSE(fizzy_find_exported_global(instance, "g2", &global));
+    EXPECT_FALSE(fizzy_find_exported_global(instance, "foo", &global));
+    EXPECT_FALSE(fizzy_find_exported_global(instance, "tab", &global));
+    EXPECT_FALSE(fizzy_find_exported_global(instance, "mem", &global));
+
+    fizzy_free_instance(instance);
+}
+
 TEST(capi, instantiate)
 {
     uint8_t wasm_prefix[]{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00};
@@ -569,6 +603,42 @@ TEST(capi, imported_function_from_another_module)
 
     FizzyValue args[] = {{44}, {2}};
     EXPECT_THAT(fizzy_execute(instance2, 1, args, 0), CResult(42));
+
+    fizzy_free_instance(instance2);
+    fizzy_free_instance(instance1);
+}
+
+TEST(capi, imported_global_from_another_module)
+{
+    /* wat2wasm
+      (global (export "g") i32 (i32.const 42))
+    */
+    const auto bin1 = from_hex("0061736d010000000606017f00412a0b07050101670300");
+    auto module1 = fizzy_parse(bin1.data(), bin1.size());
+    ASSERT_NE(module1, nullptr);
+    auto instance1 = fizzy_instantiate(module1, nullptr, 0, nullptr, 0);
+    ASSERT_NE(instance1, nullptr);
+
+    /* wat2wasm
+    (module
+      (global (import "m1" "g") i32)
+      (func (result i32)
+        get_global 0
+      )
+    )
+    */
+    const auto bin2 =
+        from_hex("0061736d010000000105016000017f020901026d310167037f00030201000a0601040023000b");
+    auto module2 = fizzy_parse(bin2.data(), bin2.size());
+    ASSERT_NE(module2, nullptr);
+
+    FizzyExternalGlobal global;
+    ASSERT_TRUE(fizzy_find_exported_global(instance1, "g", &global));
+
+    auto instance2 = fizzy_instantiate(module2, nullptr, 0, &global, 1);
+    ASSERT_NE(instance2, nullptr);
+
+    EXPECT_THAT(fizzy_execute(instance2, 0, nullptr, 0), CResult(42));
 
     fizzy_free_instance(instance2);
     fizzy_free_instance(instance1);

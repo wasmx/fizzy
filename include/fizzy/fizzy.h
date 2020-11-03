@@ -213,6 +213,15 @@ uint8_t* fizzy_get_instance_memory_data(FizzyInstance* instance);
 /// @note    Function returns memory size regardless of whether memory is exported or not.
 size_t fizzy_get_instance_memory_size(FizzyInstance* instance);
 
+/// Find exported global by name.
+///
+/// @param  instance        Pointer to instance.
+/// @param  name            The global name. NULL-terminated string. Cannot be NULL.
+/// @param  out_global      Pointer to output struct to store found global. Cannot be NULL.
+/// @returns                true if global was found, false otherwise.
+bool fizzy_find_exported_global(
+    FizzyInstance* instance, const char* name, FizzyExternalGlobal* out_global);
+
 /// Execute module function.
 ///
 /// @param instance     Pointer to module instance.
