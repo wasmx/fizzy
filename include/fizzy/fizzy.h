@@ -87,6 +87,30 @@ typedef struct FizzyGlobalType
     bool is_mutable;
 } FizzyGlobalType;
 
+/// The opaque data type representing a table.
+typedef struct FizzyTable FizzyTable;
+
+/// Limits.
+typedef struct FizzyLimits
+{
+    /// Minimum value.
+    uint32_t min;
+    /// Maximum value.
+    /// Valid only if has_max equals true.
+    uint32_t max;
+    /// Whether limits has maximum value.
+    bool has_max;
+} FizzyLimits;
+
+/// External table.
+typedef struct FizzyExternalTable
+{
+    /// Opaque pointer to table data.
+    FizzyTable* table;
+    /// Table limits.
+    FizzyLimits limits;
+} FizzyExternalTable;
+
 /// External global.
 typedef struct FizzyExternalGlobal
 {
@@ -147,6 +171,8 @@ bool fizzy_find_exported_function(
 /// @param      imported_functions       Pointer to the imported function array. Can be NULL iff
 ///                                      imported_functions_size equals 0.
 /// @param      imported_functions_size  Size of the imported function array. Can be zero.
+/// @param      imported_table           Pointer to the imported table. Can be NULL iff module
+///                                      doesn't import a table.
 /// @param      imported_globals         Pointer to the imported globals array. Can be NULL iff
 ///                                      imported_globals_size equals 0.
 /// @param      imported_globals_size    Size of the imported global array. Can be zero.
@@ -164,7 +190,8 @@ bool fizzy_find_exported_function(
 /// module, behaviour is undefined.
 FizzyInstance* fizzy_instantiate(const FizzyModule* module,
     const FizzyExternalFunction* imported_functions, size_t imported_functions_size,
-    const FizzyExternalGlobal* imported_globals, size_t imported_globals_size);
+    const FizzyExternalTable* imported_table, const FizzyExternalGlobal* imported_globals,
+    size_t imported_globals_size);
 
 /// Instantiate a module resolving imported functions.
 /// Takes ownership of module, i.e. @p module is invalidated after this call.
@@ -173,6 +200,8 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 /// @param      imported_functions       Pointer to the imported function array. Can be NULL iff
 ///                                      imported_functions_size equals 0.
 /// @param      imported_functions_size  Size of the imported function array. Can be zero.
+/// @param      imported_table           Pointer to the imported table. Can be NULL iff module
+///                                      doesn't import a table.
 /// @param      imported_globals         Pointer to the imported globals array. Can be NULL iff
 ///                                      imported_globals_size equals 0.
 /// @param      imported_globals_size    Size of the imported global array. Can be zero.
@@ -189,7 +218,8 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 /// module, behaviour is undefined.
 FizzyInstance* fizzy_resolve_instantiate(const FizzyModule* module,
     const FizzyImportedFunction* imported_functions, size_t imported_functions_size,
-    const FizzyExternalGlobal* imported_globals, size_t imported_globals_size);
+    const FizzyExternalTable* imported_table, const FizzyExternalGlobal* imported_globals,
+    size_t imported_globals_size);
 
 /// Free resources associated with the instance.
 /// If passed pointer is NULL, has no effect.
@@ -212,6 +242,15 @@ uint8_t* fizzy_get_instance_memory_data(FizzyInstance* instance);
 /// @returns Size of memory in bytes or 0 in case instance doesn't have any memory.
 /// @note    Function returns memory size regardless of whether memory is exported or not.
 size_t fizzy_get_instance_memory_size(FizzyInstance* instance);
+
+/// Find exported table by name.
+///
+/// @param  instance        Pointer to instance.
+/// @param  name            The table name. NULL-terminated string. Cannot be NULL.
+/// @param  out_table       Pointer to output struct to store found table. Cannot be NULL.
+/// @returns                true if table was found, false otherwise.
+bool fizzy_find_exported_table(
+    FizzyInstance* instance, const char* name, FizzyExternalTable* out_table);
 
 /// Find exported global by name.
 ///
