@@ -159,6 +159,25 @@ TEST(execute_call, call_indirect_imported_table)
 {
     /* wat2wasm
     (module
+     (table 5 20 anyfunc)
+     (export "t" (table 0))
+     (elem (i32.const 0) $f3 $f2 $f1 $f4 $f5)
+     (func $f1 (result i32) (i32.const 1))
+     (func $f2 (result i32) (i32.const 2))
+     (func $f3 (result i32) (i32.const 3))
+     (func $f4 (result i64) (i64.const 4))
+     (func $f5 (result i32) unreachable)
+    )
+    */
+    const auto bin_exported_table = from_hex(
+        "0061736d010000000109026000017f6000017e03060500000001000405017001051407050101740100090b0100"
+        "41000b0502010003040a1905040041010b040041020b040041030b040042040b0300000b");
+    auto instance_exported_table = instantiate(parse(bin_exported_table));
+    auto table = find_exported_table(*instance_exported_table, "t");
+    ASSERT_TRUE(table.has_value());
+
+    /* wat2wasm
+    (module
       (type $out_i32 (func (result i32)))
       (import "m" "t" (table 5 20 anyfunc))
 
@@ -171,19 +190,7 @@ TEST(execute_call, call_indirect_imported_table)
         "0061736d01000000010a026000017f60017f017f020a01016d01740170010514030201010a0901070020001100"
         "000b");
 
-    auto f1 = [](Instance&, const Value*, int) { return Value{1}; };
-    auto f2 = [](Instance&, const Value*, int) { return Value{2}; };
-    auto f3 = [](Instance&, const Value*, int) { return Value{3}; };
-    auto f4 = [](Instance&, const Value*, int) { return Value{4}; };
-    auto f5 = [](Instance&, const Value*, int) { return Trap; };
-
-    auto out_i32 = FuncType{{}, {ValType::i32}};
-    auto out_i64 = FuncType{{}, {ValType::i64}};
-
-    table_elements table{
-        {{f3, out_i32}}, {{f2, out_i32}}, {{f1, out_i32}}, {{f4, out_i64}}, {{f5, out_i32}}};
-
-    auto instance = instantiate(parse(bin), {}, {{&table, {5, 20}}});
+    auto instance = instantiate(parse(bin), {}, {*table});
 
     for (const auto param : {0u, 1u, 2u})
     {
