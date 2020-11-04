@@ -173,7 +173,7 @@ FizzyFunctionType fizzy_get_function_type(const FizzyModule* module, uint32_t fu
 /// @param  name            The function name. NULL-terminated string. Cannot be NULL.
 /// @param  out_func_idx    Pointer to output where function index will be stored. Cannot be NULL.
 /// @returns                true if function was found, false otherwise.
-bool fizzy_find_exported_function(
+bool fizzy_find_exported_function_index(
     const FizzyModule* module, const char* name, uint32_t* out_func_idx);
 
 /// Instantiate a module.

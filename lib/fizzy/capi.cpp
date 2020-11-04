@@ -298,7 +298,7 @@ FizzyFunctionType fizzy_get_function_type(const FizzyModule* module, uint32_t fu
     return wrap(unwrap(module)->get_function_type(func_idx));
 }
 
-bool fizzy_find_exported_function(
+bool fizzy_find_exported_function_index(
     const FizzyModule* module, const char* name, uint32_t* out_func_idx)
 {
     const auto optional_func_idx = fizzy::find_exported_function(*unwrap(module), name);

@@ -97,7 +97,7 @@ std::optional<WasmEngine::FuncRef> FizzyCEngine::find_function(
     std::string_view name, std::string_view /*signature*/) const
 {
     uint32_t func_idx;
-    if (!fizzy_find_exported_function(
+    if (!fizzy_find_exported_function_index(
             fizzy_get_instance_module(m_instance.get()), std::string{name}.c_str(), &func_idx))
         return std::nullopt;
 

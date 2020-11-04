@@ -69,7 +69,7 @@ TEST(capi, get_function_type)
     fizzy_free_module(module);
 }
 
-TEST(capi, find_exported_function)
+TEST(capi, find_exported_function_index)
 {
     /* wat2wasm
     (module
@@ -87,13 +87,13 @@ TEST(capi, find_exported_function)
     ASSERT_NE(module, nullptr);
 
     uint32_t func_idx;
-    EXPECT_TRUE(fizzy_find_exported_function(module, "foo", &func_idx));
+    EXPECT_TRUE(fizzy_find_exported_function_index(module, "foo", &func_idx));
     EXPECT_EQ(func_idx, 0);
 
-    EXPECT_FALSE(fizzy_find_exported_function(module, "bar", &func_idx));
-    EXPECT_FALSE(fizzy_find_exported_function(module, "g1", &func_idx));
-    EXPECT_FALSE(fizzy_find_exported_function(module, "tab", &func_idx));
-    EXPECT_FALSE(fizzy_find_exported_function(module, "mem", &func_idx));
+    EXPECT_FALSE(fizzy_find_exported_function_index(module, "bar", &func_idx));
+    EXPECT_FALSE(fizzy_find_exported_function_index(module, "g1", &func_idx));
+    EXPECT_FALSE(fizzy_find_exported_function_index(module, "tab", &func_idx));
+    EXPECT_FALSE(fizzy_find_exported_function_index(module, "mem", &func_idx));
 
     fizzy_free_module(module);
 }
@@ -731,7 +731,7 @@ TEST(capi, imported_function_from_another_module)
     ASSERT_NE(module2, nullptr);
 
     uint32_t func_idx;
-    ASSERT_TRUE(fizzy_find_exported_function(module1, "sub", &func_idx));
+    ASSERT_TRUE(fizzy_find_exported_function_index(module1, "sub", &func_idx));
 
     auto host_context = std::make_pair(instance1, func_idx);
 
