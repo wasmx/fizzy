@@ -84,14 +84,14 @@ constexpr int popcount(uint64_t x) noexcept
     return __builtin_popcountll(x);
 }
 
-inline int countl_zero(uint32_t value) noexcept
+constexpr int countl_zero(uint32_t value) noexcept
 {
     if (value == 0)
         return 32;
     return __builtin_clz(value);
 }
 
-inline int countl_zero(uint64_t value) noexcept
+constexpr int countl_zero(uint64_t value) noexcept
 {
     // NOTE: C++20 specifies this case, but C/C++ intrinsic leaves it as undefined.
     if (value == 0)
@@ -99,14 +99,14 @@ inline int countl_zero(uint64_t value) noexcept
     return __builtin_clzll(value);
 }
 
-inline int countr_zero(uint32_t value) noexcept
+constexpr int countr_zero(uint32_t value) noexcept
 {
     if (value == 0)
         return 32;
     return __builtin_ctz(value);
 }
 
-inline int countr_zero(uint64_t value) noexcept
+constexpr int countr_zero(uint64_t value) noexcept
 {
     if (value == 0)
         return 64;
