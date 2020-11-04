@@ -178,6 +178,11 @@ inline fizzy::table_elements* unwrap(FizzyTable* table) noexcept
     return reinterpret_cast<fizzy::table_elements*>(table);
 }
 
+inline fizzy::bytes* unwrap(FizzyMemory* memory) noexcept
+{
+    return reinterpret_cast<fizzy::bytes*>(memory);
+}
+
 inline FizzyLimits wrap(const fizzy::Limits& limits) noexcept
 {
     return {limits.min, (limits.max.has_value() ? *limits.max : 0), limits.max.has_value()};
@@ -198,10 +203,21 @@ inline fizzy::ExternalTable unwrap(const FizzyExternalTable& external_table) noe
     return {unwrap(external_table.table), unwrap(external_table.limits)};
 }
 
+inline fizzy::ExternalMemory unwrap(const FizzyExternalMemory& external_memory) noexcept
+{
+    return {unwrap(external_memory.memory), unwrap(external_memory.limits)};
+}
+
 inline std::vector<fizzy::ExternalTable> unwrap(const FizzyExternalTable* external_table)
 {
     return external_table ? std::vector<fizzy::ExternalTable>{unwrap(*external_table)} :
                             std::vector<fizzy::ExternalTable>{};
+}
+
+inline std::vector<fizzy::ExternalMemory> unwrap(const FizzyExternalMemory* external_memory)
+{
+    return external_memory ? std::vector<fizzy::ExternalMemory>{unwrap(*external_memory)} :
+                             std::vector<fizzy::ExternalMemory>{};
 }
 
 inline FizzyGlobalType wrap(const fizzy::GlobalType& global_type) noexcept
@@ -307,17 +323,18 @@ bool fizzy_find_exported_global(
 
 FizzyInstance* fizzy_instantiate(const FizzyModule* module,
     const FizzyExternalFunction* imported_functions, size_t imported_functions_size,
-    const FizzyExternalTable* imported_table, const FizzyExternalGlobal* imported_globals,
-    size_t imported_globals_size)
+    const FizzyExternalTable* imported_table, const FizzyExternalMemory* imported_memory,
+    const FizzyExternalGlobal* imported_globals, size_t imported_globals_size)
 {
     try
     {
         auto functions = unwrap(imported_functions, imported_functions_size);
         auto table = unwrap(imported_table);
+        auto memory = unwrap(imported_memory);
         auto globals = unwrap(imported_globals, imported_globals_size);
 
         auto instance = fizzy::instantiate(std::unique_ptr<const fizzy::Module>(unwrap(module)),
-            std::move(functions), std::move(table), {}, std::move(globals));
+            std::move(functions), std::move(table), std::move(memory), std::move(globals));
 
         return wrap(instance.release());
     }
@@ -329,20 +346,21 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 
 FizzyInstance* fizzy_resolve_instantiate(const FizzyModule* c_module,
     const FizzyImportedFunction* c_imported_functions, size_t imported_functions_size,
-    const FizzyExternalTable* imported_table, const FizzyExternalGlobal* imported_globals,
-    size_t imported_globals_size)
+    const FizzyExternalTable* imported_table, const FizzyExternalMemory* imported_memory,
+    const FizzyExternalGlobal* imported_globals, size_t imported_globals_size)
 {
     try
     {
         auto imported_functions = unwrap(c_imported_functions, imported_functions_size);
         auto table = unwrap(imported_table);
+        auto memory = unwrap(imported_memory);
         auto globals = unwrap(imported_globals, imported_globals_size);
 
         std::unique_ptr<const fizzy::Module> module{unwrap(c_module)};
         auto resolved_imports = fizzy::resolve_imported_functions(*module, imported_functions);
 
         auto instance = fizzy::instantiate(std::move(module), std::move(resolved_imports),
-            std::move(table), {}, std::move(globals));
+            std::move(table), std::move(memory), std::move(globals));
 
         return wrap(instance.release());
     }
