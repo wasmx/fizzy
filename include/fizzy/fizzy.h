@@ -177,7 +177,12 @@ bool fizzy_find_exported_function(
     const FizzyModule* module, const char* name, uint32_t* out_func_idx);
 
 /// Instantiate a module.
-/// Takes ownership of module, i.e. @p module is invalidated after this call.
+///
+/// The instance takes ownership of the module, i.e. fizzy_free_module must not be called on the
+/// module after this call.
+/// For simplicity a module cannot be shared among several instances (calling fizzy_instatiate more
+/// than once with the same module results in undefined behaviour), but after fizzy_instantiate
+/// functions querying module info can still be called with @p module.
 ///
 /// @param      module                   Pointer to module.
 /// @param      imported_functions       Pointer to the imported function array. Can be NULL iff
@@ -199,6 +204,7 @@ bool fizzy_find_exported_function(
 /// No validation is done on the number of functions passed in, nor on their order.
 /// When number of passed functions or their order is different from the one defined by the
 /// module, behaviour is undefined.
+///
 /// @note
 /// Function expects @a imported_globals to be in the order of imports defined in the module.
 /// No validation is done on the number of globals passed in, nor on their order.
@@ -210,7 +216,12 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
     const FizzyExternalGlobal* imported_globals, size_t imported_globals_size);
 
 /// Instantiate a module resolving imported functions.
-/// Takes ownership of module, i.e. @p module is invalidated after this call.
+///
+/// The instance takes ownership of the module, i.e. fizzy_free_module must not be called on the
+/// module after this call.
+/// For simplicity a module cannot be shared among several instances (calling fizzy_instatiate more
+/// than once with the same module results in undefined behaviour), but after fizzy_instantiate
+/// functions querying module info can still be called with @p module.
 ///
 /// @param      module                   Pointer to module.
 /// @param      imported_functions       Pointer to the imported function array. Can be NULL iff
@@ -231,6 +242,7 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 /// Functions in @a imported_functions are allowed to be in any order and allowed to include some
 /// functions not required by the module.
 /// Functions are matched to module's imports based on their module and name strings.
+///
 /// @note
 /// Function expects @a imported_globals to be in the order of imports defined in the module.
 /// No validation is done on the number of globals passed in, nor on their order.
