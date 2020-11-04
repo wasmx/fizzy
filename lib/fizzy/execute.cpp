@@ -254,12 +254,12 @@ inline constexpr T rotr(T lhs, T rhs) noexcept
     return (lhs >> k) | (lhs << (num_bits - k));
 }
 
-inline uint32_t clz32(uint32_t value) noexcept
+constexpr uint32_t clz32(uint32_t value) noexcept
 {
     return static_cast<uint32_t>(countl_zero(value));
 }
 
-inline uint32_t ctz32(uint32_t value) noexcept
+constexpr uint32_t ctz32(uint32_t value) noexcept
 {
     return static_cast<uint32_t>(countr_zero(value));
 }
@@ -269,12 +269,12 @@ constexpr uint32_t popcnt32(uint32_t value) noexcept
     return static_cast<uint32_t>(popcount(value));
 }
 
-inline uint64_t clz64(uint64_t value) noexcept
+constexpr uint64_t clz64(uint64_t value) noexcept
 {
     return static_cast<uint64_t>(countl_zero(value));
 }
 
-inline uint64_t ctz64(uint64_t value) noexcept
+constexpr uint64_t ctz64(uint64_t value) noexcept
 {
     return static_cast<uint64_t>(countr_zero(value));
 }
