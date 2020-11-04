@@ -269,8 +269,21 @@ size_t fizzy_get_instance_memory_size(FizzyInstance* instance);
 /// @param  name            The table name. NULL-terminated string. Cannot be NULL.
 /// @param  out_table       Pointer to output struct to store found table. Cannot be NULL.
 /// @returns                true if table was found, false otherwise.
+///
+/// @note Wasm 1.0 spec allows at most one table in a module.
 bool fizzy_find_exported_table(
     FizzyInstance* instance, const char* name, FizzyExternalTable* out_table);
+
+/// Find exported memory by name.
+///
+/// @param  instance        Pointer to instance.
+/// @param  name            The table name. NULL-terminated string. Cannot be NULL.
+/// @param  out_memory      Pointer to output struct to store found memory. Cannot be NULL.
+/// @returns                true if memory was found, false otherwise.
+///
+/// @note Wasm 1.0 spec allows at most one memory in a module.
+bool fizzy_find_exported_memory(
+    FizzyInstance* instance, const char* name, FizzyExternalMemory* out_memory);
 
 /// Find exported global by name.
 ///

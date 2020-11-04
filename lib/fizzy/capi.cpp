@@ -178,6 +178,11 @@ inline fizzy::table_elements* unwrap(FizzyTable* table) noexcept
     return reinterpret_cast<fizzy::table_elements*>(table);
 }
 
+inline FizzyMemory* wrap(fizzy::bytes* memory) noexcept
+{
+    return reinterpret_cast<FizzyMemory*>(memory);
+}
+
 inline fizzy::bytes* unwrap(FizzyMemory* memory) noexcept
 {
     return reinterpret_cast<fizzy::bytes*>(memory);
@@ -201,6 +206,11 @@ inline FizzyExternalTable wrap(const fizzy::ExternalTable& external_table) noexc
 inline fizzy::ExternalTable unwrap(const FizzyExternalTable& external_table) noexcept
 {
     return {unwrap(external_table.table), unwrap(external_table.limits)};
+}
+
+inline FizzyExternalMemory wrap(const fizzy::ExternalMemory& external_memory) noexcept
+{
+    return {wrap(external_memory.data), wrap(external_memory.limits)};
 }
 
 inline fizzy::ExternalMemory unwrap(const FizzyExternalMemory& external_memory) noexcept
@@ -307,6 +317,17 @@ bool fizzy_find_exported_table(
         return false;
 
     *out_table = wrap(*optional_external_table);
+    return true;
+}
+
+bool fizzy_find_exported_memory(
+    FizzyInstance* instance, const char* name, FizzyExternalMemory* out_memory)
+{
+    const auto optional_external_memory = fizzy::find_exported_memory(*unwrap(instance), name);
+    if (!optional_external_memory)
+        return false;
+
+    *out_memory = wrap(*optional_external_memory);
     return true;
 }
 
