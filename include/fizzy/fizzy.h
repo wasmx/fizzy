@@ -111,6 +111,18 @@ typedef struct FizzyExternalTable
     FizzyLimits limits;
 } FizzyExternalTable;
 
+/// The opaque data type representing a memory.
+typedef struct FizzyMemory FizzyMemory;
+
+/// External memory.
+typedef struct FizzyExternalMemory
+{
+    /// Opaque pointer to memory data.
+    FizzyMemory* memory;
+    /// Memory limits.
+    FizzyLimits limits;
+} FizzyExternalMemory;
+
 /// External global.
 typedef struct FizzyExternalGlobal
 {
@@ -172,7 +184,11 @@ bool fizzy_find_exported_function(
 ///                                      imported_functions_size equals 0.
 /// @param      imported_functions_size  Size of the imported function array. Can be zero.
 /// @param      imported_table           Pointer to the imported table. Can be NULL iff module
-///                                      doesn't import a table.
+///                                      doesn't import a table. Not an array, because Wasm 1.0
+///                                      doesn't support more than one table in a module.
+/// @param      imported_memory          Pointer to the imported memory. Can be NULL iff module
+///                                      doesn't import a memory. Not an array, because Wasm 1.0
+///                                      doesn't support more than one memory in a module.
 /// @param      imported_globals         Pointer to the imported globals array. Can be NULL iff
 ///                                      imported_globals_size equals 0.
 /// @param      imported_globals_size    Size of the imported global array. Can be zero.
@@ -190,8 +206,8 @@ bool fizzy_find_exported_function(
 /// module, behaviour is undefined.
 FizzyInstance* fizzy_instantiate(const FizzyModule* module,
     const FizzyExternalFunction* imported_functions, size_t imported_functions_size,
-    const FizzyExternalTable* imported_table, const FizzyExternalGlobal* imported_globals,
-    size_t imported_globals_size);
+    const FizzyExternalTable* imported_table, const FizzyExternalMemory* imported_memory,
+    const FizzyExternalGlobal* imported_globals, size_t imported_globals_size);
 
 /// Instantiate a module resolving imported functions.
 /// Takes ownership of module, i.e. @p module is invalidated after this call.
@@ -201,7 +217,11 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 ///                                      imported_functions_size equals 0.
 /// @param      imported_functions_size  Size of the imported function array. Can be zero.
 /// @param      imported_table           Pointer to the imported table. Can be NULL iff module
-///                                      doesn't import a table.
+///                                      doesn't import a table. Not an array, because Wasm 1.0
+///                                      doesn't support more than one table in a module.
+/// @param      imported_memory          Pointer to the imported memory. Can be NULL iff module
+///                                      doesn't import a memory. Not an array, because Wasm 1.0
+///                                      doesn't support more than one memory in a module.
 /// @param      imported_globals         Pointer to the imported globals array. Can be NULL iff
 ///                                      imported_globals_size equals 0.
 /// @param      imported_globals_size    Size of the imported global array. Can be zero.
@@ -218,8 +238,8 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 /// module, behaviour is undefined.
 FizzyInstance* fizzy_resolve_instantiate(const FizzyModule* module,
     const FizzyImportedFunction* imported_functions, size_t imported_functions_size,
-    const FizzyExternalTable* imported_table, const FizzyExternalGlobal* imported_globals,
-    size_t imported_globals_size);
+    const FizzyExternalTable* imported_table, const FizzyExternalMemory* imported_memory,
+    const FizzyExternalGlobal* imported_globals, size_t imported_globals_size);
 
 /// Free resources associated with the instance.
 /// If passed pointer is NULL, has no effect.
@@ -249,8 +269,21 @@ size_t fizzy_get_instance_memory_size(FizzyInstance* instance);
 /// @param  name            The table name. NULL-terminated string. Cannot be NULL.
 /// @param  out_table       Pointer to output struct to store found table. Cannot be NULL.
 /// @returns                true if table was found, false otherwise.
+///
+/// @note Wasm 1.0 spec allows at most one table in a module.
 bool fizzy_find_exported_table(
     FizzyInstance* instance, const char* name, FizzyExternalTable* out_table);
+
+/// Find exported memory by name.
+///
+/// @param  instance        Pointer to instance.
+/// @param  name            The table name. NULL-terminated string. Cannot be NULL.
+/// @param  out_memory      Pointer to output struct to store found memory. Cannot be NULL.
+/// @returns                true if memory was found, false otherwise.
+///
+/// @note Wasm 1.0 spec allows at most one memory in a module.
+bool fizzy_find_exported_memory(
+    FizzyInstance* instance, const char* name, FizzyExternalMemory* out_memory);
 
 /// Find exported global by name.
 ///
