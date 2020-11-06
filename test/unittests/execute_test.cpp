@@ -394,12 +394,12 @@ TEST(execute, i32_load_all_variants)
         {Instr::i32_load, 0xb3b2b1b0},
     };
 
-    for (const auto& test_case : test_cases)
+    for (const auto& [instr, expected] : test_cases)
     {
-        load_instr = static_cast<uint8_t>(std::get<0>(test_case));
+        load_instr = static_cast<uint8_t>(instr);
         auto instance = instantiate(*module);
         std::copy(std::begin(memory_fill), std::end(memory_fill), std::begin(*instance->memory));
-        EXPECT_THAT(execute(*instance, 0, {1}), Result(std::get<1>(test_case)));
+        EXPECT_THAT(execute(*instance, 0, {1}), Result(expected));
 
         EXPECT_THAT(execute(*instance, 0, {65537}), Traps());
     }
@@ -434,12 +434,12 @@ TEST(execute, i64_load_all_variants)
         {Instr::i64_load, 0xb7b6b5b4b3b2b1b0},
     };
 
-    for (const auto& test_case : test_cases)
+    for (const auto& [instr, expected] : test_cases)
     {
-        load_instr = static_cast<uint8_t>(std::get<0>(test_case));
+        load_instr = static_cast<uint8_t>(instr);
         auto instance = instantiate(*module);
         std::copy(std::begin(memory_fill), std::end(memory_fill), std::begin(*instance->memory));
-        EXPECT_THAT(execute(*instance, 0, {1}), Result(std::get<1>(test_case)));
+        EXPECT_THAT(execute(*instance, 0, {1}), Result(expected));
 
         EXPECT_THAT(execute(*instance, 0, {65537}), Traps());
     }
@@ -539,13 +539,13 @@ TEST(execute, i32_store_all_variants)
         {Instr::i32_store, "ccb0b1b2b3cc"_bytes},
     };
 
-    for (const auto& test_case : test_cases)
+    for (const auto& [instr, expected] : test_cases)
     {
-        store_instr = static_cast<uint8_t>(std::get<0>(test_case));
+        store_instr = static_cast<uint8_t>(instr);
         auto instance = instantiate(*module);
         std::fill_n(instance->memory->begin(), 6, uint8_t{0xcc});
         EXPECT_THAT(execute(*instance, 0, {0xb3b2b1b0, 1}), Result());
-        EXPECT_EQ(instance->memory->substr(0, 6), std::get<1>(test_case));
+        EXPECT_EQ(instance->memory->substr(0, 6), expected);
 
         EXPECT_THAT(execute(*instance, 0, {0xb3b2b1b0, 65537}), Traps());
     }
@@ -576,13 +576,13 @@ TEST(execute, i64_store_all_variants)
         {Instr::i64_store, "ccb0b1b2b3b4b5b6b7cc"_bytes},
     };
 
-    for (const auto& test_case : test_cases)
+    for (const auto& [instr, expected] : test_cases)
     {
-        store_instr = static_cast<uint8_t>(std::get<0>(test_case));
+        store_instr = static_cast<uint8_t>(instr);
         auto instance = instantiate(*module);
         std::fill_n(instance->memory->begin(), 10, uint8_t{0xcc});
         EXPECT_THAT(execute(*instance, 0, {0xb7b6b5b4b3b2b1b0, 1}), Result());
-        EXPECT_EQ(instance->memory->substr(0, 10), std::get<1>(test_case));
+        EXPECT_EQ(instance->memory->substr(0, 10), expected);
 
         EXPECT_THAT(execute(*instance, 0, {0xb7b6b5b4b3b2b1b0, 65537}), Traps());
     }
@@ -651,10 +651,10 @@ TEST(execute, memory_grow_custom_hard_limit)
         from_hex("0061736d0100000001060160017f017f0302010005030100010a08010600200040000b");
     const auto module = parse(wasm);
 
-    for (const auto& test_case : test_cases)
+    for (const auto& [input, expected] : test_cases)
     {
         const auto instance = instantiate(*module, {}, {}, {}, {}, 16);
-        EXPECT_THAT(execute(*instance, 0, {test_case.first}), Result(test_case.second));
+        EXPECT_THAT(execute(*instance, 0, {input}), Result(expected));
     }
 
     /* wat2wasm
@@ -668,10 +668,10 @@ TEST(execute, memory_grow_custom_hard_limit)
         from_hex("0061736d0100000001060160017f017f030201000504010101100a08010600200040000b");
     const auto module_max_limit = parse(wasm_max_limit);
 
-    for (const auto& test_case : test_cases)
+    for (const auto& [input, expected] : test_cases)
     {
         const auto instance = instantiate(*module_max_limit, {}, {}, {}, {}, 32);
-        EXPECT_THAT(execute(*instance, 0, {test_case.first}), Result(test_case.second));
+        EXPECT_THAT(execute(*instance, 0, {input}), Result(expected));
     }
 
     /* wat2wasm
@@ -685,17 +685,17 @@ TEST(execute, memory_grow_custom_hard_limit)
         "0061736d0100000001060160017f017f020c01036d6f64036d656d020001030201000a08010600200040000b");
     const auto module_imported = parse(wasm_imported);
 
-    for (const auto& test_case : test_cases)
+    for (const auto& [input, expected] : test_cases)
     {
         bytes memory(PageSize, 0);
         const auto instance =
             instantiate(*module_imported, {}, {}, {{&memory, {1, std::nullopt}}}, {}, 16);
-        EXPECT_THAT(execute(*instance, 0, {test_case.first}), Result(test_case.second));
+        EXPECT_THAT(execute(*instance, 0, {input}), Result(expected));
 
         bytes memory_max_limit(PageSize, 0);
         const auto instance_max_limit =
             instantiate(*module_imported, {}, {}, {{&memory_max_limit, {1, 16}}}, {}, 32);
-        EXPECT_THAT(execute(*instance_max_limit, 0, {test_case.first}), Result(test_case.second));
+        EXPECT_THAT(execute(*instance_max_limit, 0, {input}), Result(expected));
     }
 
     /* wat2wasm
@@ -710,12 +710,12 @@ TEST(execute, memory_grow_custom_hard_limit)
         "b");
     const auto module_imported_max_limit = parse(wasm_imported_max_limit);
 
-    for (const auto& test_case : test_cases)
+    for (const auto& [input, expected] : test_cases)
     {
         bytes memory(PageSize, 0);
         const auto instance =
             instantiate(*module_imported_max_limit, {}, {}, {{&memory, {1, 16}}}, {}, 32);
-        EXPECT_THAT(execute(*instance, 0, {test_case.first}), Result(test_case.second));
+        EXPECT_THAT(execute(*instance, 0, {input}), Result(expected));
     }
 
     /* wat2wasm
@@ -730,12 +730,12 @@ TEST(execute, memory_grow_custom_hard_limit)
         "b");
     const auto module_imported_max_limit_narrowing = parse(wasm_imported_max_limit_narrowing);
 
-    for (const auto& test_case : test_cases)
+    for (const auto& [input, expected] : test_cases)
     {
         bytes memory(PageSize, 0);
         const auto instance =
             instantiate(*module_imported_max_limit_narrowing, {}, {}, {{&memory, {1, 16}}}, {}, 32);
-        EXPECT_THAT(execute(*instance, 0, {test_case.first}), Result(test_case.second));
+        EXPECT_THAT(execute(*instance, 0, {input}), Result(expected));
     }
 }
 
