@@ -6,6 +6,7 @@
 
 mod sys;
 
+use std::ffi::CString;
 use std::ptr::NonNull;
 
 /// Parse and validate the input according to WebAssembly 1.0 rules. Returns true if the supplied input is valid.
@@ -159,6 +160,21 @@ impl From<ExecutionResult> for sys::FizzyExecutionResult {
 }
 
 impl Instance {
+    /// Find index of exported function by name.
+    pub fn find_exported_function_index(&self, name: &str) -> Option<u32> {
+        let module = unsafe { sys::fizzy_get_instance_module(self.0.as_ptr()) };
+        let name = CString::new(name).expect("CString::new failed");
+        let mut func_idx: u32 = 0;
+        let found = unsafe {
+            sys::fizzy_find_exported_function_index(module, name.as_ptr(), &mut func_idx)
+        };
+        if found {
+            Some(func_idx)
+        } else {
+            None
+        }
+    }
+
     /// Unsafe execution of a given function index `func_idx` with the given values `args`.
     ///
     /// An invalid index, invalid inputs, or invalid depth can cause undefined behaviour.
@@ -213,6 +229,35 @@ mod tests {
         assert!(module.is_ok());
         let instance = module.unwrap().instantiate();
         assert!(instance.is_ok());
+    }
+
+    #[test]
+    fn find_exported_function_index() {
+        /* wat2wasm
+        (module
+          (func $f (export "foo") (result i32) (i32.const 42))
+          (global (export "g1") i32 (i32.const 0))
+          (table (export "tab") 0 anyfunc)
+          (memory (export "mem") 1 2)
+        )
+        */
+        let input = hex::decode(
+        "0061736d010000000105016000017f030201000404017000000504010101020606017f0041000b07180403666f6f00000267310300037461620100036d656d02000a06010400412a0b").unwrap();
+
+        let module = parse(&input);
+        assert!(module.is_ok());
+        let instance = module.unwrap().instantiate();
+        assert!(instance.is_ok());
+        let mut instance = instance.unwrap();
+
+        let func_idx = instance.find_exported_function_index(&"foo");
+        assert!(func_idx.is_some());
+        assert_eq!(func_idx.unwrap(), 0);
+
+        assert!(instance.find_exported_function_index(&"bar").is_none());
+        assert!(instance.find_exported_function_index(&"g1").is_none());
+        assert!(instance.find_exported_function_index(&"tab").is_none());
+        assert!(instance.find_exported_function_index(&"mem").is_none());
     }
 
     #[test]
