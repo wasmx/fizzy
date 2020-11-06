@@ -34,7 +34,7 @@ TEST(module, functions)
     EXPECT_EQ(module->get_code(1).local_count, 0);
     EXPECT_EQ(module->get_code(2).instructions.size(), 1);
     EXPECT_EQ(module->get_code(2).local_count, 1);
-    EXPECT_EQ(module->get_code(3).instructions.size(), 2);
+    EXPECT_EQ(module->get_code(3).instructions.size(), 6);
     EXPECT_EQ(module->get_code(3).local_count, 0);
 }
 

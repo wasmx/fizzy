@@ -344,9 +344,8 @@ TEST(validation, store_alignment)
         {Instr::i64_store32, 2, Instr::i64_const}, {Instr::i64_store, 3, Instr::i64_const},
         {Instr::f32_store, 2, Instr::f32_const}, {Instr::f64_store, 3, Instr::f64_const}};
 
-    for (const auto& test_case : test_cases)
+    for (const auto& [instr, max_align, push_address_instr] : test_cases)
     {
-        const auto [instr, max_align, push_address_instr] = test_case;
         // TODO: consider using leb128_encode and test 2^32-1
         for (auto align : {0, 1, 2, 3, 4, 0x7f})
         {
@@ -406,10 +405,8 @@ TEST(validation, load_alignment)
         {Instr::f64_load, 3},
     };
 
-    for (const auto& test_case : test_cases)
+    for (const auto& [instr, max_align] : test_cases)
     {
-        const auto instr = test_case.first;
-        const auto max_align = test_case.second;
         // TODO: consider using leb128_encode and test 2^32-1
         for (auto align : {0, 1, 2, 3, 4, 0x7f})
         {

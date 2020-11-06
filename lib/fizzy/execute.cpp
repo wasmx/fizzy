@@ -18,8 +18,8 @@ namespace fizzy
 {
 namespace
 {
-// code_offset + imm_offset + stack_height
-constexpr auto BranchImmediateSize = 3 * sizeof(uint32_t);
+// code_offset + stack_drop
+constexpr auto BranchImmediateSize = 2 * sizeof(uint32_t);
 
 constexpr uint32_t F32AbsMask = 0x7fffffff;
 constexpr uint32_t F32SignMask = ~F32AbsMask;
@@ -453,15 +453,12 @@ __attribute__((no_sanitize("float-cast-overflow"))) inline constexpr float demot
     return static_cast<float>(value);
 }
 
-void branch(const Code& code, OperandStack& stack, const uint8_t*& pc, const uint8_t*& immediates,
-    uint32_t arity) noexcept
+void branch(const Code& code, OperandStack& stack, const uint8_t*& pc, uint32_t arity) noexcept
 {
-    const auto code_offset = read<uint32_t>(immediates);
-    const auto imm_offset = read<uint32_t>(immediates);
-    const auto stack_drop = read<uint32_t>(immediates);
+    const auto code_offset = read<uint32_t>(pc);
+    const auto stack_drop = read<uint32_t>(pc);
 
     pc = code.instructions.data() + code_offset;
-    immediates = code.immediates.data() + imm_offset;
 
     // When branch is taken, additional stack items must be dropped.
     assert(static_cast<int>(stack_drop) >= 0);
@@ -523,7 +520,6 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         static_cast<size_t>(code.max_stack_height));
 
     const uint8_t* pc = code.instructions.data();
-    const uint8_t* immediates = code.immediates.data();
 
     while (true)
     {
@@ -539,14 +535,11 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         case Instr::if_:
         {
             if (stack.pop().as<uint32_t>() != 0)
-                immediates += 2 * sizeof(uint32_t);  // Skip the immediates for else instruction.
+                pc += sizeof(uint32_t);  // Skip the immediate for else instruction.
             else
             {
-                const auto target_pc = read<uint32_t>(immediates);
-                const auto target_imm = read<uint32_t>(immediates);
-
+                const auto target_pc = read<uint32_t>(pc);
                 pc = code.instructions.data() + target_pc;
-                immediates = code.immediates.data() + target_imm;
             }
             break;
         }
@@ -554,12 +547,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         {
             // We reach else only after executing if block ("then" part),
             // so we need to skip else block now.
-            const auto target_pc = read<uint32_t>(immediates);
-            const auto target_imm = read<uint32_t>(immediates);
-
+            const auto target_pc = read<uint32_t>(pc);
             pc = code.instructions.data() + target_pc;
-            immediates = code.immediates.data() + target_imm;
-
             break;
         }
         case Instr::end:
@@ -573,36 +562,36 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         case Instr::br_if:
         case Instr::return_:
         {
-            const auto arity = read<uint32_t>(immediates);
+            const auto arity = read<uint32_t>(pc);
 
             // Check condition for br_if.
             if (instruction == Instr::br_if && stack.pop().as<uint32_t>() == 0)
             {
-                immediates += BranchImmediateSize;
+                pc += BranchImmediateSize;
                 break;
             }
 
-            branch(code, stack, pc, immediates, arity);
+            branch(code, stack, pc, arity);
             break;
         }
         case Instr::br_table:
         {
-            const auto br_table_size = read<uint32_t>(immediates);
-            const auto arity = read<uint32_t>(immediates);
+            const auto br_table_size = read<uint32_t>(pc);
+            const auto arity = read<uint32_t>(pc);
 
             const auto br_table_idx = stack.pop().as<uint32_t>();
 
             const auto label_idx_offset = br_table_idx < br_table_size ?
                                               br_table_idx * BranchImmediateSize :
                                               br_table_size * BranchImmediateSize;
-            immediates += label_idx_offset;
+            pc += label_idx_offset;
 
-            branch(code, stack, pc, immediates, arity);
+            branch(code, stack, pc, arity);
             break;
         }
         case Instr::call:
         {
-            const auto called_func_idx = read<uint32_t>(immediates);
+            const auto called_func_idx = read<uint32_t>(pc);
             const auto& called_func_type = instance.module->get_function_type(called_func_idx);
 
             if (!invoke_function(called_func_type, called_func_idx, instance, stack, depth))
@@ -613,7 +602,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         {
             assert(instance.table != nullptr);
 
-            const auto expected_type_idx = read<uint32_t>(immediates);
+            const auto expected_type_idx = read<uint32_t>(pc);
             assert(expected_type_idx < instance.module->typesec.size());
 
             const auto elem_idx = stack.pop().as<uint32_t>();
@@ -655,25 +644,25 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::local_get:
         {
-            const auto idx = read<uint32_t>(immediates);
+            const auto idx = read<uint32_t>(pc);
             stack.push(stack.local(idx));
             break;
         }
         case Instr::local_set:
         {
-            const auto idx = read<uint32_t>(immediates);
+            const auto idx = read<uint32_t>(pc);
             stack.local(idx) = stack.pop();
             break;
         }
         case Instr::local_tee:
         {
-            const auto idx = read<uint32_t>(immediates);
+            const auto idx = read<uint32_t>(pc);
             stack.local(idx) = stack.top();
             break;
         }
         case Instr::global_get:
         {
-            const auto idx = read<uint32_t>(immediates);
+            const auto idx = read<uint32_t>(pc);
             assert(idx < instance.imported_globals.size() + instance.globals.size());
             if (idx < instance.imported_globals.size())
             {
@@ -689,7 +678,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::global_set:
         {
-            const auto idx = read<uint32_t>(immediates);
+            const auto idx = read<uint32_t>(pc);
             if (idx < instance.imported_globals.size())
             {
                 assert(instance.imported_globals[idx].type.is_mutable);
@@ -706,129 +695,129 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i32_load:
         {
-            if (!load_from_memory<uint32_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint32_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i64_load:
         {
-            if (!load_from_memory<uint64_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint64_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::f32_load:
         {
-            if (!load_from_memory<float>(*memory, stack, immediates))
+            if (!load_from_memory<float>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::f64_load:
         {
-            if (!load_from_memory<double>(*memory, stack, immediates))
+            if (!load_from_memory<double>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i32_load8_s:
         {
-            if (!load_from_memory<uint32_t, int8_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint32_t, int8_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i32_load8_u:
         {
-            if (!load_from_memory<uint32_t, uint8_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint32_t, uint8_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i32_load16_s:
         {
-            if (!load_from_memory<uint32_t, int16_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint32_t, int16_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i32_load16_u:
         {
-            if (!load_from_memory<uint32_t, uint16_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint32_t, uint16_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i64_load8_s:
         {
-            if (!load_from_memory<uint64_t, int8_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint64_t, int8_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i64_load8_u:
         {
-            if (!load_from_memory<uint64_t, uint8_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint64_t, uint8_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i64_load16_s:
         {
-            if (!load_from_memory<uint64_t, int16_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint64_t, int16_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i64_load16_u:
         {
-            if (!load_from_memory<uint64_t, uint16_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint64_t, uint16_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i64_load32_s:
         {
-            if (!load_from_memory<uint64_t, int32_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint64_t, int32_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i64_load32_u:
         {
-            if (!load_from_memory<uint64_t, uint32_t>(*memory, stack, immediates))
+            if (!load_from_memory<uint64_t, uint32_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i32_store:
         {
-            if (!store_into_memory<uint32_t>(*memory, stack, immediates))
+            if (!store_into_memory<uint32_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i64_store:
         {
-            if (!store_into_memory<uint64_t>(*memory, stack, immediates))
+            if (!store_into_memory<uint64_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::f32_store:
         {
-            if (!store_into_memory<float>(*memory, stack, immediates))
+            if (!store_into_memory<float>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::f64_store:
         {
-            if (!store_into_memory<double>(*memory, stack, immediates))
+            if (!store_into_memory<double>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i32_store8:
         case Instr::i64_store8:
         {
-            if (!store_into_memory<uint8_t>(*memory, stack, immediates))
+            if (!store_into_memory<uint8_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i32_store16:
         case Instr::i64_store16:
         {
-            if (!store_into_memory<uint16_t>(*memory, stack, immediates))
+            if (!store_into_memory<uint16_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
         case Instr::i64_store32:
         {
-            if (!store_into_memory<uint32_t>(*memory, stack, immediates))
+            if (!store_into_memory<uint32_t>(*memory, stack, pc))
                 goto trap;
             break;
         }
@@ -861,14 +850,14 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         case Instr::i32_const:
         case Instr::f32_const:
         {
-            const auto value = read<uint32_t>(immediates);
+            const auto value = read<uint32_t>(pc);
             stack.push(value);
             break;
         }
         case Instr::i64_const:
         case Instr::f64_const:
         {
-            const auto value = read<uint64_t>(immediates);
+            const auto value = read<uint64_t>(pc);
             stack.push(value);
             break;
         }

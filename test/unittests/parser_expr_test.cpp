@@ -29,28 +29,24 @@ TEST(parser_expr, instr_loop)
     const auto loop_void = "03400b0b"_bytes;
     const auto [code1, pos1] = parse_expr(loop_void);
     EXPECT_THAT(code1.instructions, ElementsAre(Instr::loop, Instr::end, Instr::end));
-    EXPECT_EQ(code1.immediates.size(), 0);
     EXPECT_EQ(code1.max_stack_height, 0);
 
     const auto loop_i32 = "037f41000b1a0b"_bytes;
     const auto [code2, pos2] = parse_expr(loop_i32);
-    EXPECT_THAT(code2.instructions,
-        ElementsAre(Instr::loop, Instr::i32_const, Instr::end, Instr::drop, Instr::end));
-    EXPECT_EQ(code2.immediates.size(), 4);
+    EXPECT_THAT(code2.instructions, ElementsAre(Instr::loop, Instr::i32_const, 0, 0, 0, 0,
+                                        Instr::end, Instr::drop, Instr::end));
     EXPECT_EQ(code2.max_stack_height, 1);
 
     const auto loop_f32 = "037d43000000000b1a0b"_bytes;
     const auto [code3, pos3] = parse_expr(loop_f32);
-    EXPECT_THAT(code3.instructions,
-        ElementsAre(Instr::loop, Instr::f32_const, Instr::end, Instr::drop, Instr::end));
-    EXPECT_EQ(code3.immediates.size(), 4);
+    EXPECT_THAT(code3.instructions, ElementsAre(Instr::loop, Instr::f32_const, 0, 0, 0, 0,
+                                        Instr::end, Instr::drop, Instr::end));
     EXPECT_EQ(code3.max_stack_height, 1);
 
     const auto loop_f64 = "037c4400000000000000000b1a0b"_bytes;
     const auto [code4, pos4] = parse_expr(loop_f64);
-    EXPECT_THAT(code4.instructions,
-        ElementsAre(Instr::loop, Instr::f64_const, Instr::end, Instr::drop, Instr::end));
-    EXPECT_EQ(code4.immediates.size(), 8);
+    EXPECT_THAT(code4.instructions, ElementsAre(Instr::loop, Instr::f64_const, 0, 0, 0, 0, 0, 0, 0,
+                                        0, Instr::end, Instr::drop, Instr::end));
     EXPECT_EQ(code4.max_stack_height, 1);
 }
 
@@ -70,19 +66,16 @@ TEST(parser_expr, instr_block)
     const auto [code1, pos1] = parse_expr(empty);
     EXPECT_THAT(code1.instructions,
         ElementsAre(Instr::nop, Instr::nop, Instr::block, Instr::end, Instr::end));
-    EXPECT_TRUE(code1.immediates.empty());
 
     const auto block_i64 = "027e42000b1a0b"_bytes;
     const auto [code2, pos2] = parse_expr(block_i64);
-    EXPECT_THAT(code2.instructions,
-        ElementsAre(Instr::block, Instr::i64_const, Instr::end, Instr::drop, Instr::end));
-    EXPECT_EQ(code2.immediates, "0000000000000000"_bytes);
+    EXPECT_THAT(code2.instructions, ElementsAre(Instr::block, Instr::i64_const, 0, 0, 0, 0, 0, 0, 0,
+                                        0, Instr::end, Instr::drop, Instr::end));
 
     const auto block_f64 = "027c4400000000000000000b1a0b"_bytes;
     const auto [code3, pos3] = parse_expr(block_f64);
-    EXPECT_THAT(code3.instructions,
-        ElementsAre(Instr::block, Instr::f64_const, Instr::end, Instr::drop, Instr::end));
-    EXPECT_EQ(code2.immediates, "0000000000000000"_bytes);
+    EXPECT_THAT(code3.instructions, ElementsAre(Instr::block, Instr::f64_const, 0, 0, 0, 0, 0, 0, 0,
+                                        0, Instr::end, Instr::drop, Instr::end));
 }
 
 TEST(parser_expr, instr_block_input_buffer_overflow)
@@ -101,12 +94,8 @@ TEST(parser_expr, loop_br)
     const auto module = parse(wasm);
 
     EXPECT_THAT(module->codesec[0].instructions,
-        ElementsAre(Instr::loop, Instr::br, Instr::end, Instr::end));
-    EXPECT_EQ(module->codesec[0].immediates,
-        "00000000"          // code_offset
-        "00000000"          // imm_offset
-        "00000000"          // stack_drop
-        "00000000"_bytes);  // arity
+        ElementsAre(Instr::loop, Instr::br, /*arity:*/ 0, 0, 0, 0, /*code_offset:*/ 0, 0, 0, 0,
+            /*stack_drop:*/ 0, 0, 0, 0, Instr::end, Instr::end));
 
     /* wat2wasm
     (func
@@ -120,13 +109,9 @@ TEST(parser_expr, loop_br)
     const auto module_parent_stack = parse(wasm_parent_stack);
 
     EXPECT_THAT(module_parent_stack->codesec[0].instructions,
-        ElementsAre(Instr::i32_const, Instr::loop, Instr::br, Instr::end, Instr::drop, Instr::end));
-    EXPECT_EQ(module_parent_stack->codesec[0].immediates,
-        "00000000"          // i32.const
-        "00000000"          // arity
-        "01000000"          // code_offset
-        "04000000"          // imm_offset
-        "00000000"_bytes);  // stack_drop
+        ElementsAre(Instr::i32_const, 0, 0, 0, 0, Instr::loop, Instr::br, /*arity:*/ 0, 0, 0, 0,
+            /*code_offset:*/ 5, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0, Instr::end, Instr::drop,
+            Instr::end));
 
     /* wat2wasm
     (func
@@ -142,13 +127,9 @@ TEST(parser_expr, loop_br)
     const auto module_arity = parse(wasm_arity);
 
     EXPECT_THAT(module_arity->codesec[0].instructions,
-        ElementsAre(Instr::loop, Instr::i32_const, Instr::br, Instr::end, Instr::drop, Instr::end));
-    EXPECT_EQ(module_arity->codesec[0].immediates,
-        "00000000"          // i32.const
-        "00000000"          // arity - always 0 for loop
-        "00000000"          // code_offset
-        "00000000"          // imm_offset
-        "01000000"_bytes);  // stack_drop
+        ElementsAre(Instr::loop, Instr::i32_const, 0, 0, 0, 0, Instr::br, /*arity:*/ 0, 0, 0, 0,
+            /*code_offset:*/ 0, 0, 0, 0, /*stack_drop:*/ 1, 0, 0, 0, Instr::end, Instr::drop,
+            Instr::end));
 }
 
 TEST(parser_expr, loop_return)
@@ -159,13 +140,10 @@ TEST(parser_expr, loop_return)
     const auto wasm = from_hex("0061736d01000000010401600000030201000a0801060003400f0b0b");
     const auto module = parse(wasm);
 
-    EXPECT_THAT(module->codesec[0].instructions,
-        ElementsAre(Instr::loop, Instr::return_, Instr::end, Instr::end));
-    EXPECT_EQ(module->codesec[0].immediates,
-        "00000000"          // arity
-        "03000000"          // code_offset
-        "10000000"          // imm_offset
-        "00000000"_bytes);  // stack_drop
+    EXPECT_THAT(
+        module->codesec[0].instructions, ElementsAre(Instr::loop, Instr::return_,
+                                             /*arity:*/ 0, 0, 0, 0, /*code_offset:*/ 15, 0, 0, 0,
+                                             /*stack_drop:*/ 0, 0, 0, 0, Instr::end, Instr::end));
 }
 
 TEST(parser_expr, block_br)
@@ -185,19 +163,11 @@ TEST(parser_expr, block_br)
     const auto code_bin = "010240410a21010c00410b21010b20011a0b"_bytes;
     const auto [code, pos] = parse_expr(code_bin, 0, {{2, ValType::i32}});
     EXPECT_THAT(
-        code.instructions, ElementsAre(Instr::nop, Instr::block, Instr::i32_const, Instr::local_set,
-                               Instr::br, Instr::i32_const, Instr::local_set, Instr::end,
-                               Instr::local_get, Instr::drop, Instr::end));
-    EXPECT_EQ(code.immediates,
-        "0a000000"
-        "01000000"
-        "00000000"  // arity
-        "08000000"  // code_offset
-        "20000000"  // imm_offset
-        "00000000"  // stack_drop
-        "0b000000"
-        "01000000"
-        "01000000"_bytes);
+        code.instructions, ElementsAre(Instr::nop, Instr::block, Instr::i32_const, 0x0a, 0, 0, 0,
+                               Instr::local_set, 1, 0, 0, 0, Instr::br, /*arity:*/ 0, 0, 0, 0,
+                               /*code_offset:*/ 36, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+                               Instr::i32_const, 0x0b, 0, 0, 0, Instr::local_set, 1, 0, 0, 0,
+                               Instr::end, Instr::local_get, 1, 0, 0, 0, Instr::drop, Instr::end));
     EXPECT_EQ(code.max_stack_height, 1);
 
     /* wat2wasm
@@ -212,14 +182,9 @@ TEST(parser_expr, block_br)
     const auto module_parent_stack = parse(wasm_parent_stack);
 
     EXPECT_THAT(module_parent_stack->codesec[0].instructions,
-        ElementsAre(
-            Instr::i32_const, Instr::block, Instr::br, Instr::end, Instr::drop, Instr::end));
-    EXPECT_EQ(module_parent_stack->codesec[0].immediates,
-        "00000000"          // i32.const
-        "00000000"          // arity
-        "04000000"          // code_offset
-        "14000000"          // imm_offset
-        "00000000"_bytes);  // stack_drop
+        ElementsAre(Instr::i32_const, 0, 0, 0, 0, Instr::block, Instr::br, /*arity:*/ 0, 0, 0, 0,
+            /*code_offset:*/ 20, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0, Instr::end, Instr::drop,
+            Instr::end));
 
     /* wat2wasm
     (func
@@ -234,15 +199,10 @@ TEST(parser_expr, block_br)
         from_hex("0061736d01000000010401600000030201000a0c010a00027f41000c000b1a0b");
     const auto module_arity = parse(wasm_arity);
 
-    EXPECT_THAT(
-        module_arity->codesec[0].instructions, ElementsAre(Instr::block, Instr::i32_const,
-                                                   Instr::br, Instr::end, Instr::drop, Instr::end));
-    EXPECT_EQ(module_arity->codesec[0].immediates,
-        "00000000"          // i32.const
-        "01000000"          // arity
-        "04000000"          // code_offset
-        "14000000"          // imm_offset
-        "00000000"_bytes);  // stack_drop
+    EXPECT_THAT(module_arity->codesec[0].instructions,
+        ElementsAre(Instr::block, Instr::i32_const, 0, 0, 0, 0, Instr::br, /*arity:*/ 1, 0, 0, 0,
+            /*code_offset:*/ 20, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0, Instr::end, Instr::drop,
+            Instr::end));
 }
 
 TEST(parser_expr, block_return)
@@ -254,12 +214,8 @@ TEST(parser_expr, block_return)
     const auto module = parse(wasm);
 
     EXPECT_THAT(module->codesec[0].instructions,
-        ElementsAre(Instr::block, Instr::return_, Instr::end, Instr::end));
-    EXPECT_EQ(module->codesec[0].immediates,
-        "00000000"          // arity
-        "03000000"          // code_offset
-        "10000000"          // imm_offset
-        "00000000"_bytes);  // stack_drop
+        ElementsAre(Instr::block, Instr::return_, /*arity:*/ 0, 0, 0, 0,
+            /*code_offset:*/ 15, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0, Instr::end, Instr::end));
 }
 
 TEST(parser_expr, if_br)
@@ -274,15 +230,10 @@ TEST(parser_expr, if_br)
     const auto module = parse(wasm);
 
     EXPECT_THAT(module->codesec[0].instructions,
-        ElementsAre(Instr::i32_const, Instr::if_, Instr::br, Instr::end, Instr::end));
-    EXPECT_EQ(module->codesec[0].immediates,
-        "00000000"          // i32.const
-        "04000000"          // else code offset
-        "1c000000"          // else imm offset
-        "00000000"          // arity
-        "04000000"          // code_offset
-        "1c000000"          // imm_offset
-        "00000000"_bytes);  // stack_drop
+        ElementsAre(Instr::i32_const, 0, 0, 0, 0, Instr::if_, /*else_offset:*/ 24, 0, 0, 0,
+            Instr::br, /*arity:*/ 0, 0, 0, 0,
+            /*code_offset:*/ 24, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0, Instr::end,
+            /*24:*/ Instr::end));
 
     /* wat2wasm
     (func
@@ -297,17 +248,10 @@ TEST(parser_expr, if_br)
     const auto module_parent_stack = parse(wasm_parent_stack);
 
     EXPECT_THAT(module_parent_stack->codesec[0].instructions,
-        ElementsAre(Instr::i32_const, Instr::i32_const, Instr::if_, Instr::br, Instr::end,
-            Instr::drop, Instr::end));
-    EXPECT_EQ(module_parent_stack->codesec[0].immediates,
-        "00000000"          // i32.const
-        "00000000"          // i32.const
-        "05000000"          // else code offset
-        "20000000"          // else imm offset
-        "00000000"          // arity
-        "05000000"          // code_offset
-        "20000000"          // imm_offset
-        "00000000"_bytes);  // stack_drop
+        ElementsAre(Instr::i32_const, 0, 0, 0, 0, Instr::i32_const, 0, 0, 0, 0, Instr::if_,
+            /*else_offset:*/ 29, 0, 0, 0, Instr::br, /*arity:*/ 0, 0, 0, 0,
+            /*code_offset:*/ 29, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+            /*29:*/ Instr::end, Instr::drop, Instr::end));
 }
 
 TEST(parser_expr, instr_br_table)
@@ -320,22 +264,22 @@ TEST(parser_expr, instr_br_table)
             (block
               (block
                 (br_table 3 2 1 0 4 (get_local 0))
-                (return (i32.const 99))
+                (return (i32.const 0x41))
               )
-              (return (i32.const 100))
+              (return (i32.const 0x42))
             )
-            (return (i32.const 101))
+            (return (i32.const 0x43))
           )
-          (return (i32.const 102))
+          (return (i32.const 0x44))
         )
-        (return (i32.const 103))
+        (return (i32.const 0x45))
       )
-      (i32.const 104)
+      (i32.const 0x46)
     )
     */
     const auto wasm = from_hex(
         "0061736d0100000001060160017f017f030201000a330131000240024002400240024020000e04030201000441"
-        "e3000f0b41e4000f0b41e5000f0b41e6000f0b41e7000f0b41e8000b");
+        "c1000f0b41c2000f0b41c3000f0b41c4000f0b41c5000f0b41c6000b");
 
     const auto module = parse(wasm);
     ASSERT_EQ(module->codesec.size(), 1);
@@ -343,45 +287,27 @@ TEST(parser_expr, instr_br_table)
 
     EXPECT_THAT(code.instructions,
         ElementsAre(Instr::block, Instr::block, Instr::block, Instr::block, Instr::block,
-            Instr::local_get, Instr::br_table, Instr::i32_const, Instr::return_, Instr::end,
-            Instr::i32_const, Instr::return_, Instr::end, Instr::i32_const, Instr::return_,
-            Instr::end, Instr::i32_const, Instr::return_, Instr::end, Instr::i32_const,
-            Instr::return_, Instr::end, Instr::i32_const, Instr::end));
+            Instr::local_get, 0, 0, 0, 0, Instr::br_table,
+            /*label_count:*/ 4, 0, 0, 0, /*arity:*/ 0, 0, 0, 0,
+            /*code_offset:*/ 135, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+            /*code_offset:*/ 116, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+            /*code_offset:*/ 97, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+            /*code_offset:*/ 78, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+            /*code_offset:*/ 154, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
 
-    // 1 local_get before br_table
-    const auto br_table_imm_offset = 4;
-    // br_imm_size = 12
-    // return_imm_size = br_imm_size + arity_size = 16
-    // br_0_offset = br_table_imm_offset + 4 + 4 + br_imm_size * 5 + 4 + return_imm_size = 92 = 0x5c
-    // br_1_offset = br_0_offset + 4 + return_imm_size = 0x70
-    // br_2_offset = br_1_offset + 4 + return_imm_size = 0x84
-    // br_3_offset = br_2_offset + 4 + return_imm_size = 0x98
-    // br_4_offset = br_3_offset + 4 + return_imm_size = 0xac
-    const auto expected_br_imm =
-        "04000000"  // label_count
-        "00000000"  // arity
+            /*59:*/ Instr::i32_const, 0x41, 0, 0, 0, Instr::return_, /*arity:*/ 1, 0, 0, 0,
+            /*code_offset:*/ 159, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0, Instr::end,
+            /*78:*/ Instr::i32_const, 0x42, 0, 0, 0, Instr::return_, /*arity:*/ 1, 0, 0, 0,
+            /*code_offset:*/ 159, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0, Instr::end,
+            /*97:*/ Instr::i32_const, 0x43, 0, 0, 0, Instr::return_, /*arity:*/ 1, 0, 0, 0,
+            /*code_offset:*/ 159, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0, Instr::end,
+            /*116:*/ Instr::i32_const, 0x44, 0, 0, 0, Instr::return_, /*arity:*/ 1, 0, 0, 0,
+            /*code_offset:*/ 159, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0, Instr::end,
+            /*135:*/ Instr::i32_const, 0x45, 0, 0, 0, Instr::return_, /*arity:*/ 1, 0, 0, 0,
+            /*code_offset:*/ 159, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0, Instr::end,
+            /*154:*/ Instr::i32_const, 0x46, 0, 0, 0,
+            /*159:*/ Instr::end));
 
-        "13000000"  // code_offset
-        "98000000"  // imm_offset
-        "00000000"  // stack_drop
-
-        "10000000"  // code_offset
-        "84000000"  // imm_offset
-        "00000000"  // stack_drop
-
-        "0d000000"  // code_offset
-        "70000000"  // imm_offset
-        "00000000"  // stack_drop
-
-        "0a000000"  // code_offset
-        "5c000000"  // imm_offset
-        "00000000"  // stack_drop
-
-        "16000000"         // code_offset
-        "ac000000"         // imm_offset
-        "00000000"_bytes;  // stack_drop
-
-    EXPECT_EQ(code.immediates.substr(br_table_imm_offset, expected_br_imm.size()), expected_br_imm);
     EXPECT_EQ(code.max_stack_height, 1);
 }
 
@@ -404,18 +330,12 @@ TEST(parser_expr, instr_br_table_empty_vector)
     const auto& code = module->codesec[0];
 
     EXPECT_THAT(code.instructions,
-        ElementsAre(Instr::block, Instr::local_get, Instr::br_table, Instr::i32_const,
-            Instr::return_, Instr::end, Instr::i32_const, Instr::end));
+        ElementsAre(Instr::block, Instr::local_get, 0, 0, 0, 0, Instr::br_table,
+            /*label_count:*/ 0, 0, 0, 0, /*arity:*/ 0, 0, 0, 0, /*code_offset:*/ 42, 0, 0, 0,
+            /*stack_drop:*/ 0, 0, 0, 0, Instr::i32_const, 0x63, 0, 0, 0, Instr::return_,
+            /*arity:*/ 1, 0, 0, 0, /*code_offset:*/ 47, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+            Instr::end, Instr::i32_const, 0x64, 0, 0, 0, Instr::end));
 
-    // local_get before br_table
-    const auto br_table_imm_offset = 4;
-    const auto expected_br_imm =
-        "00000000"         // label_count
-        "00000000"         // arity
-        "06000000"         // code_offset
-        "2c000000"         // imm_offset
-        "00000000"_bytes;  // stack_drop
-    EXPECT_EQ(code.immediates.substr(br_table_imm_offset, expected_br_imm.size()), expected_br_imm);
     EXPECT_EQ(code.max_stack_height, 1);
 }
 
@@ -426,9 +346,12 @@ TEST(parser_expr, instr_br_table_as_return)
        br_table 0
     */
 
-    const auto code_bin = "41000e00000b"_bytes;
+    const auto code_bin = i32_const(0) + "0e00000b"_bytes;
     const auto [code, _] = parse_expr(code_bin);
-    EXPECT_THAT(code.instructions, ElementsAre(Instr::i32_const, Instr::br_table, Instr::end));
+    EXPECT_THAT(code.instructions,
+        ElementsAre(Instr::i32_const, 0, 0, 0, 0, Instr::br_table, /*label_count:*/ 0, 0, 0, 0,
+            /*arity:*/ 0, 0, 0, 0, /*code_offset:*/ 22, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+            Instr::end));
     EXPECT_EQ(code.max_stack_height, 1);
 }
 
@@ -464,7 +387,8 @@ TEST(parser_expr, call_indirect_table_index)
 
     const auto code1_bin = i32_const(0) + "1100000b"_bytes;
     const auto [code, pos] = parse_expr(code1_bin, 0, {}, module);
-    EXPECT_THAT(code.instructions, ElementsAre(Instr::i32_const, Instr::call_indirect, Instr::end));
+    EXPECT_THAT(code.instructions,
+        ElementsAre(Instr::i32_const, 0, 0, 0, 0, Instr::call_indirect, 0, 0, 0, 0, Instr::end));
 
     const auto code2_bin = i32_const(0) + "1100010b"_bytes;
     EXPECT_THROW_MESSAGE(parse_expr(code2_bin, 0, {}, module), parser_error,
