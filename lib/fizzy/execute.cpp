@@ -474,10 +474,9 @@ void branch(const Code& code, OperandStack& stack, const uint8_t*& pc, uint32_t 
         stack.drop(stack_drop);
 }
 
-inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
-    OperandStack& stack, int depth)
+inline bool invoke_function(
+    size_t num_args, uint32_t func_idx, Instance& instance, OperandStack& stack, int depth)
 {
-    const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
     const auto call_args = stack.rend() - num_args;
 
@@ -489,7 +488,6 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
     stack.drop(num_args);
 
     // Push back the result
-    assert(func_type.outputs.size() == (ret.has_value ? 1 : 0));
     if (ret.has_value)
         stack.push(ret.value);
 
@@ -589,9 +587,10 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         case Instr::call:
         {
             const auto called_func_idx = read<uint32_t>(pc);
-            const auto& called_func_type = instance.module->get_function_type(called_func_idx);
+            const auto called_func_num_args =
+                instance.module->get_function_type(called_func_idx).inputs.size();
 
-            if (!invoke_function(called_func_type, called_func_idx, instance, stack, depth))
+            if (!invoke_function(called_func_num_args, called_func_idx, instance, stack, depth))
                 goto trap;
             break;
         }
@@ -617,8 +616,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             if (expected_type != actual_type)
                 goto trap;
 
-            if (!invoke_function(
-                    actual_type, called_func.func_idx, *called_func.instance, stack, depth))
+            if (!invoke_function(actual_type.inputs.size(), called_func.func_idx,
+                    *called_func.instance, stack, depth))
                 goto trap;
             break;
         }
