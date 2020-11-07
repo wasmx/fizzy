@@ -160,9 +160,14 @@ impl From<ExecutionResult> for sys::FizzyExecutionResult {
 }
 
 impl Instance {
+    /// Get a read-only pointer to the module.
+    unsafe fn get_module(&self) -> *const sys::FizzyModule {
+        sys::fizzy_get_instance_module(self.0.as_ptr())
+    }
+
     /// Find index of exported function by name.
     pub fn find_exported_function_index(&self, name: &str) -> Option<u32> {
-        let module = unsafe { sys::fizzy_get_instance_module(self.0.as_ptr()) };
+        let module = unsafe { self.get_module() };
         let name = CString::new(name).expect("CString::new failed");
         let mut func_idx: u32 = 0;
         let found = unsafe {
@@ -192,6 +197,44 @@ impl Instance {
         ExecutionResult {
             0: sys::fizzy_execute(self.0.as_ptr(), func_idx, args.as_ptr(), depth),
         }
+    }
+
+    /// Find function type for a given index. Must be a valid index otherwise behaviour is undefined.
+    unsafe fn get_function_type(&self, func_idx: u32) -> sys::FizzyFunctionType {
+        let module = self.get_module();
+        sys::fizzy_get_function_type(module, func_idx)
+    }
+
+    /// Execute a given function of `name` with the given values `args`.
+    ///
+    /// An error is returned if the function can not be found, or inappropriate number of arguments are passed.
+    /// However the types of the arguments are not validated.
+    ///
+    /// The `depth` argument sets the initial call depth. Should be set to `0`.
+    pub fn execute(
+        &mut self,
+        name: &str,
+        args: &[Value],
+        depth: i32,
+    ) -> Result<ExecutionResult, ()> {
+        let func_idx = self.find_exported_function_index(&name);
+        if func_idx.is_none() {
+            return Err(());
+        }
+        let func_idx = func_idx.unwrap();
+
+        let func_type = unsafe { self.get_function_type(func_idx) };
+        if func_type.inputs_size != args.len() {
+            return Err(());
+        }
+        // TODO: validate input types too
+
+        let ret = unsafe { self.unsafe_execute(func_idx, args, depth) };
+        if !ret.trapped() {
+            // Validate presence of output whether return type is void or not.
+            assert!((func_type.output == sys::FizzyValueTypeVoid) == !ret.value().is_some());
+        }
+        Ok(ret)
     }
 }
 
@@ -337,5 +380,50 @@ mod tests {
         let result = unsafe { instance.unsafe_execute(3, &[], 0) };
         assert!(result.trapped());
         assert!(!result.value().is_some());
+    }
+
+    #[test]
+    fn execute_wasm() {
+        /* wat2wasm
+        (module
+          (func (export "foo") (result i32) (i32.const 42))
+          (func (export "bar") (param i32) (result i32) (i32.const 42))
+          (global (export "g1") i32 (i32.const 0))
+          (table (export "tab") 0 anyfunc)
+          (memory (export "mem") 1 2)
+        )
+        */
+        let input = hex::decode(
+        "0061736d01000000010a026000017f60017f017f03030200010404017000000504010101020606017f0041000b071e0503666f6f00000362617200010267310300037461620100036d656d02000a0b020400412a0b0400412a0b").unwrap();
+
+        let module = parse(&input);
+        assert!(module.is_ok());
+        let instance = module.unwrap().instantiate();
+        assert!(instance.is_ok());
+        let mut instance = instance.unwrap();
+
+        // Successful execution.
+        let result = instance.execute("foo", &[], 0);
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert!(!result.trapped());
+        assert!(result.value().is_some());
+        assert_eq!(result.value().unwrap().as_i32(), 42);
+
+        // Non-function export.
+        let result = instance.execute("g1", &[], 0);
+        assert!(result.is_err());
+
+        // Export not found.
+        let result = instance.execute("baz", &[], 0);
+        assert!(result.is_err());
+
+        // Passing more arguments than required.
+        let result = instance.execute("foo", &[42.into()], 0);
+        assert!(result.is_err());
+
+        // Passing less arguments than required.
+        let result = instance.execute("bar", &[], 0);
+        assert!(result.is_err());
     }
 }
