@@ -98,6 +98,44 @@ TEST(capi, find_exported_function_index)
     fizzy_free_module(module);
 }
 
+TEST(capi, find_exported_function)
+{
+    /* wat2wasm
+    (module
+      (func $f (export "foo") (result i32) (i32.const 42))
+      (global (export "g1") i32 (i32.const 42))
+      (table (export "tab") 10 30 anyfunc)
+      (memory (export "mem") 1 2)
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000105016000017f0302010004050170010a1e0504010101020606017f00412a0b0718040366"
+        "6f6f00000267310300037461620100036d656d02000a06010400412a0b");
+
+    auto module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+
+    auto instance = fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0);
+    ASSERT_NE(instance, nullptr);
+
+    FizzyExternalFunction function;
+    ASSERT_TRUE(fizzy_find_exported_function(instance, "foo", &function));
+    EXPECT_EQ(function.type.inputs_size, 0);
+    EXPECT_EQ(function.type.output, FizzyValueTypeI32);
+    EXPECT_NE(function.context, nullptr);
+    ASSERT_NE(function.function, nullptr);
+    EXPECT_THAT(function.function(function.context, instance, nullptr, 0), CResult(42));
+
+    fizzy_free_exported_function(&function);
+
+    EXPECT_FALSE(fizzy_find_exported_function(instance, "foo2", &function));
+    EXPECT_FALSE(fizzy_find_exported_function(instance, "g1", &function));
+    EXPECT_FALSE(fizzy_find_exported_function(instance, "tab", &function));
+    EXPECT_FALSE(fizzy_find_exported_function(instance, "mem", &function));
+
+    fizzy_free_instance(instance);
+}
+
 TEST(capi, find_exported_table)
 {
     /* wat2wasm
@@ -713,6 +751,9 @@ TEST(capi, imported_function_from_another_module)
     auto instance1 = fizzy_instantiate(module1, nullptr, 0, nullptr, nullptr, nullptr, 0);
     ASSERT_NE(instance1, nullptr);
 
+    FizzyExternalFunction func;
+    ASSERT_TRUE(fizzy_find_exported_function(instance1, "sub", &func));
+
     /* wat2wasm
     (module
       (func $sub (import "m1" "sub") (param $lhs i32) (param $rhs i32) (result i32))
@@ -730,29 +771,13 @@ TEST(capi, imported_function_from_another_module)
     auto module2 = fizzy_parse(bin2.data(), bin2.size());
     ASSERT_NE(module2, nullptr);
 
-    uint32_t func_idx;
-    ASSERT_TRUE(fizzy_find_exported_function_index(module1, "sub", &func_idx));
-
-    auto host_context = std::make_pair(instance1, func_idx);
-
-    auto sub = [](void* context, FizzyInstance*, const FizzyValue* args,
-                   int depth) -> FizzyExecutionResult {
-        const auto* instance_and_func_idx =
-            static_cast<std::pair<FizzyInstance*, uint32_t>*>(context);
-        return fizzy_execute(
-            instance_and_func_idx->first, instance_and_func_idx->second, args, depth + 1);
-    };
-
-    const FizzyValueType inputs[] = {FizzyValueTypeI32, FizzyValueTypeI32};
-
-    FizzyExternalFunction host_funcs[] = {{{FizzyValueTypeI32, &inputs[0], 2}, sub, &host_context}};
-
-    auto instance2 = fizzy_instantiate(module2, host_funcs, 1, nullptr, nullptr, nullptr, 0);
+    auto instance2 = fizzy_instantiate(module2, &func, 1, nullptr, nullptr, nullptr, 0);
     ASSERT_NE(instance2, nullptr);
 
     FizzyValue args[] = {{44}, {2}};
     EXPECT_THAT(fizzy_execute(instance2, 1, args, 0), CResult(42));
 
+    fizzy_free_exported_function(&func);
     fizzy_free_instance(instance2);
     fizzy_free_instance(instance1);
 }

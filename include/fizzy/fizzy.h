@@ -275,6 +275,29 @@ uint8_t* fizzy_get_instance_memory_data(FizzyInstance* instance);
 /// @note    Function returns memory size regardless of whether memory is exported or not.
 size_t fizzy_get_instance_memory_size(FizzyInstance* instance);
 
+/// Find exported function by name.
+///
+/// @param  instance        Pointer to instance.
+/// @param  name            The function name. NULL-terminated string. Cannot be NULL.
+/// @param  out_function    Pointer to output struct to store the found function. Cannot be NULL.
+///                         If function is found, associated context is allocated, which must exist
+///                         as long as the function can be called by some other instance, and should
+///                         be destroyed with fizzy_free_exported_function afterwards.
+///                         When function is not found (false returned), this out_function is not
+///                         modified, and fizzy_free_exported_function must not be called.
+/// @returns                true if function was found, false otherwise.
+bool fizzy_find_exported_function(
+    FizzyInstance* instance, const char* name, FizzyExternalFunction* out_function);
+
+/// Free resources associated with exported function.
+///
+/// @param  external_function   Pointer to external function struct filled by
+///                             fizzy_find_exported_function. Cannot be NULL.
+///
+/// @note   This function may not be called with external function, which was not returned from
+///         fizzy_find_exported_function.
+void fizzy_free_exported_function(FizzyExternalFunction* external_function);
+
 /// Find exported table by name.
 ///
 /// @param  instance        Pointer to instance.
