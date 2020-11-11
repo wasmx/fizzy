@@ -35,7 +35,7 @@ commands:
             else
               [[ $OSTYPE = darwin* ]] && os=macos || os=ubuntu
               cd /usr/local
-              curl -L https://github.com/WebAssembly/wabt/releases/download/1.0.19/wabt-1.0.19-$os.tar.gz | sudo tar xz --strip 1
+              curl -L https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.0.20-$os.tar.gz | sudo tar xz --strip 1
             fi
 
   install_testfloat:
