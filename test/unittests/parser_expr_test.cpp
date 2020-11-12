@@ -28,25 +28,25 @@ TEST(parser_expr, instr_loop)
 {
     const auto loop_void = "03400b0b"_bytes;
     const auto [code1, pos1] = parse_expr(loop_void);
-    EXPECT_THAT(code1.instructions, ElementsAre(Instr::end, Instr::end));
+    EXPECT_THAT(code1.instructions, ElementsAre(Instr::end));
     EXPECT_EQ(code1.max_stack_height, 0);
 
     const auto loop_i32 = "037f41000b1a0b"_bytes;
     const auto [code2, pos2] = parse_expr(loop_i32);
-    EXPECT_THAT(code2.instructions,
-        ElementsAre(Instr::i32_const, 0, 0, 0, 0, Instr::end, Instr::drop, Instr::end));
+    EXPECT_THAT(
+        code2.instructions, ElementsAre(Instr::i32_const, 0, 0, 0, 0, Instr::drop, Instr::end));
     EXPECT_EQ(code2.max_stack_height, 1);
 
     const auto loop_f32 = "037d43000000000b1a0b"_bytes;
     const auto [code3, pos3] = parse_expr(loop_f32);
-    EXPECT_THAT(code3.instructions,
-        ElementsAre(Instr::f32_const, 0, 0, 0, 0, Instr::end, Instr::drop, Instr::end));
+    EXPECT_THAT(
+        code3.instructions, ElementsAre(Instr::f32_const, 0, 0, 0, 0, Instr::drop, Instr::end));
     EXPECT_EQ(code3.max_stack_height, 1);
 
     const auto loop_f64 = "037c4400000000000000000b1a0b"_bytes;
     const auto [code4, pos4] = parse_expr(loop_f64);
     EXPECT_THAT(code4.instructions,
-        ElementsAre(Instr::f64_const, 0, 0, 0, 0, 0, 0, 0, 0, Instr::end, Instr::drop, Instr::end));
+        ElementsAre(Instr::f64_const, 0, 0, 0, 0, 0, 0, 0, 0, Instr::drop, Instr::end));
     EXPECT_EQ(code4.max_stack_height, 1);
 }
 
@@ -64,17 +64,17 @@ TEST(parser_expr, instr_block)
 
     const auto empty = "010102400b0b"_bytes;
     const auto [code1, pos1] = parse_expr(empty);
-    EXPECT_THAT(code1.instructions, ElementsAre(Instr::end, Instr::end));
+    EXPECT_THAT(code1.instructions, ElementsAre(Instr::end));
 
     const auto block_i64 = "027e42000b1a0b"_bytes;
     const auto [code2, pos2] = parse_expr(block_i64);
     EXPECT_THAT(code2.instructions,
-        ElementsAre(Instr::i64_const, 0, 0, 0, 0, 0, 0, 0, 0, Instr::end, Instr::drop, Instr::end));
+        ElementsAre(Instr::i64_const, 0, 0, 0, 0, 0, 0, 0, 0, Instr::drop, Instr::end));
 
     const auto block_f64 = "027c4400000000000000000b1a0b"_bytes;
     const auto [code3, pos3] = parse_expr(block_f64);
     EXPECT_THAT(code3.instructions,
-        ElementsAre(Instr::f64_const, 0, 0, 0, 0, 0, 0, 0, 0, Instr::end, Instr::drop, Instr::end));
+        ElementsAre(Instr::f64_const, 0, 0, 0, 0, 0, 0, 0, 0, Instr::drop, Instr::end));
 }
 
 TEST(parser_expr, instr_block_input_buffer_overflow)
@@ -94,7 +94,7 @@ TEST(parser_expr, loop_br)
 
     EXPECT_THAT(module->codesec[0].instructions,
         ElementsAre(Instr::br, /*arity:*/ 0, 0, 0, 0, /*code_offset:*/ 0, 0, 0, 0,
-            /*stack_drop:*/ 0, 0, 0, 0, Instr::end, Instr::end));
+            /*stack_drop:*/ 0, 0, 0, 0, Instr::end));
 
     /* wat2wasm
     (func
@@ -109,8 +109,7 @@ TEST(parser_expr, loop_br)
 
     EXPECT_THAT(module_parent_stack->codesec[0].instructions,
         ElementsAre(Instr::i32_const, 0, 0, 0, 0, Instr::br, /*arity:*/ 0, 0, 0, 0,
-            /*code_offset:*/ 5, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0, Instr::end, Instr::drop,
-            Instr::end));
+            /*code_offset:*/ 5, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0, Instr::drop, Instr::end));
 
     /* wat2wasm
     (func
@@ -127,8 +126,7 @@ TEST(parser_expr, loop_br)
 
     EXPECT_THAT(module_arity->codesec[0].instructions,
         ElementsAre(Instr::i32_const, 0, 0, 0, 0, Instr::br, /*arity:*/ 0, 0, 0, 0,
-            /*code_offset:*/ 0, 0, 0, 0, /*stack_drop:*/ 1, 0, 0, 0, Instr::end, Instr::drop,
-            Instr::end));
+            /*code_offset:*/ 0, 0, 0, 0, /*stack_drop:*/ 1, 0, 0, 0, Instr::drop, Instr::end));
 }
 
 TEST(parser_expr, loop_return)
@@ -140,8 +138,8 @@ TEST(parser_expr, loop_return)
     const auto module = parse(wasm);
 
     EXPECT_THAT(module->codesec[0].instructions,
-        ElementsAre(Instr::return_, /*arity:*/ 0, 0, 0, 0, /*code_offset:*/ 14, 0, 0, 0,
-            /*stack_drop:*/ 0, 0, 0, 0, Instr::end, Instr::end));
+        ElementsAre(Instr::return_, /*arity:*/ 0, 0, 0, 0, /*code_offset:*/ 13, 0, 0, 0,
+            /*stack_drop:*/ 0, 0, 0, 0, Instr::end));
 }
 
 TEST(parser_expr, block_br)
@@ -162,9 +160,9 @@ TEST(parser_expr, block_br)
     const auto [code, pos] = parse_expr(code_bin, 0, {{2, ValType::i32}});
     EXPECT_THAT(code.instructions,
         ElementsAre(Instr::i32_const, 0x0a, 0, 0, 0, Instr::local_set, 1, 0, 0, 0, Instr::br,
-            /*arity:*/ 0, 0, 0, 0, /*code_offset:*/ 34, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
-            Instr::i32_const, 0x0b, 0, 0, 0, Instr::local_set, 1, 0, 0, 0, Instr::end,
-            Instr::local_get, 1, 0, 0, 0, Instr::drop, Instr::end));
+            /*arity:*/ 0, 0, 0, 0, /*code_offset:*/ 33, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+            Instr::i32_const, 0x0b, 0, 0, 0, Instr::local_set, 1, 0, 0, 0, Instr::local_get, 1, 0,
+            0, 0, Instr::drop, Instr::end));
     EXPECT_EQ(code.max_stack_height, 1);
 
     /* wat2wasm
@@ -180,8 +178,7 @@ TEST(parser_expr, block_br)
 
     EXPECT_THAT(module_parent_stack->codesec[0].instructions,
         ElementsAre(Instr::i32_const, 0, 0, 0, 0, Instr::br, /*arity:*/ 0, 0, 0, 0,
-            /*code_offset:*/ 19, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0, Instr::end, Instr::drop,
-            Instr::end));
+            /*code_offset:*/ 18, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0, Instr::drop, Instr::end));
 
     /* wat2wasm
     (func
@@ -198,8 +195,7 @@ TEST(parser_expr, block_br)
 
     EXPECT_THAT(module_arity->codesec[0].instructions,
         ElementsAre(Instr::i32_const, 0, 0, 0, 0, Instr::br, /*arity:*/ 1, 0, 0, 0,
-            /*code_offset:*/ 19, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0, Instr::end, Instr::drop,
-            Instr::end));
+            /*code_offset:*/ 18, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0, Instr::drop, Instr::end));
 }
 
 TEST(parser_expr, block_return)
@@ -211,8 +207,8 @@ TEST(parser_expr, block_return)
     const auto module = parse(wasm);
 
     EXPECT_THAT(module->codesec[0].instructions,
-        ElementsAre(Instr::return_, /*arity:*/ 0, 0, 0, 0, /*code_offset:*/ 14, 0, 0, 0,
-            /*stack_drop:*/ 0, 0, 0, 0, Instr::end, Instr::end));
+        ElementsAre(Instr::return_, /*arity:*/ 0, 0, 0, 0, /*code_offset:*/ 13, 0, 0, 0,
+            /*stack_drop:*/ 0, 0, 0, 0, Instr::end));
 }
 
 TEST(parser_expr, if_br)
@@ -227,9 +223,9 @@ TEST(parser_expr, if_br)
     const auto module = parse(wasm);
 
     EXPECT_THAT(module->codesec[0].instructions,
-        ElementsAre(Instr::i32_const, 0, 0, 0, 0, Instr::if_, /*else_offset:*/ 24, 0, 0, 0,
-            Instr::br, /*arity:*/ 0, 0, 0, 0, /*code_offset:*/ 24, 0, 0, 0,
-            /*stack_drop:*/ 0, 0, 0, 0, Instr::end, /*24:*/ Instr::end));
+        ElementsAre(Instr::i32_const, 0, 0, 0, 0, Instr::if_, /*else_offset:*/ 23, 0, 0, 0,
+            Instr::br, /*arity:*/ 0, 0, 0, 0, /*code_offset:*/ 23, 0, 0, 0,
+            /*stack_drop:*/ 0, 0, 0, 0, /*23:*/ Instr::end));
 
     /* wat2wasm
     (func
@@ -245,9 +241,9 @@ TEST(parser_expr, if_br)
 
     EXPECT_THAT(module_parent_stack->codesec[0].instructions,
         ElementsAre(Instr::i32_const, 0, 0, 0, 0, Instr::i32_const, 0, 0, 0, 0, Instr::if_,
-            /*else_offset:*/ 29, 0, 0, 0, Instr::br, /*arity:*/ 0, 0, 0, 0,
-            /*code_offset:*/ 29, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
-            /*29:*/ Instr::end, Instr::drop, Instr::end));
+            /*else_offset:*/ 28, 0, 0, 0, Instr::br, /*arity:*/ 0, 0, 0, 0,
+            /*code_offset:*/ 28, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+            /*28:*/ Instr::drop, Instr::end));
 }
 
 TEST(parser_expr, instr_br_table)
@@ -284,24 +280,24 @@ TEST(parser_expr, instr_br_table)
     EXPECT_THAT(code.instructions,
         ElementsAre(Instr::local_get, 0, 0, 0, 0, Instr::br_table,
             /*label_count:*/ 4, 0, 0, 0, /*arity:*/ 0, 0, 0, 0,
-            /*code_offset:*/ 130, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
-            /*code_offset:*/ 111, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
-            /*code_offset:*/ 92, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
-            /*code_offset:*/ 73, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
-            /*code_offset:*/ 149, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+            /*code_offset:*/ 126, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+            /*code_offset:*/ 108, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+            /*code_offset:*/ 90, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+            /*code_offset:*/ 72, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+            /*code_offset:*/ 144, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
 
             /*54:*/ Instr::i32_const, 0x41, 0, 0, 0, Instr::return_, /*arity:*/ 1, 0, 0, 0,
-            /*code_offset:*/ 154, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0, Instr::end,
-            /*73:*/ Instr::i32_const, 0x42, 0, 0, 0, Instr::return_, /*arity:*/ 1, 0, 0, 0,
-            /*code_offset:*/ 154, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0, Instr::end,
-            /*92:*/ Instr::i32_const, 0x43, 0, 0, 0, Instr::return_, /*arity:*/ 1, 0, 0, 0,
-            /*code_offset:*/ 154, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0, Instr::end,
-            /*111:*/ Instr::i32_const, 0x44, 0, 0, 0, Instr::return_, /*arity:*/ 1, 0, 0, 0,
-            /*code_offset:*/ 154, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0, Instr::end,
-            /*130:*/ Instr::i32_const, 0x45, 0, 0, 0, Instr::return_, /*arity:*/ 1, 0, 0, 0,
-            /*code_offset:*/ 154, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0, Instr::end,
-            /*149:*/ Instr::i32_const, 0x46, 0, 0, 0,
-            /*154:*/ Instr::end));
+            /*code_offset:*/ 149, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+            /*72:*/ Instr::i32_const, 0x42, 0, 0, 0, Instr::return_, /*arity:*/ 1, 0, 0, 0,
+            /*code_offset:*/ 149, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+            /*90:*/ Instr::i32_const, 0x43, 0, 0, 0, Instr::return_, /*arity:*/ 1, 0, 0, 0,
+            /*code_offset:*/ 149, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+            /*108:*/ Instr::i32_const, 0x44, 0, 0, 0, Instr::return_, /*arity:*/ 1, 0, 0, 0,
+            /*code_offset:*/ 149, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+            /*126:*/ Instr::i32_const, 0x45, 0, 0, 0, Instr::return_, /*arity:*/ 1, 0, 0, 0,
+            /*code_offset:*/ 149, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+            /*144:*/ Instr::i32_const, 0x46, 0, 0, 0,
+            /*149:*/ Instr::end));
 
     EXPECT_EQ(code.max_stack_height, 1);
 }
@@ -326,10 +322,10 @@ TEST(parser_expr, instr_br_table_empty_vector)
 
     EXPECT_THAT(code.instructions,
         ElementsAre(Instr::local_get, 0, 0, 0, 0, Instr::br_table,
-            /*label_count:*/ 0, 0, 0, 0, /*arity:*/ 0, 0, 0, 0, /*code_offset:*/ 41, 0, 0, 0,
+            /*label_count:*/ 0, 0, 0, 0, /*arity:*/ 0, 0, 0, 0, /*code_offset:*/ 40, 0, 0, 0,
             /*stack_drop:*/ 0, 0, 0, 0, Instr::i32_const, 0x63, 0, 0, 0, Instr::return_,
-            /*arity:*/ 1, 0, 0, 0, /*code_offset:*/ 46, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
-            Instr::end, Instr::i32_const, 0x64, 0, 0, 0, Instr::end));
+            /*arity:*/ 1, 0, 0, 0, /*code_offset:*/ 45, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
+            Instr::i32_const, 0x64, 0, 0, 0, Instr::end));
 
     EXPECT_EQ(code.max_stack_height, 1);
 }
