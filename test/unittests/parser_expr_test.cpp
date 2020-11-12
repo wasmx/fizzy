@@ -508,6 +508,7 @@ TEST(parser_expr, call_1arg_1result)
     EXPECT_EQ(module->codesec[0].max_stack_height, 1);
     EXPECT_EQ(module->codesec[1].max_stack_height, 1);
 }
+
 TEST(parser_expr, call_nonexisting_typeidx)
 {
     // This creates a wasm module where code[0] has a call instruction calling function[1] which
@@ -518,4 +519,29 @@ TEST(parser_expr, call_nonexisting_typeidx)
                       make_section(10, make_vec({"040010010b"_bytes, "02000b"_bytes}));
 
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "invalid function type index");
+}
+
+TEST(parser_expr, nop_like_instructions_are_skipped)
+{
+    /* wat2wasm
+    (func
+      nop
+      (block
+        nop
+        (loop
+          nop
+          (block nop)
+          nop
+        )
+        nop
+      )
+      nop
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010401600000030201000a14011200010240010340010240010b010b010b010b");
+
+    const auto module = parse(wasm);
+    ASSERT_EQ(module->codesec.size(), 1);
+    EXPECT_THAT(module->codesec[0].instructions, ElementsAre(Instr::end));
 }
