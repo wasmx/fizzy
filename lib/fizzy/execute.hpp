@@ -36,8 +36,16 @@ struct ExecutionResult
 constexpr ExecutionResult Void{true};
 constexpr ExecutionResult Trap{false};
 
+/// The "unsafe" internal execute function.
+ExecutionResult execute_internal(
+    Instance& instance, FuncIdx func_idx, const Value* args, int depth);
+
 // Execute a function on an instance.
-ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args, int depth = 0);
+inline ExecutionResult execute(
+    Instance& instance, FuncIdx func_idx, const Value* args, int depth = 0)
+{
+    return execute_internal(instance, func_idx, args, depth);
+}
 
 inline ExecutionResult execute(
     Instance& instance, FuncIdx func_idx, std::initializer_list<Value> args)

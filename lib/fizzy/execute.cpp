@@ -501,7 +501,7 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
 
 }  // namespace
 
-ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args, int depth)
+ExecutionResult execute_internal(Instance& instance, FuncIdx func_idx, const Value* args, int depth)
 {
     assert(depth >= 0);
     if (depth > CallStackLimit)
