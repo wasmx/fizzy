@@ -37,15 +37,14 @@ constexpr ExecutionResult Void{true};
 constexpr ExecutionResult Trap{false};
 
 /// The "unsafe" internal execute function.
-ExecutionResult execute_internal(
-    Instance& instance, FuncIdx func_idx, const Value* args, int depth);
+ExecutionResult execute_internal(Instance& instance, FuncIdx func_idx, Value* args, int depth);
 
 // Execute a function on an instance.
 inline ExecutionResult execute(
     Instance& instance, FuncIdx func_idx, const Value* args, int depth = 0)
 {
     const auto num_args = instance.module->get_function_type(func_idx).inputs.size();
-    const auto* args_end = args + num_args;
+    auto* args_end = const_cast<Value*>(args + num_args);
     return execute_internal(instance, func_idx, args_end, depth);
 }
 

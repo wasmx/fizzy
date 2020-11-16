@@ -165,9 +165,9 @@ public:
     }
 
     /// Returns iterator to the bottom of the stack.
-    const Value* rbegin() const noexcept { return m_bottom; }
+    Value* rbegin() const noexcept { return m_bottom; }
 
     /// Returns end iterator counting from the bottom of the stack.
-    const Value* rend() const noexcept { return m_top + 1; }
+    Value* rend() const noexcept { return m_top + 1; }
 };
 }  // namespace fizzy
