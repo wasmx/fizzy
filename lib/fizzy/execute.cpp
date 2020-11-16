@@ -479,9 +479,8 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
 {
     const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
-    const auto call_args = stack.rend() - num_args;
 
-    const auto ret = execute_internal(instance, func_idx, call_args, depth + 1);
+    const auto ret = execute_internal(instance, func_idx, stack.rend(), depth + 1);
     // Bubble up traps
     if (ret.trapped)
         return false;
@@ -501,13 +500,16 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
 
 }  // namespace
 
-ExecutionResult execute_internal(Instance& instance, FuncIdx func_idx, const Value* args, int depth)
+ExecutionResult execute_internal(
+    Instance& instance, FuncIdx func_idx, const Value* args_end, int depth)
 {
     assert(depth >= 0);
     if (depth > CallStackLimit)
         return Trap;
 
     const auto& func_type = instance.module->get_function_type(func_idx);
+
+    const auto* args = args_end - func_type.inputs.size();
 
     assert(instance.module->imported_function_types.size() == instance.imported_functions.size());
     if (func_idx < instance.imported_functions.size())

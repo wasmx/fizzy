@@ -44,7 +44,9 @@ ExecutionResult execute_internal(
 inline ExecutionResult execute(
     Instance& instance, FuncIdx func_idx, const Value* args, int depth = 0)
 {
-    return execute_internal(instance, func_idx, args, depth);
+    const auto num_args = instance.module->get_function_type(func_idx).inputs.size();
+    const auto* args_end = args + num_args;
+    return execute_internal(instance, func_idx, args_end, depth);
 }
 
 inline ExecutionResult execute(
