@@ -138,6 +138,8 @@ public:
         return *m_top;
     }
 
+    void set_end(Value* end) noexcept { m_top = end - 1; }
+
     /// Returns the reference to the stack item on given position from the stack top.
     /// Requires index < size().
     Value& operator[](size_t index) noexcept

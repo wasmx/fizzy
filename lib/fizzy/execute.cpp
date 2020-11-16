@@ -474,19 +474,14 @@ void branch(const Code& code, OperandStack& stack, const uint8_t*& pc, uint32_t 
         stack.drop(stack_drop);
 }
 
-inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
-    OperandStack& stack, int depth)
+inline bool invoke_function(uint32_t func_idx, Instance& instance, OperandStack& stack, int depth)
 {
-    const auto num_args = func_type.inputs.size();
-    const auto num_outputs = func_type.outputs.size();
-    assert(stack.size() >= num_args);
-
     const auto ret = execute_internal(instance, func_idx, stack.rend(), depth + 1);
     // Bubble up traps
     if (ret == nullptr)
         return false;
 
-    stack.drop(num_args - num_outputs);
+    stack.set_end(ret);
     return true;
 }
 
@@ -512,7 +507,10 @@ Value* execute_internal(Instance& instance, FuncIdx func_idx, Value* args_end, i
             return nullptr;
 
         if (res.has_value)
+        {
             args[0] = res.value;
+            return args + 1;
+        }
         return args;
     }
 
@@ -589,9 +587,8 @@ Value* execute_internal(Instance& instance, FuncIdx func_idx, Value* args_end, i
         case Instr::call:
         {
             const auto called_func_idx = read<uint32_t>(pc);
-            const auto& called_func_type = instance.module->get_function_type(called_func_idx);
 
-            if (!invoke_function(called_func_type, called_func_idx, instance, stack, depth))
+            if (!invoke_function(called_func_idx, instance, stack, depth))
                 goto trap;
             break;
         }
@@ -617,8 +614,7 @@ Value* execute_internal(Instance& instance, FuncIdx func_idx, Value* args_end, i
             if (expected_type != actual_type)
                 goto trap;
 
-            if (!invoke_function(
-                    actual_type, called_func.func_idx, *called_func.instance, stack, depth))
+            if (!invoke_function(called_func.func_idx, *called_func.instance, stack, depth))
                 goto trap;
             break;
         }
@@ -1539,7 +1535,10 @@ end:
     assert(stack.size() == instance.module->get_function_type(func_idx).outputs.size());
 
     if (stack.size() != 0 && args != nullptr)
+    {
         args[0] = stack.top();
+        return args + 1;
+    }
 
     return args;
 
