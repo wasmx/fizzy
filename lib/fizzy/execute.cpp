@@ -481,7 +481,7 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
     assert(stack.size() >= num_args);
     const auto call_args = stack.rend() - num_args;
 
-    const auto ret = execute(instance, func_idx, call_args, depth + 1);
+    const auto ret = execute_internal(instance, func_idx, call_args, depth + 1);
     // Bubble up traps
     if (ret.trapped)
         return false;
