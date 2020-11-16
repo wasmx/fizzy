@@ -483,7 +483,7 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
 
     const auto ret = execute_internal(instance, func_idx, stack.rend(), depth + 1);
     // Bubble up traps
-    if (ret.trapped)
+    if (ret == nullptr)
         return false;
 
     stack.drop(num_args - num_outputs);
@@ -492,13 +492,13 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
 
 }  // namespace
 
-ExecutionResult execute_internal(Instance& instance, FuncIdx func_idx, Value* args_end, int depth)
+Value* execute_internal(Instance& instance, FuncIdx func_idx, Value* args_end, int depth)
 {
     assert(args_end != nullptr);
 
     assert(depth >= 0);
     if (depth > CallStackLimit)
-        return Trap;
+        return nullptr;
 
     const auto& func_type = instance.module->get_function_type(func_idx);
 
@@ -508,9 +508,12 @@ ExecutionResult execute_internal(Instance& instance, FuncIdx func_idx, Value* ar
     if (func_idx < instance.imported_functions.size())
     {
         const auto res = instance.imported_functions[func_idx].function(instance, args, depth);
+        if (res.trapped)
+            return nullptr;
+
         if (res.has_value)
             args[0] = res.value;
-        return res;
+        return args;
     }
 
     const auto& code = instance.module->get_code(func_idx);
@@ -1538,9 +1541,9 @@ end:
     if (stack.size() != 0 && args != nullptr)
         args[0] = stack.top();
 
-    return Void;
+    return args;
 
 trap:
-    return Trap;
+    return nullptr;
 }
 }  // namespace fizzy

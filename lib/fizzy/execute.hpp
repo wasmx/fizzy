@@ -37,7 +37,7 @@ constexpr ExecutionResult Void{true};
 constexpr ExecutionResult Trap{false};
 
 /// The "unsafe" internal execute function.
-ExecutionResult execute_internal(Instance& instance, FuncIdx func_idx, Value* args, int depth);
+Value* execute_internal(Instance& instance, FuncIdx func_idx, Value* args, int depth);
 
 // Execute a function on an instance.
 inline ExecutionResult execute(
@@ -56,8 +56,8 @@ inline ExecutionResult execute(
     auto* args_end = p_args + num_args;
     const auto res = execute_internal(instance, func_idx, args_end, depth);
 
-    if (res.trapped)
-        return res;
+    if (res == nullptr)
+        return Trap;
 
     if (num_outputs == 1)
     {
