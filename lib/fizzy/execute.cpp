@@ -478,6 +478,7 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
     OperandStack& stack, int depth)
 {
     const auto num_args = func_type.inputs.size();
+    const auto num_outputs = func_type.outputs.size();
     assert(stack.size() >= num_args);
 
     const auto ret = execute_internal(instance, func_idx, stack.rend(), depth + 1);
@@ -485,16 +486,7 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
     if (ret.trapped)
         return false;
 
-    stack.drop(num_args);
-
-    const auto num_outputs = func_type.outputs.size();
-    // NOTE: we can assume these two from validation
-    assert(num_outputs <= 1);
-    assert(ret.has_value == (num_outputs == 1));
-    // Push back the result
-    if (num_outputs != 0)
-        stack.push(ret.value);
-
+    stack.drop(num_args - num_outputs);
     return true;
 }
 
@@ -502,17 +494,24 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
 
 ExecutionResult execute_internal(Instance& instance, FuncIdx func_idx, Value* args_end, int depth)
 {
+    assert(args_end != nullptr);
+
     assert(depth >= 0);
     if (depth > CallStackLimit)
         return Trap;
 
     const auto& func_type = instance.module->get_function_type(func_idx);
 
-    const auto* args = args_end - func_type.inputs.size();
+    auto* args = args_end - func_type.inputs.size();
 
     assert(instance.module->imported_function_types.size() == instance.imported_functions.size());
     if (func_idx < instance.imported_functions.size())
-        return instance.imported_functions[func_idx].function(instance, args, depth);
+    {
+        const auto res = instance.imported_functions[func_idx].function(instance, args, depth);
+        if (res.has_value)
+            args[0] = res.value;
+        return res;
+    }
 
     const auto& code = instance.module->get_code(func_idx);
     auto* const memory = instance.memory.get();
@@ -1536,7 +1535,10 @@ end:
     assert(pc == &code.instructions[code.instructions.size()]);  // End of code must be reached.
     assert(stack.size() == instance.module->get_function_type(func_idx).outputs.size());
 
-    return stack.size() != 0 ? ExecutionResult{stack.top()} : Void;
+    if (stack.size() != 0 && args != nullptr)
+        args[0] = stack.top();
+
+    return Void;
 
 trap:
     return Trap;

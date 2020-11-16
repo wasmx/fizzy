@@ -160,7 +160,7 @@ public:
 
     void drop(size_t num) noexcept
     {
-        assert(num <= size());
+        //        assert(num <= size());
         m_top -= num;
     }
 

@@ -43,9 +43,31 @@ ExecutionResult execute_internal(Instance& instance, FuncIdx func_idx, Value* ar
 inline ExecutionResult execute(
     Instance& instance, FuncIdx func_idx, const Value* args, int depth = 0)
 {
-    const auto num_args = instance.module->get_function_type(func_idx).inputs.size();
-    auto* args_end = const_cast<Value*>(args + num_args);
-    return execute_internal(instance, func_idx, args_end, depth);
+    const auto& func_type = instance.module->get_function_type(func_idx);
+    const auto num_args = func_type.inputs.size();
+    const auto num_outputs = func_type.outputs.size();
+    assert(num_outputs <= 1);
+
+    const auto arg0 = num_args >= 1 ? args[0] : Value{};
+
+    Value fake_arg;
+    auto* p_args = num_args == 0 ? &fake_arg : const_cast<Value*>(args);
+
+    auto* args_end = p_args + num_args;
+    const auto res = execute_internal(instance, func_idx, args_end, depth);
+
+    if (res.trapped)
+        return res;
+
+    if (num_outputs == 1)
+    {
+        // Restore original value, because the caller does not expect it being modified.
+        const auto result_value = p_args[0];
+        p_args[0] = arg0;
+        return ExecutionResult(result_value);
+    }
+
+    return Void;
 }
 
 inline ExecutionResult execute(
