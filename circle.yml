@@ -138,29 +138,37 @@ commands:
           working_directory: ~/build
           command: ctest -E 'unittests|smoketests' -j4 --schedule-random --output-on-failure
 
-  collect_coverage_data:
-    description: "Collect coverage data"
+  collect_coverage_clang:
+    description: "Collect coverage data (Clang)"
+    parameters:
+      objects:
+        type: string
+        default: "fizzy-bench fizzy-spectests fizzy-testfloat fizzy-unittests fizzy-wasi"
     steps:
       - run:
-          name: "Collect coverage data"
+          name: "Collect coverage data (Clang)"
           working_directory: ~/build
           command: |
-            binaries='-object bin/fizzy-unittests -object bin/fizzy-spectests -object bin/fizzy-bench -object bin/fizzy-testfloat -object bin/fizzy-wasi'
+            OBJECTS='<<parameters.objects>>'
+
+            for OBJECT in $OBJECTS; do
+              OBJECT_ARGS="$OBJECT_ARGS -object bin/$OBJECT"
+            done
 
             mkdir coverage
             find -name '*.profraw'
             llvm-profdata merge *.profraw -o fizzy.profdata
 
-            llvm-cov report -use-color -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $binaries
-            llvm-cov report -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $binaries > coverage/report.txt
-            llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt -region-coverage-lt=100 $binaries > coverage/missing.html
-            llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $binaries > coverage/full.html
-            llvm-cov export -instr-profile fizzy.profdata -format=lcov $binaries > coverage.lcov
+            llvm-cov report -use-color -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $OBJECT_ARGS
+            llvm-cov report -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $OBJECT_ARGS > coverage/report.txt
+            llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt -region-coverage-lt=100 $OBJECT_ARGS > coverage/missing.html
+            llvm-cov show -format=html -instr-profile fizzy.profdata -Xdemangler llvm-cxxfilt $OBJECT_ARGS > coverage/full.html
+            llvm-cov export -instr-profile fizzy.profdata -format=lcov $OBJECT_ARGS > coverage.lcov
       - store_artifacts:
           path: ~/build/coverage
           destination: coverage
 
-  upload_coverage_data:
+  upload_coverage:
     description: "Upload coverage data"
     steps:
       - run:
@@ -346,7 +354,7 @@ jobs:
           paths:
             - bin/*
       - test
-      - collect_coverage_data
+      - collect_coverage_clang
 
   coverage-gcc:
     executor: linux-gcc-latest
@@ -369,7 +377,7 @@ jobs:
       - store_artifacts:
           path: ~/build/coverage
           destination: coverage
-      - upload_coverage_data
+      - upload_coverage
 
   sanitizers-clang:
     executor: linux-clang-latest
@@ -544,7 +552,7 @@ jobs:
       - attach_workspace:
           at: ~/build
       - spectest
-      - collect_coverage_data
+      - collect_coverage_clang
 
   bindings-rust:
     docker:
