@@ -474,44 +474,45 @@ void branch(const Code& code, OperandStack& stack, const uint8_t*& pc, uint32_t 
         stack.drop(stack_drop);
 }
 
-inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
-    OperandStack& stack, int depth)
+inline bool invoke_function(uint32_t func_idx, Instance& instance, OperandStack& stack, int depth)
 {
-    const auto num_args = func_type.inputs.size();
-    assert(stack.size() >= num_args);
-    const auto call_args = stack.rend() - num_args;
-
-    const auto ret = execute(instance, func_idx, call_args, depth + 1);
+    const auto ret = execute_internal(instance, func_idx, stack.rend(), depth + 1);
     // Bubble up traps
-    if (ret.trapped)
+    if (ret == nullptr)
         return false;
 
-    stack.drop(num_args);
-
-    const auto num_outputs = func_type.outputs.size();
-    // NOTE: we can assume these two from validation
-    assert(num_outputs <= 1);
-    assert(ret.has_value == (num_outputs == 1));
-    // Push back the result
-    if (num_outputs != 0)
-        stack.push(ret.value);
-
+    stack.set_end(ret);
     return true;
 }
 
 }  // namespace
 
-ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args, int depth)
+Value* execute_internal(Instance& instance, FuncIdx func_idx, Value* args_end, int depth)
 {
+    assert(args_end != nullptr);
+
     assert(depth >= 0);
     if (depth > CallStackLimit)
-        return Trap;
+        return nullptr;
 
     const auto& func_type = instance.module->get_function_type(func_idx);
 
+    auto* args = args_end - func_type.inputs.size();
+
     assert(instance.module->imported_function_types.size() == instance.imported_functions.size());
     if (func_idx < instance.imported_functions.size())
-        return instance.imported_functions[func_idx].function(instance, args, depth);
+    {
+        const auto res = instance.imported_functions[func_idx].function(instance, args, depth);
+        if (res.trapped)
+            return nullptr;
+
+        if (res.has_value)
+        {
+            args[0] = res.value;
+            return args + 1;
+        }
+        return args;
+    }
 
     const auto& code = instance.module->get_code(func_idx);
     auto* const memory = instance.memory.get();
@@ -586,9 +587,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         case Instr::call:
         {
             const auto called_func_idx = read<uint32_t>(pc);
-            const auto& called_func_type = instance.module->get_function_type(called_func_idx);
 
-            if (!invoke_function(called_func_type, called_func_idx, instance, stack, depth))
+            if (!invoke_function(called_func_idx, instance, stack, depth))
                 goto trap;
             break;
         }
@@ -614,8 +614,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             if (expected_type != actual_type)
                 goto trap;
 
-            if (!invoke_function(
-                    actual_type, called_func.func_idx, *called_func.instance, stack, depth))
+            if (!invoke_function(called_func.func_idx, *called_func.instance, stack, depth))
                 goto trap;
             break;
         }
@@ -1535,9 +1534,15 @@ end:
     assert(pc == &code.instructions[code.instructions.size()]);  // End of code must be reached.
     assert(stack.size() == instance.module->get_function_type(func_idx).outputs.size());
 
-    return stack.size() != 0 ? ExecutionResult{stack.top()} : Void;
+    if (stack.size() != 0 && args != nullptr)
+    {
+        args[0] = stack.top();
+        return args + 1;
+    }
+
+    return args;
 
 trap:
-    return Trap;
+    return nullptr;
 }
 }  // namespace fizzy

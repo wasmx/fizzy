@@ -138,6 +138,8 @@ public:
         return *m_top;
     }
 
+    void set_end(Value* end) noexcept { m_top = end - 1; }
+
     /// Returns the reference to the stack item on given position from the stack top.
     /// Requires index < size().
     Value& operator[](size_t index) noexcept
@@ -160,14 +162,14 @@ public:
 
     void drop(size_t num) noexcept
     {
-        assert(num <= size());
+        //        assert(num <= size());
         m_top -= num;
     }
 
     /// Returns iterator to the bottom of the stack.
-    const Value* rbegin() const noexcept { return m_bottom; }
+    Value* rbegin() const noexcept { return m_bottom; }
 
     /// Returns end iterator counting from the bottom of the stack.
-    const Value* rend() const noexcept { return m_top + 1; }
+    Value* rend() const noexcept { return m_top + 1; }
 };
 }  // namespace fizzy
