@@ -212,6 +212,150 @@ TEST(api, resolve_imported_function_duplicate)
     EXPECT_THAT(execute(*instance, 1, {0_u32}), Result(42));
 }
 
+TEST(api, resolve_imported_globals)
+{
+    /* wat2wasm
+      (global (import "mod1" "g1") i32)
+      (global (import "mod1" "g2") (mut i32))
+      (global (import "mod2" "g1") i64)
+      (global (import "mod2" "g2") (mut i64))
+      (func (import "mod1" "foo1")
+        (param i32) (result i32)) ;; just to test combination with other import types
+      (func (result i32) (global.get 0))
+      (func (result i32) (global.get 1))
+      (func (result i64) (global.get 2))
+      (func (result i64) (global.get 3))
+   */
+    const auto wasm = from_hex(
+        "0061736d01000000010e0360017f017f6000017f6000017e023905046d6f6431026731037f00046d6f64310267"
+        "32037f01046d6f6432026731037e00046d6f6432026732037e01046d6f643104666f6f31000003050401010202"
+        "0a1504040023000b040023010b040023020b040023030b");
+    const auto module = parse(wasm);
+
+    std::vector<ImportedFunction> imported_functions = {
+        {"mod1", "foo1", {ValType::i32}, ValType::i32, function_returning_value(1)},
+    };
+    const auto external_functions = resolve_imported_functions(*module, imported_functions);
+    EXPECT_EQ(external_functions.size(), 1);
+
+    Value global1{42};
+    Value global2{43};
+    Value global3{44};
+    Value global4{45};
+    const std::vector<ImportedGlobal> imported_globals = {
+        {"mod1", "g1", &global1, ValType::i32, false},
+        {"mod1", "g2", &global2, ValType::i32, true},
+        {"mod2", "g1", &global3, ValType::i64, false},
+        {"mod2", "g2", &global4, ValType::i64, true},
+    };
+
+    const auto external_globals = resolve_imported_globals(*module, imported_globals);
+    EXPECT_EQ(external_globals.size(), 4);
+
+    auto instance = instantiate(*module, external_functions, {}, {}, external_globals);
+
+    EXPECT_THAT(execute(*instance, 1, {}), Result(42));
+    EXPECT_THAT(execute(*instance, 2, {}), Result(43));
+    EXPECT_THAT(execute(*instance, 3, {}), Result(44));
+    EXPECT_THAT(execute(*instance, 4, {}), Result(45));
+
+    const std::vector<ImportedGlobal> imported_globals_reordered = {
+        {"mod2", "g1", &global3, ValType::i64, false},
+        {"mod1", "g2", &global2, ValType::i32, true},
+        {"mod1", "g1", &global1, ValType::i32, false},
+        {"mod2", "g2", &global4, ValType::i64, true},
+    };
+    const auto external_globals_reordered =
+        resolve_imported_globals(*module, imported_globals_reordered);
+    EXPECT_EQ(external_globals_reordered.size(), 4);
+
+    auto instance_reordered =
+        instantiate(*module, external_functions, {}, {}, external_globals_reordered);
+
+    EXPECT_THAT(execute(*instance_reordered, 1, {}), Result(42));
+    EXPECT_THAT(execute(*instance_reordered, 2, {}), Result(43));
+    EXPECT_THAT(execute(*instance_reordered, 3, {}), Result(44));
+    EXPECT_THAT(execute(*instance_reordered, 4, {}), Result(45));
+
+    Value global5{46};
+    Value global6{47};
+    const std::vector<ImportedGlobal> imported_globals_extra = {
+        {"mod1", "g1", &global1, ValType::i32, false},
+        {"mod1", "g2", &global2, ValType::i32, true},
+        {"mod2", "g1", &global3, ValType::i64, false},
+        {"mod2", "g2", &global4, ValType::i64, true},
+        {"mod3", "g1", &global5, ValType::i32, false},
+        {"mod3", "g2", &global6, ValType::i32, true},
+    };
+
+    const auto external_globals_extra = resolve_imported_globals(*module, imported_globals_extra);
+    EXPECT_EQ(external_globals_extra.size(), 4);
+
+    auto instance_extra = instantiate(*module, external_functions, {}, {}, external_globals_extra);
+
+    EXPECT_THAT(execute(*instance_reordered, 1, {}), Result(42));
+    EXPECT_THAT(execute(*instance_reordered, 2, {}), Result(43));
+    EXPECT_THAT(execute(*instance_reordered, 3, {}), Result(44));
+    EXPECT_THAT(execute(*instance_reordered, 4, {}), Result(45));
+
+    const std::vector<ImportedGlobal> imported_globals_missing = {
+        {"mod2", "g1", &global3, ValType::i64, false},
+        {"mod1", "g2", &global2, ValType::i32, true},
+        {"mod1", "g1", &global1, ValType::i32, false},
+    };
+
+    EXPECT_THROW_MESSAGE(resolve_imported_globals(*module, imported_globals_missing),
+        instantiate_error, "imported global mod2.g2 is required");
+
+    const std::vector<ImportedGlobal> imported_globals_invalid_type = {
+        {"mod1", "g1", &global1, ValType::i64, false},
+        {"mod1", "g2", &global2, ValType::i32, true},
+        {"mod2", "g1", &global3, ValType::i64, false},
+        {"mod2", "g2", &global4, ValType::i64, true},
+    };
+
+    EXPECT_THROW_MESSAGE(resolve_imported_globals(*module, imported_globals_invalid_type),
+        instantiate_error, "global mod1.g1 value type doesn't match imported global in module");
+
+    const std::vector<ImportedGlobal> imported_globals_invalid_mutability = {
+        {"mod1", "g1", &global1, ValType::i32, true},
+        {"mod1", "g2", &global2, ValType::i32, true},
+        {"mod2", "g1", &global3, ValType::i64, false},
+        {"mod2", "g2", &global4, ValType::i64, true},
+    };
+
+    EXPECT_THROW_MESSAGE(resolve_imported_globals(*module, imported_globals_invalid_mutability),
+        instantiate_error, "global mod1.g1 mutability doesn't match imported global in module");
+}
+
+TEST(api, resolve_imported_global_duplicate)
+{
+    /* wat2wasm
+      (global (import "mod1" "g1") i32)
+      (global (import "mod1" "g1") i32)
+      (func (result i32) (global.get 0))
+      (func (result i32) (global.get 1))
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000105016000017f021702046d6f6431026731037f00046d6f6431026731037f000303020000"
+        "0a0b02040023000b040023010b");
+    const auto module = parse(wasm);
+
+    Value global1{42};
+    const std::vector<ImportedGlobal> imported_globals = {
+        {"mod1", "g1", &global1, ValType::i32, false},
+    };
+
+    const auto external_globals = resolve_imported_globals(*module, imported_globals);
+
+    EXPECT_EQ(external_globals.size(), 2);
+
+    auto instance = instantiate(*module, {}, {}, {}, external_globals);
+
+    EXPECT_THAT(execute(*instance, 0, {}), Result(42));
+    EXPECT_THAT(execute(*instance, 1, {}), Result(42));
+}
+
 TEST(api, find_exported_function_index)
 {
     Module module;
