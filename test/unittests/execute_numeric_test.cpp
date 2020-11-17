@@ -84,8 +84,8 @@ TEST(execute_numeric, i32_lt_s)
 {
     EXPECT_THAT(execute_binary_operation(Instr::i32_lt_s, 22, 20), Result(0));
     EXPECT_THAT(execute_binary_operation(Instr::i32_lt_s, 20, 22), Result(1));
-    EXPECT_THAT(execute_binary_operation(Instr::i32_lt_s, uint64_t(-41), uint64_t(-42)), Result(0));
-    EXPECT_THAT(execute_binary_operation(Instr::i32_lt_s, uint64_t(-42), uint64_t(-41)), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_lt_s, uint32_t(-41), uint32_t(-42)), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_lt_s, uint32_t(-42), uint32_t(-41)), Result(1));
 }
 
 TEST(execute_numeric, i32_lt_u)
@@ -98,8 +98,8 @@ TEST(execute_numeric, i32_gt_s)
 {
     EXPECT_THAT(execute_binary_operation(Instr::i32_gt_s, 22, 20), Result(1));
     EXPECT_THAT(execute_binary_operation(Instr::i32_gt_s, 20, 22), Result(0));
-    EXPECT_THAT(execute_binary_operation(Instr::i32_gt_s, uint64_t(-41), uint64_t(-42)), Result(1));
-    EXPECT_THAT(execute_binary_operation(Instr::i32_gt_s, uint64_t(-42), uint64_t(-41)), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_gt_s, uint32_t(-41), uint32_t(-42)), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_gt_s, uint32_t(-42), uint32_t(-41)), Result(0));
 }
 
 TEST(execute_numeric, i32_gt_u)
@@ -113,9 +113,9 @@ TEST(execute_numeric, i32_le_s)
     EXPECT_THAT(execute_binary_operation(Instr::i32_le_s, 22, 20), Result(0));
     EXPECT_THAT(execute_binary_operation(Instr::i32_le_s, 20, 22), Result(1));
     EXPECT_THAT(execute_binary_operation(Instr::i32_le_s, 20, 20), Result(1));
-    EXPECT_THAT(execute_binary_operation(Instr::i32_le_s, uint64_t(-41), uint64_t(-42)), Result(0));
-    EXPECT_THAT(execute_binary_operation(Instr::i32_le_s, uint64_t(-42), uint64_t(-41)), Result(1));
-    EXPECT_THAT(execute_binary_operation(Instr::i32_le_s, uint64_t(-42), uint64_t(-42)), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_le_s, uint32_t(-41), uint32_t(-42)), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_le_s, uint32_t(-42), uint32_t(-41)), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_le_s, uint32_t(-42), uint32_t(-42)), Result(1));
 }
 
 TEST(execute_numeric, i32_le_u)
@@ -130,9 +130,9 @@ TEST(execute_numeric, i32_ge_s)
     EXPECT_THAT(execute_binary_operation(Instr::i32_ge_s, 22, 20), Result(1));
     EXPECT_THAT(execute_binary_operation(Instr::i32_ge_s, 20, 22), Result(0));
     EXPECT_THAT(execute_binary_operation(Instr::i32_ge_s, 20, 20), Result(1));
-    EXPECT_THAT(execute_binary_operation(Instr::i32_ge_s, uint64_t(-41), uint64_t(-42)), Result(1));
-    EXPECT_THAT(execute_binary_operation(Instr::i32_ge_s, uint64_t(-42), uint64_t(-41)), Result(0));
-    EXPECT_THAT(execute_binary_operation(Instr::i32_ge_s, uint64_t(-42), uint64_t(-42)), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_ge_s, uint32_t(-41), uint32_t(-42)), Result(1));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_ge_s, uint32_t(-42), uint32_t(-41)), Result(0));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_ge_s, uint32_t(-42), uint32_t(-42)), Result(1));
 }
 
 TEST(execute_numeric, i32_ge_u)
@@ -267,7 +267,7 @@ TEST(execute_numeric, i32_mul)
 
 TEST(execute_numeric, i32_div_s)
 {
-    EXPECT_THAT(execute_binary_operation(Instr::i32_div_s, uint64_t(-84), 2), Result(-42));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_div_s, uint32_t(-84), 2), Result(-42));
 }
 
 TEST(execute_numeric, i32_div_s_by_zero)
@@ -278,7 +278,7 @@ TEST(execute_numeric, i32_div_s_by_zero)
 TEST(execute_numeric, i32_div_s_overflow)
 {
     EXPECT_THAT(execute_binary_operation(
-                    Instr::i32_div_s, uint64_t(std::numeric_limits<int32_t>::min()), uint64_t(-1)),
+                    Instr::i32_div_s, uint32_t(std::numeric_limits<int32_t>::min()), uint32_t(-1)),
         Traps());
 }
 
@@ -307,10 +307,10 @@ TEST(execute_numeric, i32_div_u_by_zero)
 
 TEST(execute_numeric, i32_rem_s)
 {
-    EXPECT_THAT(execute_binary_operation(Instr::i32_rem_s, uint64_t(-4242), 4200), Result(-42));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_rem_s, uint32_t(-4242), 4200), Result(-42));
     constexpr auto i32_min = std::numeric_limits<int32_t>::min();
     EXPECT_THAT(
-        execute_binary_operation(Instr::i32_rem_s, uint64_t(i32_min), uint64_t(-1)), Result(0));
+        execute_binary_operation(Instr::i32_rem_s, uint32_t(i32_min), uint32_t(-1)), Result(0));
 }
 
 TEST(execute_numeric, i32_rem_s_by_zero)
@@ -369,7 +369,7 @@ TEST(execute_numeric, i32_shl)
 
 TEST(execute_numeric, i32_shr_s)
 {
-    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, uint64_t(-84), 1), Result(-42));
+    EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, uint32_t(-84), 1), Result(-42));
     EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 0), Result(0xffffffff));
     EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 1), Result(0xffffffff));
     EXPECT_THAT(execute_binary_operation(Instr::i32_shr_s, 0xffffffff, 31), Result(0xffffffff));
