@@ -341,8 +341,14 @@ inline parser_result<Element> parse(const uint8_t* pos, const uint8_t* end)
 {
     TableIdx table_index;
     std::tie(table_index, pos) = leb128u_decode<uint32_t>(pos, end);
+
+    // TODO: The check should be table_index < num_of_tables (0 or 1),
+    //       but access to the module is needed.
     if (table_index != 0)
-        throw parser_error{"unexpected tableidx value " + std::to_string(table_index)};
+    {
+        throw validation_error{
+            "invalid table index " + std::to_string(table_index) + " (only table 0 is allowed)"};
+    }
 
     ConstantExpression offset;
     // Offset expression is required to have i32 result value
@@ -410,8 +416,14 @@ inline parser_result<Data> parse(const uint8_t* pos, const uint8_t* end)
 {
     MemIdx memory_index;
     std::tie(memory_index, pos) = leb128u_decode<uint32_t>(pos, end);
+
+    // TODO: The check should be memory_index < num_of_memories (0 or 1),
+    //       but access to the memory section of the module is needed.
     if (memory_index != 0)
-        throw parser_error{"unexpected memidx value " + std::to_string(memory_index)};
+    {
+        throw validation_error{
+            "invalid memory index " + std::to_string(memory_index) + " (only memory 0 is allowed)"};
+    }
 
     ConstantExpression offset;
     // Offset expression is required to have i32 result value
@@ -560,7 +572,10 @@ std::unique_ptr<const Module> parse(bytes_view input)
     }
 
     if (!module->datasec.empty() && !module->has_memory())
-        throw validation_error{"data section encountered without a memory section"};
+    {
+        throw validation_error{
+            "invalid memory index 0 (data section encountered without a memory section)"};
+    }
 
     for (const auto& data : module->datasec)
     {
@@ -579,7 +594,10 @@ std::unique_ptr<const Module> parse(bytes_view input)
     }
 
     if (!module->elementsec.empty() && !module->has_table())
-        throw validation_error{"element section encountered without a table section"};
+    {
+        throw validation_error{
+            "invalid table index 0 (element section encountered without a table section)"};
+    }
 
     const auto total_func_count = module->get_function_count();
 
