@@ -552,7 +552,8 @@ jobs:
       - attach_workspace:
           at: ~/build
       - spectest
-      - collect_coverage_clang
+      - collect_coverage_clang:
+          objects: fizzy-spectests
 
   bindings-rust:
     docker:
