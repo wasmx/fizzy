@@ -58,6 +58,69 @@ TEST(execute_call, call_with_arguments)
     EXPECT_THAT(execute(parse(wasm), 1, {}), Result(4));
 }
 
+TEST(execute_call, call_void_with_zero_arguments)
+{
+    /* wat2wasm
+    (module
+      (global $z (mut i32) (i32.const -1))
+      (func $set
+        (global.set $z (i32.const 1))
+      )
+      (func (result i32)
+        call $set
+        global.get $z
+      )
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000108026000006000017f03030200010606017f01417f0b0a0f020600410124000b06001000"
+        "23000b");
+
+    EXPECT_THAT(execute(parse(wasm), 1, {}), Result(1));
+}
+
+TEST(execute_call, call_void_with_one_argument)
+{
+    /* wat2wasm
+    (module
+      (global $z (mut i32) (i32.const -1))
+      (func $set (param $a i32)
+        (global.set $z (local.get $a))
+      )
+      (func (result i32)
+        (call $set (i32.const 1))
+        global.get $z
+      )
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001090260017f006000017f03030200010606017f01417f0b0a11020600200024000b080041"
+        "01100023000b");
+
+    EXPECT_THAT(execute(parse(wasm), 1, {}), Result(1));
+}
+
+TEST(execute_call, call_void_with_two_arguments)
+{
+    /* wat2wasm
+    (module
+      (global $z (mut i32) (i32.const -1))
+      (func $set (param $a i32) (param $b i32)
+        (global.set $z (i32.add (local.get $a) (local.get $b)))
+      )
+      (func (result i32)
+        (call $set (i32.const 2) (i32.const 3))
+        global.get $z
+      )
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010a0260027f7f006000017f03030200010606017f01417f0b0a16020900200020016a2400"
+        "0b0a0041024103100023000b");
+
+    EXPECT_THAT(execute(parse(wasm), 1, {}), Result(2 + 3));
+}
+
 TEST(execute_call, call_shared_stack_space)
 {
     /* wat2wasm
@@ -283,6 +346,31 @@ TEST(execute_call, imported_function_call)
     auto instance = instantiate(*module, {{host_foo, host_foo_type}});
 
     EXPECT_THAT(execute(*instance, 1, {}), Result(42));
+}
+
+TEST(execute_call, imported_function_call_void)
+{
+    /* wat2wasm
+    (func (import "m" "foo"))
+    (func
+      call 0
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d01000000010401600000020901016d03666f6f0000030201000a0601040010000b");
+
+    const auto module = parse(wasm);
+
+    bool called = false;
+    const auto host_foo = [&called](Instance&, const Value*, int) {
+        called = true;
+        return Void;
+    };
+    const auto host_foo_type = module->typesec[0];
+
+    auto instance = instantiate(*module, {{host_foo, host_foo_type}});
+    execute(*instance, 1, {});
+    EXPECT_TRUE(called);
 }
 
 TEST(execute_call, imported_function_call_with_arguments)
