@@ -35,7 +35,7 @@ commands:
             else
               [[ $OSTYPE = darwin* ]] && os=macos || os=ubuntu
               cd /usr/local
-              curl -L https://github.com/WebAssembly/wabt/releases/download/1.0.19/wabt-1.0.19-$os.tar.gz | sudo tar xz --strip 1
+              curl -L https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.0.20-$os.tar.gz | sudo tar xz --strip 1
             fi
 
   install_testfloat:
@@ -210,13 +210,13 @@ commands:
         default: false
       expected_passed:
         type: integer
-        default: 18900
+        default: 18975
       expected_failed:
         type: integer
-        default: 2
+        default: 4
       expected_skipped:
         type: integer
-        default: 477
+        default: 499
 
     steps:
       - install_wabt
@@ -225,7 +225,7 @@ commands:
           working_directory: ~/build
           command: |
             if [ ! -d wasm-spec ]; then
-              git clone https://github.com/wasmx/wasm-spec --branch w3c-1.0-jsontests-20200813 --depth 1 wasm-spec
+              git clone https://github.com/wasmx/wasm-spec --branch w3c-1.0-tests-backported-20201113 --depth 1 wasm-spec
               mkdir json && cd json
               options='--disable-saturating-float-to-int --disable-sign-extension --disable-multi-value'
               find ../wasm-spec/test/core -name '*.wast' -exec wast2json $options {} \;
