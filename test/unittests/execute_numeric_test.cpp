@@ -172,11 +172,14 @@ TEST(execute_numeric, i32_ge_u)
 TEST(execute_numeric, i64_eqz)
 {
     const auto i64_eqz = create_unary_operation_executor(Instr::i64_eqz);
-    EXPECT_THAT(i64_eqz(0_u64), Result(1));
-    EXPECT_THAT(i64_eqz(1_u64), Result(0));
-    // 64-bit value on the stack
-    EXPECT_THAT(i64_eqz(0xff00000000_u64), Result(0));
-    EXPECT_THAT(i64_eqz(0xff00000001_u64), Result(0));
+    EXPECT_THAT(i64_eqz(0_u64), Result(1_u32));
+    EXPECT_THAT(i64_eqz(1_u64), Result(0_u32));
+    EXPECT_THAT(i64_eqz(0xff00000000_u64), Result(0_u32));
+    EXPECT_THAT(i64_eqz(0xff00000001_u64), Result(0_u32));
+    EXPECT_THAT(i64_eqz(0xffffffff00000000_u64), Result(0_u32));
+    EXPECT_THAT(i64_eqz(0xffffffff00000001_u64), Result(0_u32));
+    EXPECT_THAT(i64_eqz(0x8000000000000000_u64), Result(0_u32));
+    EXPECT_THAT(i64_eqz(0x8000000000000001_u64), Result(0_u32));
 }
 
 TEST(execute_numeric, i64_eq)
