@@ -170,6 +170,9 @@ commands:
 
   upload_coverage:
     description: "Upload coverage data"
+    parameters:
+      flags:
+        type: string
     steps:
       - run:
           name: "Upgrade codecov"
@@ -181,7 +184,7 @@ commands:
             sed -i 's|$(pwd)/||' ~/build/coverage.lcov
 
             counter=1
-            until codecov --required --file ~/build/coverage.lcov -X gcov || [ $counter = 5 ]; do
+            until codecov --flags <<parameters.flags>> --required --file ~/build/coverage.lcov -X gcov || [ $counter = 5 ]; do
               counter=$((counter+1))
               sleep 1
               echo "Try #$counter..."
@@ -377,7 +380,8 @@ jobs:
       - store_artifacts:
           path: ~/build/coverage
           destination: coverage
-      - upload_coverage
+      - upload_coverage:
+          flags: unittests
 
   sanitizers-clang:
     executor: linux-clang-latest
