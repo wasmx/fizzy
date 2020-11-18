@@ -120,6 +120,21 @@ inline auto unwrap(FizzyExternalFn func, void* context) noexcept
     };
 }
 
+inline FizzyExternalFunction wrap(fizzy::ExternalFunction external_func)
+{
+    static constexpr FizzyExternalFn c_function = [](void* context, FizzyInstance* instance,
+                                                      const FizzyValue* args,
+                                                      int depth) -> FizzyExecutionResult {
+        auto* func = static_cast<fizzy::ExternalFunction*>(context);
+        return wrap((func->function)(*unwrap(instance), unwrap(args), depth));
+    };
+
+    auto context = std::make_unique<fizzy::ExternalFunction>(std::move(external_func));
+    const auto c_type = wrap(context->type);
+    void* c_context = context.release();
+    return {c_type, c_function, c_context};
+}
+
 inline fizzy::ExternalFunction unwrap(const FizzyExternalFunction& external_func)
 {
     return fizzy::ExternalFunction{
@@ -298,7 +313,7 @@ FizzyFunctionType fizzy_get_function_type(const FizzyModule* module, uint32_t fu
     return wrap(unwrap(module)->get_function_type(func_idx));
 }
 
-bool fizzy_find_exported_function(
+bool fizzy_find_exported_function_index(
     const FizzyModule* module, const char* name, uint32_t* out_func_idx)
 {
     const auto optional_func_idx = fizzy::find_exported_function(*unwrap(module), name);
@@ -307,6 +322,22 @@ bool fizzy_find_exported_function(
 
     *out_func_idx = *optional_func_idx;
     return true;
+}
+
+bool fizzy_find_exported_function(
+    FizzyInstance* instance, const char* name, FizzyExternalFunction* out_function)
+{
+    auto optional_func = fizzy::find_exported_function(*unwrap(instance), name);
+    if (!optional_func)
+        return false;
+
+    *out_function = wrap(std::move(*optional_func));
+    return true;
+}
+
+void fizzy_free_exported_function(FizzyExternalFunction* external_function)
+{
+    delete static_cast<fizzy::ExternalFunction*>(external_function->context);
 }
 
 bool fizzy_find_exported_table(

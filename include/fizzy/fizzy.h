@@ -159,7 +159,7 @@ void fizzy_free_module(const FizzyModule* module);
 
 /// Get type of the function defined in the module.
 ///
-/// @param module   Pointer to module.
+/// @param module   Pointer to module. Cannot be NULL.
 /// @param func_idx Function index. Can be either index of an imported function or of a function
 ///                 defined in module. Behaviour is undefined, if index is not valid according to
 ///                 module definition.
@@ -169,11 +169,11 @@ FizzyFunctionType fizzy_get_function_type(const FizzyModule* module, uint32_t fu
 
 /// Find index of exported function by name.
 ///
-/// @param  module          Pointer to module.
+/// @param  module          Pointer to module. Cannot be NULL.
 /// @param  name            The function name. NULL-terminated string. Cannot be NULL.
 /// @param  out_func_idx    Pointer to output where function index will be stored. Cannot be NULL.
 /// @returns                true if function was found, false otherwise.
-bool fizzy_find_exported_function(
+bool fizzy_find_exported_function_index(
     const FizzyModule* module, const char* name, uint32_t* out_func_idx);
 
 /// Instantiate a module.
@@ -184,7 +184,7 @@ bool fizzy_find_exported_function(
 /// than once with the same module results in undefined behaviour), but after fizzy_instantiate
 /// functions querying module info can still be called with @p module.
 ///
-/// @param      module                   Pointer to module.
+/// @param      module                   Pointer to module. Cannot be NULL.
 /// @param      imported_functions       Pointer to the imported function array. Can be NULL iff
 ///                                      imported_functions_size equals 0.
 /// @param      imported_functions_size  Size of the imported function array. Can be zero.
@@ -223,7 +223,7 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 /// than once with the same module results in undefined behaviour), but after fizzy_instantiate
 /// functions querying module info can still be called with @p module.
 ///
-/// @param      module                   Pointer to module.
+/// @param      module                   Pointer to module. Cannot be NULL.
 /// @param      imported_functions       Pointer to the imported function array. Can be NULL iff
 ///                                      imported_functions_size equals 0.
 /// @param      imported_functions_size  Size of the imported function array. Can be zero.
@@ -275,9 +275,32 @@ uint8_t* fizzy_get_instance_memory_data(FizzyInstance* instance);
 /// @note    Function returns memory size regardless of whether memory is exported or not.
 size_t fizzy_get_instance_memory_size(FizzyInstance* instance);
 
+/// Find exported function by name.
+///
+/// @param  instance        Pointer to instance. Cannot be NULL.
+/// @param  name            The function name. NULL-terminated string. Cannot be NULL.
+/// @param  out_function    Pointer to output struct to store the found function. Cannot be NULL.
+///                         If function is found, associated context is allocated, which must exist
+///                         as long as the function can be called by some other instance, and should
+///                         be destroyed with fizzy_free_exported_function afterwards.
+///                         When function is not found (false returned), this out_function is not
+///                         modified, and fizzy_free_exported_function must not be called.
+/// @returns                true if function was found, false otherwise.
+bool fizzy_find_exported_function(
+    FizzyInstance* instance, const char* name, FizzyExternalFunction* out_function);
+
+/// Free resources associated with exported function.
+///
+/// @param  external_function   Pointer to external function struct filled by
+///                             fizzy_find_exported_function. Cannot be NULL.
+///
+/// @note   This function may not be called with external function, which was not returned from
+///         fizzy_find_exported_function.
+void fizzy_free_exported_function(FizzyExternalFunction* external_function);
+
 /// Find exported table by name.
 ///
-/// @param  instance        Pointer to instance.
+/// @param  instance        Pointer to instance. Cannot be NULL.
 /// @param  name            The table name. NULL-terminated string. Cannot be NULL.
 /// @param  out_table       Pointer to output struct to store found table. Cannot be NULL.
 /// @returns                true if table was found, false otherwise.
@@ -288,7 +311,7 @@ bool fizzy_find_exported_table(
 
 /// Find exported memory by name.
 ///
-/// @param  instance        Pointer to instance.
+/// @param  instance        Pointer to instance. Cannot be NULL.
 /// @param  name            The table name. NULL-terminated string. Cannot be NULL.
 /// @param  out_memory      Pointer to output struct to store found memory. Cannot be NULL.
 /// @returns                true if memory was found, false otherwise.
@@ -299,7 +322,7 @@ bool fizzy_find_exported_memory(
 
 /// Find exported global by name.
 ///
-/// @param  instance        Pointer to instance.
+/// @param  instance        Pointer to instance. Cannot be NULL.
 /// @param  name            The global name. NULL-terminated string. Cannot be NULL.
 /// @param  out_global      Pointer to output struct to store found global. Cannot be NULL.
 /// @returns                true if global was found, false otherwise.
@@ -308,7 +331,7 @@ bool fizzy_find_exported_global(
 
 /// Execute module function.
 ///
-/// @param instance     Pointer to module instance.
+/// @param instance     Pointer to module instance. Cannot be NULL.
 /// @param args         Pointer to the argument array. Can be NULL if function has 0 inputs.
 /// @param depth        Call stack depth.
 ///
