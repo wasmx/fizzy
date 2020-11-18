@@ -16,12 +16,11 @@ using namespace fizzy::test;
 
 namespace
 {
-TypedExecutionResult execute_unary_operation(Instr instr, TypedValue arg)
+auto create_unary_operation_executor(Instr instr)
 {
     const auto& instr_type = get_instruction_type_table()[static_cast<uint8_t>(instr)];
     EXPECT_EQ(instr_type.inputs.size(), 1);
     EXPECT_EQ(instr_type.outputs.size(), 1);
-    EXPECT_EQ(instr_type.inputs[0], arg.type);
 
     auto module{std::make_unique<Module>()};
     module->typesec.emplace_back(FuncType{{instr_type.inputs[0]}, {instr_type.outputs[0]}});
@@ -30,16 +29,17 @@ TypedExecutionResult execute_unary_operation(Instr instr, TypedValue arg)
         {static_cast<uint8_t>(Instr::local_get), 0, 0, 0, 0, static_cast<uint8_t>(instr),
             static_cast<uint8_t>(Instr::end)}});
 
-    return execute(*instantiate(std::move(module)), 0, {arg});
+    auto instance = instantiate(std::move(module));
+
+    return
+        [instance = std::move(instance)](TypedValue arg) { return execute(*instance, 0, {arg}); };
 }
 
-TypedExecutionResult execute_binary_operation(Instr instr, TypedValue lhs, TypedValue rhs)
+auto create_binary_operation_executor(Instr instr)
 {
     const auto& instr_type = get_instruction_type_table()[static_cast<uint8_t>(instr)];
     EXPECT_EQ(instr_type.inputs.size(), 2);
     EXPECT_EQ(instr_type.outputs.size(), 1);
-    EXPECT_EQ(instr_type.inputs[0], lhs.type);
-    EXPECT_EQ(instr_type.inputs[1], rhs.type);
 
     auto module{std::make_unique<Module>()};
     module->typesec.emplace_back(
@@ -49,7 +49,21 @@ TypedExecutionResult execute_binary_operation(Instr instr, TypedValue lhs, Typed
         {static_cast<uint8_t>(Instr::local_get), 0, 0, 0, 0, static_cast<uint8_t>(Instr::local_get),
             1, 0, 0, 0, static_cast<uint8_t>(instr), static_cast<uint8_t>(Instr::end)}});
 
-    return execute(*instantiate(std::move(module)), 0, {lhs, rhs});
+    auto instance = instantiate(std::move(module));
+
+    return [instance = std::move(instance)](TypedValue lhs, TypedValue rhs) {
+        return execute(*instance, 0, {lhs, rhs});
+    };
+}
+
+TypedExecutionResult execute_unary_operation(Instr instr, TypedValue arg)
+{
+    return create_unary_operation_executor(instr)(arg);
+}
+
+TypedExecutionResult execute_binary_operation(Instr instr, TypedValue lhs, TypedValue rhs)
+{
+    return create_binary_operation_executor(instr)(lhs, rhs);
 }
 }  // namespace
 
