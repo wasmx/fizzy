@@ -138,6 +138,18 @@ commands:
           working_directory: ~/build
           command: ctest -E 'unittests|smoketests' -j4 --schedule-random --output-on-failure
 
+  collect_coverage_gcc:
+    description: "Collect coverage data (GCC)"
+    steps:
+      - run:
+          name: "Collect coverage data (GCC)"
+          working_directory: ~/build
+          command: |
+            lcov --capture --directory . --output-file coverage.lcov --exclude='/usr/include/*' --exclude="$HOME/.hunter/*" --exclude="$PWD/_deps/*"
+            lcov --zerocounters --directory .
+            rm -rf coverage
+            genhtml coverage.lcov --output-directory coverage --title Fizzy
+
   collect_coverage_clang:
     description: "Collect coverage data (Clang)"
     parameters:
@@ -371,17 +383,19 @@ jobs:
           configuration_name: "Coverage"
           build_type: Coverage
       - test
-      - run:
-          name: "Create coverage report"
-          working_directory: ~/build
-          command: |
-            lcov -c -d . -o coverage.lcov --exclude='/usr/include/*' --exclude="$HOME/.hunter/*" --exclude="$PWD/_deps/*"
-            genhtml coverage.lcov -o coverage -t Fizzy
+      - collect_coverage_gcc
       - store_artifacts:
           path: ~/build/coverage
-          destination: coverage
+          destination: coverage-unittests
       - upload_coverage:
           flags: unittests
+      - spectest
+      - collect_coverage_gcc
+      - store_artifacts:
+          path: ~/build/coverage
+          destination: coverage-spectests
+      - upload_coverage:
+          flags: spectests
 
   sanitizers-clang:
     executor: linux-clang-latest
