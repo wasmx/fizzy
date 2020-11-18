@@ -408,8 +408,7 @@ std::vector<ExternalFunction> resolve_imported_functions(
                                     " output type doesn't match imported function in module"};
         }
 
-        external_functions.emplace_back(
-            ExternalFunction{std::move(it->function), module_func_type});
+        external_functions.emplace_back(ExternalFunction{it->function, module_func_type});
     }
 
     return external_functions;

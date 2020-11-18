@@ -193,6 +193,31 @@ TEST(api, resolve_imported_functions)
         "function mod1.foo2 output type doesn't match imported function in module");
 }
 
+TEST(api, resolve_imported_function_duplicate)
+{
+    /* wat2wasm
+      (func (import "mod1" "foo1") (param i32) (result i32))
+      (func (import "mod1" "foo1") (param i32) (result i32))
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017f021902046d6f643104666f6f310000046d6f643104666f6f310000");
+    const auto module = parse(wasm);
+
+    std::vector<ImportedFunction> imported_functions = {
+        {"mod1", "foo1", {ValType::i32}, ValType::i32, function_returning_value(42)},
+    };
+
+    const auto external_functions =
+        resolve_imported_functions(*module, std::move(imported_functions));
+
+    EXPECT_EQ(external_functions.size(), 2);
+
+    auto instance = instantiate(*module, external_functions, {}, {}, {});
+
+    EXPECT_THAT(execute(*instance, 0, {Value{0}}), Result(42));
+    EXPECT_THAT(execute(*instance, 1, {Value{0}}), Result(42));
+}
+
 TEST(api, find_exported_function_index)
 {
     Module module;

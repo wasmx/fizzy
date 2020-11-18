@@ -456,6 +456,33 @@ TEST(capi, resolve_instantiate)
         fizzy_resolve_instantiate(module, host_funcs, 3, nullptr, nullptr, nullptr, 0), nullptr);
 }
 
+TEST(capi, resolve_instantiate_function_duplicate)
+{
+    /* wat2wasm
+      (func (import "mod1" "foo1") (result i32))
+      (func (import "mod1" "foo1") (result i32))
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000105016000017f021902046d6f643104666f6f310000046d6f643104666f6f310000");
+    auto module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+
+    FizzyExternalFn host_fn = [](void*, FizzyInstance*, const FizzyValue*, int) {
+        return FizzyExecutionResult{false, true, FizzyValue{42}};
+    };
+
+    FizzyExternalFunction mod1foo1 = {{FizzyValueTypeI32, nullptr, 0}, host_fn, nullptr};
+    FizzyImportedFunction host_funcs[] = {{"mod1", "foo1", mod1foo1}};
+
+    auto instance = fizzy_resolve_instantiate(module, host_funcs, 1, nullptr, nullptr, nullptr, 0);
+    ASSERT_NE(instance, nullptr);
+
+    EXPECT_THAT(fizzy_execute(instance, 0, nullptr, 0), CResult(42));
+    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, 0), CResult(42));
+
+    fizzy_free_instance(instance);
+}
+
 TEST(capi, free_instance_null)
 {
     fizzy_free_instance(nullptr);
