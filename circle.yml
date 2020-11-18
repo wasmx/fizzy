@@ -375,13 +375,29 @@ jobs:
           name: "Create coverage report"
           working_directory: ~/build
           command: |
-            lcov -c -d . -o coverage.lcov --exclude='/usr/include/*' --exclude="$HOME/.hunter/*" --exclude="$PWD/_deps/*"
-            genhtml coverage.lcov -o coverage -t Fizzy
+            lcov --capture --directory . --output-file coverage.lcov --exclude='/usr/include/*' --exclude="$HOME/.hunter/*" --exclude="$PWD/_deps/*"
+            lcov --zerocounters --directory .
+            rm -rf coverage
+            genhtml coverage.lcov --output-directory coverage --title Fizzy
       - store_artifacts:
           path: ~/build/coverage
           destination: coverage
       - upload_coverage:
           flags: unittests
+      - spectest
+      - run:
+          name: "Create coverage report"
+          working_directory: ~/build
+          command: |
+            lcov --capture --directory . --output-file coverage.lcov --exclude='/usr/include/*' --exclude="$HOME/.hunter/*" --exclude="$PWD/_deps/*"
+            lcov --zerocounters --directory .
+            rm -rf coverage
+            genhtml coverage.lcov --output-directory coverage --title Fizzy
+      - store_artifacts:
+          path: ~/build/coverage
+          destination: coverage-spectests
+      - upload_coverage:
+          flags: spectests
 
   sanitizers-clang:
     executor: linux-clang-latest
