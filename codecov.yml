@@ -8,3 +8,7 @@ coverage:
 
 comment:
   layout: "reach, diff, flags, files"
+
+flags:
+  spectests:
+    joined: false
