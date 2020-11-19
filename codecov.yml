@@ -1,10 +1,14 @@
 codecov:
-  require_ci_to_pass: yes
+  require_ci_to_pass: false
 
 coverage:
   status:
-    project: no
-    patch: no
+    project: false
+    patch: false
 
 comment:
-  layout: "diff"
+  layout: "diff, flags, files"
+
+flags:
+  spectests:
+    joined: false
