@@ -25,6 +25,8 @@ public:
       : m_array{std::forward<U>(u)...}, m_size(sizeof...(U))
     {}
 
+    constexpr T operator[](std::size_t index) const noexcept { return m_array[index]; }
+
     constexpr const T* data() const noexcept { return m_array; }
     constexpr std::size_t size() const noexcept { return m_size; }
 

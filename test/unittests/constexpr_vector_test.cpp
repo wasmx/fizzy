@@ -27,6 +27,21 @@ TEST(constexpr_vector, size)
     EXPECT_EQ(*v3.data(), 1);
 }
 
+TEST(constexpr_vector, subscript)
+{
+    constexpr constexpr_vector<int, 3> v1 = {1, 2, 3};
+    ASSERT_EQ(v1.size(), 3);
+    EXPECT_EQ(v1[0], 1);
+    EXPECT_EQ(v1[1], 2);
+    EXPECT_EQ(v1[2], 3);
+
+    constexpr constexpr_vector<int, 4> v2 = {1, 2, 3};
+    ASSERT_EQ(v2.size(), 3);
+    EXPECT_EQ(v2[0], 1);
+    EXPECT_EQ(v2[1], 2);
+    EXPECT_EQ(v2[2], 3);
+}
+
 TEST(constexpr_vector, iterator)
 {
     constexpr constexpr_vector<int, 5> v = {1, 2, 3};
