@@ -13,6 +13,7 @@
 #include <string>
 #include <unordered_map>
 
+using namespace fizzy;
 using namespace fizzy::test;
 
 namespace
@@ -76,23 +77,22 @@ enum FPException : uint8_t
 
 struct FunctionDescription
 {
-    const fizzy::FuncIdx idx;
+    const FuncIdx idx;
     const Type result_type;
     const Type param_types[2];
     const size_t num_arguments;
     const Options options = Options::None;
 
-    constexpr FunctionDescription(fizzy::FuncIdx func_idx, Type result, Type param) noexcept
+    constexpr FunctionDescription(FuncIdx func_idx, Type result, Type param) noexcept
       : idx{func_idx}, result_type{result}, param_types{param}, num_arguments{1}
     {}
 
     constexpr FunctionDescription(
-        fizzy::FuncIdx func_idx, Type result_ty, Type param1, Type param2) noexcept
+        FuncIdx func_idx, Type result_ty, Type param1, Type param2) noexcept
       : idx{func_idx}, result_type{result_ty}, param_types{param1, param2}, num_arguments{2}
     {}
 
-    constexpr FunctionDescription(
-        fizzy::FuncIdx func_idx, Type result, Type param, Options opts) noexcept
+    constexpr FunctionDescription(FuncIdx func_idx, Type result, Type param, Options opts) noexcept
       : idx{func_idx},
         result_type{result},
         param_types{param, Type::f32},
@@ -228,18 +228,18 @@ FunctionDescription from_name(std::string_view name)
     throw std::invalid_argument{"unknown <function>: " + std::string{name}};
 }
 
-constexpr fizzy::Value make_value(Type type, uint64_t bits) noexcept
+constexpr Value make_value(Type type, uint64_t bits) noexcept
 {
     switch (type)
     {
     case Type::i32:
-        return fizzy::Value{static_cast<uint32_t>(bits)};
+        return Value{static_cast<uint32_t>(bits)};
     case Type::i64:
-        return fizzy::Value{bits};
+        return Value{bits};
     case Type::f32:
-        return fizzy::Value{FP{static_cast<uint32_t>(bits)}.value};
+        return Value{FP{static_cast<uint32_t>(bits)}.value};
     case Type::f64:
-        return fizzy::Value{FP{bits}.value};
+        return Value{FP{bits}.value};
     }
     __builtin_unreachable();
 }
@@ -247,10 +247,10 @@ constexpr fizzy::Value make_value(Type type, uint64_t bits) noexcept
 class TypedValue
 {
     Type m_type;
-    fizzy::Value m_value;
+    Value m_value;
 
 public:
-    constexpr TypedValue(Type type, fizzy::Value value) noexcept : m_type{type}, m_value{value} {}
+    constexpr TypedValue(Type type, Value value) noexcept : m_type{type}, m_value{value} {}
 
     constexpr TypedValue(Type type, uint64_t bits) noexcept
       : m_type{type}, m_value{make_value(type, bits)}
@@ -321,8 +321,8 @@ public:
     }
 };
 
-bool check(const FunctionDescription& func, fizzy::Instance& instance, const uint64_t inputs[],
-    bool ignore_nans)
+bool check(
+    const FunctionDescription& func, Instance& instance, const uint64_t inputs[], bool ignore_nans)
 {
     const auto report_failure = [&](auto result, auto expected) {
         std::cerr << "FAILURE: " << result << " <-";
@@ -331,12 +331,12 @@ bool check(const FunctionDescription& func, fizzy::Instance& instance, const uin
         std::cerr << "\n         " << expected << " (expected)\n";
     };
 
-    fizzy::Value args[2]{};
+    Value args[2]{};
     assert(func.num_arguments <= std::size(args));
     for (size_t i = 0; i < func.num_arguments; ++i)
         args[i] = make_value(func.param_types[i], inputs[i]);
 
-    const auto r = fizzy::execute(instance, func.idx, args);
+    const auto r = execute(instance, func.idx, args);
 
     if (func.options == Options::TrapIsInvalidOperation)
     {
@@ -401,7 +401,7 @@ int main(int argc, const char* argv[])
 
         const auto func = from_name(function_name);
 
-        auto instance = fizzy::instantiate(fizzy::parse(get_wasm_code()));
+        auto instance = instantiate(parse(get_wasm_code()));
 
         std::fesetround(rounding_direction);
 
