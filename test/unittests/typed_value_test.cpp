@@ -73,3 +73,23 @@ TEST(typed_value, construct)
     EXPECT_EQ(f64.type, ValType::f64);
     EXPECT_EQ(f64.value.f64, -2.2250738585072014e-308);
 }
+
+TEST(typed_value, u32_literal)
+{
+    static_assert(std::is_same_v<decltype(0_u32), uint32_t>);
+    EXPECT_EQ(0_u32, uint32_t{0});
+    EXPECT_EQ(1_u32, uint32_t{1});
+    EXPECT_EQ(0xffffffff_u32, uint32_t{0xffffffff});
+
+    EXPECT_THROW(operator""_u32(0x100000000), const char*);
+}
+
+TEST(typed_value, u64_literal)
+{
+    static_assert(std::is_same_v<decltype(0_u64), uint64_t>);
+    EXPECT_EQ(0_u64, uint64_t{0});
+    EXPECT_EQ(1_u64, uint64_t{1});
+    EXPECT_EQ(0xffffffff_u64, uint64_t{0xffffffff});
+    EXPECT_EQ(0x100000000_u64, uint64_t{0x100000000});
+    EXPECT_EQ(0xffffffffffffffff_u64, uint64_t{0xffffffffffffffff});
+}
