@@ -93,7 +93,6 @@ constexpr int countl_zero(uint32_t value) noexcept
 
 constexpr int countl_zero(uint64_t value) noexcept
 {
-    // NOTE: C++20 specifies this case, but C/C++ intrinsic leaves it as undefined.
     if (value == 0)
         return 64;
     return __builtin_clzll(value);
