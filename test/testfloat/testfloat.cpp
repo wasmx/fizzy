@@ -6,6 +6,7 @@
 #include <fizzy/parser.hpp>
 #include <test/utils/floating_point_utils.hpp>
 #include <test/utils/hex.hpp>
+#include <test/utils/typed_value.hpp>
 #include <cfenv>
 #include <iomanip>
 #include <iostream>
@@ -221,98 +222,86 @@ FunctionDescription from_name(std::string_view name)
     throw std::invalid_argument{"unknown <function>: " + std::string{name}};
 }
 
-constexpr Value make_value(ValType type, uint64_t bits) noexcept
+/// Creates TypedValue of given type from provided bits.
+constexpr TypedValue from_bits(ValType ty, uint64_t bits) noexcept
 {
-    switch (type)
+    switch (ty)
     {
     case ValType::i32:
-        return Value{static_cast<uint32_t>(bits)};
+        return static_cast<uint32_t>(bits);
     case ValType::i64:
-        return Value{bits};
+        return bits;
     case ValType::f32:
-        return Value{FP{static_cast<uint32_t>(bits)}.value};
+        return FP{static_cast<uint32_t>(bits)}.value;
     case ValType::f64:
-        return Value{FP{bits}.value};
+        return FP{bits}.value;
     }
     __builtin_unreachable();
 }
 
-class TypedValue
+std::ostream& operator<<(std::ostream& os, const TypedValue& value)
 {
-    ValType m_type;
-    Value m_value;
-
-public:
-    constexpr TypedValue(ValType type, Value value) noexcept : m_type{type}, m_value{value} {}
-
-    constexpr TypedValue(ValType type, uint64_t bits) noexcept
-      : m_type{type}, m_value{make_value(type, bits)}
-    {}
-
-    bool eq(uint64_t expected_bits, bool ignore_nans) const
+    std::ios os_state{nullptr};
+    os_state.copyfmt(os);
+    os << std::hex << std::uppercase << std::setfill('0');
+    switch (value.type)
     {
-        switch (m_type)
-        {
-        case ValType::i32:
-        case ValType::i64:
-            return m_value.i64 == expected_bits;
-        case ValType::f32:
-        {
-            const FP value{m_value.f32};
-            const FP expected{static_cast<uint32_t>(expected_bits)};
-            if (ignore_nans && std::isnan(expected.value))
-            {
-                if (expected.is_canonical_nan())
-                    return value.is_canonical_nan();
-                if (expected.is_arithmetic_nan())
-                    return value.is_arithmetic_nan();
-                throw std::invalid_argument{"invalid input: unexpected signaling NaN"};
-            }
-            return value == expected;
-        }
+    case ValType::i32:
+        os << std::setw(8) << value.value.as<uint32_t>();
+        break;
+    case ValType::i64:
+        os << std::setw(16) << value.value.i64;
+        break;
+    case ValType::f32:
+        os << std::setw(8) << FP{value.value.f32}.as_uint();
+        break;
+    case ValType::f64:
+        os << std::setw(16) << FP{value.value.f64}.as_uint();
+        break;
+    }
+    os.copyfmt(os_state);
+    return os;
+}
 
-        case ValType::f64:
+bool eq(TypedValue v, uint64_t expected_bits, bool ignore_nans)
+{
+    switch (v.type)
+    {
+    case ValType::i32:
+    case ValType::i64:
+        return v.value.i64 == expected_bits;
+    case ValType::f32:
+    {
+        const FP fp_value{v.value.f32};
+        const FP expected{static_cast<uint32_t>(expected_bits)};
+        if (ignore_nans && std::isnan(expected.value))
         {
-            const FP value{m_value.f64};
-            const FP expected{expected_bits};
-            if (ignore_nans && std::isnan(expected.value))
-            {
-                if (expected.is_canonical_nan())
-                    return value.is_canonical_nan();
-                if (expected.is_arithmetic_nan())
-                    return value.is_arithmetic_nan();
-                throw std::invalid_argument{"invalid input: unexpected signaling NaN"};
-            }
-            return value == expected;
+            if (expected.is_canonical_nan())
+                return fp_value.is_canonical_nan();
+            if (expected.is_arithmetic_nan())
+                return fp_value.is_arithmetic_nan();
+            throw std::invalid_argument{"invalid input: unexpected signaling NaN"};
         }
-        }
-        __builtin_unreachable();
+        return fp_value == expected;
     }
 
-    friend std::ostream& operator<<(std::ostream& os, const TypedValue& value)
+    case ValType::f64:
     {
-        std::ios os_state{nullptr};
-        os_state.copyfmt(os);
-        os << std::hex << std::uppercase << std::setfill('0');
-        switch (value.m_type)
+        const FP fp_value{v.value.f64};
+        const FP expected{expected_bits};
+        if (ignore_nans && std::isnan(expected.value))
         {
-        case ValType::i32:
-            os << std::setw(8) << value.m_value.as<uint32_t>();
-            break;
-        case ValType::i64:
-            os << std::setw(16) << value.m_value.i64;
-            break;
-        case ValType::f32:
-            os << std::setw(8) << FP{value.m_value.f32}.as_uint();
-            break;
-        case ValType::f64:
-            os << std::setw(16) << FP{value.m_value.f64}.as_uint();
-            break;
+            if (expected.is_canonical_nan())
+                return fp_value.is_canonical_nan();
+            if (expected.is_arithmetic_nan())
+                return fp_value.is_arithmetic_nan();
+            throw std::invalid_argument{"invalid input: unexpected signaling NaN"};
         }
-        os.copyfmt(os_state);
-        return os;
+        return fp_value == expected;
     }
-};
+    }
+    __builtin_unreachable();
+}
 
 bool check(
     const FunctionDescription& func, Instance& instance, const uint64_t inputs[], bool ignore_nans)
@@ -320,14 +309,14 @@ bool check(
     const auto report_failure = [&](auto result, auto expected) {
         std::cerr << "FAILURE: " << result << " <-";
         for (size_t i = 0; i < func.num_arguments; ++i)
-            std::cerr << ' ' << TypedValue{func.param_types[i], inputs[i]};
+            std::cerr << ' ' << from_bits(func.param_types[i], inputs[i]);
         std::cerr << "\n         " << expected << " (expected)\n";
     };
 
     Value args[2]{};
     assert(func.num_arguments <= std::size(args));
     for (size_t i = 0; i < func.num_arguments; ++i)
-        args[i] = make_value(func.param_types[i], inputs[i]);
+        args[i] = from_bits(func.param_types[i], inputs[i]).value;
 
     const auto r = execute(instance, func.idx, args);
 
@@ -347,9 +336,9 @@ bool check(
     assert(!r.trapped && r.has_value);
     const auto result = TypedValue{func.result_type, r.value};
     const auto expected_result_bits = inputs[func.num_arguments];
-    if (!result.eq(expected_result_bits, ignore_nans))
+    if (!eq(result, expected_result_bits, ignore_nans))
     {
-        report_failure(result, TypedValue{func.result_type, expected_result_bits});
+        report_failure(result, from_bits(func.result_type, expected_result_bits));
         return false;
     }
     return true;
