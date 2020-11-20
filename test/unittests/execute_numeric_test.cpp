@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "execute.hpp"
+#include "instructions.hpp"
 #include "parser.hpp"
 #include <gtest/gtest.h>
 #include <test/utils/asserts.hpp>
@@ -16,9 +17,12 @@ namespace
 {
 ExecutionResult execute_unary_operation(Instr instr, uint64_t arg)
 {
+    const auto& instr_type = get_instruction_type_table()[static_cast<uint8_t>(instr)];
+    EXPECT_EQ(instr_type.inputs.size(), 1);
+    EXPECT_EQ(instr_type.outputs.size(), 1);
+
     auto module{std::make_unique<Module>()};
-    // type is currently needed only to get arity of function, so exact value types don't matter
-    module->typesec.emplace_back(FuncType{{ValType::i32}, {ValType::i32}});
+    module->typesec.emplace_back(FuncType{{instr_type.inputs[0]}, {instr_type.outputs[0]}});
     module->funcsec.emplace_back(TypeIdx{0});
     module->codesec.emplace_back(Code{1, 0,
         {static_cast<uint8_t>(Instr::local_get), 0, 0, 0, 0, static_cast<uint8_t>(instr),
@@ -29,9 +33,13 @@ ExecutionResult execute_unary_operation(Instr instr, uint64_t arg)
 
 ExecutionResult execute_binary_operation(Instr instr, uint64_t lhs, uint64_t rhs)
 {
+    const auto& instr_type = get_instruction_type_table()[static_cast<uint8_t>(instr)];
+    EXPECT_EQ(instr_type.inputs.size(), 2);
+    EXPECT_EQ(instr_type.outputs.size(), 1);
+
     auto module{std::make_unique<Module>()};
-    // type is currently needed only to get arity of function, so exact value types don't matter
-    module->typesec.emplace_back(FuncType{{ValType::i32, ValType::i32}, {ValType::i32}});
+    module->typesec.emplace_back(
+        FuncType{{instr_type.inputs[0], instr_type.inputs[1]}, {instr_type.outputs[0]}});
     module->funcsec.emplace_back(TypeIdx{0});
     module->codesec.emplace_back(Code{2, 0,
         {static_cast<uint8_t>(Instr::local_get), 0, 0, 0, 0, static_cast<uint8_t>(Instr::local_get),
