@@ -7,7 +7,7 @@
 #include "parser.hpp"
 #include "trunc_boundaries.hpp"
 #include <test/utils/asserts.hpp>
-#include <test/utils/instantiate_helpers.hpp>
+#include <test/utils/execute_helpers.hpp>
 #include <cmath>
 
 using namespace fizzy;

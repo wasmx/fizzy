@@ -6,8 +6,8 @@
 #include "parser.hpp"
 #include <gtest/gtest.h>
 #include <test/utils/asserts.hpp>
+#include <test/utils/execute_helpers.hpp>
 #include <test/utils/hex.hpp>
-#include <test/utils/instantiate_helpers.hpp>
 
 using namespace fizzy;
 using namespace fizzy::test;

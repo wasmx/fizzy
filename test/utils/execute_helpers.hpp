@@ -10,10 +10,17 @@
 
 namespace fizzy::test
 {
+inline ExecutionResult execute(
+    Instance& instance, FuncIdx func_idx, std::initializer_list<Value> args)
+{
+    assert(args.size() == instance.module->get_function_type(func_idx).inputs.size());
+    return fizzy::execute(instance, func_idx, args.begin());
+}
+
 inline ExecutionResult execute(const std::unique_ptr<const Module>& module, FuncIdx func_idx,
     std::initializer_list<Value> args)
 {
     auto instance = instantiate(*module);
-    return execute(*instance, func_idx, args);
+    return test::execute(*instance, func_idx, args);
 }
 }  // namespace fizzy::test
