@@ -100,8 +100,8 @@ TEST(api, resolve_imported_functions)
         *module, external_functions, {}, {}, std::vector<ExternalGlobal>(external_globals));
 
     EXPECT_THAT(execute(*instance, 0, {}), Result(0));
-    EXPECT_THAT(execute(*instance, 1, {Value{0}}), Result(1));
-    EXPECT_THAT(execute(*instance, 2, {Value{0}}), Result(2));
+    EXPECT_THAT(execute(*instance, 1, {0_u32}), Result(1));
+    EXPECT_THAT(execute(*instance, 2, {0_u32}), Result(2));
     EXPECT_THAT(execute(*instance, 3, {0, 0}), Result());
 
 
@@ -120,8 +120,8 @@ TEST(api, resolve_imported_functions)
         std::vector<ExternalGlobal>(external_globals));
 
     EXPECT_THAT(execute(*instance_reordered, 0, {}), Result(0));
-    EXPECT_THAT(execute(*instance_reordered, 1, {Value{0}}), Result(1));
-    EXPECT_THAT(execute(*instance_reordered, 2, {Value{0}}), Result(2));
+    EXPECT_THAT(execute(*instance_reordered, 1, {0_u32}), Result(1));
+    EXPECT_THAT(execute(*instance_reordered, 2, {0_u32}), Result(2));
     EXPECT_THAT(execute(*instance_reordered, 3, {0, 0}), Result());
 
 
@@ -142,8 +142,8 @@ TEST(api, resolve_imported_functions)
         *module, external_functions_extra, {}, {}, std::vector<ExternalGlobal>(external_globals));
 
     EXPECT_THAT(execute(*instance_extra, 0, {}), Result(0));
-    EXPECT_THAT(execute(*instance_extra, 1, {Value{0}}), Result(1));
-    EXPECT_THAT(execute(*instance_extra, 2, {Value{0}}), Result(2));
+    EXPECT_THAT(execute(*instance_extra, 1, {0_u32}), Result(1));
+    EXPECT_THAT(execute(*instance_extra, 2, {0_u32}), Result(2));
     EXPECT_THAT(execute(*instance_extra, 3, {0, 0}), Result());
 
 
@@ -214,8 +214,8 @@ TEST(api, resolve_imported_function_duplicate)
 
     auto instance = instantiate(*module, external_functions, {}, {}, {});
 
-    EXPECT_THAT(execute(*instance, 0, {Value{0}}), Result(42));
-    EXPECT_THAT(execute(*instance, 1, {Value{0}}), Result(42));
+    EXPECT_THAT(execute(*instance, 0, {0_u32}), Result(42));
+    EXPECT_THAT(execute(*instance, 1, {0_u32}), Result(42));
 }
 
 TEST(api, find_exported_function_index)
