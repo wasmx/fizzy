@@ -9,17 +9,19 @@
 #include <test/utils/asserts.hpp>
 #include <test/utils/execute_helpers.hpp>
 #include <test/utils/hex.hpp>
+#include <test/utils/typed_value.hpp>
 
 using namespace fizzy;
 using namespace fizzy::test;
 
 namespace
 {
-ExecutionResult execute_unary_operation(Instr instr, uint64_t arg)
+ExecutionResult execute_unary_operation(Instr instr, TypedValue arg)
 {
     const auto& instr_type = get_instruction_type_table()[static_cast<uint8_t>(instr)];
     EXPECT_EQ(instr_type.inputs.size(), 1);
     EXPECT_EQ(instr_type.outputs.size(), 1);
+    EXPECT_EQ(instr_type.inputs[0], arg.type);
 
     auto module{std::make_unique<Module>()};
     module->typesec.emplace_back(FuncType{{instr_type.inputs[0]}, {instr_type.outputs[0]}});
@@ -152,11 +154,11 @@ TEST(execute_numeric, i32_ge_u)
 
 TEST(execute_numeric, i64_eqz)
 {
-    EXPECT_THAT(execute_unary_operation(Instr::i64_eqz, 0), Result(1));
-    EXPECT_THAT(execute_unary_operation(Instr::i64_eqz, 1), Result(0));
+    EXPECT_THAT(execute_unary_operation(Instr::i64_eqz, 0_u64), Result(1));
+    EXPECT_THAT(execute_unary_operation(Instr::i64_eqz, 1_u64), Result(0));
     // 64-bit value on the stack
-    EXPECT_THAT(execute_unary_operation(fizzy::Instr::i64_eqz, 0xff00000000), Result(0));
-    EXPECT_THAT(execute_unary_operation(fizzy::Instr::i64_eqz, 0xff00000001), Result(0));
+    EXPECT_THAT(execute_unary_operation(fizzy::Instr::i64_eqz, 0xff00000000_u64), Result(0));
+    EXPECT_THAT(execute_unary_operation(fizzy::Instr::i64_eqz, 0xff00000001_u64), Result(0));
 }
 
 TEST(execute_numeric, i64_eq)
@@ -444,10 +446,10 @@ TEST(execute_numeric, i32_rotr)
 TEST(execute_numeric, i32_wrap_i64)
 {
     // <=32-bits set
-    EXPECT_THAT(execute_unary_operation(Instr::i32_wrap_i64, 0xffffffff), Result(0xffffffff));
+    EXPECT_THAT(execute_unary_operation(Instr::i32_wrap_i64, 0xffffffff_u64), Result(0xffffffff));
     // >32-bits set
     EXPECT_THAT(
-        execute_unary_operation(Instr::i32_wrap_i64, 0xffffffffffffffff), Result(0xffffffff));
+        execute_unary_operation(Instr::i32_wrap_i64, 0xffffffffffffffff_u64), Result(0xffffffff));
 }
 
 TEST(execute_numeric, i64_extend_i32_s_all_bits_set)
@@ -498,27 +500,27 @@ TEST(execute_numeric, i64_extend_i32_u_2)
 
 TEST(execute_numeric, i64_clz)
 {
-    EXPECT_THAT(execute_unary_operation(Instr::i64_clz, 0x7f), Result(64 - 7));
+    EXPECT_THAT(execute_unary_operation(Instr::i64_clz, 0x7f_u64), Result(64 - 7));
 }
 
 TEST(execute_numeric, i64_clz0)
 {
-    EXPECT_THAT(execute_unary_operation(Instr::i64_clz, 0), Result(64));
+    EXPECT_THAT(execute_unary_operation(Instr::i64_clz, 0_u64), Result(64));
 }
 
 TEST(execute_numeric, i64_ctz)
 {
-    EXPECT_THAT(execute_unary_operation(Instr::i64_ctz, 0x80), Result(7));
+    EXPECT_THAT(execute_unary_operation(Instr::i64_ctz, 0x80_u64), Result(7));
 }
 
 TEST(execute_numeric, i64_ctz0)
 {
-    EXPECT_THAT(execute_unary_operation(Instr::i64_ctz, 0), Result(64));
+    EXPECT_THAT(execute_unary_operation(Instr::i64_ctz, 0_u64), Result(64));
 }
 
 TEST(execute_numeric, i64_popcnt)
 {
-    EXPECT_THAT(execute_unary_operation(Instr::i64_popcnt, 0x7fff00), Result(7 + 8));
+    EXPECT_THAT(execute_unary_operation(Instr::i64_popcnt, 0x7fff00_u64), Result(7 + 8));
 }
 
 TEST(execute_numeric, i64_add)
