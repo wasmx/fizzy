@@ -102,7 +102,7 @@ TEST(api, resolve_imported_functions)
     EXPECT_THAT(execute(*instance, 0, {}), Result(0));
     EXPECT_THAT(execute(*instance, 1, {0_u32}), Result(1));
     EXPECT_THAT(execute(*instance, 2, {0_u32}), Result(2));
-    EXPECT_THAT(execute(*instance, 3, {0, 0}), Result());
+    EXPECT_THAT(execute(*instance, 3, {0_u64, 0_u32}), Result());
 
 
     std::vector<ImportedFunction> imported_functions_reordered = {
@@ -122,7 +122,7 @@ TEST(api, resolve_imported_functions)
     EXPECT_THAT(execute(*instance_reordered, 0, {}), Result(0));
     EXPECT_THAT(execute(*instance_reordered, 1, {0_u32}), Result(1));
     EXPECT_THAT(execute(*instance_reordered, 2, {0_u32}), Result(2));
-    EXPECT_THAT(execute(*instance_reordered, 3, {0, 0}), Result());
+    EXPECT_THAT(execute(*instance_reordered, 3, {0_u64, 0_u32}), Result());
 
 
     std::vector<ImportedFunction> imported_functions_extra = {
@@ -144,7 +144,7 @@ TEST(api, resolve_imported_functions)
     EXPECT_THAT(execute(*instance_extra, 0, {}), Result(0));
     EXPECT_THAT(execute(*instance_extra, 1, {0_u32}), Result(1));
     EXPECT_THAT(execute(*instance_extra, 2, {0_u32}), Result(2));
-    EXPECT_THAT(execute(*instance_extra, 3, {0, 0}), Result());
+    EXPECT_THAT(execute(*instance_extra, 3, {0_u64, 0_u32}), Result());
 
 
     std::vector<ImportedFunction> imported_functions_missing = {
