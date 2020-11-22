@@ -422,7 +422,7 @@ TEST(execute, i32_load_all_variants)
 
     const auto memory_fill = "deb0b1b2b3ed"_bytes;
 
-    constexpr std::tuple<Instr, uint64_t> test_cases[]{
+    constexpr std::tuple<Instr, uint32_t> test_cases[]{
         {Instr::i32_load8_u, 0x000000b0},
         {Instr::i32_load8_s, 0xffffffb0},
         {Instr::i32_load16_u, 0x0000b1b0},
@@ -984,9 +984,10 @@ TEST(execute, reuse_args)
 
     auto instance = instantiate(parse(wasm));
 
-    const std::vector<Value> args{20, 3};
+    const std::vector<Value> args{20_u64, 3_u64};
     const auto expected = args[0].i64 % (args[0].i64 / args[1].i64);
-    EXPECT_THAT(execute(*instance, 0, args.data()), Result(expected));
+    EXPECT_THAT(
+        TypedExecutionResult(execute(*instance, 0, args.data()), ValType::i64), Result(expected));
     EXPECT_THAT(args[0].i64, 20);
     EXPECT_THAT(args[1].i64, 3);
 
