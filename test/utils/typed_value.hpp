@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #pragma once
 
+#include "execute.hpp"
 #include "types.hpp"
 #include "value.hpp"
 
@@ -38,5 +39,13 @@ struct TypedValue
     constexpr TypedValue(uint64_t v) noexcept : TypedValue{ValType::i64, v} {}
     constexpr TypedValue(float v) noexcept : TypedValue{ValType::f32, v} {}
     constexpr TypedValue(double v) noexcept : TypedValue{ValType::f64, v} {}
+};
+
+struct TypedExecutionResult : ExecutionResult
+{
+    ValType type;
+    constexpr TypedExecutionResult(ExecutionResult result, ValType ty) noexcept
+      : ExecutionResult{result}, type{ty}
+    {}
 };
 }  // namespace fizzy::test

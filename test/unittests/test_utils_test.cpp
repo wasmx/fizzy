@@ -34,11 +34,11 @@ TEST(test_utils, from_hex)
     EXPECT_THROW_MESSAGE(from_hex("FG"), std::out_of_range, "not a hex digit");
 }
 
-TEST(test_utils, result_signed_int)
+TEST(test_utils, result_signed_int_typed)
 {
-    EXPECT_THAT(ExecutionResult{Value{-1}}, Result(-1));
+    EXPECT_THAT(TypedExecutionResult(Value{-1}, ValType::i32), Result(-1));
     constexpr auto v = std::numeric_limits<int32_t>::min();
-    EXPECT_THAT(ExecutionResult{Value{v}}, Result(v));
+    EXPECT_THAT(TypedExecutionResult(Value{v}, ValType::i32), Result(v));
 }
 
 TEST(test_utils, print_execution_result)
@@ -69,4 +69,50 @@ TEST(test_utils, print_c_execution_result)
     std::stringstream str_value;
     str_value << FizzyExecutionResult{false, true, {42}};
     EXPECT_EQ(str_value.str(), "result(42 [0x2a])");
+}
+
+TEST(test_utils, print_typed_execution_result)
+{
+    std::stringstream str_trap;
+    str_trap << TypedExecutionResult{Trap, {}};
+    EXPECT_EQ(str_trap.str(), "trapped");
+
+    std::stringstream str_void;
+    str_void << TypedExecutionResult{Void, {}};
+    EXPECT_EQ(str_void.str(), "result()");
+
+    std::stringstream str_value_i32;
+    str_value_i32 << TypedExecutionResult{ExecutionResult{Value{42_u32}}, ValType::i32};
+    EXPECT_EQ(str_value_i32.str(), "result(42 [0x2a] (i32))");
+    str_value_i32.str({});
+    str_value_i32 << TypedExecutionResult{ExecutionResult{Value{0x80000000_u32}}, ValType::i32};
+    EXPECT_EQ(str_value_i32.str(), "result(2147483648 [0x80000000] (i32))");
+    str_value_i32.str({});
+    str_value_i32 << TypedExecutionResult{ExecutionResult{Value{-2_u32}}, ValType::i32};
+    EXPECT_EQ(str_value_i32.str(), "result(4294967294 [0xfffffffe] (i32))");
+
+
+    std::stringstream str_value_i64;
+    str_value_i64 << TypedExecutionResult{ExecutionResult{Value{42_u64}}, ValType::i64};
+    EXPECT_EQ(str_value_i64.str(), "result(42 [0x2a] (i64))");
+    str_value_i64.str({});
+    str_value_i64 << TypedExecutionResult{ExecutionResult{Value{0x100000000_u64}}, ValType::i64};
+    EXPECT_EQ(str_value_i64.str(), "result(4294967296 [0x100000000] (i64))");
+    str_value_i64.str({});
+    str_value_i64 << TypedExecutionResult{ExecutionResult{Value{-3_u64}}, ValType::i64};
+    EXPECT_EQ(str_value_i64.str(), "result(18446744073709551613 [0xfffffffffffffffd] (i64))");
+
+    std::stringstream str_value_f32;
+    str_value_f32 << TypedExecutionResult{ExecutionResult{Value{1.125f}}, ValType::f32};
+    EXPECT_EQ(str_value_f32.str(), "result(1.125 (f32))");
+    str_value_f32.str({});
+    str_value_f32 << TypedExecutionResult{ExecutionResult{Value{-1.125f}}, ValType::f32};
+    EXPECT_EQ(str_value_f32.str(), "result(-1.125 (f32))");
+
+    std::stringstream str_value_f64;
+    str_value_f64 << TypedExecutionResult{ExecutionResult{Value{1.125}}, ValType::f64};
+    EXPECT_EQ(str_value_f64.str(), "result(1.125 (f64))");
+    str_value_f64.str({});
+    str_value_f64 << TypedExecutionResult{ExecutionResult{Value{-1.125}}, ValType::f64};
+    EXPECT_EQ(str_value_f64.str(), "result(-1.125 (f64))");
 }

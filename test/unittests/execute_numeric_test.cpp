@@ -16,7 +16,7 @@ using namespace fizzy::test;
 
 namespace
 {
-ExecutionResult execute_unary_operation(Instr instr, TypedValue arg)
+TypedExecutionResult execute_unary_operation(Instr instr, TypedValue arg)
 {
     const auto& instr_type = get_instruction_type_table()[static_cast<uint8_t>(instr)];
     EXPECT_EQ(instr_type.inputs.size(), 1);
@@ -33,7 +33,7 @@ ExecutionResult execute_unary_operation(Instr instr, TypedValue arg)
     return execute(*instantiate(std::move(module)), 0, {arg});
 }
 
-ExecutionResult execute_binary_operation(Instr instr, TypedValue lhs, TypedValue rhs)
+TypedExecutionResult execute_binary_operation(Instr instr, TypedValue lhs, TypedValue rhs)
 {
     const auto& instr_type = get_instruction_type_table()[static_cast<uint8_t>(instr)];
     EXPECT_EQ(instr_type.inputs.size(), 2);
