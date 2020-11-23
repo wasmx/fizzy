@@ -81,6 +81,8 @@ MATCHER_P(CResult, value, "")  // NOLINT(readability-redundant-string-init)
     }                                                                                        \
     (void)0
 
+std::ostream& operator<<(std::ostream& os, FizzyExecutionResult);
+
 namespace fizzy
 {
 /// Equal operator for Instr and uint8_t. Convenient for unit tests.

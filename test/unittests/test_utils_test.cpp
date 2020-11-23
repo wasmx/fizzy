@@ -40,3 +40,33 @@ TEST(test_utils, result_signed_int)
     constexpr auto v = std::numeric_limits<int32_t>::min();
     EXPECT_THAT(ExecutionResult{Value{v}}, Result(v));
 }
+
+TEST(test_utils, print_execution_result)
+{
+    std::stringstream str_trap;
+    str_trap << Trap;
+    EXPECT_EQ(str_trap.str(), "trapped");
+
+    std::stringstream str_void;
+    str_void << Void;
+    EXPECT_EQ(str_void.str(), "result()");
+
+    std::stringstream str_value;
+    str_value << ExecutionResult{Value{42}};
+    EXPECT_EQ(str_value.str(), "result(42 [0x2a])");
+}
+
+TEST(test_utils, print_c_execution_result)
+{
+    std::stringstream str_trap;
+    str_trap << FizzyExecutionResult{true, false, {0}};
+    EXPECT_EQ(str_trap.str(), "trapped");
+
+    std::stringstream str_void;
+    str_void << FizzyExecutionResult{false, false, {0}};
+    EXPECT_EQ(str_void.str(), "result()");
+
+    std::stringstream str_value;
+    str_value << FizzyExecutionResult{false, true, {42}};
+    EXPECT_EQ(str_value.str(), "result(42 [0x2a])");
+}
