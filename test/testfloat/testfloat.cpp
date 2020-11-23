@@ -6,6 +6,7 @@
 #include <fizzy/parser.hpp>
 #include <test/utils/floating_point_utils.hpp>
 #include <test/utils/hex.hpp>
+#include <test/utils/typed_value.hpp>
 #include <cfenv>
 #include <iomanip>
 #include <iostream>
@@ -13,6 +14,7 @@
 #include <string>
 #include <unordered_map>
 
+using namespace fizzy;
 using namespace fizzy::test;
 
 namespace
@@ -52,14 +54,6 @@ Example:
 // The maximum number of failures reported.
 constexpr auto max_failures = 5;
 
-enum class Type
-{
-    i32,
-    i64,
-    f32,
-    f64
-};
-
 enum class Options
 {
     None = 0,
@@ -76,26 +70,26 @@ enum FPException : uint8_t
 
 struct FunctionDescription
 {
-    const fizzy::FuncIdx idx;
-    const Type result_type;
-    const Type param_types[2];
+    const FuncIdx idx;
+    const ValType result_type;
+    const ValType param_types[2];
     const size_t num_arguments;
     const Options options = Options::None;
 
-    constexpr FunctionDescription(fizzy::FuncIdx func_idx, Type result, Type param) noexcept
+    constexpr FunctionDescription(FuncIdx func_idx, ValType result, ValType param) noexcept
       : idx{func_idx}, result_type{result}, param_types{param}, num_arguments{1}
     {}
 
     constexpr FunctionDescription(
-        fizzy::FuncIdx func_idx, Type result_ty, Type param1, Type param2) noexcept
+        FuncIdx func_idx, ValType result_ty, ValType param1, ValType param2) noexcept
       : idx{func_idx}, result_type{result_ty}, param_types{param1, param2}, num_arguments{2}
     {}
 
     constexpr FunctionDescription(
-        fizzy::FuncIdx func_idx, Type result, Type param, Options opts) noexcept
+        FuncIdx func_idx, ValType result, ValType param, Options opts) noexcept
       : idx{func_idx},
         result_type{result},
-        param_types{param, Type::f32},
+        param_types{param, ValType::f32},
         num_arguments{1},
         options{opts}
     {}
@@ -169,58 +163,58 @@ auto get_wasm_code()
 FunctionDescription from_name(std::string_view name)
 {
     static const std::unordered_map<std::string_view, FunctionDescription> map{
-        {"f32_add", {0, Type::f32, Type::f32, Type::f32}},
-        {"f64_add", {1, Type::f64, Type::f64, Type::f64}},
-        {"f32_sub", {2, Type::f32, Type::f32, Type::f32}},
-        {"f64_sub", {3, Type::f64, Type::f64, Type::f64}},
-        {"f32_mul", {4, Type::f32, Type::f32, Type::f32}},
-        {"f64_mul", {5, Type::f64, Type::f64, Type::f64}},
-        {"f32_div", {6, Type::f32, Type::f32, Type::f32}},
-        {"f64_div", {7, Type::f64, Type::f64, Type::f64}},
-        {"f32_sqrt", {8, Type::f32, Type::f32}},
-        {"f64_sqrt", {9, Type::f64, Type::f64}},
+        {"f32_add", {0, ValType::f32, ValType::f32, ValType::f32}},
+        {"f64_add", {1, ValType::f64, ValType::f64, ValType::f64}},
+        {"f32_sub", {2, ValType::f32, ValType::f32, ValType::f32}},
+        {"f64_sub", {3, ValType::f64, ValType::f64, ValType::f64}},
+        {"f32_mul", {4, ValType::f32, ValType::f32, ValType::f32}},
+        {"f64_mul", {5, ValType::f64, ValType::f64, ValType::f64}},
+        {"f32_div", {6, ValType::f32, ValType::f32, ValType::f32}},
+        {"f64_div", {7, ValType::f64, ValType::f64, ValType::f64}},
+        {"f32_sqrt", {8, ValType::f32, ValType::f32}},
+        {"f64_sqrt", {9, ValType::f64, ValType::f64}},
 
-        {"i32_to_f32", {10, Type::f32, Type::i32}},
-        {"ui32_to_f32", {11, Type::f32, Type::i32}},
-        {"i64_to_f32", {12, Type::f32, Type::i64}},
-        {"ui64_to_f32", {13, Type::f32, Type::i64}},
-        {"i32_to_f64", {14, Type::f64, Type::i32}},
-        {"ui32_to_f64", {15, Type::f64, Type::i32}},
-        {"i64_to_f64", {16, Type::f64, Type::i64}},
-        {"ui64_to_f64", {17, Type::f64, Type::i64}},
+        {"i32_to_f32", {10, ValType::f32, ValType::i32}},
+        {"ui32_to_f32", {11, ValType::f32, ValType::i32}},
+        {"i64_to_f32", {12, ValType::f32, ValType::i64}},
+        {"ui64_to_f32", {13, ValType::f32, ValType::i64}},
+        {"i32_to_f64", {14, ValType::f64, ValType::i32}},
+        {"ui32_to_f64", {15, ValType::f64, ValType::i32}},
+        {"i64_to_f64", {16, ValType::f64, ValType::i64}},
+        {"ui64_to_f64", {17, ValType::f64, ValType::i64}},
 
-        {"f32_eq", {18, Type::i32, Type::f32, Type::f32}},
-        {"f64_eq", {19, Type::i32, Type::f64, Type::f64}},
-        {"f32_lt", {20, Type::i32, Type::f32, Type::f32}},
-        {"f64_lt", {21, Type::i32, Type::f64, Type::f64}},
-        {"f32_le", {22, Type::i32, Type::f32, Type::f32}},
-        {"f64_le", {23, Type::i32, Type::f64, Type::f64}},
+        {"f32_eq", {18, ValType::i32, ValType::f32, ValType::f32}},
+        {"f64_eq", {19, ValType::i32, ValType::f64, ValType::f64}},
+        {"f32_lt", {20, ValType::i32, ValType::f32, ValType::f32}},
+        {"f64_lt", {21, ValType::i32, ValType::f64, ValType::f64}},
+        {"f32_le", {22, ValType::i32, ValType::f32, ValType::f32}},
+        {"f64_le", {23, ValType::i32, ValType::f64, ValType::f64}},
 
         // Wasm only supports conversions to integer with truncation rounding direction:
         // testfloat_gen needs -rminMag option.
         // Conversion of a floating-point number to an integer format, when the source is NaN,
         // infinity, or a value that would convert to an integer outside the range of the result
         // format under the applicable rounding attribute.
-        {"f32_trunc_to_i32", {24, Type::i32, Type::f32, Options::TrapIsInvalidOperation}},
-        {"f32_trunc_to_ui32", {25, Type::i32, Type::f32, Options::TrapIsInvalidOperation}},
-        {"f32_trunc_to_i64", {26, Type::i64, Type::f32, Options::TrapIsInvalidOperation}},
-        {"f32_trunc_to_ui64", {27, Type::i64, Type::f32, Options::TrapIsInvalidOperation}},
-        {"f64_trunc_to_i32", {28, Type::i32, Type::f64, Options::TrapIsInvalidOperation}},
-        {"f64_trunc_to_ui32", {29, Type::i32, Type::f64, Options::TrapIsInvalidOperation}},
-        {"f64_trunc_to_i64", {30, Type::i64, Type::f64, Options::TrapIsInvalidOperation}},
-        {"f64_trunc_to_ui64", {31, Type::i64, Type::f64, Options::TrapIsInvalidOperation}},
+        {"f32_trunc_to_i32", {24, ValType::i32, ValType::f32, Options::TrapIsInvalidOperation}},
+        {"f32_trunc_to_ui32", {25, ValType::i32, ValType::f32, Options::TrapIsInvalidOperation}},
+        {"f32_trunc_to_i64", {26, ValType::i64, ValType::f32, Options::TrapIsInvalidOperation}},
+        {"f32_trunc_to_ui64", {27, ValType::i64, ValType::f32, Options::TrapIsInvalidOperation}},
+        {"f64_trunc_to_i32", {28, ValType::i32, ValType::f64, Options::TrapIsInvalidOperation}},
+        {"f64_trunc_to_ui32", {29, ValType::i32, ValType::f64, Options::TrapIsInvalidOperation}},
+        {"f64_trunc_to_i64", {30, ValType::i64, ValType::f64, Options::TrapIsInvalidOperation}},
+        {"f64_trunc_to_ui64", {31, ValType::i64, ValType::f64, Options::TrapIsInvalidOperation}},
 
-        {"f32_to_f64", {32, Type::f64, Type::f32}},
-        {"f64_to_f32", {33, Type::f32, Type::f64}},
+        {"f32_to_f64", {32, ValType::f64, ValType::f32}},
+        {"f64_to_f32", {33, ValType::f32, ValType::f64}},
 
-        {"f32_ceil", {34, Type::f32, Type::f32}},
-        {"f32_floor", {35, Type::f32, Type::f32}},
-        {"f32_trunc", {36, Type::f32, Type::f32}},
-        {"f32_nearest", {37, Type::f32, Type::f32}},
-        {"f64_ceil", {38, Type::f64, Type::f64}},
-        {"f64_floor", {39, Type::f64, Type::f64}},
-        {"f64_trunc", {40, Type::f64, Type::f64}},
-        {"f64_nearest", {41, Type::f64, Type::f64}},
+        {"f32_ceil", {34, ValType::f32, ValType::f32}},
+        {"f32_floor", {35, ValType::f32, ValType::f32}},
+        {"f32_trunc", {36, ValType::f32, ValType::f32}},
+        {"f32_nearest", {37, ValType::f32, ValType::f32}},
+        {"f64_ceil", {38, ValType::f64, ValType::f64}},
+        {"f64_floor", {39, ValType::f64, ValType::f64}},
+        {"f64_trunc", {40, ValType::f64, ValType::f64}},
+        {"f64_nearest", {41, ValType::f64, ValType::f64}},
     };
 
     if (const auto it = map.find(name); it != map.end())
@@ -228,115 +222,103 @@ FunctionDescription from_name(std::string_view name)
     throw std::invalid_argument{"unknown <function>: " + std::string{name}};
 }
 
-constexpr fizzy::Value make_value(Type type, uint64_t bits) noexcept
+/// Creates TypedValue of given type from provided bits.
+constexpr TypedValue from_bits(ValType ty, uint64_t bits) noexcept
 {
-    switch (type)
+    switch (ty)
     {
-    case Type::i32:
-        return fizzy::Value{static_cast<uint32_t>(bits)};
-    case Type::i64:
-        return fizzy::Value{bits};
-    case Type::f32:
-        return fizzy::Value{FP{static_cast<uint32_t>(bits)}.value};
-    case Type::f64:
-        return fizzy::Value{FP{bits}.value};
+    case ValType::i32:
+        return static_cast<uint32_t>(bits);
+    case ValType::i64:
+        return bits;
+    case ValType::f32:
+        return FP{static_cast<uint32_t>(bits)}.value;
+    case ValType::f64:
+        return FP{bits}.value;
     }
     __builtin_unreachable();
 }
 
-class TypedValue
+std::ostream& operator<<(std::ostream& os, const TypedValue& value)
 {
-    Type m_type;
-    fizzy::Value m_value;
-
-public:
-    constexpr TypedValue(Type type, fizzy::Value value) noexcept : m_type{type}, m_value{value} {}
-
-    constexpr TypedValue(Type type, uint64_t bits) noexcept
-      : m_type{type}, m_value{make_value(type, bits)}
-    {}
-
-    bool eq(uint64_t expected_bits, bool ignore_nans) const
+    std::ios os_state{nullptr};
+    os_state.copyfmt(os);
+    os << std::hex << std::uppercase << std::setfill('0');
+    switch (value.type)
     {
-        switch (m_type)
-        {
-        case Type::i32:
-        case Type::i64:
-            return m_value.i64 == expected_bits;
-        case Type::f32:
-        {
-            const FP value{m_value.f32};
-            const FP expected{static_cast<uint32_t>(expected_bits)};
-            if (ignore_nans && std::isnan(expected.value))
-            {
-                if (expected.is_canonical_nan())
-                    return value.is_canonical_nan();
-                if (expected.is_arithmetic_nan())
-                    return value.is_arithmetic_nan();
-                throw std::invalid_argument{"invalid input: unexpected signaling NaN"};
-            }
-            return value == expected;
-        }
+    case ValType::i32:
+        os << std::setw(8) << value.value.as<uint32_t>();
+        break;
+    case ValType::i64:
+        os << std::setw(16) << value.value.i64;
+        break;
+    case ValType::f32:
+        os << std::setw(8) << FP{value.value.f32}.as_uint();
+        break;
+    case ValType::f64:
+        os << std::setw(16) << FP{value.value.f64}.as_uint();
+        break;
+    }
+    os.copyfmt(os_state);
+    return os;
+}
 
-        case Type::f64:
+bool eq(TypedValue v, uint64_t expected_bits, bool ignore_nans)
+{
+    switch (v.type)
+    {
+    case ValType::i32:
+    case ValType::i64:
+        return v.value.i64 == expected_bits;
+    case ValType::f32:
+    {
+        const FP fp_value{v.value.f32};
+        const FP expected{static_cast<uint32_t>(expected_bits)};
+        if (ignore_nans && std::isnan(expected.value))
         {
-            const FP value{m_value.f64};
-            const FP expected{expected_bits};
-            if (ignore_nans && std::isnan(expected.value))
-            {
-                if (expected.is_canonical_nan())
-                    return value.is_canonical_nan();
-                if (expected.is_arithmetic_nan())
-                    return value.is_arithmetic_nan();
-                throw std::invalid_argument{"invalid input: unexpected signaling NaN"};
-            }
-            return value == expected;
+            if (expected.is_canonical_nan())
+                return fp_value.is_canonical_nan();
+            if (expected.is_arithmetic_nan())
+                return fp_value.is_arithmetic_nan();
+            throw std::invalid_argument{"invalid input: unexpected signaling NaN"};
         }
-        }
-        __builtin_unreachable();
+        return fp_value == expected;
     }
 
-    friend std::ostream& operator<<(std::ostream& os, const TypedValue& value)
+    case ValType::f64:
     {
-        std::ios os_state{nullptr};
-        os_state.copyfmt(os);
-        os << std::hex << std::uppercase << std::setfill('0');
-        switch (value.m_type)
+        const FP fp_value{v.value.f64};
+        const FP expected{expected_bits};
+        if (ignore_nans && std::isnan(expected.value))
         {
-        case Type::i32:
-            os << std::setw(8) << value.m_value.as<uint32_t>();
-            break;
-        case Type::i64:
-            os << std::setw(16) << value.m_value.i64;
-            break;
-        case Type::f32:
-            os << std::setw(8) << FP{value.m_value.f32}.as_uint();
-            break;
-        case Type::f64:
-            os << std::setw(16) << FP{value.m_value.f64}.as_uint();
-            break;
+            if (expected.is_canonical_nan())
+                return fp_value.is_canonical_nan();
+            if (expected.is_arithmetic_nan())
+                return fp_value.is_arithmetic_nan();
+            throw std::invalid_argument{"invalid input: unexpected signaling NaN"};
         }
-        os.copyfmt(os_state);
-        return os;
+        return fp_value == expected;
     }
-};
+    }
+    __builtin_unreachable();
+}
 
-bool check(const FunctionDescription& func, fizzy::Instance& instance, const uint64_t inputs[],
-    bool ignore_nans)
+bool check(
+    const FunctionDescription& func, Instance& instance, const uint64_t inputs[], bool ignore_nans)
 {
     const auto report_failure = [&](auto result, auto expected) {
         std::cerr << "FAILURE: " << result << " <-";
         for (size_t i = 0; i < func.num_arguments; ++i)
-            std::cerr << ' ' << TypedValue{func.param_types[i], inputs[i]};
+            std::cerr << ' ' << from_bits(func.param_types[i], inputs[i]);
         std::cerr << "\n         " << expected << " (expected)\n";
     };
 
-    fizzy::Value args[2]{};
+    Value args[2]{};
     assert(func.num_arguments <= std::size(args));
     for (size_t i = 0; i < func.num_arguments; ++i)
-        args[i] = make_value(func.param_types[i], inputs[i]);
+        args[i] = from_bits(func.param_types[i], inputs[i]).value;
 
-    const auto r = fizzy::execute(instance, func.idx, args);
+    const auto r = execute(instance, func.idx, args);
 
     if (func.options == Options::TrapIsInvalidOperation)
     {
@@ -354,9 +336,9 @@ bool check(const FunctionDescription& func, fizzy::Instance& instance, const uin
     assert(!r.trapped && r.has_value);
     const auto result = TypedValue{func.result_type, r.value};
     const auto expected_result_bits = inputs[func.num_arguments];
-    if (!result.eq(expected_result_bits, ignore_nans))
+    if (!eq(result, expected_result_bits, ignore_nans))
     {
-        report_failure(result, TypedValue{func.result_type, expected_result_bits});
+        report_failure(result, from_bits(func.result_type, expected_result_bits));
         return false;
     }
     return true;
@@ -401,7 +383,7 @@ int main(int argc, const char* argv[])
 
         const auto func = from_name(function_name);
 
-        auto instance = fizzy::instantiate(fizzy::parse(get_wasm_code()));
+        auto instance = instantiate(parse(get_wasm_code()));
 
         std::fesetround(rounding_direction);
 

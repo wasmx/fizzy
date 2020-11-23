@@ -22,6 +22,7 @@ target_sources(
     instantiate_helpers.hpp
     leb128_encode.cpp
     leb128_encode.hpp
+    typed_value.hpp
     wabt_engine.cpp
     wasm3_engine.cpp
     wasm_binary.hpp
