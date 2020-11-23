@@ -12,13 +12,13 @@ TEST(typed_value, construct_contexpr)
 {
     constexpr TypedValue i32{int32_t{-1}};
     static_assert(i32.type == ValType::i32);
-    static_assert(i32.value.i64 == uint32_t(-1));
+    static_assert(i32.value.i32 == uint32_t(-1));
     EXPECT_EQ(i32.type, ValType::i32);
     EXPECT_EQ(i32.value.i64, uint32_t(-1));
 
     constexpr TypedValue u32{uint32_t{0xfffffffe}};
     static_assert(u32.type == ValType::i32);
-    static_assert(u32.value.i64 == uint32_t{0xfffffffe});
+    static_assert(u32.value.i32 == uint32_t{0xfffffffe});
     EXPECT_EQ(u32.type, ValType::i32);
     EXPECT_EQ(u32.value.i64, uint32_t{0xfffffffe});
 
@@ -51,11 +51,11 @@ TEST(typed_value, construct)
 {
     const TypedValue i32{int32_t{-1}};
     EXPECT_EQ(i32.type, ValType::i32);
-    EXPECT_EQ(i32.value.i64, uint32_t(-1));
+    EXPECT_EQ(i32.value.i32, uint32_t(-1));
 
     const TypedValue u32{uint32_t{0xfffffffe}};
     EXPECT_EQ(u32.type, ValType::i32);
-    EXPECT_EQ(u32.value.i64, uint32_t{0xfffffffe});
+    EXPECT_EQ(u32.value.i32, uint32_t{0xfffffffe});
 
     const TypedValue i64{int64_t{-1}};
     EXPECT_EQ(i64.type, ValType::i64);

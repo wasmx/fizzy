@@ -13,12 +13,42 @@ TEST(value, value_initialization)
     EXPECT_EQ(v.i64, 0);
 }
 
+TEST(value, constructor_from_i32)
+{
+    Value v = int32_t{1};
+    EXPECT_EQ(v.i32, 1);
+    v = int32_t{-2};
+    EXPECT_EQ(v.i32, 0xfffffffe);
+    v = uint32_t{111};
+    EXPECT_EQ(v.i32, 111);
+
+    constexpr auto max_i32 = std::numeric_limits<uint32_t>::max();
+    v = max_i32;
+    EXPECT_EQ(v.i32, max_i32);
+}
+
+TEST(value, constructor_from_int)
+{
+    // The int type is likely the int32_t but it deserves separate test
+    // because it is also the type of the bare integer literal.
+    Value v = 0;
+    EXPECT_EQ(v.i32, 0);
+    v = -3;
+    EXPECT_EQ(v.i32, 0xfffffffd);
+
+    constexpr auto max_int = std::numeric_limits<int>::max();
+    v = max_int;
+    EXPECT_EQ(v.i32, max_int);
+}
+
 TEST(value, constructor_from_i64)
 {
-    Value v = 1;
+    Value v = int64_t{1};
     EXPECT_EQ(v.i64, 1);
-    v = 2;
+    v = int64_t{2};
     EXPECT_EQ(v.i64, 2);
+    v = int64_t{-13};
+    EXPECT_EQ(v.i64, 0xfffffffffffffff3);
     v = uint64_t{111};
     EXPECT_EQ(v.i64, 111);
 
@@ -29,7 +59,7 @@ TEST(value, constructor_from_i64)
 
 TEST(value, constructor_from_unsigned_ints)
 {
-    EXPECT_EQ(Value{uint32_t{0xdededefe}}.i64, 0xdededefe);
+    EXPECT_EQ(Value{uint32_t{0xdededefe}}.i32, 0xdededefe);
     EXPECT_EQ(Value{uint64_t{0xdededededededefe}}.i64, 0xdededededededefe);
     EXPECT_EQ(Value{static_cast<unsigned long>(0xdededededededefe)}.i64, 0xdededededededefe);
     EXPECT_EQ(Value{static_cast<unsigned long long>(0xdededededededefe)}.i64, 0xdededededededefe);
@@ -37,7 +67,7 @@ TEST(value, constructor_from_unsigned_ints)
 
 TEST(value, constructor_from_signed_ints)
 {
-    EXPECT_EQ(Value{int32_t{-3}}.i64, 0xfffffffd);
+    EXPECT_EQ(Value{int32_t{-3}}.i32, 0xfffffffd);
     EXPECT_EQ(Value{int64_t{-3}}.i64, 0xfffffffffffffffd);
 }
 

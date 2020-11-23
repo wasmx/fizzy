@@ -174,16 +174,16 @@ TEST(execute, global_get_imported)
     const auto wasm = from_hex(
         "0061736d010000000105016000017e020d01036d6f6404676c6f62037e00030201000a0601040023000b");
 
-    Value global_value = 42;
+    Value global_value = 42_u64;
     auto instance = instantiate(
         parse(wasm), {}, {}, {}, {ExternalGlobal{&global_value, {ValType::i64, false}}});
 
     EXPECT_THAT(execute(*instance, 0, {}), Result(42));
 
-    global_value = 0;
+    global_value = 0_u64;
     EXPECT_THAT(execute(*instance, 0, {}), Result(0));
 
-    global_value = 43;
+    global_value = 43_u64;
     EXPECT_THAT(execute(*instance, 0, {}), Result(43));
 }
 

@@ -1089,7 +1089,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
                 goto trap;
             const auto lhs = stack.top().as<int32_t>();
             if (lhs == std::numeric_limits<int32_t>::min() && rhs == -1)
-                stack.top() = 0;
+                stack.top() = int32_t{0};
             else
                 stack.top() = rem(lhs, rhs);
             break;
@@ -1199,7 +1199,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
                 goto trap;
             const auto lhs = stack.top().as<int64_t>();
             if (lhs == std::numeric_limits<int64_t>::min() && rhs == -1)
-                stack.top() = 0;
+                stack.top() = int64_t{0};
             else
                 stack.top() = rem(lhs, rhs);
             break;
@@ -1434,7 +1434,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::i64_extend_i32_u:
         {
-            // effectively no-op
+            stack.top() = uint64_t{stack.top().i32};
             break;
         }
         case Instr::i64_trunc_f32_s:

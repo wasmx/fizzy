@@ -47,7 +47,7 @@ TEST(api, execution_result_value)
     const ExecutionResult result = Value{1234_u32};
     EXPECT_FALSE(result.trapped);
     EXPECT_TRUE(result.has_value);
-    EXPECT_EQ(result.value.i64, 1234_u32);
+    EXPECT_EQ(result.value.i32, 1234_u32);
 }
 
 TEST(api, execution_result_bool_constructor)
@@ -65,7 +65,7 @@ TEST(api, execution_result_value_constructor)
     const ExecutionResult result{value};
     EXPECT_FALSE(result.trapped);
     EXPECT_TRUE(result.has_value);
-    EXPECT_EQ(result.value.i64, 1234_u32);
+    EXPECT_EQ(result.value.i32, 1234_u32);
 }
 
 TEST(api, resolve_imported_functions)

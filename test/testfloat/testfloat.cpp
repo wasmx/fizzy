@@ -268,6 +268,7 @@ bool eq(TypedValue v, uint64_t expected_bits, bool ignore_nans)
     switch (v.type)
     {
     case ValType::i32:
+        return v.value.i32 == expected_bits;
     case ValType::i64:
         return v.value.i64 == expected_bits;
     case ValType::f32:

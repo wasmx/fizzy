@@ -84,11 +84,11 @@ TEST(cxx20_span, stack)
     span<const Value> s(stack.rend() - num_items, num_items);
     EXPECT_FALSE(s.empty());
     EXPECT_EQ(s.size(), 2);
-    EXPECT_EQ(s[0].i64, 12);
-    EXPECT_EQ(s[1].i64, 13);
+    EXPECT_EQ(s[0].i32, 12);
+    EXPECT_EQ(s[1].i32, 13);
 
     stack[0] = 0;
-    EXPECT_EQ(s[1].i64, 0);
+    EXPECT_EQ(s[1].i32, 0);
 }
 
 TEST(cxx20_span, initializer_list)

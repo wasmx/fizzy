@@ -483,6 +483,16 @@ TEST(execute_numeric, i64_extend_i32_s)
     EXPECT_THAT(i64_extend_i32_s(0x80000001_u32), Result(0xffffffff80000001_u64));
     EXPECT_THAT(i64_extend_i32_s(0xfffffffe_u32), Result(0xfffffffffffffffe_u64));
     EXPECT_THAT(i64_extend_i32_s(0xffffffff_u32), Result(0xffffffffffffffff_u64));
+
+    // Put some garbage in the Value's high bits.
+    TypedValue v{ValType::i32, {}};
+    v.value.i64 = 0xdeaddeaddeaddead;
+    v.value.i32 = 0x80000000;
+    EXPECT_THAT(i64_extend_i32_s(v), Result(0xffffffff80000000_u64));
+
+    v.value.i64 = 0xdeaddeaddeaddead;
+    v.value.i32 = 0x40000000;
+    EXPECT_THAT(i64_extend_i32_s(v), Result(0x0000000040000000_u64));
 }
 
 TEST(execute_numeric, i64_extend_i32_u)
@@ -496,9 +506,32 @@ TEST(execute_numeric, i64_extend_i32_u)
     EXPECT_THAT(i64_extend_i32_u(0x80000001_u32), Result(0x0000000080000001_u64));
     EXPECT_THAT(i64_extend_i32_u(0xfffffffe_u32), Result(0x00000000fffffffe_u64));
     EXPECT_THAT(i64_extend_i32_u(0xffffffff_u32), Result(0x00000000ffffffff_u64));
+
+    // Put some garbage in the Value's high bits.
+    TypedValue v{ValType::i32, {}};
+    v.value.i64 = 0xdeaddeaddeaddead;
+    v.value.i32 = 0x80000000;
+    EXPECT_THAT(i64_extend_i32_u(v), Result(0x0000000080000000_u64));
 }
 
 TEST(execute_numeric, i64_extend_i32_u_2)
+{
+    /* wat2wasm
+    (func (param i32) (result i64)
+      i64.const 0xdeadbeefdeadbeef
+      drop
+      local.get 0
+      i64.extend_i32_u
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001060160017f017e030201000a1201100042effdb6f5fdddefd65e1a2000ad0b");
+
+    auto instance = instantiate(parse(wasm));
+    EXPECT_THAT(execute(*instance, 0, {0xff000000}), Result(0x00000000ff000000_u64));
+}
+
+TEST(execute_numeric, i64_extend_i32_u_3)
 {
     /* wat2wasm
     (func (param i32) (result i64)

@@ -52,7 +52,7 @@ TEST(test_utils, print_execution_result)
     EXPECT_EQ(str_void.str(), "result()");
 
     std::stringstream str_value;
-    str_value << ExecutionResult{Value{42}};
+    str_value << ExecutionResult{Value{42_u64}};
     EXPECT_EQ(str_value.str(), "result(42 [0x2a])");
 }
 
@@ -67,7 +67,9 @@ TEST(test_utils, print_c_execution_result)
     EXPECT_EQ(str_void.str(), "result()");
 
     std::stringstream str_value;
-    str_value << FizzyExecutionResult{false, true, {42}};
+    FizzyValue v;
+    v.i64 = 42;
+    str_value << FizzyExecutionResult{false, true, v};
     EXPECT_EQ(str_value.str(), "result(42 [0x2a])");
 }
 
