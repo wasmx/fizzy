@@ -298,7 +298,7 @@ TEST(validation, i32_store_no_memory)
 {
     /* wat2wasm --no-check
     (func (param i32)
-      get_local 0
+      local.get 0
       i32.const 0
       i32.store
     )
@@ -312,7 +312,7 @@ TEST(validation, f32_store_no_memory)
 {
     /* wat2wasm --no-check
     (func (param i32)
-      get_local 0
+      local.get 0
       f32.const 0
       f32.store
     )
@@ -351,7 +351,7 @@ TEST(validation, store_alignment)
         {
             /*
             (func (param i32)
-              get_local 0
+              local.get 0
               i32.const 0
               <instr> align=<align>
             */
@@ -412,7 +412,7 @@ TEST(validation, load_alignment)
         {
             /*
             (func (param i32)
-              get_local 0
+              local.get 0
               <instr> align=<align>
             */
             const auto type_section = make_vec({"60017f00"_bytes});
@@ -606,7 +606,7 @@ TEST(validation, call_indirect_unknown_type)
     /* wat2wasm --no-check
     (table anyfunc (elem 0))
     (func (param i32)
-      (call_indirect (type 1) (get_local 0))
+      (call_indirect (type 1) (local.get 0))
     )
     */
     const auto wasm = from_hex(
@@ -619,7 +619,7 @@ TEST(validation, call_indirect_no_table)
 {
     /* wat2wasm --no-check
     (func (param i32)
-      (call_indirect (type 1) (get_local 0))
+      (call_indirect (type 1) (local.get 0))
     )
     */
     const auto wasm = from_hex("0061736d0100000001050160017f00030201000a0901070020001101000b");
@@ -695,7 +695,7 @@ TEST(validation, global_get_invalid_index)
 {
     /* wat2wasm --no-check
     (func (param i32)
-      (get_global 0)
+      (global.get 0)
     )
     */
     const auto wasm = from_hex("0061736d0100000001050160017f00030201000a0601040023000b");
@@ -704,7 +704,7 @@ TEST(validation, global_get_invalid_index)
     /* wat2wasm --no-check
     (global i32 (i32.const 0))
     (func (param i32)
-      (get_global 1)
+      (global.get 1)
     )
     */
     const auto wasm_global =
@@ -715,7 +715,7 @@ TEST(validation, global_get_invalid_index)
     /* wat2wasm --no-check
     (global (import "mod" "g") i32)
     (func (param i32)
-      (get_global 1)
+      (global.get 1)
     )
     */
     const auto wasm_imp_global =
@@ -727,7 +727,7 @@ TEST(validation, global_get_invalid_index)
     (global (import "mod" "g") i32)
     (global i32 (i32.const 0))
     (func (param i32)
-      (get_global 2)
+      (global.get 2)
     )
     */
     const auto wasm_two_globals = from_hex(
@@ -742,7 +742,7 @@ TEST(validation, global_set_invalid_index)
     /* wat2wasm --no-check
     (func (param i32)
       (i32.const 0)
-      (set_global 0)
+      (global.set 0)
     )
     */
     const auto wasm = from_hex("0061736d0100000001050160017f00030201000a08010600410024000b");
@@ -752,7 +752,7 @@ TEST(validation, global_set_invalid_index)
     (global i32 (i32.const 0))
     (func (param i32)
       (i32.const 0)
-      (set_global 1)
+      (global.set 1)
     )
     */
     const auto wasm_global =
@@ -764,7 +764,7 @@ TEST(validation, global_set_invalid_index)
     (global (import "mod" "g") i32)
     (func (param i32)
       (i32.const 0)
-      (set_global 1)
+      (global.set 1)
     )
     */
     const auto wasm_imp_global = from_hex(
@@ -777,7 +777,7 @@ TEST(validation, global_set_invalid_index)
     (global i32 (i32.const 0))
     (func (param i32)
       (i32.const 0)
-      (set_global 2)
+      (global.set 2)
     )
     */
     const auto wasm_two_globals = from_hex(
@@ -793,7 +793,7 @@ TEST(validation, global_set_immutable)
     (global i32 (i32.const 0))
     (func (param i32)
       (i32.const 0)
-      (set_global 0)
+      (global.set 0)
     )
     */
     const auto wasm_global =
@@ -804,7 +804,7 @@ TEST(validation, global_set_immutable)
     (global (import "mod" "g") i32)
     (func (param i32)
       (i32.const 0)
-      (set_global 0)
+      (global.set 0)
     )
     */
     const auto wasm_imp_global = from_hex(

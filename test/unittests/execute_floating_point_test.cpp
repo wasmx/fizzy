@@ -1039,7 +1039,7 @@ TEST(execute_floating_point, f32_load_overflow)
     /* wat2wasm
     (memory 1 1)
     (func (param i32) (result f32)
-      get_local 0
+      local.get 0
       f32.load offset=0x7fffffff
     )
     */
@@ -1112,7 +1112,7 @@ TEST(execute_floating_point, f64_load_overflow)
     /* wat2wasm
     (memory 1 1)
     (func (param i32) (result f64)
-      get_local 0
+      local.get 0
       f64.load offset=0x7fffffff
     )
     */
@@ -1135,8 +1135,8 @@ TEST(execute_floating_point, f32_store)
     (memory 1 1)
     (data (i32.const 0)  "\cc\cc\cc\cc\cc\cc")
     (func (param f32 i32)
-      get_local 1
-      get_local 0
+      local.get 1
+      local.get 0
       f32.store
     )
     */
@@ -1187,7 +1187,7 @@ TEST(execute_floating_point, f32_store_overflow)
     /* wat2wasm
     (memory 1 1)
     (func (param i32)
-      get_local 0
+      local.get 0
       f32.const 1.234
       f32.store offset=0x7fffffff
     )
@@ -1212,8 +1212,8 @@ TEST(execute_floating_point, f64_store)
     (memory 1 1)
     (data (i32.const 0)  "\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc\cc")
     (func (param f64 i32)
-      get_local 1
-      get_local 0
+      local.get 1
+      local.get 0
       f64.store
     )
     */
@@ -1264,7 +1264,7 @@ TEST(execute_floating_point, f64_store_overflow)
     /* wat2wasm
     (memory 1 1)
     (func (param i32)
-      get_local 0
+      local.get 0
       f64.const 1.234
       f64.store offset=0x7fffffff
     )

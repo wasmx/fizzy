@@ -333,10 +333,10 @@ TEST(capi, instantiate_imported_globals)
       (global (import "mod1" "g2") i64)
       (global (import "mod1" "g3") f32)
       (global (import "mod1" "g4") (mut f64))
-      (func (result i32) (get_global 0))
-      (func (result i64) (get_global 1))
-      (func (result f32) (get_global 2))
-      (func (result f64) (get_global 3))
+      (func (result i32) (global.get 0))
+      (func (result i64) (global.get 1))
+      (func (result f32) (global.get 2))
+      (func (result f64) (global.get 3))
     */
     const auto wasm = from_hex(
         "0061736d010000000111046000017f6000017e6000017d6000017c022d04046d6f6431026731037f01046d6f64"
@@ -738,8 +738,8 @@ TEST(capi, imported_function_from_another_module)
     /* wat2wasm
     (module
       (func $sub (param $lhs i32) (param $rhs i32) (result i32)
-        get_local $lhs
-        get_local $rhs
+        local.get $lhs
+        local.get $rhs
         i32.sub)
       (export "sub" (func $sub))
     )
@@ -759,8 +759,8 @@ TEST(capi, imported_function_from_another_module)
       (func $sub (import "m1" "sub") (param $lhs i32) (param $rhs i32) (result i32))
 
       (func $main (param i32) (param i32) (result i32)
-        get_local 0
-        get_local 1
+        local.get 0
+        local.get 1
         call $sub
       )
     )
@@ -872,7 +872,7 @@ TEST(capi, imported_global_from_another_module)
     (module
       (global (import "m1" "g") i32)
       (func (result i32)
-        get_global 0
+        global.get 0
       )
     )
     */
