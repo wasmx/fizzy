@@ -162,9 +162,8 @@ inline std::vector<fizzy::ExternalFunction> unwrap(
 inline fizzy::ImportedFunction unwrap(const FizzyImportedFunction& c_imported_func)
 {
     fizzy::ImportedFunction imported_func;
-    imported_func.module =
-        c_imported_func.module ? std::string{c_imported_func.module} : std::string{};
-    imported_func.name = c_imported_func.name ? std::string{c_imported_func.name} : std::string{};
+    imported_func.module = c_imported_func.module;
+    imported_func.name = c_imported_func.name;
 
     const auto& c_type = c_imported_func.external_function.type;
     imported_func.inputs.resize(c_type.inputs_size);
