@@ -32,10 +32,11 @@ typedef struct FizzyExecutionResult
 {
     /// Whether execution ended with a trap.
     bool trapped;
-    /// Whether function returned a value. Valid only if trapped equals false.
+    /// Whether function returned a value.
+    /// Equals false if trapped equals true.
     bool has_value;
     /// Value returned from a function.
-    /// Valid only if trapped equals false and has_value equals true.
+    /// Valid only if has_value equals true.
     FizzyValue value;
 } FizzyExecutionResult;
 
