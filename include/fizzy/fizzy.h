@@ -201,11 +201,11 @@ bool fizzy_find_exported_function_index(
 ///                                    imported_functions_size equals 0.
 /// @param  imported_functions_size    Size of the imported function array. Can be zero.
 /// @param  imported_table             Pointer to the imported table. Can be NULL iff module doesn't
-///                                    import a table. Not an array, because Wasm 1.0 doesn't
+///                                    import a table. Not an array, because WebAssembly 1.0 doesn't
 ///                                    support more than one table in a module.
 /// @param  imported_memory            Pointer to the imported memory. Can be NULL iff module
-///                                    doesn't import a memory. Not an array, because Wasm 1.0
-///                                    doesn't support more than one memory in a module.
+///                                    doesn't import a memory. Not an array, because WebAssembly
+///                                    1.0 doesn't support more than one memory in a module.
 /// @param  imported_globals           Pointer to the imported globals array. Can be NULL iff
 ///                                    imported_globals_size equals 0.
 /// @param  imported_globals_size      Size of the imported global array. Can be zero.
@@ -241,11 +241,11 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 ///                                    imported_functions_size equals 0.
 /// @param  imported_functions_size    Size of the imported function array. Can be zero.
 /// @param  imported_table             Pointer to the imported table. Can be NULL iff module doesn't
-///                                    import a table. Not an array, because Wasm 1.0 doesn't
+///                                    import a table. Not an array, because WebAssembly 1.0 doesn't
 ///                                    support more than one table in a module.
 /// @param  imported_memory            Pointer to the imported memory. Can be NULL iff module
-///                                    doesn't import a memory. Not an array, because Wasm 1.0
-///                                    doesn't support more than one memory in a module.
+///                                    doesn't import a memory. Not an array, because WebAssembly
+///                                    1.0 doesn't support more than one memory in a module.
 /// @param  imported_globals           Pointer to the imported globals array. Can be NULL iff
 ///                                    imported_globals_size equals 0.
 /// @param  imported_globals_size      Size of the imported global array. Can be zero.
@@ -319,7 +319,7 @@ void fizzy_free_exported_function(FizzyExternalFunction* external_function);
 /// @param  out_table    Pointer to output struct to store found table. Cannot be NULL.
 /// @returns             true if table was found, false otherwise.
 ///
-/// @note  Wasm 1.0 spec allows at most one table in a module.
+/// @note  WebAssembly 1.0 spec allows at most one table in a module.
 bool fizzy_find_exported_table(
     FizzyInstance* instance, const char* name, FizzyExternalTable* out_table);
 
@@ -330,7 +330,7 @@ bool fizzy_find_exported_table(
 /// @param  out_memory    Pointer to output struct to store found memory. Cannot be NULL.
 /// @returns              true if memory was found, false otherwise.
 ///
-/// @note  Wasm 1.0 spec allows at most one memory in a module.
+/// @note  WebAssembly 1.0 spec allows at most one memory in a module.
 bool fizzy_find_exported_memory(
     FizzyInstance* instance, const char* name, FizzyExternalMemory* out_memory);
 
