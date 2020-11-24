@@ -263,7 +263,7 @@ TEST(parser_expr, instr_br_table)
           (block
             (block
               (block
-                (br_table 3 2 1 0 4 (get_local 0))
+                (br_table 3 2 1 0 4 (local.get 0))
                 (return (i32.const 0x41))
               )
               (return (i32.const 0x42))
@@ -316,7 +316,7 @@ TEST(parser_expr, instr_br_table_empty_vector)
     /* wat2wasm
     (func (param i32) (result i32)
       (block
-        (br_table 0 (get_local 0))
+        (br_table 0 (local.get 0))
         (return (i32.const 99))
       )
       (i32.const 100)

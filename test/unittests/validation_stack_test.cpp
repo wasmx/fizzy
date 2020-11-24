@@ -77,8 +77,8 @@ TEST(validation_stack, func_stack_underflow)
 {
     /* wat2wasm --no-check
     (func (param i32 i32) (result i32)
-      get_local 0
-      get_local 1
+      local.get 0
+      local.get 1
       i32.add
       i32.add
     )
@@ -180,7 +180,7 @@ TEST(validation_stack, block_too_many_results)
     (func
       (local i32)
       (block
-        get_local 0  ;; Leaves an item on the stack what makes the block invalid.
+        local.get 0  ;; Leaves an item on the stack what makes the block invalid.
       )
     )
     */
@@ -192,7 +192,7 @@ TEST(validation_stack, loop_stack_underflow)
 {
     /* wat2wasm --no-check
     (func (param i32)
-      get_local 0
+      local.get 0
       (loop
         i32.eqz
         drop
@@ -251,7 +251,7 @@ TEST(validation_stack, loop_too_many_results)
     (func
       (local i32)
       (loop
-        get_local 0  ;; Leaves an item on the stack what makes the loop invalid.
+        local.get 0  ;; Leaves an item on the stack what makes the loop invalid.
       )
     )
     */
@@ -279,7 +279,7 @@ TEST(validation_stack, call_stack_underflow)
 {
     /* wat2wasm --no-check
     (func $f (param i32) (result i32)
-      get_local 0
+      local.get 0
     )
     (func (result i32)
       ;; Call argument missing.
@@ -406,7 +406,7 @@ TEST(validation_stack, call_indirect_stack_underflow)
       (func (param i32) nop)
       (func (param i32)
         ;; Call argument missing.
-        (call_indirect (type 0) (get_local 0))
+        (call_indirect (type 0) (local.get 0))
       )
     */
     const auto wasm = from_hex(
@@ -566,7 +566,7 @@ TEST(validation_stack, unreachable_call)
 {
     /* wat2wasm
     (func $f (param i32) (result i32)
-      get_local 0
+      local.get 0
     )
     (func (result i32)
       unreachable
@@ -589,7 +589,7 @@ TEST(validation_stack, unreachable_call_indirect)
       (func (param i32)
         unreachable
         ;; Call argument missing.
-        (call_indirect (type 0) (get_local 0))
+        (call_indirect (type 0) (local.get 0))
       )
     */
     const auto wasm = from_hex(
@@ -719,7 +719,7 @@ TEST(validation_stack, br_table)
     (func (param i32)
       (block
         i32.const 1001
-        get_local 0
+        local.get 0
         br_table 0 1
         i32.mul  ;; unreachable
         i32.mul
@@ -757,7 +757,7 @@ TEST(validation_stack, if_stack_underflow)
       i32.const 2
       (if
         (then
-          set_local 0  ;; stack underflow
+          local.set 0  ;; stack underflow
         )
       )
       drop
@@ -902,7 +902,7 @@ TEST(validation_stack, else_stack_underflow)
       (if
         (then)
         (else
-          set_local 0  ;; stack underflow
+          local.set 0  ;; stack underflow
         )
       )
       drop
@@ -922,7 +922,7 @@ TEST(validation_stack, if_with_result_stack_underflow)
       i32.const 2
       (if (result i64)
         (then
-          set_local 0  ;; stack underflow
+          local.set 0  ;; stack underflow
           i64.const -1
         )
         (else
@@ -950,7 +950,7 @@ TEST(validation_stack, else_with_result_stack_underflow)
           i64.const -1
         )
         (else
-          set_local 0  ;; stack underflow
+          local.set 0  ;; stack underflow
           i64.const -2
         )
       )
@@ -1017,7 +1017,7 @@ TEST(validation_stack, if_with_unreachable)
 {
     /* wat2wasm --no-check
     (func (param i32) (result i64)
-      get_local 0
+      local.get 0
       (if (result i64)
         (then
           unreachable

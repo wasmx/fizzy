@@ -161,7 +161,7 @@ TEST(execute_call, call_indirect)
       (func $f5 (result i32) unreachable)
 
       (func (param i32) (result i32)
-        (call_indirect (type $out-i32) (get_local 0))
+        (call_indirect (type $out-i32) (local.get 0))
       )
     */
     const auto bin = from_hex(
@@ -194,14 +194,14 @@ TEST(execute_call, call_indirect_with_argument)
       (type $bin_func (func (param i32 i32) (result i32)))
       (table anyfunc (elem $f1 $f2 $f3))
 
-      (func $f1 (param i32 i32) (result i32) (i32.div_u (get_local 0) (get_local 1)))
-      (func $f2 (param i32 i32) (result i32) (i32.sub (get_local 0) (get_local 1)))
-      (func $f3 (param i32) (result i32) (i32.mul (get_local 0) (get_local 0)))
+      (func $f1 (param i32 i32) (result i32) (i32.div_u (local.get 0) (local.get 1)))
+      (func $f2 (param i32 i32) (result i32) (i32.sub (local.get 0) (local.get 1)))
+      (func $f3 (param i32) (result i32) (i32.mul (local.get 0) (local.get 0)))
 
       (func (param i32) (result i32)
         i32.const 31
         i32.const 7
-        (call_indirect (type $bin_func) (get_local 0))
+        (call_indirect (type $bin_func) (local.get 0))
       )
     )
     */
@@ -245,7 +245,7 @@ TEST(execute_call, call_indirect_imported_table)
       (import "m" "t" (table 5 20 anyfunc))
 
       (func (param i32) (result i32)
-        (call_indirect (type $out_i32) (get_local 0))
+        (call_indirect (type $out_i32) (local.get 0))
       )
     )
     */
@@ -285,7 +285,7 @@ TEST(execute_call, call_indirect_uninited_table)
       (func $f3 (result i32) i32.const 3)
 
       (func (param i32) (result i32)
-        (call_indirect (type $out-i32) (get_local 0))
+        (call_indirect (type $out-i32) (local.get 0))
       )
     */
     const auto bin = from_hex(
@@ -378,7 +378,7 @@ TEST(execute_call, imported_function_call_with_arguments)
     /* wat2wasm
     (import "mod" "foo" (func (param i32) (result i32)))
     (func (param i32) (result i32)
-      get_local 0
+      local.get 0
       call 0
       i32.const 2
       i32.add
@@ -452,8 +452,8 @@ TEST(execute_call, imported_function_from_another_module)
     /* wat2wasm
     (module
       (func $sub (param $lhs i32) (param $rhs i32) (result i32)
-        get_local $lhs
-        get_local $rhs
+        local.get $lhs
+        local.get $rhs
         i32.sub)
       (export "sub" (func $sub))
     )
@@ -468,8 +468,8 @@ TEST(execute_call, imported_function_from_another_module)
       (func $sub (import "m1" "sub") (param $lhs i32) (param $rhs i32) (result i32))
 
       (func $main (param i32) (param i32) (result i32)
-        get_local 0
-        get_local 1
+        local.get 0
+        local.get 1
         call $sub
       )
     )
@@ -495,8 +495,8 @@ TEST(execute_call, imported_table_from_another_module)
     /* wat2wasm
     (module
       (func $sub (param $lhs i32) (param $rhs i32) (result i32)
-        get_local $lhs
-        get_local $rhs
+        local.get $lhs
+        local.get $rhs
         i32.sub)
       (table (export "tab") 1 funcref)
       (elem (i32.const 0) $sub)
@@ -513,8 +513,8 @@ TEST(execute_call, imported_table_from_another_module)
       (import "m1" "tab" (table 1 funcref))
 
       (func $main (param i32) (param i32) (result i32)
-        get_local 0
-        get_local 1
+        local.get 0
+        local.get 1
         (call_indirect (type $t1) (i32.const 0))
       )
     )
@@ -537,8 +537,8 @@ TEST(execute_call, imported_table_modified_by_uninstantiable_module)
     (module
       (type $t1 (func (param $lhs i32) (param $rhs i32) (result i32)))
       (func (param i32) (param i32) (result i32)
-        get_local 0
-        get_local 1
+        local.get 0
+        local.get 1
         (call_indirect (type $t1) (i32.const 0))
       )
       (table (export "tab") 1 funcref)
@@ -553,8 +553,8 @@ TEST(execute_call, imported_table_modified_by_uninstantiable_module)
     (module
       (import "m1" "tab" (table 1 funcref))
       (func $sub (param $lhs i32) (param $rhs i32) (result i32)
-        get_local $lhs
-        get_local $rhs
+        local.get $lhs
+        local.get $rhs
         i32.sub)
       (elem (i32.const 0) $sub)
       (func $main (unreachable))

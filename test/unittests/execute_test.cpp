@@ -27,7 +27,7 @@ TEST(execute, drop)
     /* wat2wasm
     (func
       (local i32)
-      get_local 0
+      local.get 0
       drop
     )
     */
@@ -39,9 +39,9 @@ TEST(execute, select)
 {
     /* wat2wasm
     (func (param i64 i64 i32) (result i64)
-      get_local 0
-      get_local 1
-      get_local 2
+      local.get 0
+      local.get 1
+      local.get 2
       select
     )
     */
@@ -58,7 +58,7 @@ TEST(execute, local_get)
 {
     /* wat2wasm
     (func (param i64) (result i64)
-      get_local 0
+      local.get 0
     )
     */
     const auto wasm = from_hex("0061736d0100000001060160017e017e030201000a0601040020000b");
@@ -70,9 +70,9 @@ TEST(execute, local_set)
     /* wat2wasm
     (func (param i64) (result i64)
       (local i64)
-      get_local 0
-      set_local 1
-      get_local 1
+      local.get 0
+      local.set 1
+      local.get 1
     )
     */
     const auto wasm =
@@ -85,8 +85,8 @@ TEST(execute, local_tee)
     /* wat2wasm
     (func (param i64) (result i64)
       (local i64)
-      get_local 0
-      tee_local 1
+      local.get 0
+      local.tee 1
     )
     */
     const auto wasm = from_hex("0061736d0100000001060160017e017e030201000a0a010801017e200022010b");
@@ -98,7 +98,7 @@ TEST(execute, global_get)
     /* wat2wasm
     (global i32 (i32.const 42))
     (func (result i32)
-      get_global 0
+      global.get 0
     )
     */
     const auto wasm =
@@ -112,10 +112,10 @@ TEST(execute, global_get_two_globals)
     (global i64 (i64.const 42))
     (global i64 (i64.const 43))
     (func (result i64)
-      get_global 0
+      global.get 0
     )
     (func (result i64)
-      get_global 1
+      global.get 1
     )
     */
     const auto wasm = from_hex(
@@ -132,7 +132,7 @@ TEST(execute, global_get_imported)
     /* wat2wasm
     (import "mod" "glob" (global i64))
     (func (result i64)
-      get_global 0
+      global.get 0
     )
     */
     const auto wasm = from_hex(
@@ -159,10 +159,10 @@ TEST(execute, global_get_imported_and_internal)
       (global (import "mod" "g2") i32)
       (global i32 (i32.const 42))
       (global i32 (i32.const 43))
-      (func (result i32) (get_global 0))
-      (func (result i32) (get_global 1))
-      (func (result i32) (get_global 2))
-      (func (result i32) (get_global 3))
+      (func (result i32) (global.get 0))
+      (func (result i32) (global.get 1))
+      (func (result i32) (global.get 2))
+      (func (result i32) (global.get 3))
     )
      */
     const auto wasm = from_hex(
@@ -189,11 +189,11 @@ TEST(execute, global_get_float)
     (global (mut f64) (f64.const 3.4))
     (global f64 (global.get 1))
 
-    (func (result f32) get_global 0)
-    (func (result f64) get_global 1)
-    (func (result f32) get_global 2)
-    (func (result f64) get_global 3)
-    (func (result f64) get_global 4)
+    (func (result f32) global.get 0)
+    (func (result f64) global.get 1)
+    (func (result f32) global.get 2)
+    (func (result f64) global.get 3)
+    (func (result f64) global.get 4)
     */
     const auto wasm = from_hex(
         "0061736d010000000109026000017d6000017c021102016d026731037d01016d026732037c0003060500010001"
@@ -218,7 +218,7 @@ TEST(execute, global_set)
     (global (mut i32) (i32.const 41))
     (func
       i32.const 42
-      set_global 0
+      global.set 0
     )
     */
     const auto wasm =
@@ -236,9 +236,9 @@ TEST(execute, global_set_two_globals)
     (global (mut i32) (i32.const 43))
     (func
       i32.const 44
-      set_global 0
+      global.set 0
       i32.const 45
-      set_global 1
+      global.set 1
     )
     */
     const auto wasm = from_hex(
@@ -257,7 +257,7 @@ TEST(execute, global_set_imported)
     (import "mod" "glob" (global (mut i32)))
     (func
       i32.const 42
-      set_global 0
+      global.set 0
     )
     */
     const auto wasm = from_hex(
@@ -278,10 +278,10 @@ TEST(execute, global_set_float)
     (global (mut f32) (f32.const 1.2))
     (global (mut f64) (f64.const 3.4))
 
-    (func (set_global 0 (f32.const 11.22)))
-    (func (set_global 1 (f64.const 33.44)))
-    (func (set_global 2 (f32.const 55.66)))
-    (func (set_global 3 (f64.const 77.88)))
+    (func (global.set 0 (f32.const 11.22)))
+    (func (global.set 1 (f64.const 33.44)))
+    (func (global.set 2 (f32.const 55.66)))
+    (func (global.set 3 (f64.const 77.88)))
     */
     const auto wasm = from_hex(
         "0061736d01000000010401600000021102016d026731037d01016d026732037c01030504000000000615027d01"
@@ -308,7 +308,7 @@ TEST(execute, i32_load_imported_memory)
     /* wat2wasm
     (import "mod" "m" (memory 1 1))
     (func (param i32) (result i32)
-      get_local 0
+      local.get 0
       i32.load
     )
     */
@@ -328,7 +328,7 @@ TEST(execute, i32_load_overflow)
     /* wat2wasm
     (memory 1 1)
     (func (param i32) (result i32)
-      get_local 0
+      local.get 0
       i32.load offset=0x7fffffff
     )
     */
@@ -350,7 +350,7 @@ TEST(execute, i64_load_overflow)
     /* wat2wasm
     (memory 1 1)
     (func (param i32) (result i64)
-      get_local 0
+      local.get 0
       i64.load offset=0x7fffffff
     )
     */
@@ -372,7 +372,7 @@ TEST(execute, i32_load_all_variants)
     /* wat2wasm
     (memory 1 1)
     (func (param i32) (result i32)
-      get_local 0
+      local.get 0
       i32.load  ;; to be replaced by variants of i32.load
     )
     */
@@ -410,7 +410,7 @@ TEST(execute, i64_load_all_variants)
     /* wat2wasm
     (memory 1 1)
     (func (param i32) (result i64)
-      get_local 0
+      local.get 0
       i64.load  ;; to be replaced by variants of i64.load
     )
     */
@@ -450,8 +450,8 @@ TEST(execute, i32_store_imported_memory)
     /* wat2wasm
     (import "mod" "m" (memory 1 1))
     (func (param i32 i32)
-      get_local 1
-      get_local 0
+      local.get 1
+      local.get 0
       i32.store
     )
     */
@@ -472,7 +472,7 @@ TEST(execute, i32_store_overflow)
     /* wat2wasm
     (memory 1 1)
     (func (param i32)
-      get_local 0
+      local.get 0
       i32.const 0xaa55aa55
       i32.store offset=0x7fffffff
     )
@@ -496,7 +496,7 @@ TEST(execute, i64_store_overflow)
     /* wat2wasm
     (memory 1 1)
     (func (param i32)
-      get_local 0
+      local.get 0
       i64.const 0xaa55aa55aa55aa55
       i64.store offset=0x7fffffff
     )
@@ -520,8 +520,8 @@ TEST(execute, i32_store_all_variants)
     /* wat2wasm
     (memory 1 1)
     (func (param i32 i32)
-      get_local 1
-      get_local 0
+      local.get 1
+      local.get 0
       i32.store  ;; to be replaced by variants of i32.store
     )
     */
@@ -556,8 +556,8 @@ TEST(execute, i64_store_all_variants)
     /* wat2wasm
     (memory 1 1)
     (func (param i64 i32)
-      get_local 1
-      get_local 0
+      local.get 1
+      local.get 0
       i64.store  ;; to be replaced by variants of i64.store
     )
     */
@@ -607,7 +607,7 @@ TEST(execute, memory_grow)
     /* wat2wasm
     (memory 1 4096)
     (func (param i32) (result i32)
-      get_local 0
+      local.get 0
       memory.grow
     )
     */
@@ -643,7 +643,7 @@ TEST(execute, memory_grow_custom_hard_limit)
     /* wat2wasm
     (memory 1)
     (func (param i32) (result i32)
-      get_local 0
+      local.get 0
       memory.grow
     )
     */
@@ -660,7 +660,7 @@ TEST(execute, memory_grow_custom_hard_limit)
     /* wat2wasm
     (memory 1 16)
     (func (param i32) (result i32)
-      get_local 0
+      local.get 0
       memory.grow
     )
     */
@@ -677,7 +677,7 @@ TEST(execute, memory_grow_custom_hard_limit)
     /* wat2wasm
     (memory (import "mod" "mem") 1)
     (func (param i32) (result i32)
-      get_local 0
+      local.get 0
       memory.grow
     )
     */
@@ -701,7 +701,7 @@ TEST(execute, memory_grow_custom_hard_limit)
     /* wat2wasm
     (memory (import "mod" "mem") 1 16)
     (func (param i32) (result i32)
-      get_local 0
+      local.get 0
       memory.grow
     )
     */
@@ -721,7 +721,7 @@ TEST(execute, memory_grow_custom_hard_limit)
     /* wat2wasm
     (memory (import "mod" "mem") 1 32)
     (func (param i32) (result i32)
-      get_local 0
+      local.get 0
       memory.grow
     )
     */
@@ -889,20 +889,20 @@ TEST(execute, memory_copy_32bytes)
 
     ;; copy32(dst, src) - copies 4 x 8 bytes using offset immediate.
     (func (param i32 i32)
-      get_local 0
-      get_local 1
+      local.get 0
+      local.get 1
       i64.load offset=0
       i64.store offset=0
-      get_local 0
-      get_local 1
+      local.get 0
+      local.get 1
       i64.load offset=8
       i64.store offset=8
-      get_local 0
-      get_local 1
+      local.get 0
+      local.get 1
       i64.load offset=16
       i64.store offset=16
-      get_local 0
-      get_local 1
+      local.get 0
+      local.get 1
       i64.load offset=24
       i64.store offset=24
     )

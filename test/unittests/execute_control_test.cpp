@@ -39,12 +39,12 @@ TEST(execute_control, block_br)
         (local i32 i32)
         (block
           i32.const 0xa
-          set_local 1
+          local.set 1
           br 0
           i32.const 0xb
-          set_local 1
+          local.set 1
         )
-        get_local 1
+        local.get 1
     )
     */
     const auto wasm = from_hex(
@@ -129,10 +129,10 @@ TEST(execute_control, loop_with_result_br_if)
     (func (param i32) (result i32)
       (loop (result i32)
         i32.const -1
-        get_local 0
+        local.get 0
         i32.const 1
         i32.sub
-        tee_local 0
+        local.tee 0
         br_if 0
       )
     )
@@ -149,10 +149,10 @@ TEST(execute_control, loop_with_result_br)
       (block (result i32)
         (loop (result i32)
           i32.const 999
-          get_local 0
+          local.get 0
           i32.const 1
           i32.sub
-          tee_local 0
+          local.tee 0
           br_if 1
 
           drop  ;; Stack height 0.
@@ -174,10 +174,10 @@ TEST(execute_control, loop_with_result_br_stack_cleanup)
       (block (result i32)
         (loop (result i32)
           i32.const 999
-          get_local 0
+          local.get 0
           i32.const 1
           i32.sub
-          tee_local 0
+          local.tee 0
           br_if 1
 
           i32.const 666  ;; Stack height 2.
@@ -197,30 +197,30 @@ TEST(execute_control, blocks_without_br)
     (func (result i32)
       (local i32)
       (block
-        get_local 0
+        local.get 0
         i32.const 1
         i32.add
-        set_local 0
+        local.set 0
         (loop
-          get_local 0
+          local.get 0
           i32.const 1
           i32.add
-          set_local 0
+          local.set 0
           (block
-            get_local 0
+            local.get 0
             i32.const 1
             i32.add
-            set_local 0
+            local.set 0
             (loop
-              get_local 0
+              local.get 0
               i32.const 1
               i32.add
-              set_local 0
+              local.set 0
             )
           )
         )
       )
-      get_local 0
+      local.get 0
     )
     */
     const auto bin = from_hex(
@@ -236,35 +236,35 @@ TEST(execute_control, nested_blocks_0)
     (func (result i32)
       (local i32)
       (block
-        get_local 0
+        local.get 0
         i32.const 1
         i32.or
-        set_local 0
+        local.set 0
         (block
-          get_local 0
+          local.get 0
           i32.const 2
           i32.or
-          set_local 0
+          local.set 0
           (block
-            get_local 0
+            local.get 0
             i32.const 4
             i32.or
-            set_local 0
+            local.set 0
             i32.const 1
             br 0
-            get_local 0
+            local.get 0
             i32.const 8
             i32.or
-            set_local 0)
-          get_local 0
+            local.set 0)
+          local.get 0
           i32.const 16
           i32.or
-          set_local 0)
-        get_local 0
+          local.set 0)
+        local.get 0
         i32.const 32
         i32.or
-        set_local 0)
-      get_local 0
+        local.set 0)
+      local.get 0
       i32.const 64
       i32.or)
     */
@@ -281,35 +281,35 @@ TEST(execute_control, nested_blocks_1)
     (func (result i32)
       (local i32)
       (block
-        get_local 0
+        local.get 0
         i32.const 1
         i32.or
-        set_local 0
+        local.set 0
         (block
-          get_local 0
+          local.get 0
           i32.const 2
           i32.or
-          set_local 0
+          local.set 0
           (block
-            get_local 0
+            local.get 0
             i32.const 4
             i32.or
-            set_local 0
+            local.set 0
             i32.const 1
             br 1
-            get_local 0
+            local.get 0
             i32.const 8
             i32.or
-            set_local 0)
-          get_local 0
+            local.set 0)
+          local.get 0
           i32.const 16
           i32.or
-          set_local 0)
-        get_local 0
+          local.set 0)
+        local.get 0
         i32.const 32
         i32.or
-        set_local 0)
-      get_local 0
+        local.set 0)
+      local.get 0
       i32.const 64
       i32.or)
     */
@@ -326,35 +326,35 @@ TEST(execute_control, nested_blocks_2)
     (func (result i32)
       (local i32)
       (block
-        get_local 0
+        local.get 0
         i32.const 1
         i32.or
-        set_local 0
+        local.set 0
         (block
-          get_local 0
+          local.get 0
           i32.const 2
           i32.or
-          set_local 0
+          local.set 0
           (block
-            get_local 0
+            local.get 0
             i32.const 4
             i32.or
-            set_local 0
+            local.set 0
             i32.const 1
             br 2
-            get_local 0
+            local.get 0
             i32.const 8
             i32.or
-            set_local 0)
-          get_local 0
+            local.set 0)
+          local.get 0
           i32.const 16
           i32.or
-          set_local 0)
-        get_local 0
+          local.set 0)
+        local.get 0
         i32.const 32
         i32.or
-        set_local 0)
-      get_local 0
+        local.set 0)
+      local.get 0
       i32.const 64
       i32.or)
     */
@@ -371,35 +371,35 @@ TEST(execute_control, nested_blocks_3)
     (func (result i32)
       (local i32)
       (block
-        get_local 0
+        local.get 0
         i32.const 1
         i32.or
-        set_local 0
+        local.set 0
         (block
-          get_local 0
+          local.get 0
           i32.const 2
           i32.or
-          set_local 0
+          local.set 0
           (block
-            get_local 0
+            local.get 0
             i32.const 4
             i32.or
-            set_local 0
+            local.set 0
             i32.const 1
             br 3
-            get_local 0
+            local.get 0
             i32.const 8
             i32.or
-            set_local 0)
-          get_local 0
+            local.set 0)
+          local.get 0
           i32.const 16
           i32.or
-          set_local 0)
-        get_local 0
+          local.set 0)
+        local.get 0
         i32.const 32
         i32.or
-        set_local 0)
-      get_local 0
+        local.set 0)
+      local.get 0
       i32.const 64
       i32.or)
     */
@@ -416,40 +416,40 @@ TEST(execute_control, nested_br_if)
     (func (param i32) (result i32)
       (local i32)
       (block
-        get_local 1
+        local.get 1
         i32.const 0x8000
         i32.or
-        set_local 1
+        local.set 1
         (loop
-          get_local 1
+          local.get 1
           i32.const 1
           i32.add
-          set_local 1
+          local.set 1
 
-          get_local 0
+          local.get 0
           i32.const 1
           i32.sub
-          tee_local 0
+          local.tee 0
           br_if 0
 
-          get_local 1
+          local.get 1
           i32.const 0x4000
           i32.or
-          set_local 1
+          local.set 1
 
-          get_local 0
+          local.get 0
           i32.eqz
           br_if 1
 
-          get_local 1
+          local.get 1
           i32.const 0x2000
           i32.or
-          set_local 1)
-        get_local 1
+          local.set 1)
+        local.get 1
         i32.const 0x1000
         i32.or
-        set_local 1)
-      get_local 1
+        local.set 1)
+      local.get 1
       i32.const 0x0800
       i32.or)
     */
@@ -492,9 +492,9 @@ TEST(execute_control, br_if_stack_cleanup)
       (loop
         i64.const -2  ;; Additional stack item.
         i32.const -1
-        get_local 0
+        local.get 0
         i32.add
-        tee_local 0
+        local.tee 0
         br_if 0       ;; Clean up stack.
         drop          ;; Drop the additional stack item.
       )
@@ -603,7 +603,7 @@ TEST(execute_control, br_if_with_result)
       (block (result i32)
         i32.const 1
         i32.const 2
-        get_local 0
+        local.get 0
         br_if 0
         i32.xor
       )
@@ -629,7 +629,7 @@ TEST(execute_control, br_if_out_of_function)
     (func (param i32) (result i32)
       i32.const 1
       i32.const 2
-      get_local 0
+      local.get 0
       br_if 0
       drop
     )
@@ -700,7 +700,7 @@ TEST(execute_control, br_table)
           (block
             (block
               (block
-                (br_table 3 2 1 0 4 (get_local 0))
+                (br_table 3 2 1 0 4 (local.get 0))
                 (return (i32.const 99))
               )
               (return (i32.const 100))
@@ -733,7 +733,7 @@ TEST(execute_control, br_table_empty_vector)
     /* wat2wasm
     (func (param i32) (result i32)
       (block
-        (br_table 0 (get_local 0))
+        (br_table 0 (local.get 0))
         (return (i32.const 99))
       )
       (i32.const 100)
@@ -754,7 +754,7 @@ TEST(execute_control, br_table_as_return)
     (func (param i32) (result i32)
       (block (result i32)
         i32.const 1001
-        get_local 0
+        local.get 0
         br_table 0 1
       )
       drop
@@ -826,14 +826,14 @@ TEST(execute_control, if_smoke)
     /* wat2wasm
     (func (param $x i32) (result i32)
       (local $y i32)
-      get_local $x
+      local.get $x
       (if
         (then
           i32.const 4
-          set_local $y
+          local.set $y
         )
       )
-      get_local $y
+      local.get $y
     )
     */
     const auto bin =
@@ -856,7 +856,7 @@ TEST(execute_control, if_else_smoke)
 {
     /* wat2wasm
     (func (param $x i32) (result i32)
-      get_local $x
+      local.get $x
       (if (result i32)
         (then
           i32.const 1
@@ -888,7 +888,7 @@ TEST(execute_control, if_return_from_branch)
 {
     /* wat2wasm
     (func (param $x i32) (result i32)
-      get_local $x
+      local.get $x
       (if (result i32)
         (then
           i32.const -1
@@ -924,7 +924,7 @@ TEST(execute_control, if_br_from_branch)
 {
     /* wat2wasm
     (func  (param $x i32) (result i32)
-      get_local $x
+      local.get $x
       (if (result i32)
         (then
           i32.const -1
