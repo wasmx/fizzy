@@ -1038,3 +1038,39 @@ TEST(execute, stack_abuse)
 
     EXPECT_THAT(execute(parse(wasm), 0, {1000}), Result(1136));
 }
+
+TEST(execute, local_init)
+{
+    /* wat2wasm
+    (func (result i32) (local i32) (local.get 0))
+    (func (result i64) (local i64) (local.get 0))
+    (func (result f32) (local f32) (local.get 0))
+    (func (result f64) (local f64) (local.get 0))
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000111046000017f6000017e6000017d6000017c030504000102030a1d040601017f20000b06"
+        "01017e20000b0601017d20000b0601017c20000b");
+
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result(0_u32));
+    EXPECT_THAT(execute(parse(wasm), 1, {}), Result(0_u64));
+    EXPECT_THAT(execute(parse(wasm), 2, {}), Result(0.0f));
+    EXPECT_THAT(execute(parse(wasm), 3, {}), Result(0.0));
+}
+
+TEST(execute, local_init_combined)
+{
+    /* wat2wasm
+    (func (result i32) (local i32 i64 f32 f64) (local.get 0))
+    (func (result i64) (local i32 i64 f32 f64) (local.get 1))
+    (func (result f32) (local i32 i64 f32 f64) (local.get 2))
+    (func (result f64) (local i32 i64 f32 f64) (local.get 3))
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000111046000017f6000017e6000017d6000017c030504000102030a35040c04017f017e017d"
+        "017c20000b0c04017f017e017d017c20010b0c04017f017e017d017c20020b0c04017f017e017d017c20030b");
+
+    EXPECT_THAT(execute(parse(wasm), 0, {}), Result(0_u32));
+    EXPECT_THAT(execute(parse(wasm), 1, {}), Result(0_u64));
+    EXPECT_THAT(execute(parse(wasm), 2, {}), Result(0.0f));
+    EXPECT_THAT(execute(parse(wasm), 3, {}), Result(0.0));
+}
