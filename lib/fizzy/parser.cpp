@@ -34,6 +34,14 @@ void validate_constant_expression(
 }
 }  // namespace
 
+/// The reference to the `code` in the wasm binary.
+///
+/// The distinct type is needed for parse_vec<> specialization.
+struct code_view : public bytes_view
+{
+    using bytes_view::bytes_view;
+};
+
 template <typename T>
 parser_result<T> parse(const uint8_t* pos, const uint8_t* end);
 

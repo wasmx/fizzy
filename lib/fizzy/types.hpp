@@ -365,14 +365,6 @@ struct Code
     std::vector<uint8_t> instructions;
 };
 
-/// The reference to the `code` in the wasm binary.
-///
-/// The distinct type is needed for parse_vec<> specialization.
-struct code_view : public bytes_view
-{
-    using bytes_view::bytes_view;
-};
-
 // https://webassembly.github.io/spec/core/binary/modules.html#data-section
 // The memory index is omitted from the structure as the parser ensures it to be 0
 struct Data
