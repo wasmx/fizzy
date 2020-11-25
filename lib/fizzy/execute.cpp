@@ -503,18 +503,17 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
 
 ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args, int depth)
 {
-    depth += 1;
-
     assert(depth >= 0);
     if (depth > CallStackLimit)
         return Trap;
-
-    const auto& func_type = instance.module->get_function_type(func_idx);
 
     assert(instance.module->imported_function_types.size() == instance.imported_functions.size());
     if (func_idx < instance.imported_functions.size())
         return instance.imported_functions[func_idx].function(instance, args, depth);
 
+    const auto callee_depth = depth + 1;
+
+    const auto& func_type = instance.module->get_function_type(func_idx);
     const auto& code = instance.module->get_code(func_idx);
     auto* const memory = instance.memory.get();
 
@@ -596,7 +595,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             const auto called_func_idx = read<uint32_t>(pc);
             const auto& called_func_type = instance.module->get_function_type(called_func_idx);
 
-            if (!invoke_function(called_func_type, called_func_idx, instance, stack, depth))
+            if (!invoke_function(called_func_type, called_func_idx, instance, stack, callee_depth))
                 goto trap;
             break;
         }
@@ -623,7 +622,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
                 goto trap;
 
             if (!invoke_function(
-                    actual_type, called_func.func_idx, *called_func.instance, stack, depth))
+                    actual_type, called_func.func_idx, *called_func.instance, stack, callee_depth))
                 goto trap;
             break;
         }
