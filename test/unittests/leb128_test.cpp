@@ -29,30 +29,29 @@ inline auto leb128s_decode(bytes_view input)
 
 TEST(leb128, decode_u64)
 {
-    // clang-format off
-    std::vector<std::pair<bytes, uint64_t>> testcases = {
-        {{0}, 0}, // 0
-        {{0x80, 0x80, 0x00}, 0}, // 0 with leading zeroes
-        {{1}, 1}, // 1
-        {{0x81, 0x80, 0x80, 0x00}, 1}, // 1 with leading zeroes
-        {{0x81, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x00}, 1}, // 1 with max leading zeroes
-        {{0xe5, 0x8e, 0x26}, 624485}, // 624485
-        {{0xe5, 0x8e, 0xa6, 0x80, 0x80, 0x00}, 624485}, // 624485 with leading zeroes
-        {{0xff, 0xff, 0xff, 0xff, 0x07}, 0x7fffffff},
-        {{0x80, 0x80, 0x80, 0x80, 0x08}, 0x80000000},
-        {{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00}, 562949953421311}, // bigger than int32
-        {{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0x80, 0x00}, 562949953421311}, // bigger than int32 with zeroes
-        {{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f}, 0x7fffffffffffffff},
-        {{0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x01}, 0x8000000000000000},
-        {{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01}, std::numeric_limits<uint64_t>::max()}, // max
+    constexpr std::pair<std::string_view, uint64_t> test_cases[]{
+        {"00", 0},                                     // 0
+        {"808000", 0},                                 // 0 with leading zeroes
+        {"01", 1},                                     // 1
+        {"81808000", 1},                               // 1 with leading zeroes
+        {"81808080808080808000", 1},                   // 1 with max leading zeroes
+        {"e58e26", 624485},                            // 624485
+        {"e58ea6808000", 624485},                      // 624485 with leading zeroes
+        {"ffffffff07", 0x7fffffff},                    //
+        {"8080808008", 0x80000000},                    //
+        {"ffffffffffffff00", 562949953421311},         // bigger than int32
+        {"ffffffffffffff808000", 562949953421311},     // bigger than int32 with zeroes
+        {"ffffffffffffffff7f", 0x7fffffffffffffff},    //
+        {"80808080808080808001", 0x8000000000000000},  //
+        {"ffffffffffffffffff01", std::numeric_limits<uint64_t>::max()},  // max
     };
-    // clang-format on
 
-    for (auto const& testcase : testcases)
+    for (const auto& [input_hex, expected] : test_cases)
     {
-        auto res = leb128u_decode<uint64_t>(testcase.first);
-        EXPECT_EQ(res.first, testcase.second) << hex(testcase.first);
-        EXPECT_EQ(res.second, &testcase.first[0] + testcase.first.size()) << hex(testcase.first);
+        const auto input = from_hex(input_hex);
+        const auto [value, ptr] = leb128u_decode<uint64_t>(input);
+        EXPECT_EQ(value, expected) << input_hex;
+        EXPECT_EQ(ptr, &input[0] + input.size()) << input_hex;
     }
 }
 
@@ -84,27 +83,26 @@ TEST(leb128, decode_u64_invalid)
 
 TEST(leb128, decode_u32)
 {
-    // clang-format off
-    std::vector<std::pair<bytes, uint32_t>> testcases = {
-        {{0}, 0}, // 0
-        {{0x80, 0x80, 0x00}, 0}, // 0 with leading zeroes
-        {{1}, 1}, // 1
-        {{0x81, 0x80, 0x80, 0x00}, 1}, // 1 with leading zeroes
-        {{0x81, 0x80, 0x80, 0x80, 0x00}, 1}, // 1 with max leading zeroes
-        {{0x82, 0x00}, 2}, // 2 with leading zeroes
-        {{0xe5, 0x8e, 0x26}, 624485}, // 624485
-        {{0xe5, 0x8e, 0xa6, 0x80, 0x00}, 624485}, // 624485 with leading zeroes
-        {{0xff, 0xff, 0xff, 0xff, 0x07}, 0x7fffffff},
-        {{0x80, 0x80, 0x80, 0x80, 0x08}, 0x80000000},
-        {{0xff, 0xff, 0xff, 0xff, 0x0f}, std::numeric_limits<uint32_t>::max()}, // max
+    constexpr std::pair<std::string_view, uint32_t> test_cases[]{
+        {"00", 0},                                             // 0
+        {"808000", 0},                                         // 0 with leading zeroes
+        {"01", 1},                                             // 1
+        {"81808000", 1},                                       // 1 with leading zeroes
+        {"8180808000", 1},                                     // 1 with max leading zeroes
+        {"8200", 2},                                           // 2 with leading zeroes
+        {"e58e26", 624485},                                    // 624485
+        {"e58ea68000", 624485},                                // 624485 with leading zeroes
+        {"ffffffff07", 0x7fffffff},                            //
+        {"8080808008", 0x80000000},                            //
+        {"ffffffff0f", std::numeric_limits<uint32_t>::max()},  // max
     };
-    // clang-format on
 
-    for (auto const& testcase : testcases)
+    for (const auto& [input_hex, expected] : test_cases)
     {
-        auto res = leb128u_decode<uint32_t>(testcase.first);
-        EXPECT_EQ(res.first, testcase.second) << hex(testcase.first);
-        EXPECT_EQ(res.second, &testcase.first[0] + testcase.first.size()) << hex(testcase.first);
+        const auto input = from_hex(input_hex);
+        const auto [value, ptr] = leb128u_decode<uint32_t>(input);
+        EXPECT_EQ(value, expected) << input_hex;
+        EXPECT_EQ(ptr, &input[0] + input.size()) << input_hex;
     }
 }
 
@@ -137,22 +135,21 @@ TEST(leb128, decode_u32_invalid)
 
 TEST(leb128, decode_u8)
 {
-    // clang-format off
-    std::vector<std::pair<bytes, uint64_t>> testcases = {
-        {{0}, 0}, // 0
-        {{0x80, 0x00}, 0}, // 0 with leading zero
-        {{1}, 1}, // 1
-        {{0x81, 0x00}, 1}, // 1 with leading zero
-        {{0xe5, 0x01}, 229}, // 229
-        {{0xff, 0x01}, 255}, // max
+    constexpr std::pair<std::string_view, uint64_t> test_cases[]{
+        {"00", 0},      // 0
+        {"8000", 0},    // 0 with leading zero
+        {"01", 1},      // 1
+        {"8100", 1},    // 1 with leading zero
+        {"e501", 229},  // 229
+        {"ff01", 255},  // max
     };
-    // clang-format on
 
-    for (auto const& testcase : testcases)
+    for (const auto& [input_hex, expected] : test_cases)
     {
-        auto res = leb128u_decode<uint8_t>(testcase.first);
-        EXPECT_EQ(res.first, testcase.second) << hex(testcase.first);
-        EXPECT_EQ(res.second, &testcase.first[0] + testcase.first.size()) << hex(testcase.first);
+        const auto input = from_hex(input_hex);
+        const auto [value, ptr] = leb128u_decode<uint8_t>(input);
+        EXPECT_EQ(value, expected) << input_hex;
+        EXPECT_EQ(ptr, &input[0] + input.size()) << input_hex;
     }
 }
 
@@ -212,32 +209,31 @@ TEST(leb128, decode_out_of_buffer)
 
 TEST(leb128, decode_s64)
 {
-    // clang-format off
-    std::vector<std::pair<bytes, int64_t>> testcases = {
-        {{0}, 0}, // 0
-        {{0x80, 0x80, 0x00}, 0}, // 0 with leading zeroes
-        {{1}, 1},
-        {{0x81, 0x80, 0x80, 0x00}, 1}, // 1 with leading zeroes
-        {{0x81, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x00}, 1}, // 1 with max leading zeroes
-        {{0x7f}, -1},
-        {{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f}, -1}, // -1 with leading 1s
-        {{0x7e}, -2},
-        {{0xfe, 0x7f}, -2}, // -2 with leading 1s
-        {{0xfe, 0xff, 0x7f}, -2},  // -2 with leading 1s
-        {{0xe5, 0x8e, 0x26}, 624485},
-        {{0xe5, 0x8e, 0xa6, 0x80, 0x80, 0x00}, 624485}, // 624485 with leading zeroes
-        {{0xc0, 0xbb, 0x78}, -123456},
-        {{0x9b, 0xf1, 0x59}, -624485},
-        {{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00}, 562949953421311}, // bigger than int32
-        {{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x80, 0x80, 0x00}, 562949953421311}, // bigger than int32 with zeroes
+    constexpr std::pair<std::string_view, int64_t> test_cases[]{
+        {"00", 0},                                  // 0
+        {"808000", 0},                              // 0 with leading zeroes
+        {"01", 1},                                  //
+        {"81808000", 1},                            // 1 with leading zeroes
+        {"81808080808080808000", 1},                // 1 with max leading zeroes
+        {"7f", -1},                                 //
+        {"ffffffffffffffffff7f", -1},               // -1 with leading 1s
+        {"7e", -2},                                 //
+        {"fe7f", -2},                               // -2 with leading 1s
+        {"feff7f", -2},                             // -2 with leading 1s
+        {"e58e26", 624485},                         //
+        {"e58ea6808000", 624485},                   // 624485 with leading zeroes
+        {"c0bb78", -123456},                        //
+        {"9bf159", -624485},                        //
+        {"ffffffffffffff00", 562949953421311},      // bigger than int32
+        {"ffffffffffffff808000", 562949953421311},  // bigger than int32 with zeroes
     };
-    // clang-format on
 
-    for (auto const& testcase : testcases)
+    for (const auto& [input_hex, expected] : test_cases)
     {
-        const auto res = leb128s_decode<int64_t>(testcase.first);
-        EXPECT_EQ(res.first, testcase.second) << hex(testcase.first);
-        EXPECT_EQ(res.second, &testcase.first[0] + testcase.first.size()) << hex(testcase.first);
+        const auto input = from_hex(input_hex);
+        const auto [value, ptr] = leb128s_decode<int64_t>(input);
+        EXPECT_EQ(value, expected) << input_hex;
+        EXPECT_EQ(ptr, &input[0] + input.size()) << input_hex;
     }
 }
 
@@ -266,32 +262,31 @@ TEST(leb128, decode_s64_invalid)
 
 TEST(leb128, decode_s32)
 {
-    // clang-format off
-    std::vector<std::pair<bytes, int32_t>> testcases = {
-        {{0}, 0}, // 0
-        {{0x80, 0x80, 0x00}, 0}, // 0 with leading zeroes
-        {{1}, 1},
-        {{0x81, 0x80, 0x80, 0x00}, 1}, // 1 with leading zeroes
-        {{0x81, 0x80, 0x80, 0x80, 0x00}, 1}, // 1 with max leading zeroes
-        {{0x7f}, -1},
-        {{0xff, 0xff, 0xff, 0xff, 0x7f}, -1}, // -1 with leading 1s
-        {{0x7e}, -2},
-        {{0xfe, 0x7f}, -2}, // -2 with leading 1s
-        {{0xfe, 0xff, 0x7f}, -2}, // -2 with leading 1s
-        {{0xe5, 0x8e, 0x26}, 624485},
-        {{0xe5, 0x8e, 0xa6, 0x80, 0x00}, 624485}, // 624485 with leading zeroes
-        {{0xc0, 0xbb, 0x78}, -123456},
-        {{0x9b, 0xf1, 0x59}, -624485},
-        {{0x81, 0x80, 0x80, 0x80, 0x78}, -2147483647},
-        {{0x80, 0x80, 0x80, 0x80, 0x78}, std::numeric_limits<int32_t>::min()},
+    constexpr std::pair<std::string_view, int32_t> test_cases[]{
+        {"00", 0},               // 0
+        {"808000", 0},           // 0 with leading zeroes
+        {"01", 1},               //
+        {"81808000", 1},         // 1 with leading zeroes
+        {"8180808000", 1},       // 1 with max leading zeroes
+        {"7f", -1},              //
+        {"ffffffff7f", -1},      // -1 with leading 1s
+        {"7e", -2},              //
+        {"fe7f", -2},            // -2 with leading 1s
+        {"feff7f", -2},          // -2 with leading 1s
+        {"e58e26", 624485},      //
+        {"e58ea68000", 624485},  // 624485 with leading zeroes
+        {"c0bb78", -123456},
+        {"9bf159", -624485},
+        {"8180808078", -2147483647},
+        {"8080808078", std::numeric_limits<int32_t>::min()},
     };
-    // clang-format on
 
-    for (auto const& testcase : testcases)
+    for (const auto& [input_hex, expected] : test_cases)
     {
-        const auto res = leb128s_decode<int32_t>(testcase.first);
-        EXPECT_EQ(res.first, testcase.second) << hex(testcase.first);
-        EXPECT_EQ(res.second, &testcase.first[0] + testcase.first.size()) << hex(testcase.first);
+        const auto input = from_hex(input_hex);
+        const auto [value, ptr] = leb128s_decode<int32_t>(input);
+        EXPECT_EQ(value, expected) << input_hex;
+        EXPECT_EQ(ptr, &input[0] + input.size()) << input_hex;
     }
 }
 
@@ -316,25 +311,24 @@ TEST(leb128, decode_s32_invalid)
 
 TEST(leb128, decode_s8)
 {
-    // clang-format off
-    std::vector<std::pair<bytes, int64_t>> testcases = {
-        {{0}, 0}, // 0
-        {{0x80, 0x00}, 0}, // 0 with leading zero
-        {{1}, 1}, // 1
-        {{0x81, 0x00}, 1}, // 1 with leading zero
-        {{0xff, 0x7f}, -1},
-        {{0xfe, 0x7f}, -2},
-        {{0x40}, -64},
-        {{0x81, 0x7f}, -127},
-        {{0x80, 0x7f}, std::numeric_limits<int8_t>::min()},
+    constexpr std::pair<std::string_view, int64_t> test_cases[]{
+        {"00", 0},    // 0
+        {"8000", 0},  // 0 with leading zero
+        {"01", 1},    // 1
+        {"8100", 1},  // 1 with leading zero
+        {"ff7f", -1},
+        {"fe7f", -2},
+        {"40", -64},
+        {"817f", -127},
+        {"807f", std::numeric_limits<int8_t>::min()},
     };
-    // clang-format on
 
-    for (auto const& testcase : testcases)
+    for (const auto& [input_hex, expected] : test_cases)
     {
-        const auto res = leb128s_decode<int8_t>(testcase.first);
-        EXPECT_EQ(res.first, testcase.second) << hex(testcase.first);
-        EXPECT_EQ(res.second, &testcase.first[0] + testcase.first.size()) << hex(testcase.first);
+        const auto input = from_hex(input_hex);
+        const auto [value, ptr] = leb128s_decode<int8_t>(input);
+        EXPECT_EQ(value, expected) << input_hex;
+        EXPECT_EQ(ptr, &input[0] + input.size()) << input_hex;
     }
 }
 
