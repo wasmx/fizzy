@@ -22,6 +22,7 @@ target_sources(
     execute_floating_point_conversion_test.cpp
     execute_floating_point_test.cpp
     execute_floating_point_test.hpp
+    execute_invalid_test.cpp
     execute_numeric_test.cpp
     execute_test.cpp
     floating_point_utils_test.cpp

@@ -296,6 +296,7 @@ jobs:
             ./wat2wasm4cpp.py test/unittests/execute_call_test.cpp
             ./wat2wasm4cpp.py test/unittests/execute_control_test.cpp
             ./wat2wasm4cpp.py test/unittests/execute_floating_point_test.cpp
+            ./wat2wasm4cpp.py test/unittests/execute_invalid_test.cpp
             ./wat2wasm4cpp.py test/unittests/execute_numeric_test.cpp
             ./wat2wasm4cpp.py test/unittests/execute_test.cpp
             ./wat2wasm4cpp.py test/unittests/instantiate_test.cpp
