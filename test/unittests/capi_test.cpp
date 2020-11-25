@@ -124,7 +124,7 @@ TEST(capi, find_exported_function)
     EXPECT_EQ(function.type.output, FizzyValueTypeI32);
     EXPECT_NE(function.context, nullptr);
     ASSERT_NE(function.function, nullptr);
-    EXPECT_THAT(function.function(function.context, instance, nullptr, 0), CResult(42));
+    EXPECT_THAT(function.function(function.context, instance, nullptr, 1), CResult(42));
 
     fizzy_free_exported_function(&function);
 
@@ -358,10 +358,10 @@ TEST(capi, instantiate_imported_globals)
     auto instance = fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, globals, 4);
     EXPECT_NE(instance, nullptr);
 
-    EXPECT_THAT(fizzy_execute(instance, 0, nullptr, 0), CResult(42));
-    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, 0), CResult(uint64_t{43}));
-    EXPECT_THAT(fizzy_execute(instance, 2, nullptr, 0), CResult(float(44.4)));
-    EXPECT_THAT(fizzy_execute(instance, 3, nullptr, 0), CResult(45.5));
+    EXPECT_THAT(fizzy_execute(instance, 0, nullptr, 1), CResult(42));
+    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, 1), CResult(uint64_t{43}));
+    EXPECT_THAT(fizzy_execute(instance, 2, nullptr, 1), CResult(float(44.4)));
+    EXPECT_THAT(fizzy_execute(instance, 3, nullptr, 1), CResult(45.5));
 
     fizzy_free_instance(instance);
 
@@ -593,7 +593,7 @@ TEST(capi, memory_access)
     memory[0] = 0xaa;
     memory[1] = 0xbb;
 
-    EXPECT_EQ(fizzy_execute(instance, 0, nullptr, 0).value.i64, 0x22bbaa);
+    EXPECT_EQ(fizzy_execute(instance, 0, nullptr, 1).value.i64, 0x22bbaa);
 
     fizzy_free_instance(instance);
 }

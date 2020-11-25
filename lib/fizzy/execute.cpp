@@ -501,17 +501,25 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
 
 }  // namespace
 
-ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args, int depth)
+ExecutionResult execute(
+    Instance& instance, FuncIdx func_idx, const Value* args, int call_depth_limit)
 {
-    assert(depth >= 0);
-    if (depth > CallStackLimit)
+    assert(call_depth_limit >= 0);
+
+    if (call_depth_limit == 0)  // The call depth limit exhausted.
         return Trap;
+
+    const auto callee_depth_limit = call_depth_limit - 1;
 
     const auto& func_type = instance.module->get_function_type(func_idx);
 
+    // FIXME: If the imported function is a WebAssembly function the execute() will be called again
+    //        on the virtually the same call depth and the call_depth_limit will be decreased twice.
+    //        The way of solving this is to have outer_execute() which checks the depth and
+    //        inner_execute() with does not but is used as the imported function pointer?
     assert(instance.module->imported_function_types.size() == instance.imported_functions.size());
     if (func_idx < instance.imported_functions.size())
-        return instance.imported_functions[func_idx].function(instance, args, depth);
+        return instance.imported_functions[func_idx].function(instance, args, call_depth_limit);
 
     const auto& code = instance.module->get_code(func_idx);
     auto* const memory = instance.memory.get();
@@ -594,7 +602,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             const auto called_func_idx = read<uint32_t>(pc);
             const auto& called_func_type = instance.module->get_function_type(called_func_idx);
 
-            if (!invoke_function(called_func_type, called_func_idx, instance, stack, depth))
+            if (!invoke_function(
+                    called_func_type, called_func_idx, instance, stack, callee_depth_limit))
                 goto trap;
             break;
         }
@@ -620,8 +629,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
             if (expected_type != actual_type)
                 goto trap;
 
-            if (!invoke_function(
-                    actual_type, called_func.func_idx, *called_func.instance, stack, depth))
+            if (!invoke_function(actual_type, called_func.func_idx, *called_func.instance, stack,
+                    callee_depth_limit))
                 goto trap;
             break;
         }

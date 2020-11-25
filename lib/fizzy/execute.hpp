@@ -37,5 +37,6 @@ constexpr ExecutionResult Void{true};
 constexpr ExecutionResult Trap{false};
 
 // Execute a function on an instance.
-ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args, int depth = 0);
+ExecutionResult execute(
+    Instance& instance, FuncIdx func_idx, const Value* args, int call_depth_limit = CallStackLimit);
 }  // namespace fizzy
