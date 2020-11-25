@@ -481,13 +481,14 @@ TEST(execute_call, imported_function_from_another_module)
     const auto func_idx = fizzy::find_exported_function(*module1, "sub");
     ASSERT_TRUE(func_idx.has_value());
 
-    auto sub = [&instance1, func_idx](Instance&, const Value* args, int) -> ExecutionResult {
-        return fizzy::execute(*instance1, *func_idx, args);
+    auto sub = [&instance1, func_idx](Instance&, const Value* args, int depth) -> ExecutionResult {
+        return fizzy::execute(*instance1, *func_idx, args, depth);
     };
 
     auto instance2 = instantiate(parse(bin2), {{sub, module1->typesec[0]}});
 
     EXPECT_THAT(execute(*instance2, 1, {44, 2}), Result(42));
+    EXPECT_THAT(execute(*instance2, 0, {44, 2}), Result(42));
 }
 
 TEST(execute_call, imported_table_from_another_module)
@@ -607,6 +608,26 @@ TEST(execute_call, call_indirect_infinite_recursion)
 constexpr int MaxDepth = 2048;
 static_assert(MaxDepth == CallStackLimit);
 
+TEST(execute_call, call_initial_depth)
+{
+    /* wat2wasm
+    (import "mod" "foo" (func))
+    */
+
+    const auto wasm = from_hex("0061736d01000000010401600000020b01036d6f6403666f6f0000");
+
+    auto module = parse(wasm);
+    auto host_foo = [](Instance& /*instance*/, const Value*, int depth) -> ExecutionResult {
+        EXPECT_EQ(depth, 0);
+        return Void;
+    };
+    const auto host_foo_type = module->typesec[0];
+
+    auto instance = instantiate(std::move(module), {{host_foo, host_foo_type}});
+
+    EXPECT_THAT(execute(*instance, 0, {}), Result());
+}
+
 TEST(execute_call, call_max_depth)
 {
     /* wat2wasm
@@ -620,6 +641,69 @@ TEST(execute_call, call_max_depth)
 
     EXPECT_THAT(execute(*instance, 0, {}, MaxDepth), Result(42));
     EXPECT_THAT(execute(*instance, 1, {}, MaxDepth), Traps());
+}
+
+TEST(execute_call, execute_imported_max_depth)
+{
+    /* wat2wasm
+    (import "mod" "foo" (func))
+    (func)
+    */
+
+    const auto wasm =
+        from_hex("0061736d01000000010401600000020b01036d6f6403666f6f0000030201000a040102000b");
+
+    auto module = parse(wasm);
+    auto host_foo = [](Instance& /*instance*/, const Value*, int depth) -> ExecutionResult {
+        EXPECT_LE(depth, MaxDepth);
+        return Void;
+    };
+    const auto host_foo_type = module->typesec[0];
+
+    auto instance = instantiate(std::move(module), {{host_foo, host_foo_type}});
+
+    EXPECT_THAT(execute(*instance, 0, {}, MaxDepth), Result());
+    EXPECT_THAT(execute(*instance, 1, {}, MaxDepth), Result());
+    EXPECT_THAT(execute(*instance, 0, {}, MaxDepth + 1), Traps());
+    EXPECT_THAT(execute(*instance, 1, {}, MaxDepth + 1), Traps());
+}
+
+TEST(execute_call, imported_function_from_another_module_max_depth)
+{
+    /* wat2wasm
+    (module
+      (func)
+      (export "f" (func 0))
+    )
+    */
+    const auto bin1 = from_hex("0061736d0100000001040160000003020100070501016600000a040102000b");
+    auto module1 = parse(bin1);
+    auto instance1 = instantiate(std::move(module1));
+
+    /* wat2wasm
+    (module
+      (func (import "m1" "f"))
+      (func)
+      (func call 0)
+      (func call 1)
+    )
+    */
+    const auto bin2 = from_hex(
+        "0061736d01000000010401600000020801026d31016600000304030000000a0e0302000b040010000b04001001"
+        "0b");
+    auto module2 = parse(bin2);
+
+    const auto func_idx = fizzy::find_exported_function(*instance1->module, "f");
+    ASSERT_TRUE(func_idx.has_value());
+
+    auto sub = [&instance1, func_idx](Instance&, const Value* args, int depth) -> ExecutionResult {
+        return fizzy::execute(*instance1, *func_idx, args, depth + 1);
+    };
+
+    auto instance2 = instantiate(std::move(module2), {{sub, instance1->module->typesec[0]}});
+
+    EXPECT_THAT(execute(*instance2, 2, {}, MaxDepth - 1), Traps());
+    EXPECT_THAT(execute(*instance2, 3, {}, MaxDepth - 1), Result());
 }
 
 // A regression test for incorrect number of arguments passed to a call.
