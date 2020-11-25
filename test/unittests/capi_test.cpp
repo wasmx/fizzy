@@ -594,14 +594,55 @@ TEST(capi, memory_access)
 TEST(capi, imported_memory_access)
 {
     /* wat2wasm
-      (memory (import "mod" "mem") 1)
+      (memory (export "mem") 1)
+      (data (i32.const 1) "\11\22")
+      (func (result i32)
+        i32.const 0
+        i32.load
+      )
     */
-    const auto wasm = from_hex("0061736d01000000020c01036d6f64036d656d020001");
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    const auto wasm_memory = from_hex(
+        "0061736d010000000105016000017f030201000503010001070701036d656d02000a0901070041002802000b0b"
+        "08010041010b021122");
+    auto* module_memory = fizzy_parse(wasm_memory.data(), wasm_memory.size());
+    ASSERT_NE(module_memory, nullptr);
+    auto* instance_memory =
+        fizzy_instantiate(module_memory, nullptr, 0, nullptr, nullptr, nullptr, 0);
+    ASSERT_NE(instance_memory, nullptr);
+
+    FizzyExternalMemory memory;
+    ASSERT_TRUE(fizzy_find_exported_memory(instance_memory, "mem", &memory));
+
+    /* wat2wasm
+      (memory (import "mod" "mem") 1)
+      (func (result i32)
+        i32.const 0
+        i32.load
+      )
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000105016000017f020c01036d6f64036d656d020001030201000a0901070041002802000b");
+    auto* module = fizzy_parse(wasm.data(), wasm.size());
     ASSERT_NE(module, nullptr);
 
-    auto instance = fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0);
-    EXPECT_EQ(instance, nullptr);
+    auto* instance = fizzy_instantiate(module, nullptr, 0, nullptr, &memory, nullptr, 0);
+    ASSERT_NE(instance, nullptr);
+
+    EXPECT_EQ(fizzy_execute(instance, 0, nullptr, 0).value.i64, 0x221100);
+
+    EXPECT_EQ(fizzy_get_instance_memory_size(instance), 65536);
+
+    uint8_t* memory_data = fizzy_get_instance_memory_data(instance);
+    ASSERT_NE(memory_data, nullptr);
+
+    memory_data[0] = 0xaa;
+    memory_data[1] = 0xbb;
+
+    EXPECT_EQ(fizzy_execute(instance_memory, 0, nullptr, 0).value.i64, 0x22bbaa);
+    EXPECT_EQ(fizzy_execute(instance, 0, nullptr, 0).value.i64, 0x22bbaa);
+
+    fizzy_free_instance(instance);
+    fizzy_free_instance(instance_memory);
 }
 
 TEST(capi, execute)
