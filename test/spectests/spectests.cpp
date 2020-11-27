@@ -480,17 +480,19 @@ private:
         return fizzy::execute(*instance, *func_idx, args.data());
     }
 
-    bool check_integer_result(fizzy::Value actual_value, const json& expected)
+    template <typename T>
+    bool check_integer_result(fizzy::Value value, const json& expected)
     {
-        const auto expected_value = read_value(expected)->value;  // TODO: Type ignored.
+        const auto expected_value = read_value(expected)->value.as<T>();
+        const auto actual_value = value.as<T>();
 
-        if (expected_value.i64 != actual_value.i64)
+        if (expected_value != actual_value)
         {
             std::stringstream message;
-            message << "Incorrect returned value. Expected: " << expected_value.i64 << " (0x"
-                    << std::hex << expected_value.i64 << ")"
-                    << " Actual: " << std::dec << actual_value.i64 << " (0x" << std::hex
-                    << actual_value.i64 << ")";
+            message << "Incorrect returned value. Expected: " << expected_value << " (0x"
+                    << std::hex << expected_value << ")"
+                    << " Actual: " << std::dec << actual_value << " (0x" << std::hex << actual_value
+                    << ")";
             fail(message.str());
             return false;
         }
@@ -537,10 +539,14 @@ private:
 
     bool check_result(fizzy::Value actual_value, const json& expected)
     {
+        // TODO: Check types here.
+        // TODO: Use read_value() here too if it can handle "nan:..." strings.
         const auto type = expected.at("type").get<std::string>();
 
-        if (type == "i32" || type == "i64")
-            return check_integer_result(actual_value, expected);
+        if (type == "i32")
+            return check_integer_result<uint32_t>(actual_value, expected);
+        else if (type == "i64")
+            return check_integer_result<uint64_t>(actual_value, expected);
         else if (type == "f32")
             return check_floating_point_result<float>(actual_value, expected);
         else if (type == "f64")
