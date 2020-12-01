@@ -9,6 +9,9 @@
 
 using namespace fizzy::test;
 
+/// Represents an invalid/mocked pointer to a host function for tests without execution.
+static constexpr FizzyExternalFn NullFn = nullptr;
+
 TEST(capi, validate)
 {
     uint8_t wasm_prefix[]{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00};
@@ -314,11 +317,7 @@ TEST(capi, instantiate_imported_function)
     module = fizzy_parse(wasm.data(), wasm.size());
     ASSERT_NE(module, nullptr);
 
-    FizzyExternalFunction host_funcs[] = {{{FizzyValueTypeI32, nullptr, 0},
-        [](void*, FizzyInstance*, const FizzyValue*, int) {
-            return FizzyExecutionResult{false, true, {42}};
-        },
-        nullptr}};
+    FizzyExternalFunction host_funcs[] = {{{FizzyValueTypeI32, nullptr, 0}, NullFn, nullptr}};
 
     auto instance = fizzy_instantiate(module, host_funcs, 1, nullptr, nullptr, nullptr, 0);
     EXPECT_NE(instance, nullptr);
@@ -415,10 +414,8 @@ TEST(capi, resolve_instantiate_no_imports)
     module = fizzy_parse(wasm.data(), wasm.size());
     ASSERT_NE(module, nullptr);
 
-    FizzyImportedFunction host_funcs[] = {{"mod", "foo",
-        {{FizzyValueTypeVoid, nullptr, 0},
-            [](void*, FizzyInstance*, const FizzyValue*, int) { return FizzyExecutionResult{}; },
-            nullptr}}};
+    FizzyImportedFunction host_funcs[] = {
+        {"mod", "foo", {{FizzyValueTypeVoid, nullptr, 0}, NullFn, nullptr}}};
 
     instance = fizzy_resolve_instantiate(module, host_funcs, 1, nullptr, nullptr, nullptr, 0);
     EXPECT_NE(instance, nullptr);
@@ -445,20 +442,16 @@ TEST(capi, resolve_instantiate)
     module = fizzy_parse(wasm.data(), wasm.size());
     ASSERT_NE(module, nullptr);
 
-    FizzyExternalFn host_fn = [](void* context, FizzyInstance*, const FizzyValue*, int) {
-        return FizzyExecutionResult{true, false, *static_cast<FizzyValue*>(context)};
-    };
-
     const FizzyValueType input_type = FizzyValueTypeI32;
     FizzyValue result_int{42};
-    FizzyExternalFunction mod1foo1 = {{FizzyValueTypeI32, &input_type, 1}, host_fn, &result_int};
-    FizzyExternalFunction mod1foo2 = {{FizzyValueTypeI64, &input_type, 1}, host_fn, &result_int};
+    FizzyExternalFunction mod1foo1 = {{FizzyValueTypeI32, &input_type, 1}, NullFn, &result_int};
+    FizzyExternalFunction mod1foo2 = {{FizzyValueTypeI64, &input_type, 1}, NullFn, &result_int};
     FizzyValue result_f32;
     result_f32.f32 = 42;
-    FizzyExternalFunction mod2foo1 = {{FizzyValueTypeF32, &input_type, 1}, host_fn, &result_f32};
+    FizzyExternalFunction mod2foo1 = {{FizzyValueTypeF32, &input_type, 1}, NullFn, &result_f32};
     FizzyValue result_f64;
     result_f64.f64 = 42;
-    FizzyExternalFunction mod2foo2 = {{FizzyValueTypeF64, &input_type, 1}, host_fn, &result_f64};
+    FizzyExternalFunction mod2foo2 = {{FizzyValueTypeF64, &input_type, 1}, NullFn, &result_f64};
 
     FizzyImportedFunction host_funcs[] = {{"mod1", "foo1", mod1foo1}, {"mod1", "foo2", mod1foo2},
         {"mod2", "foo1", mod2foo1}, {"mod2", "foo2", mod2foo2}};
