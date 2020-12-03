@@ -21,7 +21,8 @@ namespace fizzy
 struct ExecutionResult;
 struct Instance;
 
-using ExecuteFunctionPtr = ExecutionResult (*)(
+using ExecuteFunctionPtr = ExecutionResult (*)(void* context, Instance&, const Value*, int depth);
+using ExecuteFunctionExtendedPtr = ExecutionResult (*)(
     void* context1, void* context2, Instance&, const Value*, int depth);
 
 /// Function representing WebAssembly or host function execution.
@@ -29,9 +30,15 @@ struct ExecuteFunction
 {
     ExecuteFunction() = delete;
 
-    template <class F>
-    ExecuteFunction(F f, void* context1 = nullptr, void* context2 = nullptr)
+    static ExecutionResult func_single_context(
+        void* context1, void* context2, Instance& instance, const Value* args, int depth);
+
+    ExecuteFunction(ExecuteFunctionExtendedPtr f, void* context1, void* context2)
       : host_func{f, context1, context2}, m_is_host_func{true}
+    {}
+
+    ExecuteFunction(ExecuteFunctionPtr f, void* context = nullptr)
+      : host_func{func_single_context, reinterpret_cast<void*>(f), context}, m_is_host_func{true}
     {}
 
     ExecuteFunction(Instance& instance, FuncIdx func_idx)
@@ -42,7 +49,7 @@ struct ExecuteFunction
 
     union
     {
-        std::tuple<ExecuteFunctionPtr, void*, void*> host_func;
+        std::tuple<ExecuteFunctionExtendedPtr, void*, void*> host_func;
         std::tuple<Instance*, FuncIdx> wasm_func;
     };
     bool m_is_host_func = false;

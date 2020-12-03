@@ -470,6 +470,13 @@ std::optional<FuncIdx> find_exported_function(const Module& module, std::string_
     return find_export(module, ExternalKind::Function, name);
 }
 
+ExecutionResult ExecuteFunction::func_single_context(
+    void* context1, void* context2, Instance& instance, const Value* args, int depth)
+{
+    auto* func = reinterpret_cast<ExecuteFunctionPtr>(context1);
+    return func(context2, instance, args, depth);
+}
+
 ExecutionResult ExecuteFunction::operator()(Instance& instance, const Value* args, int depth)
 {
     if (m_is_host_func)

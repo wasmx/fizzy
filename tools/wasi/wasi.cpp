@@ -18,12 +18,12 @@ namespace
 // and we are a single-run tool. This may change in the future and should reevaluate.
 uvwasi_t state;
 
-fizzy::ExecutionResult wasi_return_enosys(void*, void*, fizzy::Instance&, const fizzy::Value*, int)
+fizzy::ExecutionResult wasi_return_enosys(void*, fizzy::Instance&, const fizzy::Value*, int)
 {
     return fizzy::Value{uint32_t{UVWASI_ENOSYS}};
 }
 
-fizzy::ExecutionResult wasi_proc_exit(void*, void*, fizzy::Instance&, const fizzy::Value* args, int)
+fizzy::ExecutionResult wasi_proc_exit(void*, fizzy::Instance&, const fizzy::Value* args, int)
 {
     uvwasi_proc_exit(&state, static_cast<uvwasi_exitcode_t>(args[0].as<uint32_t>()));
     // Should not reach this.
@@ -31,7 +31,7 @@ fizzy::ExecutionResult wasi_proc_exit(void*, void*, fizzy::Instance&, const fizz
 }
 
 fizzy::ExecutionResult wasi_fd_write(
-    void*, void*, fizzy::Instance& instance, const fizzy::Value* args, int)
+    void*, fizzy::Instance& instance, const fizzy::Value* args, int)
 {
     const auto fd = args[0].as<uint32_t>();
     const auto iov_ptr = args[1].as<uint32_t>();
@@ -52,8 +52,7 @@ fizzy::ExecutionResult wasi_fd_write(
     return fizzy::Value{uint32_t{ret}};
 }
 
-fizzy::ExecutionResult wasi_fd_read(
-    void*, void*, fizzy::Instance& instance, const fizzy::Value* args, int)
+fizzy::ExecutionResult wasi_fd_read(void*, fizzy::Instance& instance, const fizzy::Value* args, int)
 {
     const auto fd = args[0].as<uint32_t>();
     const auto iov_ptr = args[1].as<uint32_t>();
@@ -75,7 +74,7 @@ fizzy::ExecutionResult wasi_fd_read(
 }
 
 fizzy::ExecutionResult wasi_fd_prestat_get(
-    void*, void*, fizzy::Instance& instance, const fizzy::Value* args, int)
+    void*, fizzy::Instance& instance, const fizzy::Value* args, int)
 {
     const auto fd = args[0].as<uint32_t>();
     const auto prestat_ptr = args[1].as<uint32_t>();
@@ -89,7 +88,7 @@ fizzy::ExecutionResult wasi_fd_prestat_get(
 }
 
 fizzy::ExecutionResult wasi_environ_sizes_get(
-    void*, void*, fizzy::Instance& instance, const fizzy::Value* args, int)
+    void*, fizzy::Instance& instance, const fizzy::Value* args, int)
 {
     const auto environc = args[0].as<uint32_t>();
     const auto environ_buf_size = args[1].as<uint32_t>();
