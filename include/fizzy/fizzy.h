@@ -77,15 +77,51 @@ typedef struct FizzyFunctionType
     size_t inputs_size;
 } FizzyFunctionType;
 
+
+typedef struct HostFunctionRef
+{
+    /// Pointer to function.
+    FizzyExternalFn function;
+    /// Opaque pointer to execution context, that will be passed to function.
+    void* context;
+} HostFunctionRef;
+
+typedef struct HostCppFunctionRef
+{
+    void* function;
+    void* context;
+} HostCppFunctionRef;
+
+typedef struct WasmFunctionRef
+{
+    FizzyInstance* instance;
+    uint32_t func_idx;
+} WasmFunctionRef;
+
+typedef enum FizzyExecuteFunctionKind
+{
+    FizzyExecuteFunctionHost,
+    FizzyExecuteFunctionWasm,
+    FizzyExecuteFunctionHostCpp,
+} FizzyExecuteFunctionKind;
+
+typedef struct FizzyExecuteFunction
+{
+    union
+    {
+        HostFunctionRef host_func;
+        WasmFunctionRef wasm_func;
+        HostCppFunctionRef host_cpp_func;
+    } function;
+    FizzyExecuteFunctionKind kind;
+} FizzyExecuteFunction;
+
 /// External function.
 typedef struct FizzyExternalFunction
 {
     /// Function type.
     FizzyFunctionType type;
-    /// Pointer to function.
-    FizzyExternalFn function;
-    /// Opaque pointer to execution context, that will be passed to function.
-    void* context;
+    FizzyExecuteFunction function;
 } FizzyExternalFunction;
 
 /// Global type.
@@ -473,15 +509,6 @@ size_t fizzy_get_instance_memory_size(FizzyInstance* instance);
 /// @return                 true if function was found, false otherwise.
 bool fizzy_find_exported_function(
     FizzyInstance* instance, const char* name, FizzyExternalFunction* out_function);
-
-/// Free resources associated with exported function.
-///
-/// @param  external_function    Pointer to external function struct filled by
-///                              fizzy_find_exported_function(). Cannot be NULL.
-///
-/// @note  This function may not be called with external function, which was not returned from
-///        fizzy_find_exported_function().
-void fizzy_free_exported_function(FizzyExternalFunction* external_function);
 
 /// Find exported table by name.
 ///

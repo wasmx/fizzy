@@ -2,6 +2,7 @@
 // Copyright 2020 The Fizzy Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#include "asserts.hpp"
 #include "cxx20/bit.hpp"
 #include "execute.hpp"
 #include "instantiate.hpp"
@@ -110,32 +111,69 @@ inline fizzy::ExecutionResult unwrap(const FizzyExecutionResult& result) noexcep
         return unwrap(result.value);
 }
 
-inline fizzy::ExecuteFunction unwrap(FizzyExternalFn c_func, void* c_context) noexcept
+fizzy::ExecutionResult unwrapped_host_function(
+    void* context1, void* context2, fizzy::Instance& instance, const fizzy::Value* args, int depth)
 {
-    static constexpr fizzy::ExecuteFunctionExtendedPtr function =
-        [](void* context1, void* context2, fizzy::Instance& instance, const fizzy::Value* args,
-            int depth) -> fizzy::ExecutionResult {
-        auto* host_func = reinterpret_cast<FizzyExternalFn>(context1);
-
-        return unwrap(host_func(context2, wrap(&instance), wrap(args), depth));
-    };
-
-    return fizzy::ExecuteFunction(function, reinterpret_cast<void*>(c_func), c_context);
+    auto function = reinterpret_cast<FizzyExternalFn>(context1);
+    return unwrap(function(context2, wrap(&instance), wrap(args), depth));
 }
 
-inline FizzyExternalFunction wrap(fizzy::ExternalFunction external_func)
+inline FizzyExecuteFunction wrap(const fizzy::ExecuteFunction& execute_func)
 {
-    static constexpr FizzyExternalFn c_function = [](void* context, FizzyInstance* instance,
-                                                      const FizzyValue* args,
-                                                      int depth) -> FizzyExecutionResult {
-        auto* func = static_cast<fizzy::ExternalFunction*>(context);
-        return wrap((func->function)(*unwrap(instance), unwrap(args), depth));
-    };
+    FizzyExecuteFunction c_execute_func;
+    if (execute_func.m_is_host_func)
+    {
+        const auto [function, context1, context2] = execute_func.host_func;
+        if (context2 == nullptr)
+        {
+            c_execute_func.function.host_cpp_func = {reinterpret_cast<void*>(function), context1};
+            c_execute_func.kind = FizzyExecuteFunctionHostCpp;
+        }
+        else if (function == unwrapped_host_function)
+        {
+            c_execute_func.function.host_func = {
+                reinterpret_cast<FizzyExternalFn>(context1), context2};
+            c_execute_func.kind = FizzyExecuteFunctionHost;
+        }
+        else
+            throw "error";
+    }
+    else
+    {
+        const auto [instance, func_idx] = execute_func.wasm_func;
+        c_execute_func.function.wasm_func = {wrap(instance), func_idx};
+        c_execute_func.kind = FizzyExecuteFunctionWasm;
+    }
+    return c_execute_func;
+}
 
-    const auto c_type = wrap(external_func.input_types, external_func.output_types);
-    auto context = std::make_unique<fizzy::ExternalFunction>(std::move(external_func));
-    void* c_context = context.release();
-    return {c_type, c_function, c_context};
+inline FizzyExternalFunction wrap(const fizzy::ExternalFunction& external_func)
+{
+    return {
+        wrap(external_func.input_types, external_func.output_types), wrap(external_func.function)};
+}
+
+fizzy::ExecuteFunction unwrap(const FizzyExecuteFunction& execute_func)
+{
+    switch (execute_func.kind)
+    {
+    case FizzyExecuteFunctionWasm:
+        return {*unwrap(execute_func.function.wasm_func.instance),
+            execute_func.function.wasm_func.func_idx};
+    case FizzyExecuteFunctionHost:
+        return {unwrapped_host_function,
+            reinterpret_cast<void*>(execute_func.function.host_func.function),
+            execute_func.function.host_func.context};
+    case FizzyExecuteFunctionHostCpp:
+    {
+        return {reinterpret_cast<fizzy::ExecuteFunctionExtendedPtr>(
+                    execute_func.function.host_cpp_func.function),
+            execute_func.function.host_cpp_func.context, nullptr};
+    }
+    default:
+        FIZZY_UNREACHABLE();
+    }
+    return fizzy::ExecuteFunction{nullptr, nullptr};
 }
 
 inline fizzy::ExternalFunction unwrap(const FizzyExternalFunction& external_func)
@@ -147,8 +185,7 @@ inline fizzy::ExternalFunction unwrap(const FizzyExternalFunction& external_func
                 fizzy::span<const fizzy::ValType>{} :
                 fizzy::span<const fizzy::ValType>{unwrap(&external_func.type.output), 1});
 
-    return fizzy::ExternalFunction{
-        unwrap(external_func.function, external_func.context), input_types, output_types};
+    return {unwrap(external_func.function), input_types, output_types};
 }
 
 inline std::vector<fizzy::ExternalFunction> unwrap(
@@ -175,8 +212,7 @@ inline fizzy::ImportedFunction unwrap(const FizzyImportedFunction& c_imported_fu
     auto output = c_type.output == FizzyValueTypeVoid ? std::nullopt :
                                                         std::make_optional(unwrap(c_type.output));
 
-    auto function = unwrap(
-        c_imported_func.external_function.function, c_imported_func.external_function.context);
+    auto function = unwrap(c_imported_func.external_function.function);
 
     return fizzy::ImportedFunction{module, name, inputs, output, function};
 }
@@ -458,13 +494,8 @@ bool fizzy_find_exported_function(
     if (!optional_func)
         return false;
 
-    *out_function = wrap(std::move(*optional_func));
+    *out_function = wrap(*optional_func);
     return true;
-}
-
-void fizzy_free_exported_function(FizzyExternalFunction* external_function)
-{
-    delete static_cast<fizzy::ExternalFunction*>(external_function->context);
 }
 
 bool fizzy_find_exported_table(
