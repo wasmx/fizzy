@@ -29,7 +29,17 @@ using execute_function = std::function<ExecutionResult(Instance&, const Value*, 
 struct ExternalFunction
 {
     execute_function function;
-    FuncType type;
+    span<const ValType> input_types;
+    span<const ValType> output_types;
+
+    ExternalFunction(execute_function _function, span<const ValType> _input_types,
+        span<const ValType> _output_types)
+      : function(std::move(_function)), input_types(_input_types), output_types(_output_types)
+    {}
+
+    ExternalFunction(execute_function _function, const FuncType& type)
+      : function(std::move(_function)), input_types(type.inputs), output_types(type.outputs)
+    {}
 };
 
 /// Table element, which references a function in any instance.
