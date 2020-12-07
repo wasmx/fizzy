@@ -59,6 +59,8 @@ public:
     constexpr T* data() const noexcept { return m_begin; }
     constexpr std::size_t size() const noexcept { return m_size; }
 
+    constexpr bool empty() const noexcept { return m_size == 0; }
+
     constexpr iterator begin() const noexcept { return m_begin; }
     constexpr iterator end() const noexcept { return m_begin + m_size; }
 
