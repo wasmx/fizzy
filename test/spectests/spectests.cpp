@@ -293,7 +293,7 @@ public:
                 catch (fizzy::parser_error const& ex)
                 {
                     if (type == "assert_malformed")
-                        pass();
+                        pass(ex.what());
                     else
                         fail(std::string{"Unexpected parser error: "} + ex.what());
                     continue;
@@ -301,7 +301,7 @@ public:
                 catch (fizzy::validation_error const& ex)
                 {
                     if (type == "assert_invalid")
-                        pass();
+                        pass(ex.what());
                     else
                         fail(std::string{"Unexpected validation error: "} + ex.what());
                     continue;
@@ -332,7 +332,7 @@ public:
                     if (!error.empty())
                     {
                         if (type == "assert_unlinkable")
-                            pass();
+                            pass(error);
                         else
                             fail(error);
                         continue;
@@ -357,7 +357,7 @@ public:
                     if (ex.what() == std::string{"start function failed to execute"})
                     {
                         if (type == "assert_uninstantiable")
-                            pass();
+                            pass(ex.what());
                         else
                             fail(std::string{"Instantiation failed with error: "} + ex.what());
                     }
@@ -366,7 +366,7 @@ public:
                         if (type == "assert_uninstantiable")
                             fail(std::string{"Instantiation failed with error: "} + ex.what());
                         else
-                            pass();
+                            pass(ex.what());
                     }
                     continue;
                 }
@@ -622,11 +622,11 @@ private:
         return {result, ""};
     }
 
-    void pass()
+    void pass(std::string_view message = {})
     {
         ++m_results.passed;
         if (m_settings.show_passed)
-            add_to_result_details("PASSED");
+            add_to_result_details("PASSED " + std::string{message});
         log_no_newline(".");
     }
 

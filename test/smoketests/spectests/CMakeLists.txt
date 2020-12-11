@@ -43,6 +43,16 @@ set_tests_properties(
 )
 
 add_test(
+        NAME fizzy/smoketests/spectests/showpassed-error-message
+        COMMAND fizzy-spectests ${CMAKE_CURRENT_LIST_DIR}/default --show-passed
+)
+set_tests_properties(
+        fizzy/smoketests/spectests/showpassed-error-message
+        PROPERTIES
+        PASS_REGULAR_EXPRESSION "assert_malformed PASSED invalid wasm module prefix"
+)
+
+add_test(
         NAME fizzy/smoketests/spectests/showskipped
         COMMAND fizzy-spectests ${CMAKE_CURRENT_LIST_DIR}/default --show-skipped
 )
