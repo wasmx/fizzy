@@ -8,7 +8,6 @@ endif()
 find_package(nlohmann_json REQUIRED)
 
 add_executable(fizzy-spectests spectests.cpp)
-target_compile_features(fizzy-spectests PRIVATE cxx_std_17)
 target_link_libraries(fizzy-spectests PRIVATE fizzy::fizzy-internal fizzy::test-utils nlohmann_json::nlohmann_json)
 
 if(UNIX AND NOT APPLE)
