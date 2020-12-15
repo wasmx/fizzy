@@ -30,6 +30,5 @@ target_sources(
     wasm_engine.hpp
 )
 
-target_compile_features(test-utils PUBLIC cxx_std_17)
 target_include_directories(test-utils PUBLIC ${PROJECT_SOURCE_DIR})
 target_link_libraries(test-utils PUBLIC fizzy::fizzy-internal PRIVATE wabt::wabt wasm3::wasm3 GTest::gtest)

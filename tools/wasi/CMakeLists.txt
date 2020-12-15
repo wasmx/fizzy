@@ -7,7 +7,6 @@ include(ProjectUVWASI)
 set(fizzy_include_dir ${PROJECT_SOURCE_DIR}/lib/fizzy)
 
 add_executable(fizzy-wasi wasi.cpp)
-target_compile_features(fizzy-wasi PRIVATE cxx_std_17)
 target_link_libraries(fizzy-wasi PRIVATE fizzy::fizzy-internal uvwasi::uvwasi)
 target_include_directories(fizzy-wasi PRIVATE ${fizzy_include_dir})
 

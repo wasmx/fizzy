@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 add_executable(fizzy-bench bench.cpp)
-target_compile_features(fizzy-bench PRIVATE cxx_std_17)
 target_link_libraries(fizzy-bench PRIVATE fizzy::fizzy-internal fizzy::test-utils benchmark::benchmark)
 
 if(UNIX AND NOT APPLE)
