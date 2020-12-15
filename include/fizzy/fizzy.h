@@ -157,6 +157,17 @@ const FizzyModule* fizzy_parse(const uint8_t* wasm_binary, size_t wasm_binary_si
 /// If passed pointer is NULL, has no effect.
 void fizzy_free_module(const FizzyModule* module);
 
+/// Make a copy of a module.
+///
+/// @param  module    Pointer to module. Cannot be NULL.
+/// @returns          Pointer to a newly allocated module, identical to @a module, or NULL in case
+///                   memory for a module could not be allocated.
+///
+/// @note  Creating a copy is needed if more than single instance of a module is required, because
+/// instantiation takes ownership of a module, and the same module cannot be instantiated twice.
+/// @note  Input module is not modified neither in success nor in failure case.
+const FizzyModule* fizzy_clone_module(const FizzyModule* module);
+
 /// Get type of the function defined in the module.
 ///
 /// @param module   Pointer to module. Cannot be NULL.
