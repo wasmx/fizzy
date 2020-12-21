@@ -308,6 +308,19 @@ void fizzy_free_module(const FizzyModule* module)
     delete unwrap(module);
 }
 
+const FizzyModule* fizzy_clone_module(const FizzyModule* module)
+{
+    try
+    {
+        auto clone = std::make_unique<fizzy::Module>(*unwrap(module));
+        return wrap(clone.release());
+    }
+    catch (...)
+    {
+        return nullptr;
+    }
+}
+
 FizzyFunctionType fizzy_get_function_type(const FizzyModule* module, uint32_t func_idx)
 {
     return wrap(unwrap(module)->get_function_type(func_idx));
