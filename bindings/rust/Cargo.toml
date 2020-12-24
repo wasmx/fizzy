@@ -4,7 +4,7 @@
 
 [package]
 name = "fizzy"
-version = "0.6.0"
+version = "0.7.0-dev"
 authors = ["The Fizzy Authors"]
 license = "Apache-2.0"
 repository = "https://github.com/wasmx/fizzy"
