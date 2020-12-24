@@ -7,6 +7,7 @@
 #include <nlohmann/json.hpp>
 #include <test/utils/floating_point_utils.hpp>
 #include <test/utils/hex.hpp>
+#include <test/utils/typed_value.hpp>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -406,40 +407,33 @@ private:
         return it_instance->second.get();
     }
 
-
-    static fizzy::Value read_integer_value(const json& v)
-    {
-        assert(
-            v.at("type").get<std::string>() == "i32" || v.at("type").get<std::string>() == "i64");
-
-        // JSON tests have all values including floats serialized as 64-bit unsigned integers
-        return std::stoull(v.at("value").get<std::string>());
-    }
-
-    template <typename T>
-    static fizzy::Value read_floating_point_value(const json& v)
-    {
-        assert(
-            v.at("type").get<std::string>() == "f32" || v.at("type").get<std::string>() == "f64");
-        assert(!is_canonical_nan(v) && !is_arithmetic_nan(v));
-
-        // JSON tests have all values including floats serialized as 64-bit unsigned integers.
-        const uint64_t uint_value = std::stoull(v.at("value").get<std::string>());
-        /// The unsigned integer type matching the size of this floating-point type.
-        using UintType = typename fizzy::test::FP<T>::UintType;
-        return fizzy::test::FP<T>{static_cast<UintType>(uint_value)}.value;
-    }
-
-    std::optional<fizzy::Value> read_value(const json& v)
+    std::optional<fizzy::test::TypedValue> read_value(const json& v)
     {
         const auto type = v.at("type").get<std::string>();
 
-        if (type == "i32" || type == "i64")
-            return read_integer_value(v);
+        // JSON tests have all values including floats serialized as 64-bit unsigned integers.
+        const uint64_t raw_value = std::stoull(v.at("value").get<std::string>());
+
+        if (type == "i32")
+        {
+            assert(static_cast<uint32_t>(raw_value) == raw_value && "overflow in i32 test value");
+            return static_cast<uint32_t>(raw_value);
+        }
+        else if (type == "i64")
+        {
+            return raw_value;
+        }
         else if (type == "f32")
-            return read_floating_point_value<float>(v);
+        {
+            assert(static_cast<uint32_t>(raw_value) == raw_value && "overflow in f32 test value");
+            assert(!is_canonical_nan(v) && !is_arithmetic_nan(v));
+            return fizzy::test::FP{static_cast<uint32_t>(raw_value)}.value;
+        }
         else if (type == "f64")
-            return read_floating_point_value<double>(v);
+        {
+            assert(!is_canonical_nan(v) && !is_arithmetic_nan(v));
+            return fizzy::test::FP{raw_value}.value;
+        }
         else
         {
             skip("Unsupported value type '" + type + "'.");
@@ -478,24 +472,27 @@ private:
             if (!arg_value.has_value())
                 return std::nullopt;
 
-            args.push_back(*arg_value);
+            args.push_back(arg_value->value);
         }
 
         assert(args.size() == instance->module->get_function_type(*func_idx).inputs.size());
+        // TODO: Switch to fizzy::test::execute() to check argument types.
         return fizzy::execute(*instance, *func_idx, args.data());
     }
 
-    bool check_integer_result(fizzy::Value actual_value, const json& expected)
+    template <typename T>
+    bool check_integer_result(fizzy::Value value, const json& expected)
     {
-        const auto expected_value = read_integer_value(expected);
+        const auto expected_value = read_value(expected)->value.as<T>();
+        const auto actual_value = value.as<T>();
 
-        if (expected_value.i64 != actual_value.i64)
+        if (expected_value != actual_value)
         {
             std::stringstream message;
-            message << "Incorrect returned value. Expected: " << expected_value.i64 << " (0x"
-                    << std::hex << expected_value.i64 << ")"
-                    << " Actual: " << std::dec << actual_value.i64 << " (0x" << std::hex
-                    << actual_value.i64 << ")";
+            message << "Incorrect returned value. Expected: " << expected_value << " (0x"
+                    << std::hex << expected_value << ")"
+                    << " Actual: " << std::dec << actual_value << " (0x" << std::hex << actual_value
+                    << ")";
             fail(message.str());
             return false;
         }
@@ -525,7 +522,7 @@ private:
             return false;
         }
 
-        const auto expected_value = read_floating_point_value<T>(expected);
+        const auto expected_value = read_value(expected)->value;  // TODO: Type ignored.
 
         if (expected_value.template as<T>() != fp_actual)
         {
@@ -542,10 +539,14 @@ private:
 
     bool check_result(fizzy::Value actual_value, const json& expected)
     {
+        // TODO: Check types here.
+        // TODO: Use read_value() here too if it can handle "nan:..." strings.
         const auto type = expected.at("type").get<std::string>();
 
-        if (type == "i32" || type == "i64")
-            return check_integer_result(actual_value, expected);
+        if (type == "i32")
+            return check_integer_result<uint32_t>(actual_value, expected);
+        else if (type == "i64")
+            return check_integer_result<uint64_t>(actual_value, expected);
         else if (type == "f32")
             return check_floating_point_result<float>(actual_value, expected);
         else if (type == "f64")
