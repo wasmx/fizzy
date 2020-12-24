@@ -86,6 +86,7 @@ constexpr int popcount(uint64_t x) noexcept
 
 constexpr int countl_zero(uint32_t x) noexcept
 {
+    static_assert(sizeof(x) == sizeof(unsigned int));
     if (x == 0)
         return 32;
     return __builtin_clz(x);
@@ -93,6 +94,7 @@ constexpr int countl_zero(uint32_t x) noexcept
 
 constexpr int countl_zero(uint64_t x) noexcept
 {
+    static_assert(sizeof(x) == sizeof(unsigned long long));
     if (x == 0)
         return 64;
     return __builtin_clzll(x);
@@ -100,6 +102,7 @@ constexpr int countl_zero(uint64_t x) noexcept
 
 constexpr int countr_zero(uint32_t x) noexcept
 {
+    static_assert(sizeof(x) == sizeof(unsigned int));
     if (x == 0)
         return 32;
     return __builtin_ctz(x);
@@ -107,6 +110,7 @@ constexpr int countr_zero(uint32_t x) noexcept
 
 constexpr int countr_zero(uint64_t x) noexcept
 {
+    static_assert(sizeof(x) == sizeof(unsigned long long));
     if (x == 0)
         return 64;
     return __builtin_ctzll(x);
