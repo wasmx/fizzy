@@ -5,6 +5,177 @@ Documentation of all notable changes to the **Fizzy** project.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
+## [0.6.0] — Unreleased
+
+With this release we focus on introducing three major features:
+- a public C API,
+- an initial version of Rust binding,
+- partial support for WASI (via the `fizzy-wasi` tool).
+
+All these features are work-in-progress with differing levels of completeness. More progress
+to be made in the next release.
+
+Fizzy passes all of the official WebAssembly 1.0 tests. We are maintaining the WebAssembly 1.0 test suite
+with corrections and additions backported from the WebAssembly specification master branch. For this
+Fizzy release [the snapshot from 2020-11-13](https://github.com/wasmx/wasm-spec/tree/w3c-1.0-tests-backported-20201113/test/core) is used:
+  - 18979 of 18979 binary parser and execution tests,
+  - 999 of 999 validation tests,
+  - 499 skipped due to testing text format parser.
+
+We continued working on performance improvements. Worth noting, the internal program representation
+has been changed to favour execution time (8% faster) instead of instantiation time (9% slower).
+
+#### Detailed benchmark results
+
+```
+Comparing Fizzy 0.5.0 to 0.6.0 (Intel Haswell CPU 4.0 GHz, GCC 10, LTO)
+Benchmark                                  CPU Time [µs]       Old       New
+----------------------------------------------------------------------------
+
+
+fizzy/parse/blake2b                              +0.1726        23        27
+fizzy/instantiate/blake2b                        +0.1986        27        33
+fizzy/execute/blake2b/512_bytes_rounds_1         -0.0506        82        77
+fizzy/execute/blake2b/512_bytes_rounds_16        -0.0971      1237      1117
+fizzy/parse/ecpairing                            +0.1519      1335      1538
+fizzy/instantiate/ecpairing                      +0.1237      1414      1589
+fizzy/execute/ecpairing/onepoint                 -0.0637    373103    349353
+fizzy/parse/keccak256                            +0.1373        43        48
+fizzy/instantiate/keccak256                      +0.1022        48        53
+fizzy/execute/keccak256/512_bytes_rounds_1       -0.0183        92        91
+fizzy/execute/keccak256/512_bytes_rounds_16      -0.0310      1355      1313
+fizzy/parse/memset                               +0.1286         6         6
+fizzy/instantiate/memset                         +0.0223        10        10
+fizzy/execute/memset/256_bytes                   -0.0969         6         6
+fizzy/execute/memset/60000_bytes                 -0.0847      1396      1278
+fizzy/parse/mul256_opt0                          +0.1449         8         9
+fizzy/instantiate/mul256_opt0                    +0.0724        12        13
+fizzy/execute/mul256_opt0/input1                 -0.0668        25        23
+fizzy/parse/ramanujan_pi                         +0.1732        23        27
+fizzy/instantiate/ramanujan_pi                   +0.1099        28        31
+fizzy/execute/ramanujan_pi/33_runs               -0.1707       116        96
+fizzy/parse/sha1                                 +0.1457        38        44
+fizzy/instantiate/sha1                           +0.1198        43        48
+fizzy/execute/sha1/512_bytes_rounds_1            -0.0791        84        78
+fizzy/execute/sha1/512_bytes_rounds_16           -0.0727      1172      1087
+fizzy/parse/sha256                               +0.1235        64        72
+fizzy/instantiate/sha256                         +0.0967        70        77
+fizzy/execute/sha256/512_bytes_rounds_1          -0.0804        85        78
+fizzy/execute/sha256/512_bytes_rounds_16         -0.0764      1169      1080
+fizzy/parse/taylor_pi                            +0.0569         2         3
+fizzy/instantiate/taylor_pi                      -0.0291         7         6
+fizzy/execute/taylor_pi/pi_1000000_runs          -0.0805     40094     36867
+fizzy/parse/micro/eli_interpreter                +0.0734         4         4
+fizzy/instantiate/micro/eli_interpreter          -0.0023         8         8
+fizzy/execute/micro/eli_interpreter/exec105      -0.0513         4         4
+fizzy/parse/micro/factorial                      -0.0070         1         1
+fizzy/instantiate/micro/factorial                -0.1451         1         1
+fizzy/execute/micro/factorial/20                 +0.0159         1         1
+fizzy/parse/micro/fibonacci                      -0.0011         1         1
+fizzy/instantiate/micro/fibonacci                -0.1177         2         1
+fizzy/execute/micro/fibonacci/24                 +0.0163      4912      4992
+fizzy/parse/micro/host_adler32                   +0.0457         2         2
+fizzy/instantiate/micro/host_adler32             -0.1045         4         4
+fizzy/execute/micro/host_adler32/1               +0.0094         0         0
+fizzy/execute/micro/host_adler32/1000            -0.0178        29        28
+fizzy/parse/micro/icall_hash                     +0.0178         3         3
+fizzy/instantiate/micro/icall_hash               -0.0945         8         7
+fizzy/execute/micro/icall_hash/1000_steps        -0.3885        98        60
+fizzy/parse/micro/spinner                        +0.0124         1         1
+fizzy/instantiate/micro/spinner                  -0.1366         1         1
+fizzy/execute/micro/spinner/1                    -0.0931         0         0
+fizzy/execute/micro/spinner/1000                 -0.1721         9         7
+fizzy/parse/stress/guido-fuzzer-find-1           +0.1121       125       139
+fizzy/instantiate/stress/guido-fuzzer-find-1     +0.0784       156       168
+```
+
+Note that in previous releases there was unnecessary copying of the module data during benchmarking instantiation 
+by Fizzy, and [eliminating it](https://github.com/wasmx/fizzy/pull/581) in this release by itself resulted in some 
+improvement in the instantiation performance as measured by the `fizzy-bench` tool. 
+
+### Added
+
+- `fizzy-wasi` command-line tool to execute Wasm code using WASI interface. (WASI support is not complete yet, but can 
+  be easily extended.) [#329](https://github.com/wasmx/fizzy/pull/329)
+- Public C API:
+    - Validating a module. [#530](https://github.com/wasmx/fizzy/pull/530)
+    - Parsing, instantiation and execution. [#576](https://github.com/wasmx/fizzy/pull/576) 
+      [#624](https://github.com/wasmx/fizzy/pull/624) [#635](https://github.com/wasmx/fizzy/pull/635)
+      [#664](https://github.com/wasmx/fizzy/pull/664) [#676](https://github.com/wasmx/fizzy/pull/676)
+    - Accessing memory of an instance. [#596](https://github.com/wasmx/fizzy/pull/596) 
+      [#665](https://github.com/wasmx/fizzy/pull/665)
+    - Finding exports by name. [#601](https://github.com/wasmx/fizzy/pull/601) 
+      [#627](https://github.com/wasmx/fizzy/pull/627) [#628](https://github.com/wasmx/fizzy/pull/628) 
+      [#631](https://github.com/wasmx/fizzy/pull/631) [#633](https://github.com/wasmx/fizzy/pull/633)
+    - Getting type of a function. [#557](https://github.com/wasmx/fizzy/pull/557)
+    - Getting module of an instance. [#599](https://github.com/wasmx/fizzy/pull/599)
+    - Cloning a module. [#674](https://github.com/wasmx/fizzy/pull/674)
+    - Instantiation with resolving imported functions by names. [#608](https://github.com/wasmx/fizzy/pull/608)
+    - `fizzy-bench` now includes `fizzyc` engine to benchmark Fizzy with C API. 
+      [#561](https://github.com/wasmx/fizzy/pull/561)
+- Rust bindings:
+    - Building and crates.io package. [#584](https://github.com/wasmx/fizzy/pull/584) 
+      [#585](https://github.com/wasmx/fizzy/pull/585) [#586](https://github.com/wasmx/fizzy/pull/586) 
+      [#587](https://github.com/wasmx/fizzy/pull/587) [#589](https://github.com/wasmx/fizzy/pull/589)
+      [#591](https://github.com/wasmx/fizzy/pull/591) [#595](https://github.com/wasmx/fizzy/pull/595)
+    - Validating a module. [#538](https://github.com/wasmx/fizzy/pull/538)
+    - Parsing, instantiation, (unsafe) execution. [#566](https://github.com/wasmx/fizzy/pull/566) 
+- CMake Package for easy Fizzy integration. [#553](https://github.com/wasmx/fizzy/pull/553)
+- New benchmarks. [#234](https://github.com/wasmx/fizzy/pull/234) [#632](https://github.com/wasmx/fizzy/pull/632)
+- Support for building with libc++ on Linux by using CMake toolchain file. 
+  [#597](https://github.com/wasmx/fizzy/pull/597)
+- `fizzy-spectests` logs error message for passed tests that expect an error 
+  [#672](https://github.com/wasmx/fizzy/pull/672)
+
+### Changed
+
+- Optimization in `execute()`: now arguments are passed by a pointer (`const Value*`) instead of `span<const Value>`.
+  [#552](https://github.com/wasmx/fizzy/pull/552) [#573](https://github.com/wasmx/fizzy/pull/573) 
+  [#574](https://github.com/wasmx/fizzy/pull/574)
+- Optimization in `fabs`, `fneg`, `fcopysign` instructions implementation. 
+  [#560](https://github.com/wasmx/fizzy/pull/560)
+- `popcnt` instructions implementation now uses standard library function when built with C++20. 
+  [#551](https://github.com/wasmx/fizzy/pull/551) 
+- Optimization to store instruction immediate arguments together with instructions in a single array. 
+  [#618](https://github.com/wasmx/fizzy/pull/618) [#620](https://github.com/wasmx/fizzy/pull/620)
+- Parsing now allocates `Module` dynamically and `std::unique_ptr<const Module>` is used in the API to represent a 
+  module. [#575](https://github.com/wasmx/fizzy/pull/575) 
+- Refactoring and simplification of table representation. [#616](https://github.com/wasmx/fizzy/pull/616)
+- `execute()` variant taking arguments as `std::initializer_list<Value>` is moved to test utils. 
+  [#657](https://github.com/wasmx/fizzy/pull/657)
+- CMake project restructuring: `fizzy::fizzy` library now includes only public headers, only `fizzy::fizzy-internal` 
+  provides access to internal headers. [#550](https://github.com/wasmx/fizzy/pull/550)
+- CI improvements. [#559](https://github.com/wasmx/fizzy/pull/559) [#590](https://github.com/wasmx/fizzy/pull/590)
+  [#598](https://github.com/wasmx/fizzy/pull/598) [#600](https://github.com/wasmx/fizzy/pull/600) 
+  [#603](https://github.com/wasmx/fizzy/pull/603) [#605](https://github.com/wasmx/fizzy/pull/605) 
+  [#625](https://github.com/wasmx/fizzy/pull/625) [#629](https://github.com/wasmx/fizzy/pull/629)
+  [#646](https://github.com/wasmx/fizzy/pull/646) [#649](https://github.com/wasmx/fizzy/pull/649)
+- New unit tests. [#571](https://github.com/wasmx/fizzy/pull/571) [#580](https://github.com/wasmx/fizzy/pull/580) 
+  [#641](https://github.com/wasmx/fizzy/pull/641) [#648](https://github.com/wasmx/fizzy/pull/648)
+  [#662](https://github.com/wasmx/fizzy/pull/662) [#666](https://github.com/wasmx/fizzy/pull/666)
+- Update WebAssembly spec test suite. [#534](https://github.com/wasmx/fizzy/pull/534)
+- Test utils improvements. [#579](https://github.com/wasmx/fizzy/pull/579) 
+  [#658](https://github.com/wasmx/fizzy/pull/658) [#661](https://github.com/wasmx/fizzy/pull/661)
+- Code and test cleanups and refactoring. [#527](https://github.com/wasmx/fizzy/pull/527) [#562](https://github.com/wasmx/fizzy/pull/562) 
+  [#567](https://github.com/wasmx/fizzy/pull/567) [#578](https://github.com/wasmx/fizzy/pull/578) 
+  [#606](https://github.com/wasmx/fizzy/pull/606) [#607](https://github.com/wasmx/fizzy/pull/607) 
+  [#611](https://github.com/wasmx/fizzy/pull/611) [#617](https://github.com/wasmx/fizzy/pull/617)
+  [#619](https://github.com/wasmx/fizzy/pull/619) [#623](https://github.com/wasmx/fizzy/pull/623)
+  [#656](https://github.com/wasmx/fizzy/pull/656) [#663](https://github.com/wasmx/fizzy/pull/663)
+  [#670](https://github.com/wasmx/fizzy/pull/670) [#671](https://github.com/wasmx/fizzy/pull/671) 
+  [#673](https://github.com/wasmx/fizzy/pull/673)
+
+### Fixed
+
+- Remove unnecessary module copying when measuring instantiation performance for Fizzy in `fizzy-bench`. 
+  [#581](https://github.com/wasmx/fizzy/pull/581)
+- 32-bit instructions always clean (fill with zeroes) the higher 32-bit of the stack item. 
+  [#612](https://github.com/wasmx/fizzy/pull/612) [#613](https://github.com/wasmx/fizzy/pull/613)
+- Validating Data and Element sections now throw `validation_error` instead of `parser_error`.
+  [#546](https://github.com/wasmx/fizzy/pull/546)
+- `resolving_imported_functions` now behaves correctly when the same function is imported multiple times. 
+  [#639](https://github.com/wasmx/fizzy/pull/639)  
+
 ## [0.5.0] — 2020-09-30
 
 This release focuses on behind the scenes code and test cleanups, and preparation for a public API.
@@ -467,6 +638,7 @@ First release!
 [0.3.0]: https://github.com/wasmx/fizzy/releases/tag/v0.3.0
 [0.4.0]: https://github.com/wasmx/fizzy/releases/tag/v0.4.0
 [0.5.0]: https://github.com/wasmx/fizzy/releases/tag/v0.5.0
+[0.6.0]: https://github.com/wasmx/fizzy/compare/v0.5.0...master
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Semantic Versioning]: https://semver.org
