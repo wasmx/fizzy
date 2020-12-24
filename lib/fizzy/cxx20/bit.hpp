@@ -46,24 +46,24 @@ constexpr int popcount(uint64_t x) noexcept
     return std::popcount(x);
 }
 
-constexpr int countl_zero(uint32_t value) noexcept
+constexpr int countl_zero(uint32_t x) noexcept
 {
-    return std::countl_zero(value);
+    return std::countl_zero(x);
 }
 
-constexpr int countl_zero(uint64_t value) noexcept
+constexpr int countl_zero(uint64_t x) noexcept
 {
-    return std::countl_zero(value);
+    return std::countl_zero(x);
 }
 
-constexpr int countr_zero(uint32_t value) noexcept
+constexpr int countr_zero(uint32_t x) noexcept
 {
-    return std::countr_zero(value);
+    return std::countr_zero(x);
 }
 
-constexpr int countr_zero(uint64_t value) noexcept
+constexpr int countr_zero(uint64_t x) noexcept
 {
-    return std::countr_zero(value);
+    return std::countr_zero(x);
 }
 
 }  // namespace fizzy
@@ -84,32 +84,32 @@ constexpr int popcount(uint64_t x) noexcept
     return __builtin_popcountll(x);
 }
 
-constexpr int countl_zero(uint32_t value) noexcept
+constexpr int countl_zero(uint32_t x) noexcept
 {
-    if (value == 0)
+    if (x == 0)
         return 32;
-    return __builtin_clz(value);
+    return __builtin_clz(x);
 }
 
-constexpr int countl_zero(uint64_t value) noexcept
+constexpr int countl_zero(uint64_t x) noexcept
 {
-    if (value == 0)
+    if (x == 0)
         return 64;
-    return __builtin_clzll(value);
+    return __builtin_clzll(x);
 }
 
-constexpr int countr_zero(uint32_t value) noexcept
+constexpr int countr_zero(uint32_t x) noexcept
 {
-    if (value == 0)
+    if (x == 0)
         return 32;
-    return __builtin_ctz(value);
+    return __builtin_ctz(x);
 }
 
-constexpr int countr_zero(uint64_t value) noexcept
+constexpr int countr_zero(uint64_t x) noexcept
 {
-    if (value == 0)
+    if (x == 0)
         return 64;
-    return __builtin_ctzll(value);
+    return __builtin_ctzll(x);
 }
 }  // namespace fizzy
 
