@@ -149,7 +149,7 @@ bool fizzy_validate(const uint8_t* wasm_binary, size_t wasm_binary_size);
 
 /// Parse binary module.
 ///
-/// @returns  non-NULL pointer to module in case of success, NULL otherwise.
+/// @return  non-NULL pointer to module in case of success, NULL otherwise.
 const FizzyModule* fizzy_parse(const uint8_t* wasm_binary, size_t wasm_binary_size);
 
 /// Free resources associated with the module.
@@ -161,7 +161,7 @@ void fizzy_free_module(const FizzyModule* module);
 /// Make a copy of a module.
 ///
 /// @param  module    Pointer to module. Cannot be NULL.
-/// @returns          Pointer to a newly allocated module, identical to @a module, or NULL in case
+/// @return           Pointer to a newly allocated module, identical to @a module, or NULL in case
 ///                   memory for a module could not be allocated.
 ///
 /// @note  Creating a copy is needed if more than single instance of a module is required, because
@@ -184,7 +184,7 @@ FizzyFunctionType fizzy_get_function_type(const FizzyModule* module, uint32_t fu
 /// @param  module          Pointer to module. Cannot be NULL.
 /// @param  name            The function name. NULL-terminated string. Cannot be NULL.
 /// @param  out_func_idx    Pointer to output where function index will be stored. Cannot be NULL.
-/// @returns                true if function was found, false otherwise.
+/// @return                 true if function was found, false otherwise.
 bool fizzy_find_exported_function_index(
     const FizzyModule* module, const char* name, uint32_t* out_func_idx);
 
@@ -209,7 +209,7 @@ bool fizzy_find_exported_function_index(
 /// @param  imported_globals           Pointer to the imported globals array. Can be NULL iff
 ///                                    imported_globals_size equals 0.
 /// @param  imported_globals_size      Size of the imported global array. Can be zero.
-/// @returns                           non-NULL pointer to instance in case of success,
+/// @return                            non-NULL pointer to instance in case of success,
 ///                                    NULL otherwise.
 ///
 /// @note
@@ -249,7 +249,7 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 /// @param  imported_globals           Pointer to the imported globals array. Can be NULL iff
 ///                                    imported_globals_size equals 0.
 /// @param  imported_globals_size      Size of the imported global array. Can be zero.
-/// @returns                           non-NULL pointer to instance in case of success,
+/// @return                            non-NULL pointer to instance in case of success,
 ///                                    NULL otherwise.
 ///
 /// @note
@@ -279,14 +279,14 @@ const FizzyModule* fizzy_get_instance_module(FizzyInstance* instance);
 
 /// Get pointer to memory of an instance.
 ///
-/// @returns  Pointer to memory data or NULL in case instance doesn't have any memory.
-/// @note     Function returns pointer to memory regardless of whether memory is exported or not.
+/// @return  Pointer to memory data or NULL in case instance doesn't have any memory.
+/// @note    Function returns pointer to memory regardless of whether memory is exported or not.
 uint8_t* fizzy_get_instance_memory_data(FizzyInstance* instance);
 
 /// Get size of memory of an instance.
 ///
-/// @returns  Size of memory in bytes or 0 in case instance doesn't have any memory.
-/// @note     Function returns memory size regardless of whether memory is exported or not.
+/// @return  Size of memory in bytes or 0 in case instance doesn't have any memory.
+/// @note    Function returns memory size regardless of whether memory is exported or not.
 size_t fizzy_get_instance_memory_size(FizzyInstance* instance);
 
 /// Find exported function by name.
@@ -299,7 +299,7 @@ size_t fizzy_get_instance_memory_size(FizzyInstance* instance);
 ///                         be destroyed with fizzy_free_exported_function afterwards.
 ///                         When function is not found (false returned), this out_function is not
 ///                         modified, and fizzy_free_exported_function must not be called.
-/// @returns                true if function was found, false otherwise.
+/// @return                 true if function was found, false otherwise.
 bool fizzy_find_exported_function(
     FizzyInstance* instance, const char* name, FizzyExternalFunction* out_function);
 
@@ -317,7 +317,7 @@ void fizzy_free_exported_function(FizzyExternalFunction* external_function);
 /// @param  instance     Pointer to instance. Cannot be NULL.
 /// @param  name         The table name. NULL-terminated string. Cannot be NULL.
 /// @param  out_table    Pointer to output struct to store found table. Cannot be NULL.
-/// @returns             true if table was found, false otherwise.
+/// @return              true if table was found, false otherwise.
 ///
 /// @note  WebAssembly 1.0 spec allows at most one table in a module.
 bool fizzy_find_exported_table(
@@ -328,7 +328,7 @@ bool fizzy_find_exported_table(
 /// @param  instance      Pointer to instance. Cannot be NULL.
 /// @param  name          The table name. NULL-terminated string. Cannot be NULL.
 /// @param  out_memory    Pointer to output struct to store found memory. Cannot be NULL.
-/// @returns              true if memory was found, false otherwise.
+/// @return               true if memory was found, false otherwise.
 ///
 /// @note  WebAssembly 1.0 spec allows at most one memory in a module.
 bool fizzy_find_exported_memory(
@@ -339,7 +339,7 @@ bool fizzy_find_exported_memory(
 /// @param  instance      Pointer to instance. Cannot be NULL.
 /// @param  name          The global name. NULL-terminated string. Cannot be NULL.
 /// @param  out_global    Pointer to output struct to store found global. Cannot be NULL.
-/// @returns             true if global was found, false otherwise.
+/// @return               true if global was found, false otherwise.
 bool fizzy_find_exported_global(
     FizzyInstance* instance, const char* name, FizzyExternalGlobal* out_global);
 
