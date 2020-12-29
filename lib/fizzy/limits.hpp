@@ -19,9 +19,9 @@ static_assert(MemoryPagesValidationLimit == 65536);
 /// The default hard limit of the memory size (256MB) as number of pages.
 constexpr uint32_t DefaultMemoryPagesLimit = (256 * 1024 * 1024ULL) / PageSize;
 
-/// Call depth limit is set to default limit in wabt.
-/// See
-/// https://github.com/WebAssembly/wabt/blob/ae2140ddc6969ef53599fe2fab81818de65db875/src/interp/interp.h#L1007
-// TODO: review this
+/// The limit of the size of the call stack, i.e. how many calls are allowed to be stacked up
+/// in a single execution thread. Allowed values for call depth levels are [0, CallStackLimit-1].
+/// The current value is the same as the default limit in WABT:
+/// https://github.com/WebAssembly/wabt/blob/1.0.20/src/interp/interp.h#L1027
 constexpr int CallStackLimit = 2048;
 }  // namespace fizzy

@@ -605,8 +605,8 @@ TEST(execute_call, call_indirect_infinite_recursion)
     EXPECT_TRUE(execute(module, 0, {}).trapped);
 }
 
-constexpr int MaxDepth = 2048;
-static_assert(MaxDepth == CallStackLimit);
+constexpr auto TestCallStackLimit = 2048;
+static_assert(TestCallStackLimit == CallStackLimit);
 
 TEST(execute_call, call_initial_depth)
 {
@@ -639,8 +639,8 @@ TEST(execute_call, call_max_depth)
 
     auto instance = instantiate(parse(bin));
 
-    EXPECT_THAT(execute(*instance, 0, {}, MaxDepth), Result(42));
-    EXPECT_THAT(execute(*instance, 1, {}, MaxDepth), Traps());
+    EXPECT_THAT(execute(*instance, 0, {}, TestCallStackLimit - 1), Result(42));
+    EXPECT_THAT(execute(*instance, 1, {}, TestCallStackLimit - 1), Traps());
 }
 
 TEST(execute_call, execute_imported_max_depth)
@@ -655,17 +655,17 @@ TEST(execute_call, execute_imported_max_depth)
 
     auto module = parse(wasm);
     auto host_foo = [](Instance& /*instance*/, const Value*, int depth) -> ExecutionResult {
-        EXPECT_LE(depth, MaxDepth);
+        EXPECT_LE(depth, TestCallStackLimit - 1);
         return Void;
     };
     const auto host_foo_type = module->typesec[0];
 
     auto instance = instantiate(std::move(module), {{host_foo, host_foo_type}});
 
-    EXPECT_THAT(execute(*instance, 0, {}, MaxDepth), Result());
-    EXPECT_THAT(execute(*instance, 1, {}, MaxDepth), Result());
-    EXPECT_THAT(execute(*instance, 0, {}, MaxDepth + 1), Traps());
-    EXPECT_THAT(execute(*instance, 1, {}, MaxDepth + 1), Traps());
+    EXPECT_THAT(execute(*instance, 0, {}, TestCallStackLimit - 1), Result());
+    EXPECT_THAT(execute(*instance, 1, {}, TestCallStackLimit - 1), Result());
+    EXPECT_THAT(execute(*instance, 0, {}, TestCallStackLimit), Traps());
+    EXPECT_THAT(execute(*instance, 1, {}, TestCallStackLimit), Traps());
 }
 
 TEST(execute_call, imported_function_from_another_module_max_depth)
@@ -702,8 +702,8 @@ TEST(execute_call, imported_function_from_another_module_max_depth)
 
     auto instance2 = instantiate(std::move(module2), {{sub, instance1->module->typesec[0]}});
 
-    EXPECT_THAT(execute(*instance2, 2, {}, MaxDepth - 1), Traps());
-    EXPECT_THAT(execute(*instance2, 3, {}, MaxDepth - 1), Result());
+    EXPECT_THAT(execute(*instance2, 2, {}, TestCallStackLimit - 1 - 1), Traps());
+    EXPECT_THAT(execute(*instance2, 3, {}, TestCallStackLimit - 1 - 1), Result());
 }
 
 TEST(execute_call, count_calls_to_imported_function)
@@ -724,7 +724,7 @@ TEST(execute_call, count_calls_to_imported_function)
     auto i1 = instantiate(parse(wasm1), {}, {}, {}, {{&counter, {ValType::i64, true}}});
     counter.i64 = 0;
     EXPECT_THAT(execute(*i1, 0, {}), Traps());
-    EXPECT_EQ(counter.i64, MaxDepth + 1);
+    EXPECT_EQ(counter.i64, TestCallStackLimit);
 
 
     /* wat2wasm
@@ -734,7 +734,7 @@ TEST(execute_call, count_calls_to_imported_function)
     auto i2 = instantiate(parse(wasm2), {*find_exported_function(*i1, "infinite")});
     counter.i64 = 0;
     EXPECT_THAT(execute(*i2, 0, {}), Traps());
-    EXPECT_EQ(counter.i64, MaxDepth + 1);
+    EXPECT_EQ(counter.i64, TestCallStackLimit);
 }
 
 // A regression test for incorrect number of arguments passed to a call.
@@ -773,7 +773,7 @@ TEST(execute_call, call_imported_infinite_recursion)
     const auto module = parse(wasm);
     int counter = 0;
     auto host_foo = [&counter](Instance& instance, const Value* args, int depth) {
-        EXPECT_LE(depth, MaxDepth);
+        EXPECT_LE(depth, TestCallStackLimit - 1);
         ++counter;
         return execute(instance, 0, args, depth + 1);
     };
@@ -783,11 +783,11 @@ TEST(execute_call, call_imported_infinite_recursion)
 
     counter = 0;
     EXPECT_THAT(execute(*instance, 0, {}), Traps());
-    EXPECT_EQ(counter, MaxDepth + 1);
+    EXPECT_EQ(counter, TestCallStackLimit);
 
     counter = 0;
     EXPECT_THAT(execute(*instance, 1, {}), Traps());
-    EXPECT_EQ(counter, MaxDepth);
+    EXPECT_EQ(counter, TestCallStackLimit - 1);
 }
 
 TEST(execute_call, call_imported_interleaved_infinite_recursion)
@@ -805,7 +805,7 @@ TEST(execute_call, call_imported_interleaved_infinite_recursion)
     int counter = 0;
     auto host_foo = [&counter](Instance& instance, const Value* args, int depth) {
         // Function $f will increase depth. This means each iteration goes 2 steps deeper.
-        EXPECT_LE(depth, MaxDepth);
+        EXPECT_LT(depth, CallStackLimit);
         ++counter;
         return execute(instance, 1, args, depth + 1);
     };
@@ -816,12 +816,12 @@ TEST(execute_call, call_imported_interleaved_infinite_recursion)
     // Start with the imported host function.
     counter = 0;
     EXPECT_THAT(execute(*instance, 0, {}), Traps());
-    EXPECT_EQ(counter, MaxDepth / 2 + 1);
+    EXPECT_EQ(counter, CallStackLimit / 2);
 
     // Start with the wasm function.
     counter = 0;
     EXPECT_THAT(execute(*instance, 1, {}), Traps());
-    EXPECT_EQ(counter, MaxDepth / 2);
+    EXPECT_EQ(counter, CallStackLimit / 2);
 }
 
 TEST(execute_call, call_imported_max_depth_recursion)
@@ -833,7 +833,7 @@ TEST(execute_call, call_imported_max_depth_recursion)
 
     const auto module = parse(wasm);
     auto host_foo = [](Instance& instance, const Value* args, int depth) -> ExecutionResult {
-        if (depth == MaxDepth)
+        if (depth == TestCallStackLimit - 1)
             return Value{uint32_t{1}};  // Terminate recursion on the max depth.
         return execute(instance, 0, args, depth + 1);
     };
@@ -858,7 +858,7 @@ TEST(execute_call, call_via_imported_max_depth_recursion)
     const auto module = parse(wasm);
     auto host_foo = [](Instance& instance, const Value* args, int depth) -> ExecutionResult {
         // Function $f will increase depth. This means each iteration goes 2 steps deeper.
-        if (depth == (MaxDepth - 1))
+        if (depth == TestCallStackLimit - 1)
             return Value{uint32_t{1}};  // Terminate recursion on the max depth.
         return execute(instance, 1, args, depth + 1);
     };
