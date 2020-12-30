@@ -66,7 +66,7 @@ TEST(execute_control, loop_void)
     */
     const auto wasm =
         from_hex("0061736d0100000001070160027e7e017e030201000a0d010b000340200021010b20010b");
-    const auto result = execute(parse(wasm), 0, {1, 0});
+    const auto result = execute(parse(wasm), 0, {1_u64, 0_u64});
     EXPECT_THAT(result, Result(1));
 }
 

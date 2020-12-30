@@ -8,6 +8,21 @@
 
 namespace fizzy::test
 {
+/// Creates uint64_t value with intention to map it to i64 WebAssembly type.
+inline constexpr uint64_t operator"" _u64(unsigned long long x)
+{
+    return uint64_t{x};  // Guarantees lossless conversion if needed.
+}
+
+/// Creates uint32_t value with intention to map it to i32 WebAssembly type.
+inline constexpr uint32_t operator"" _u32(unsigned long long x)
+{
+    const auto v = static_cast<uint32_t>(x);
+    if (v != x)
+        throw "integer literal is too large to be represented in the u32 type";
+    return v;
+}
+
 struct TypedValue
 {
     Value value;

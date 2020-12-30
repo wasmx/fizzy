@@ -49,9 +49,9 @@ TEST(execute, select)
         from_hex("0061736d0100000001080160037e7e7f017e030201000a0b0109002000200120021b0b");
 
     const auto module = parse(wasm);
-    EXPECT_THAT(execute(module, 0, {3, 6, 0}), Result(6));
-    EXPECT_THAT(execute(module, 0, {3, 6, 1}), Result(3));
-    EXPECT_THAT(execute(module, 0, {3, 6, 42}), Result(3));
+    EXPECT_THAT(execute(module, 0, {3_u64, 6_u64, 0_u32}), Result(6));
+    EXPECT_THAT(execute(module, 0, {3_u64, 6_u64, 1_u32}), Result(3));
+    EXPECT_THAT(execute(module, 0, {3_u64, 6_u64, 42_u32}), Result(3));
 }
 
 TEST(execute, local_get)
@@ -62,7 +62,7 @@ TEST(execute, local_get)
     )
     */
     const auto wasm = from_hex("0061736d0100000001060160017e017e030201000a0601040020000b");
-    EXPECT_THAT(execute(parse(wasm), 0, {42}), Result(42));
+    EXPECT_THAT(execute(parse(wasm), 0, {42_u64}), Result(42));
 }
 
 TEST(execute, local_init)
@@ -113,7 +113,7 @@ TEST(execute, local_set)
     */
     const auto wasm =
         from_hex("0061736d0100000001060160017e017e030201000a0c010a01017e2000210120010b");
-    EXPECT_THAT(execute(parse(wasm), 0, {42}), Result(42));
+    EXPECT_THAT(execute(parse(wasm), 0, {42_u64}), Result(42));
 }
 
 TEST(execute, local_tee)
@@ -126,7 +126,7 @@ TEST(execute, local_tee)
     )
     */
     const auto wasm = from_hex("0061736d0100000001060160017e017e030201000a0a010801017e200022010b");
-    EXPECT_THAT(execute(parse(wasm), 0, {42}), Result(42));
+    EXPECT_THAT(execute(parse(wasm), 0, {42_u64}), Result(42));
 }
 
 TEST(execute, global_get)
@@ -374,7 +374,7 @@ TEST(execute, i32_load_overflow)
     auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
-    EXPECT_THAT(execute(*instance, 0, {Value{0}}), Traps());
+    EXPECT_THAT(execute(*instance, 0, {0_u32}), Traps());
     // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
     EXPECT_THAT(execute(*instance, 0, {0x80000000}), Traps());
     // Offset is 0x7fffffff + 0x80000001 => 0x100000000
@@ -396,7 +396,7 @@ TEST(execute, i64_load_overflow)
     auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
-    EXPECT_THAT(execute(*instance, 0, {Value{0}}), Traps());
+    EXPECT_THAT(execute(*instance, 0, {0_u32}), Traps());
     // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
     EXPECT_THAT(execute(*instance, 0, {0x80000000}), Traps());
     // Offset is 0x7fffffff + 0x80000001 => 0x100000000
@@ -520,7 +520,7 @@ TEST(execute, i32_store_overflow)
     auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
-    EXPECT_THAT(execute(*instance, 0, {Value{0}}), Traps());
+    EXPECT_THAT(execute(*instance, 0, {0_u32}), Traps());
     // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
     EXPECT_THAT(execute(*instance, 0, {0x80000000}), Traps());
     // Offset is 0x7fffffff + 0x80000001 => 0x100000000
@@ -544,7 +544,7 @@ TEST(execute, i64_store_overflow)
     auto instance = instantiate(parse(wasm));
 
     // Offset is 0x7fffffff + 0 => 0x7fffffff
-    EXPECT_THAT(execute(*instance, 0, {Value{0}}), Traps());
+    EXPECT_THAT(execute(*instance, 0, {0_u32}), Traps());
     // Offset is 0x7fffffff + 0x80000000 => 0xffffffff
     EXPECT_THAT(execute(*instance, 0, {0x80000000}), Traps());
     // Offset is 0x7fffffff + 0x80000001 => 0x100000000
@@ -617,10 +617,10 @@ TEST(execute, i64_store_all_variants)
         *store_instr = static_cast<uint8_t>(instr);
         auto instance = instantiate(*module);
         std::fill_n(instance->memory->begin(), 10, uint8_t{0xcc});
-        EXPECT_THAT(execute(*instance, 0, {0xb7b6b5b4b3b2b1b0, 1}), Result());
+        EXPECT_THAT(execute(*instance, 0, {0xb7b6b5b4b3b2b1b0_u64, 1_u32}), Result());
         EXPECT_EQ(instance->memory->substr(0, 10), expected);
 
-        EXPECT_THAT(execute(*instance, 0, {0xb7b6b5b4b3b2b1b0, 65537}), Traps());
+        EXPECT_THAT(execute(*instance, 0, {0xb7b6b5b4b3b2b1b0_u64, 65537_u32}), Traps());
     }
 }
 
@@ -899,9 +899,9 @@ TEST(execute, imported_two_functions_different_type)
     auto instance =
         instantiate(*module, {{host_foo1, module->typesec[0]}, {host_foo2, module->typesec[1]}});
 
-    EXPECT_THAT(execute(*instance, 0, {20, 22}), Result(42));
-    EXPECT_THAT(execute(*instance, 1, {0x3000'0000}), Result(0x900'0000'0000'0000));
-    EXPECT_THAT(execute(*instance, 2, {20}), Result(0x2a002a));
+    EXPECT_THAT(execute(*instance, 0, {20_u32, 22_u32}), Result(42));
+    EXPECT_THAT(execute(*instance, 1, {0x3000'0000_u64}), Result(0x900'0000'0000'0000));
+    EXPECT_THAT(execute(*instance, 2, {20_u64}), Result(0x2a002a));
 }
 
 TEST(execute, imported_function_traps)
