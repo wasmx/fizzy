@@ -1194,3 +1194,94 @@ TEST(capi, get_type)
 
     fizzy_free_module(module_imported_func);
 }
+
+TEST(capi, get_global_count)
+{
+    /* wat2wasm
+      (module)
+    */
+    const auto wasm = from_hex("0061736d01000000");
+
+    const auto* module_empty = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module_empty, nullptr);
+
+    EXPECT_EQ(fizzy_get_global_count(module_empty), 0);
+    fizzy_free_module(module_empty);
+
+    /* wat2wasm
+      (global i32 (i32.const 0))
+    */
+    const auto wasm_one_global = from_hex("0061736d010000000606017f0041000b");
+
+    const auto* module_one_global = fizzy_parse(wasm_one_global.data(), wasm_one_global.size());
+    ASSERT_NE(module_one_global, nullptr);
+
+    EXPECT_EQ(fizzy_get_global_count(module_one_global), 1);
+    fizzy_free_module(module_one_global);
+
+    /* wat2wasm
+      (global (import "mod" "g") i32)
+      (global i32 (i32.const 0))
+    */
+    const auto wasm_imported_global =
+        from_hex("0061736d01000000020a01036d6f640167037f000606017f0041000b");
+
+    const auto* module_imported_global =
+        fizzy_parse(wasm_imported_global.data(), wasm_imported_global.size());
+    ASSERT_NE(module_imported_global, nullptr);
+
+    EXPECT_EQ(fizzy_get_global_count(module_imported_global), 2);
+    fizzy_free_module(module_imported_global);
+}
+
+TEST(capi, get_global_type)
+{
+    /* wat2wasm
+      (global i32 (i32.const 0))
+      (global (mut i64) (i64.const 0))
+      (global f32 (f32.const 0))
+      (global (mut f64) (f64.const 0))
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000061f047f0041000b7e0142000b7d0043000000000b7c014400000000000000000b");
+
+    const auto* module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+    ASSERT_EQ(fizzy_get_global_count(module), 4);
+
+    EXPECT_EQ(fizzy_get_global_type(module, 0).value_type, FizzyValueTypeI32);
+    EXPECT_EQ(fizzy_get_global_type(module, 0).is_mutable, false);
+    EXPECT_EQ(fizzy_get_global_type(module, 1).value_type, FizzyValueTypeI64);
+    EXPECT_EQ(fizzy_get_global_type(module, 1).is_mutable, true);
+    EXPECT_EQ(fizzy_get_global_type(module, 2).value_type, FizzyValueTypeF32);
+    EXPECT_EQ(fizzy_get_global_type(module, 2).is_mutable, false);
+    EXPECT_EQ(fizzy_get_global_type(module, 3).value_type, FizzyValueTypeF64);
+    EXPECT_EQ(fizzy_get_global_type(module, 3).is_mutable, true);
+
+    fizzy_free_module(module);
+
+    /* wat2wasm
+      (global (import "mod" "g1") i32)
+      (global (import "mod" "g2") (mut i64))
+      (global (import "mod" "g3") f32)
+      (global (import "mod" "g4") (mut f64))
+    */
+    const auto wasm_imports = from_hex(
+        "0061736d01000000022904036d6f64026731037f00036d6f64026732037e01036d6f64026733037d00036d6f64"
+        "026734037c01");
+
+    const auto* module_imports = fizzy_parse(wasm_imports.data(), wasm_imports.size());
+    ASSERT_NE(module_imports, nullptr);
+    ASSERT_EQ(fizzy_get_global_count(module_imports), 4);
+
+    EXPECT_EQ(fizzy_get_global_type(module_imports, 0).value_type, FizzyValueTypeI32);
+    EXPECT_EQ(fizzy_get_global_type(module_imports, 0).is_mutable, false);
+    EXPECT_EQ(fizzy_get_global_type(module_imports, 1).value_type, FizzyValueTypeI64);
+    EXPECT_EQ(fizzy_get_global_type(module_imports, 1).is_mutable, true);
+    EXPECT_EQ(fizzy_get_global_type(module_imports, 2).value_type, FizzyValueTypeF32);
+    EXPECT_EQ(fizzy_get_global_type(module_imports, 2).is_mutable, false);
+    EXPECT_EQ(fizzy_get_global_type(module_imports, 3).value_type, FizzyValueTypeF64);
+    EXPECT_EQ(fizzy_get_global_type(module_imports, 3).is_mutable, true);
+
+    fizzy_free_module(module_imports);
+}

@@ -205,6 +205,23 @@ bool fizzy_module_has_table(const FizzyModule* module);
 /// @return                 true if module has a memory definition, false otherwise.
 bool fizzy_module_has_memory(const FizzyModule* module);
 
+/// Get number of globals defined in the module.
+///
+/// @param  module    Pointer to module. Cannot be NULL.
+/// @return           Number of globals in the module.
+uint32_t fizzy_get_global_count(const FizzyModule* module);
+
+/// Get type of a given global defined in the module.
+///
+/// @param  module        Pointer to module. Cannot be NULL.
+/// @param  global_idx    Global index. Can be either index of an imported global or of a global
+///                       defined in module. Behaviour is undefined if index is not valid according
+///                       to module definition.
+/// @return               Type of the global corresponding to the index.
+///
+/// @note  All module global indices are greater than all imported global indices.
+FizzyGlobalType fizzy_get_global_type(const FizzyModule* module, uint32_t global_idx);
+
 /// Find index of exported function by name.
 ///
 /// @param  module          Pointer to module. Cannot be NULL.
