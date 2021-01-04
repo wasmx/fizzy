@@ -266,25 +266,15 @@ TEST(execute_numeric, i64_ge_u)
 TEST(execute_numeric, i32_clz)
 {
     const auto i32_clz = create_unary_operation_executor(Instr::i32_clz);
-    EXPECT_THAT(i32_clz(0x7f), Result(32 - 7));
-}
-
-TEST(execute_numeric, i32_clz0)
-{
-    const auto i32_clz = create_unary_operation_executor(Instr::i32_clz);
     EXPECT_THAT(i32_clz(0), Result(32));
+    EXPECT_THAT(i32_clz(0x7f), Result(32 - 7));
 }
 
 TEST(execute_numeric, i32_ctz)
 {
     const auto i32_ctz = create_unary_operation_executor(Instr::i32_ctz);
-    EXPECT_THAT(i32_ctz(0x80), Result(7));
-}
-
-TEST(execute_numeric, i32_ctz0)
-{
-    const auto i32_ctz = create_unary_operation_executor(Instr::i32_ctz);
     EXPECT_THAT(i32_ctz(0), Result(32));
+    EXPECT_THAT(i32_ctz(0x80), Result(7));
 }
 
 TEST(execute_numeric, i32_popcnt)
@@ -315,17 +305,7 @@ TEST(execute_numeric, i32_div_s)
 {
     const auto i32_div_s = create_binary_operation_executor(Instr::i32_div_s);
     EXPECT_THAT(i32_div_s(uint32_t(-84), 2), Result(-42));
-}
-
-TEST(execute_numeric, i32_div_s_by_zero)
-{
-    const auto i32_div_s = create_binary_operation_executor(Instr::i32_div_s);
     EXPECT_THAT(i32_div_s(84, 0), Traps());
-}
-
-TEST(execute_numeric, i32_div_s_overflow)
-{
-    const auto i32_div_s = create_binary_operation_executor(Instr::i32_div_s);
     EXPECT_THAT(i32_div_s(uint32_t(std::numeric_limits<int32_t>::min()), uint32_t(-1)), Traps());
 }
 
@@ -346,11 +326,6 @@ TEST(execute_numeric, i32_div_u)
 {
     const auto i32_div_u = create_binary_operation_executor(Instr::i32_div_u);
     EXPECT_THAT(i32_div_u(84, 2), Result(42));
-}
-
-TEST(execute_numeric, i32_div_u_by_zero)
-{
-    const auto i32_div_u = create_binary_operation_executor(Instr::i32_div_u);
     EXPECT_THAT(i32_div_u(84, 0), Traps());
 }
 
@@ -360,11 +335,6 @@ TEST(execute_numeric, i32_rem_s)
     EXPECT_THAT(i32_rem_s(uint32_t(-4242), 4200), Result(-42));
     constexpr auto i32_min = std::numeric_limits<int32_t>::min();
     EXPECT_THAT(i32_rem_s(uint32_t(i32_min), uint32_t(-1)), Result(0));
-}
-
-TEST(execute_numeric, i32_rem_s_by_zero)
-{
-    const auto i32_rem_s = create_binary_operation_executor(Instr::i32_rem_s);
     EXPECT_THAT(i32_rem_s(uint32_t(-4242), 0), Traps());
 }
 
@@ -385,11 +355,6 @@ TEST(execute_numeric, i32_rem_u)
 {
     const auto i32_rem_u = create_binary_operation_executor(Instr::i32_rem_u);
     EXPECT_THAT(i32_rem_u(4242, 4200), Result(42));
-}
-
-TEST(execute_numeric, i32_rem_u_by_zero)
-{
-    const auto i32_rem_u = create_binary_operation_executor(Instr::i32_rem_u);
     EXPECT_THAT(i32_rem_u(4242, 0), Traps());
 }
 
@@ -502,28 +467,13 @@ TEST(execute_numeric, i32_wrap_i64)
     EXPECT_THAT(i32_wrap_i64(0xffffffffffffffff_u64), Result(0xffffffff));
 }
 
-TEST(execute_numeric, i64_extend_i32_s_all_bits_set)
-{
-    const auto i64_extend_i32_s = create_unary_operation_executor(Instr::i64_extend_i32_s);
-    EXPECT_THAT(i64_extend_i32_s(0xffffffff), Result(0xffffffffffffffff));
-}
-
-TEST(execute_numeric, i64_extend_i32_s_one_bit_set)
-{
-    const auto i64_extend_i32_s = create_unary_operation_executor(Instr::i64_extend_i32_s);
-    EXPECT_THAT(i64_extend_i32_s(0x80000000), Result(0xffffffff80000000));
-}
-
-TEST(execute_numeric, i64_extend_i32_s_0)
+TEST(execute_numeric, i64_extend_i32_s)
 {
     const auto i64_extend_i32_s = create_unary_operation_executor(Instr::i64_extend_i32_s);
     EXPECT_THAT(i64_extend_i32_s(0), Result(0));
-}
-
-TEST(execute_numeric, i64_extend_i32_s_1)
-{
-    const auto i64_extend_i32_s = create_unary_operation_executor(Instr::i64_extend_i32_s);
     EXPECT_THAT(i64_extend_i32_s(0x01), Result(0x01));
+    EXPECT_THAT(i64_extend_i32_s(0x80000000), Result(0xffffffff80000000));
+    EXPECT_THAT(i64_extend_i32_s(0xffffffff), Result(0xffffffffffffffff));
 }
 
 TEST(execute_numeric, i64_extend_i32_u)
@@ -553,25 +503,15 @@ TEST(execute_numeric, i64_extend_i32_u_2)
 TEST(execute_numeric, i64_clz)
 {
     const auto i64_clz = create_unary_operation_executor(Instr::i64_clz);
-    EXPECT_THAT(i64_clz(0x7f_u64), Result(64 - 7));
-}
-
-TEST(execute_numeric, i64_clz0)
-{
-    const auto i64_clz = create_unary_operation_executor(Instr::i64_clz);
     EXPECT_THAT(i64_clz(0_u64), Result(64));
+    EXPECT_THAT(i64_clz(0x7f_u64), Result(64 - 7));
 }
 
 TEST(execute_numeric, i64_ctz)
 {
     const auto i64_ctz = create_unary_operation_executor(Instr::i64_ctz);
-    EXPECT_THAT(i64_ctz(0x80_u64), Result(7));
-}
-
-TEST(execute_numeric, i64_ctz0)
-{
-    const auto i64_ctz = create_unary_operation_executor(Instr::i64_ctz);
     EXPECT_THAT(i64_ctz(0_u64), Result(64));
+    EXPECT_THAT(i64_ctz(0x80_u64), Result(7));
 }
 
 TEST(execute_numeric, i64_popcnt)
@@ -602,17 +542,7 @@ TEST(execute_numeric, i64_div_s)
 {
     const auto i64_div_s = create_binary_operation_executor(Instr::i64_div_s);
     EXPECT_THAT(i64_div_s(-84_u64, 2_u64), Result(-42_u64));
-}
-
-TEST(execute_numeric, i64_div_s_by_zero)
-{
-    const auto i64_div_s = create_binary_operation_executor(Instr::i64_div_s);
     EXPECT_THAT(i64_div_s(84_u64, 0_u64), Traps());
-}
-
-TEST(execute_numeric, i64_div_s_overflow)
-{
-    const auto i64_div_s = create_binary_operation_executor(Instr::i64_div_s);
     EXPECT_THAT(i64_div_s(uint64_t(std::numeric_limits<int64_t>::min()), -1_u64), Traps());
 }
 
@@ -620,11 +550,6 @@ TEST(execute_numeric, i64_div_u)
 {
     const auto i64_div_u = create_binary_operation_executor(Instr::i64_div_u);
     EXPECT_THAT(i64_div_u(84_u64, 2_u64), Result(42));
-}
-
-TEST(execute_numeric, i64_div_u_by_zero)
-{
-    const auto i64_div_u = create_binary_operation_executor(Instr::i64_div_u);
     EXPECT_THAT(i64_div_u(84_u64, 0_u64), Traps());
 }
 
@@ -634,11 +559,6 @@ TEST(execute_numeric, i64_rem_s)
     EXPECT_THAT(i64_rem_s(-4242_u64, 4200_u64), Result(-42_u64));
     constexpr auto i64_min = std::numeric_limits<int64_t>::min();
     EXPECT_THAT(i64_rem_s(uint64_t(i64_min), -1_u64), Result(0));
-}
-
-TEST(execute_numeric, i64_rem_s_by_zero)
-{
-    const auto i64_rem_s = create_binary_operation_executor(Instr::i64_rem_s);
     EXPECT_THAT(i64_rem_s(-4242_u64, 0_u64), Traps());
 }
 
@@ -646,11 +566,6 @@ TEST(execute_numeric, i64_rem_u)
 {
     const auto i64_rem_u = create_binary_operation_executor(Instr::i64_rem_u);
     EXPECT_THAT(i64_rem_u(4242_u64, 4200_u64), Result(42));
-}
-
-TEST(execute_numeric, i64_rem_u_by_zero)
-{
-    const auto i64_rem_u = create_binary_operation_executor(Instr::i64_rem_u);
     EXPECT_THAT(i64_rem_u(4242_u64, 0_u64), Traps());
 }
 
