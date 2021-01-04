@@ -1069,3 +1069,128 @@ TEST(capi, imported_global_from_another_module)
     fizzy_free_instance(instance2);
     fizzy_free_instance(instance1);
 }
+
+TEST(capi, get_type_count)
+{
+    /* wat2wasm
+      (module)
+    */
+    const auto wasm = from_hex("0061736d01000000");
+
+    const auto* module_empty = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module_empty, nullptr);
+
+    EXPECT_EQ(fizzy_get_type_count(module_empty), 0);
+    fizzy_free_module(module_empty);
+
+    /* wat2wasm
+      (func)
+    */
+    const auto wasm_one_func = from_hex("0061736d01000000010401600000030201000a040102000b");
+
+    const auto* module_one_func = fizzy_parse(wasm_one_func.data(), wasm_one_func.size());
+    ASSERT_NE(module_one_func, nullptr);
+
+    EXPECT_EQ(fizzy_get_type_count(module_one_func), 1);
+    fizzy_free_module(module_one_func);
+
+    /* wat2wasm
+      (type (func (param i32)))
+      (type (func (param i32) (result i32)))
+      (type (func (result i32)))
+      (func (type 0))
+      (func (type 1) (return (i32.const 0)))
+      (func (type 1) (return (i32.const 0)))
+      (func (type 2) (return (i32.const 0)))
+    */
+    const auto wasm_three_types = from_hex(
+        "0061736d01000000010e0360017f0060017f017f6000017f030504000101020a160402000b050041000f0b0500"
+        "41000f0b050041000f0b");
+
+    const auto* module_three_types = fizzy_parse(wasm_three_types.data(), wasm_three_types.size());
+    ASSERT_NE(module_three_types, nullptr);
+
+    EXPECT_EQ(fizzy_get_type_count(module_three_types), 3);
+    fizzy_free_module(module_three_types);
+}
+
+TEST(capi, get_type)
+{
+    /* wat2wasm
+      (func)
+    */
+    const auto wasm_one_func = from_hex("0061736d01000000010401600000030201000a040102000b");
+
+    const auto* module_one_func = fizzy_parse(wasm_one_func.data(), wasm_one_func.size());
+    ASSERT_NE(module_one_func, nullptr);
+    ASSERT_EQ(fizzy_get_type_count(module_one_func), 1);
+
+    const auto type_one_func = fizzy_get_type(module_one_func, 0);
+    EXPECT_EQ(type_one_func.inputs_size, 0);
+    EXPECT_EQ(type_one_func.output, FizzyValueTypeVoid);
+    fizzy_free_module(module_one_func);
+
+    /* wat2wasm
+      (type (func))
+      (type (func (param i32)))
+      (type (func (param i32) (result i32)))
+      (type (func (result i32)))
+      (func (type 0))
+      (func (type 1))
+      (func (type 2) (return (i32.const 0)))
+      (func (type 2) (return (i32.const 0)))
+      (func (type 3) (return (i32.const 0)))
+    */
+    const auto wasm_three_types = from_hex(
+        "0061736d0100000001110460000060017f0060017f017f6000017f03060500010202030a190502000b02000b05"
+        "0041000f0b050041000f0b050041000f0b");
+
+    const auto* module_three_types = fizzy_parse(wasm_three_types.data(), wasm_three_types.size());
+    ASSERT_NE(module_three_types, nullptr);
+    ASSERT_EQ(fizzy_get_type_count(module_three_types), 4);
+
+    const auto type0 = fizzy_get_type(module_three_types, 0);
+    ASSERT_EQ(type0.inputs_size, 0);
+    EXPECT_EQ(type0.output, FizzyValueTypeVoid);
+
+    const auto type1 = fizzy_get_type(module_three_types, 1);
+    ASSERT_EQ(type1.inputs_size, 1);
+    EXPECT_EQ(type1.inputs[0], FizzyValueTypeI32);
+    EXPECT_EQ(type1.output, FizzyValueTypeVoid);
+
+    const auto type2 = fizzy_get_type(module_three_types, 2);
+    ASSERT_EQ(type2.inputs_size, 1);
+    EXPECT_EQ(type2.inputs[0], FizzyValueTypeI32);
+    EXPECT_EQ(type2.output, FizzyValueTypeI32);
+
+    const auto type3 = fizzy_get_type(module_three_types, 3);
+    EXPECT_EQ(type3.inputs_size, 0);
+    EXPECT_EQ(type3.output, FizzyValueTypeI32);
+
+    fizzy_free_module(module_three_types);
+
+    /* wat2wasm
+      (func (import "mod" "f") (param i64 i64))
+      (func (param i32))
+    */
+    const auto wasm_imported_func = from_hex(
+        "0061736d01000000010a0260027e7e0060017f00020901036d6f6401660000030201010a040102000b");
+
+    const auto* module_imported_func =
+        fizzy_parse(wasm_imported_func.data(), wasm_imported_func.size());
+    ASSERT_NE(module_imported_func, nullptr);
+    ASSERT_EQ(fizzy_get_type_count(module_imported_func), 2);
+
+    const auto type_imported = fizzy_get_type(module_imported_func, 0);
+    ASSERT_EQ(type_imported.inputs_size, 2);
+    EXPECT_EQ(type_imported.inputs[0], FizzyValueTypeI64);
+    EXPECT_EQ(type_imported.inputs[1], FizzyValueTypeI64);
+    EXPECT_EQ(type_imported.output, FizzyValueTypeVoid);
+
+    const auto type_local = fizzy_get_type(module_imported_func, 1);
+    ASSERT_EQ(type_local.inputs_size, 1);
+    EXPECT_EQ(type_local.inputs[0], FizzyValueTypeI32);
+    EXPECT_EQ(type_local.output, FizzyValueTypeVoid);
+
+    fizzy_free_module(module_imported_func);
+}

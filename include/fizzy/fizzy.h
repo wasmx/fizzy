@@ -169,6 +169,20 @@ void fizzy_free_module(const FizzyModule* module);
 /// @note  Input module is not modified neither in success nor in failure case.
 const FizzyModule* fizzy_clone_module(const FizzyModule* module);
 
+/// Get number of types defined in the module.
+///
+/// @param  module    Pointer to module. Cannot be NULL.
+/// @return           Number of type in the module.
+uint32_t fizzy_get_type_count(const FizzyModule* module);
+
+/// Get type defined in the module.
+///
+/// @param  module      Pointer to module. Cannot be NULL.
+/// @param  type_idx    Type index. Behaviour is undefined if index is not valid according
+///                     to module definition.
+/// @return             Type corresponding to the index.
+FizzyFunctionType fizzy_get_type(const FizzyModule* module, uint32_t type_idx);
+
 /// Get type of the function defined in the module.
 ///
 /// @param  module      Pointer to module. Cannot be NULL.

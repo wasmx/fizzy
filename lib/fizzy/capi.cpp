@@ -329,6 +329,16 @@ const FizzyModule* fizzy_clone_module(const FizzyModule* module)
     }
 }
 
+uint32_t fizzy_get_type_count(const FizzyModule* module)
+{
+    return static_cast<uint32_t>(unwrap(module)->typesec.size());
+}
+
+FizzyFunctionType fizzy_get_type(const FizzyModule* module, uint32_t type_idx)
+{
+    return wrap(unwrap(module)->typesec[type_idx]);
+}
+
 FizzyFunctionType fizzy_get_function_type(const FizzyModule* module, uint32_t func_idx)
 {
     return wrap(unwrap(module)->get_function_type(func_idx));
