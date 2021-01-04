@@ -21,10 +21,16 @@ inline const fizzy::Module* unwrap(const FizzyModule* module) noexcept
     return reinterpret_cast<const fizzy::Module*>(module);
 }
 
+static_assert(sizeof(FizzyValueType) == sizeof(fizzy::ValType));
+
 inline const FizzyValueType* wrap(const fizzy::ValType* value_types) noexcept
 {
-    static_assert(sizeof(FizzyValueType) == sizeof(fizzy::ValType));
     return reinterpret_cast<const FizzyValueType*>(value_types);
+}
+
+inline const fizzy::ValType* unwrap(const FizzyValueType* c_value_types) noexcept
+{
+    return reinterpret_cast<const fizzy::ValType*>(c_value_types);
 }
 
 inline FizzyValueType wrap(fizzy::ValType value_type) noexcept
@@ -43,17 +49,11 @@ inline FizzyFunctionType wrap(const fizzy::FuncType& type) noexcept
         (type.inputs.empty() ? nullptr : wrap(&type.inputs[0])), type.inputs.size()};
 }
 
-inline fizzy::FuncType unwrap(const FizzyFunctionType& type)
+inline FizzyFunctionType wrap(fizzy::span<const fizzy::ValType> input_types,
+    fizzy::span<const fizzy::ValType> output_types) noexcept
 {
-    fizzy::FuncType func_type{std::vector<fizzy::ValType>(type.inputs_size),
-        (type.output == FizzyValueTypeVoid ? std::vector<fizzy::ValType>{} :
-                                             std::vector<fizzy::ValType>{unwrap(type.output)})};
-
-    fizzy::ValType (*unwrap_valtype_fn)(FizzyValueType value) = &unwrap;
-    std::transform(
-        type.inputs, type.inputs + type.inputs_size, func_type.inputs.begin(), unwrap_valtype_fn);
-
-    return func_type;
+    return {(output_types.empty() ? FizzyValueTypeVoid : wrap(output_types[0])),
+        (input_types.empty() ? nullptr : wrap(&input_types[0])), input_types.size()};
 }
 
 inline FizzyValue wrap(fizzy::Value value) noexcept
@@ -130,24 +130,32 @@ inline FizzyExternalFunction wrap(fizzy::ExternalFunction external_func)
     };
 
     auto context = std::make_unique<fizzy::ExternalFunction>(std::move(external_func));
-    const auto c_type = wrap(context->type);
+    const auto c_type = wrap(context->input_types, context->output_types);
     void* c_context = context.release();
     return {c_type, c_function, c_context};
 }
 
 inline fizzy::ExternalFunction unwrap(const FizzyExternalFunction& external_func)
 {
+    const fizzy::span<const fizzy::ValType> input_types{
+        unwrap(external_func.type.inputs), external_func.type.inputs_size};
+    const fizzy::span<const fizzy::ValType> output_types =
+        (external_func.type.output == FizzyValueTypeVoid ?
+                fizzy::span<const fizzy::ValType>{} :
+                fizzy::span<const fizzy::ValType>{unwrap(&external_func.type.output), 1});
+
     return fizzy::ExternalFunction{
-        unwrap(external_func.function, external_func.context), unwrap(external_func.type)};
+        unwrap(external_func.function, external_func.context), input_types, output_types};
 }
 
 inline std::vector<fizzy::ExternalFunction> unwrap(
     const FizzyExternalFunction* c_external_functions, size_t external_functions_size)
 {
-    std::vector<fizzy::ExternalFunction> external_functions(external_functions_size);
+    std::vector<fizzy::ExternalFunction> external_functions;
+    external_functions.reserve(external_functions_size);
     fizzy::ExternalFunction (*unwrap_external_func_fn)(const FizzyExternalFunction&) = &unwrap;
     std::transform(c_external_functions, c_external_functions + external_functions_size,
-        external_functions.begin(), unwrap_external_func_fn);
+        std::back_inserter(external_functions), unwrap_external_func_fn);
     return external_functions;
 }
 

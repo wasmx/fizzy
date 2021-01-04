@@ -270,9 +270,9 @@ TEST(api, find_exported_function)
     auto opt_function = find_exported_function(*instance, "foo");
     ASSERT_TRUE(opt_function);
     EXPECT_THAT(opt_function->function(*instance, {}, 0), Result(42));
-    EXPECT_TRUE(opt_function->type.inputs.empty());
-    ASSERT_EQ(opt_function->type.outputs.size(), 1);
-    EXPECT_EQ(opt_function->type.outputs[0], ValType::i32);
+    EXPECT_TRUE(opt_function->input_types.empty());
+    ASSERT_EQ(opt_function->output_types.size(), 1);
+    EXPECT_EQ(opt_function->output_types[0], ValType::i32);
 
     EXPECT_FALSE(find_exported_function(*instance, "bar").has_value());
 
@@ -292,14 +292,14 @@ TEST(api, find_exported_function)
     const auto bar_type = FuncType{{}, {ValType::i32}};
 
     auto instance_reexported_function =
-        instantiate(parse(wasm_reexported_function), {{bar, bar_type}});
+        instantiate(parse(wasm_reexported_function), {{bar, bar_type.inputs, bar_type.outputs}});
 
-    opt_function = find_exported_function(*instance_reexported_function, "foo");
-    ASSERT_TRUE(opt_function);
-    EXPECT_THAT(opt_function->function(*instance, {}, 0), Result(42));
-    EXPECT_TRUE(opt_function->type.inputs.empty());
-    ASSERT_EQ(opt_function->type.outputs.size(), 1);
-    EXPECT_EQ(opt_function->type.outputs[0], ValType::i32);
+    auto opt_reexported_function = find_exported_function(*instance_reexported_function, "foo");
+    ASSERT_TRUE(opt_reexported_function);
+    EXPECT_THAT(opt_reexported_function->function(*instance, {}, 0), Result(42));
+    EXPECT_TRUE(opt_reexported_function->input_types.empty());
+    ASSERT_EQ(opt_reexported_function->output_types.size(), 1);
+    EXPECT_EQ(opt_reexported_function->output_types[0], ValType::i32);
 
     EXPECT_FALSE(find_exported_function(*instance, "bar").has_value());
 

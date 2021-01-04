@@ -12,6 +12,11 @@ namespace fizzy
 {
 namespace
 {
+bool equal_types(span<const ValType> valtypes1, span<const ValType> valtypes2) noexcept
+{
+    return std::equal(valtypes1.begin(), valtypes1.end(), valtypes2.begin(), valtypes2.end());
+}
+
 void match_imported_functions(const std::vector<FuncType>& module_imported_types,
     const std::vector<ExternalFunction>& imported_functions)
 {
@@ -24,7 +29,8 @@ void match_imported_functions(const std::vector<FuncType>& module_imported_types
 
     for (size_t i = 0; i < imported_functions.size(); ++i)
     {
-        if (module_imported_types[i] != imported_functions[i].type)
+        if (!equal_types(module_imported_types[i].inputs, imported_functions[i].input_types) ||
+            !equal_types(module_imported_types[i].outputs, imported_functions[i].output_types))
         {
             throw instantiate_error{"function " + std::to_string(i) +
                                     " type doesn't match module's imported function type"};

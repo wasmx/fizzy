@@ -13,8 +13,14 @@ using namespace testing;
 
 TEST(cxx20_span, vector)
 {
+    std::vector<uint64_t> vec_empty;
+    span<const uint64_t> s_empty(vec_empty);
+    EXPECT_TRUE(s_empty.empty());
+    EXPECT_EQ(s_empty.size(), 0);
+
     std::vector<uint64_t> vec{1, 2, 3, 4, 5, 6};
     span<const uint64_t> s(&vec[1], 3);
+    EXPECT_FALSE(s.empty());
     EXPECT_EQ(s.size(), 3);
     EXPECT_EQ(s[0], 2);
     EXPECT_EQ(s[1], 3);
@@ -27,6 +33,7 @@ TEST(cxx20_span, vector)
     EXPECT_EQ(s[0], 100);
 
     const span<const uint64_t> s2 = vec;  // Implicit conversion from vector.
+    EXPECT_FALSE(s2.empty());
     for (size_t i = 0; i < vec.size(); ++i)
         EXPECT_EQ(s2[i], vec[i]);
 }
@@ -34,14 +41,26 @@ TEST(cxx20_span, vector)
 TEST(cxx20_span, array)
 {
     float a1[] = {1, 2, 3};
+
+    span<const float> s1_empty(&a1[0], size_t{0});
+    EXPECT_TRUE(s1_empty.empty());
+    EXPECT_EQ(s1_empty.size(), 0);
+
     span<const float> s1 = a1;
+    EXPECT_FALSE(s1.empty());
     EXPECT_EQ(s1.size(), 3);
     EXPECT_EQ(s1[0], 1.0f);
     EXPECT_EQ(s1[1], 2.0f);
     EXPECT_EQ(s1[2], 3.0f);
 
+    const std::array<float, 0> a2_empty = {};
+    span<const float> s2_empty(a2_empty);
+    EXPECT_TRUE(s2_empty.empty());
+    EXPECT_EQ(s2_empty.size(), 0);
+
     const std::array a2 = {0.1f, 0.2f, 0.3f};
     span<const float> s2 = a2;
+    EXPECT_FALSE(s2.empty());
     EXPECT_EQ(s2.size(), 3);
     EXPECT_EQ(s2[0], 0.1f);
     EXPECT_EQ(s2[1], 0.2f);
@@ -51,6 +70,11 @@ TEST(cxx20_span, array)
 TEST(cxx20_span, stack)
 {
     OperandStack stack(nullptr, 0, 0, 4);
+
+    span<const Value> s_empty(stack.rend(), size_t{0});
+    EXPECT_TRUE(s_empty.empty());
+    EXPECT_EQ(s_empty.size(), 0);
+
     stack.push(10);
     stack.push(11);
     stack.push(12);
@@ -58,6 +82,7 @@ TEST(cxx20_span, stack)
 
     constexpr auto num_items = 2;
     span<const Value> s(stack.rend() - num_items, num_items);
+    EXPECT_FALSE(s.empty());
     EXPECT_EQ(s.size(), 2);
     EXPECT_EQ(s[0].i64, 12);
     EXPECT_EQ(s[1].i64, 13);
@@ -71,8 +96,14 @@ TEST(cxx20_span, initializer_list)
     // This only works for lvalue initializer_lists, but not as `span{1, 2, 3}`.
     // Dangerous usage because user need to keep the initializer_list alive
     // as long as span is being used.
+    const std::initializer_list<uint64_t> empty = {};
+    span<const uint64_t> s_empty(empty);
+    EXPECT_TRUE(s_empty.empty());
+    EXPECT_EQ(s_empty.size(), 0);
+
     const std::initializer_list<uint64_t> init = {1, 2, 3};
     const auto s = span<const uint64_t>(init);
+    EXPECT_FALSE(s.empty());
     EXPECT_EQ(s.size(), 3);
     EXPECT_EQ(s[0], 1);
     EXPECT_EQ(s[1], 2);

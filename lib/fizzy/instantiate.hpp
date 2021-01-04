@@ -21,10 +21,25 @@ namespace fizzy
 struct ExecutionResult;
 struct Instance;
 
+/// Function representing WebAssembly or host function execution.
+using execute_function = std::function<ExecutionResult(Instance&, const Value*, int depth)>;
+
+/// Function with associated input/output types,
+/// used to represent both imported and exported functions.
 struct ExternalFunction
 {
-    std::function<ExecutionResult(Instance&, const Value*, int depth)> function;
-    FuncType type;
+    execute_function function;
+    span<const ValType> input_types;
+    span<const ValType> output_types;
+
+    ExternalFunction(execute_function _function, span<const ValType> _input_types,
+        span<const ValType> _output_types)
+      : function(std::move(_function)), input_types(_input_types), output_types(_output_types)
+    {}
+
+    ExternalFunction(execute_function _function, const FuncType& type)
+      : function(std::move(_function)), input_types(type.inputs), output_types(type.outputs)
+    {}
 };
 
 /// Table element, which references a function in any instance.
@@ -113,7 +128,7 @@ struct ImportedFunction
     std::string name;
     std::vector<ValType> inputs;
     std::optional<ValType> output;
-    std::function<ExecutionResult(Instance&, const Value*, int depth)> function;
+    execute_function function;
 };
 
 /// Create vector of ExternalFunctions ready to be passed to instantiate.
