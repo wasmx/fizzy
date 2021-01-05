@@ -473,16 +473,27 @@ TEST(execute_numeric, i32_wrap_i64)
 TEST(execute_numeric, i64_extend_i32_s)
 {
     const auto i64_extend_i32_s = create_unary_operation_executor(Instr::i64_extend_i32_s);
-    EXPECT_THAT(i64_extend_i32_s(0), Result(0));
-    EXPECT_THAT(i64_extend_i32_s(0x01), Result(0x01));
-    EXPECT_THAT(i64_extend_i32_s(0x80000000), Result(0xffffffff80000000));
-    EXPECT_THAT(i64_extend_i32_s(0xffffffff), Result(0xffffffffffffffff));
+    EXPECT_THAT(i64_extend_i32_s(0x00000000_u32), Result(0x0000000000000000_u64));
+    EXPECT_THAT(i64_extend_i32_s(0x00000001_u32), Result(0x0000000000000001_u64));
+    EXPECT_THAT(i64_extend_i32_s(0x7ffffffe_u32), Result(0x000000007ffffffe_u64));
+    EXPECT_THAT(i64_extend_i32_s(0x7fffffff_u32), Result(0x000000007fffffff_u64));
+    EXPECT_THAT(i64_extend_i32_s(0x80000000_u32), Result(0xffffffff80000000_u64));
+    EXPECT_THAT(i64_extend_i32_s(0x80000001_u32), Result(0xffffffff80000001_u64));
+    EXPECT_THAT(i64_extend_i32_s(0xfffffffe_u32), Result(0xfffffffffffffffe_u64));
+    EXPECT_THAT(i64_extend_i32_s(0xffffffff_u32), Result(0xffffffffffffffff_u64));
 }
 
 TEST(execute_numeric, i64_extend_i32_u)
 {
     const auto i64_extend_i32_u = create_unary_operation_executor(Instr::i64_extend_i32_u);
-    EXPECT_THAT(i64_extend_i32_u(0xff000000), Result(0x00000000ff000000));
+    EXPECT_THAT(i64_extend_i32_u(0x00000000_u32), Result(0x0000000000000000_u64));
+    EXPECT_THAT(i64_extend_i32_u(0x00000001_u32), Result(0x0000000000000001_u64));
+    EXPECT_THAT(i64_extend_i32_u(0x7ffffffe_u32), Result(0x000000007ffffffe_u64));
+    EXPECT_THAT(i64_extend_i32_u(0x7fffffff_u32), Result(0x000000007fffffff_u64));
+    EXPECT_THAT(i64_extend_i32_u(0x80000000_u32), Result(0x0000000080000000_u64));
+    EXPECT_THAT(i64_extend_i32_u(0x80000001_u32), Result(0x0000000080000001_u64));
+    EXPECT_THAT(i64_extend_i32_u(0xfffffffe_u32), Result(0x00000000fffffffe_u64));
+    EXPECT_THAT(i64_extend_i32_u(0xffffffff_u32), Result(0x00000000ffffffff_u64));
 }
 
 TEST(execute_numeric, i64_extend_i32_u_2)
