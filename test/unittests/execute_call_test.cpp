@@ -172,7 +172,7 @@ TEST(execute_call, call_indirect)
 
     for (const auto param : {0u, 1u, 2u})
     {
-        constexpr uint64_t expected_results[]{3, 2, 1};
+        constexpr uint32_t expected_results[]{3, 2, 1};
 
         EXPECT_THAT(execute(module, 5, {param}), Result(expected_results[param]));
     }
@@ -257,7 +257,7 @@ TEST(execute_call, call_indirect_imported_table)
 
     for (const auto param : {0u, 1u, 2u})
     {
-        constexpr uint64_t expected_results[]{3, 2, 1};
+        constexpr uint32_t expected_results[]{3, 2, 1};
 
         EXPECT_THAT(execute(*instance, 0, {param}), Result(expected_results[param]));
     }

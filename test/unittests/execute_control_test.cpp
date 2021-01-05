@@ -614,7 +614,7 @@ TEST(execute_control, br_if_with_result)
 
     for (const auto param : {0u, 1u})
     {
-        constexpr uint64_t expected_results[]{
+        constexpr uint32_t expected_results[]{
             3,  // br_if not taken, result: 1 xor 2 == 3.
             2,  // br_if taken, result: 2, remaining item dropped.
         };
@@ -639,7 +639,7 @@ TEST(execute_control, br_if_out_of_function)
 
     for (const auto param : {0u, 1u})
     {
-        constexpr uint64_t expected_results[]{
+        constexpr uint32_t expected_results[]{
             1,  // br_if not taken.
             2,  // br_if taken.
         };
@@ -717,7 +717,7 @@ TEST(execute_control, br_table)
 
     for (const auto param : {0u, 1u, 2u, 3u, 4u, 5u})
     {
-        constexpr uint64_t expected_results[]{103, 102, 101, 100, 104, 104};
+        constexpr uint32_t expected_results[]{103, 102, 101, 100, 104, 104};
 
         EXPECT_THAT(execute(parse(bin), 0, {param}), Result(expected_results[param]));
     }
@@ -840,7 +840,7 @@ TEST(execute_control, if_smoke)
 
     for (const auto param : {0u, 1u})
     {
-        constexpr uint64_t expected_results[]{
+        constexpr uint32_t expected_results[]{
             0,  // no if branch.
             4,  // if branch.
         };
@@ -871,7 +871,7 @@ TEST(execute_control, if_else_smoke)
 
     for (const auto param : {0u, 1u})
     {
-        constexpr uint64_t expected_results[]{
+        constexpr uint32_t expected_results[]{
             2,  // else branch.
             1,  // if branch.
         };
@@ -908,7 +908,7 @@ TEST(execute_control, if_return_from_branch)
 
     for (const auto param : {0u, 1u})
     {
-        constexpr uint64_t expected_results[]{
+        constexpr uint32_t expected_results[]{
             2,  // else branch.
             1,  // if branch.
         };
@@ -947,7 +947,7 @@ TEST(execute_control, if_br_from_branch)
 
     for (const auto param : {0u, 1u})
     {
-        constexpr uint64_t expected_results[]{
+        constexpr uint32_t expected_results[]{
             2,   // else branch.
             21,  // if branch.
         };
