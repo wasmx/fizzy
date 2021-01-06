@@ -110,22 +110,17 @@ inline fizzy::ExecutionResult unwrap(const FizzyExecutionResult& result) noexcep
         return unwrap(result.value);
 }
 
-inline fizzy::ExecuteFunction unwrap(FizzyExternalFn func, void* c_context) noexcept
+inline fizzy::ExecuteFunction unwrap(FizzyExternalFn c_func, void* c_context) noexcept
 {
-    auto context = std::make_unique<std::pair<FizzyExternalFn, void*>>(func, c_context);
-
-    auto context_deleter = [](void* context) noexcept {
-        delete static_cast<std::pair<FizzyExternalFn, void*>*>(context);
-    };
-
     static constexpr fizzy::ExecuteFunctionPtr function =
-        [](void* context, fizzy::Instance& instance, const fizzy::Value* args,
+        [](void* context1, void* context2, fizzy::Instance& instance, const fizzy::Value* args,
             int depth) -> fizzy::ExecutionResult {
-        auto [c_func, c_context] = *static_cast<std::pair<FizzyExternalFn, void*>*>(context);
-        return unwrap(c_func(c_context, wrap(&instance), wrap(args), depth));
+        auto* host_func = reinterpret_cast<FizzyExternalFn>(context1);
+
+        return unwrap(host_func(context2, wrap(&instance), wrap(args), depth));
     };
 
-    return fizzy::ExecuteFunction(function, context.release(), context_deleter);
+    return fizzy::ExecuteFunction(function, reinterpret_cast<void*>(c_func), c_context);
 }
 
 inline FizzyExternalFunction wrap(fizzy::ExternalFunction external_func)
@@ -137,8 +132,8 @@ inline FizzyExternalFunction wrap(fizzy::ExternalFunction external_func)
         return wrap((func->function)(*unwrap(instance), unwrap(args), depth));
     };
 
+    const auto c_type = wrap(external_func.input_types, external_func.output_types);
     auto context = std::make_unique<fizzy::ExternalFunction>(std::move(external_func));
-    const auto c_type = wrap(context->input_types, context->output_types);
     void* c_context = context.release();
     return {c_type, c_function, c_context};
 }
@@ -169,32 +164,30 @@ inline std::vector<fizzy::ExternalFunction> unwrap(
 
 inline fizzy::ImportedFunction unwrap(const FizzyImportedFunction& c_imported_func)
 {
-    fizzy::ImportedFunction imported_func;
-    imported_func.module = c_imported_func.module;
-    imported_func.name = c_imported_func.name;
+    auto module = c_imported_func.module;
+    auto name = c_imported_func.name;
 
     const auto& c_type = c_imported_func.external_function.type;
-    imported_func.inputs.resize(c_type.inputs_size);
+    std::vector<fizzy::ValType> inputs(c_type.inputs_size);
     fizzy::ValType (*unwrap_valtype_fn)(FizzyValueType value) = &unwrap;
-    std::transform(c_type.inputs, c_type.inputs + c_type.inputs_size, imported_func.inputs.begin(),
-        unwrap_valtype_fn);
-    imported_func.output = c_type.output == FizzyValueTypeVoid ?
-                               std::nullopt :
-                               std::make_optional(unwrap(c_type.output));
+    std::transform(
+        c_type.inputs, c_type.inputs + c_type.inputs_size, inputs.begin(), unwrap_valtype_fn);
+    auto output = c_type.output == FizzyValueTypeVoid ? std::nullopt :
+                                                        std::make_optional(unwrap(c_type.output));
 
-    imported_func.function = unwrap(
+    auto function = unwrap(
         c_imported_func.external_function.function, c_imported_func.external_function.context);
 
-    return imported_func;
+    return fizzy::ImportedFunction{module, name, inputs, output, function};
 }
 
 inline std::vector<fizzy::ImportedFunction> unwrap(
     const FizzyImportedFunction* c_imported_functions, size_t imported_functions_size)
 {
-    std::vector<fizzy::ImportedFunction> imported_functions(imported_functions_size);
+    std::vector<fizzy::ImportedFunction> imported_functions;
     fizzy::ImportedFunction (*unwrap_imported_func_fn)(const FizzyImportedFunction&) = &unwrap;
     std::transform(c_imported_functions, c_imported_functions + imported_functions_size,
-        imported_functions.begin(), unwrap_imported_func_fn);
+        std::back_inserter(imported_functions), unwrap_imported_func_fn);
     return imported_functions;
 }
 

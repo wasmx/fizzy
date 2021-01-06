@@ -53,7 +53,8 @@ FuncType translate_signature(std::string_view signature)
     return func_type;
 }
 
-fizzy::ExecutionResult env_adler32(void*, fizzy::Instance& instance, const fizzy::Value* args, int)
+fizzy::ExecutionResult env_adler32(
+    void*, void*, fizzy::Instance& instance, const fizzy::Value* args, int)
 {
     assert(instance.memory != nullptr);
     const auto ret = fizzy::test::adler32(
@@ -86,7 +87,7 @@ bool FizzyEngine::instantiate(bytes_view wasm_binary)
     {
         auto module = fizzy::parse(wasm_binary);
 
-        ExecuteFunction env_adler32_func = env_adler32;
+        ExecuteFunction env_adler32_func{env_adler32};
         ImportedFunction imported_func = {"env", "adler32",
             {fizzy::ValType::i32, fizzy::ValType::i32}, fizzy::ValType::i32,
             std::move(env_adler32_func)};

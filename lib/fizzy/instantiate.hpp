@@ -21,32 +21,31 @@ namespace fizzy
 struct ExecutionResult;
 struct Instance;
 
-using ExecuteFunctionPtr = ExecutionResult (*)(void* context, Instance&, const Value*, int depth);
-using DeleteContextFunctionPtr = void (*)(void* context) noexcept;
+using ExecuteFunctionPtr = ExecutionResult (*)(
+    void* context1, void* context2, Instance&, const Value*, int depth);
 
 /// Function representing WebAssembly or host function execution.
-class ExecuteFunction
+struct ExecuteFunction
 {
-public:
-    ExecuteFunction() = default;
+    ExecuteFunction() = delete;
 
     template <class F>
-    ExecuteFunction(
-        F f, void* context, DeleteContextFunctionPtr context_deleter = [](void*) noexcept {})
-      : m_function{f}, m_context{context, context_deleter}
+    ExecuteFunction(F f, void* context1 = nullptr, void* context2 = nullptr)
+      : host_func{f, context1, context2}, m_is_host_func{true}
     {}
 
-    template <class F>
-    ExecuteFunction(F f) : m_function{f}, m_context{nullptr, [](void*) noexcept {}}
+    ExecuteFunction(Instance& instance, FuncIdx func_idx)
+      : wasm_func{&instance, func_idx}, m_is_host_func(false)
     {}
-
-    ExecuteFunction(Instance& instance, FuncIdx func_idx);
 
     ExecutionResult operator()(Instance& instance, const Value* args, int depth);
 
-private:
-    ExecuteFunctionPtr m_function = nullptr;
-    std::shared_ptr<void> m_context = {nullptr, [](void*) noexcept {}};
+    union
+    {
+        std::tuple<ExecuteFunctionPtr, void*, void*> host_func;
+        std::tuple<Instance*, FuncIdx> wasm_func;
+    };
+    bool m_is_host_func = false;
 };
 
 /// Function with associated input/output types,

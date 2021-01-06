@@ -470,18 +470,13 @@ std::optional<FuncIdx> find_exported_function(const Module& module, std::string_
     return find_export(module, ExternalKind::Function, name);
 }
 
-ExecuteFunction::ExecuteFunction(Instance& instance, FuncIdx func_idx)
-  : m_function{[](void* context, Instance&, const Value* args, int depth) {
-        auto [func_idx, instance] = *static_cast<std::pair<FuncIdx, Instance*>*>(context);
-        return execute(*instance, func_idx, args, depth);
-    }},
-    m_context{new std::pair<FuncIdx, Instance*>(func_idx, &instance),
-        [](void* context) noexcept { delete static_cast<std::pair<FuncIdx, Instance*>*>(context); }}
-{}
-
 ExecutionResult ExecuteFunction::operator()(Instance& instance, const Value* args, int depth)
 {
-    return m_function(m_context.get(), instance, args, depth);
+    if (m_is_host_func)
+        return std::get<0>(host_func)(
+            std::get<1>(host_func), std::get<2>(host_func), instance, args, depth);
+    else
+        return execute(*std::get<0>(wasm_func), std::get<1>(wasm_func), args, depth);
 }
 
 std::optional<ExternalFunction> find_exported_function(Instance& instance, std::string_view name)
