@@ -63,7 +63,7 @@ static const FizzyValueType FizzyValueTypeVoid = 0;
 /// Function type.
 typedef struct FizzyFunctionType
 {
-    /// Output type, equals to FizzyValueTypeVoid, iff function has no output.
+    /// Output type, equals to FizzyValueTypeVoid iff function has no output.
     FizzyValueType output;
     /// Pointer to input types array.
     const FizzyValueType* inputs;
@@ -196,7 +196,7 @@ FizzyFunctionType fizzy_get_type(const FizzyModule* module, uint32_t type_idx);
 ///
 /// @param  module      Pointer to module. Cannot be NULL.
 /// @param  func_idx    Function index. Can be either index of an imported function or of a function
-///                     defined in module. Behaviour is undefined, if index is not valid according
+///                     defined in module. Behaviour is undefined if index is not valid according
 ///                     to module definition.
 /// @return             Type of the function corresponding to the index.
 ///
