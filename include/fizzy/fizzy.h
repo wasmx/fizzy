@@ -170,7 +170,7 @@ void fizzy_free_module(const FizzyModule* module);
 /// Make a copy of a module.
 ///
 /// @param  module    Pointer to module. Cannot be NULL.
-/// @return           Pointer to a newly allocated module, identical to @a module, or NULL in case
+/// @return           Pointer to a newly allocated module, identical to @p module, or NULL in case
 ///                   memory for a module could not be allocated.
 ///
 /// @note  Creating a copy is needed if more than single instance of a module is required, because
@@ -257,7 +257,7 @@ bool fizzy_module_has_start_function(const FizzyModule* module);
 ///
 /// @param  module                     Pointer to module. Cannot be NULL.
 /// @param  imported_functions         Pointer to the imported function array. Can be NULL iff
-///                                    imported_functions_size equals 0.
+///                                    @p imported_functions_size equals 0.
 /// @param  imported_functions_size    Size of the imported function array. Can be zero.
 /// @param  imported_table             Pointer to the imported table. Can be NULL iff module doesn't
 ///                                    import a table. Not an array, because WebAssembly 1.0 doesn't
@@ -266,19 +266,19 @@ bool fizzy_module_has_start_function(const FizzyModule* module);
 ///                                    doesn't import a memory. Not an array, because WebAssembly
 ///                                    1.0 doesn't support more than one memory in a module.
 /// @param  imported_globals           Pointer to the imported globals array. Can be NULL iff
-///                                    imported_globals_size equals 0.
+///                                    @p imported_globals_size equals 0.
 /// @param  imported_globals_size      Size of the imported global array. Can be zero.
 /// @return                            non-NULL pointer to instance in case of success,
 ///                                    NULL otherwise.
 ///
 /// @note
-/// Function expects @a imported_functions to be in the order of imports defined in the module.
+/// Function expects @p imported_functions to be in the order of imports defined in the module.
 /// No validation is done on the number of functions passed in, nor on their order.
 /// When number of passed functions or their order is different from the one defined by the
 /// module, behaviour is undefined.
 ///
 /// @note
-/// Function expects @a imported_globals to be in the order of imports defined in the module.
+/// Function expects @p imported_globals to be in the order of imports defined in the module.
 /// No validation is done on the number of globals passed in, nor on their order.
 /// When number of passed globals or their order is different from the one defined by the
 /// module, behaviour is undefined.
@@ -297,7 +297,7 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 ///
 /// @param  module                     Pointer to module. Cannot be NULL.
 /// @param  imported_functions         Pointer to the imported function array. Can be NULL iff
-///                                    imported_functions_size equals 0.
+///                                    @p imported_functions_size equals 0.
 /// @param  imported_functions_size    Size of the imported function array. Can be zero.
 /// @param  imported_table             Pointer to the imported table. Can be NULL iff module doesn't
 ///                                    import a table. Not an array, because WebAssembly 1.0 doesn't
@@ -306,18 +306,18 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 ///                                    doesn't import a memory. Not an array, because WebAssembly
 ///                                    1.0 doesn't support more than one memory in a module.
 /// @param  imported_globals           Pointer to the imported globals array. Can be NULL iff
-///                                    imported_globals_size equals 0.
+///                                    @p imported_globals_size equals 0.
 /// @param  imported_globals_size      Size of the imported global array. Can be zero.
 /// @return                            non-NULL pointer to instance in case of success,
 ///                                    NULL otherwise.
 ///
 /// @note
-/// Functions in @a imported_functions are allowed to be in any order and allowed to include some
+/// Functions in @p imported_functions are allowed to be in any order and allowed to include some
 /// functions not required by the module.
 /// Functions are matched to module's imports based on their module and name strings.
 ///
 /// @note
-/// Function expects @a imported_globals to be in the order of imports defined in the module.
+/// Function expects @p imported_globals to be in the order of imports defined in the module.
 /// No validation is done on the number of globals passed in, nor on their order.
 /// When number of passed globals or their order is different from the one defined by the
 /// module, behaviour is undefined.
@@ -364,7 +364,7 @@ size_t fizzy_get_instance_memory_size(FizzyInstance* instance);
 ///                         If function is found, associated context is allocated, which must exist
 ///                         as long as the function can be called by some other instance, and should
 ///                         be destroyed with fizzy_free_exported_function afterwards.
-///                         When function is not found (false returned), this out_function is not
+///                         When function is not found (false returned), this @p out_function is not
 ///                         modified, and fizzy_free_exported_function must not be called.
 /// @return                 true if function was found, false otherwise.
 bool fizzy_find_exported_function(
