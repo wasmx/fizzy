@@ -95,6 +95,43 @@ TEST(capi, get_function_type)
     fizzy_free_module(module);
 }
 
+TEST(capi, has_table)
+{
+    /* wat2wasm
+      (module)
+    */
+    const auto wasm_no_table = from_hex("0061736d01000000");
+    const auto module_no_table = fizzy_parse(wasm_no_table.data(), wasm_no_table.size());
+    ASSERT_NE(module_no_table, nullptr);
+
+    EXPECT_FALSE(fizzy_module_has_table(module_no_table));
+
+    fizzy_free_module(module_no_table);
+
+    /* wat2wasm
+      (table 0 anyfunc)
+    */
+    const auto wasm_table = from_hex("0061736d01000000040401700000");
+    const auto module_table = fizzy_parse(wasm_table.data(), wasm_table.size());
+    ASSERT_NE(module_table, nullptr);
+
+    EXPECT_TRUE(fizzy_module_has_table(module_table));
+
+    fizzy_free_module(module_table);
+
+    /* wat2wasm
+      (table (import "m" "t") 10 30 funcref)
+    */
+    const auto wasm_imported_table = from_hex("0061736d01000000020a01016d01740170010a1e");
+    const auto module_imported_table =
+        fizzy_parse(wasm_imported_table.data(), wasm_imported_table.size());
+    ASSERT_NE(module_imported_table, nullptr);
+
+    EXPECT_TRUE(fizzy_module_has_table(module_imported_table));
+
+    fizzy_free_module(module_imported_table);
+}
+
 TEST(capi, find_exported_function_index)
 {
     /* wat2wasm
