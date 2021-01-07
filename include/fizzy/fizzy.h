@@ -47,6 +47,7 @@ typedef struct FizzyExecutionResult
 /// @param  instance    Pointer to module instance.
 /// @param  args        Pointer to the argument array. Can be NULL iff function has no inputs.
 /// @param  depth       Call stack depth.
+/// @return             Result of execution.
 typedef FizzyExecutionResult (*FizzyExternalFn)(
     void* context, FizzyInstance* instance, const FizzyValue* args, int depth);
 
@@ -145,17 +146,25 @@ typedef struct FizzyImportedFunction
 } FizzyImportedFunction;
 
 /// Validate binary module.
+///
+/// @param  wasm_binary         Pointer to module binary data.
+/// @param  wasm_binary_size    Size of the module binary data.
+/// @return                     true if module is valid, false otherwise.
 bool fizzy_validate(const uint8_t* wasm_binary, size_t wasm_binary_size);
 
 /// Parse binary module.
 ///
-/// @return  non-NULL pointer to module in case of success, NULL otherwise.
+/// @param  wasm_binary         Pointer to module binary data.
+/// @param  wasm_binary_size    Size of the module binary data.
+/// @return                     non-NULL pointer to module in case of success, NULL otherwise.
 const FizzyModule* fizzy_parse(const uint8_t* wasm_binary, size_t wasm_binary_size);
 
 /// Free resources associated with the module.
 ///
+/// @param  module    Pointer to module. If NULL is passed, function has no effect.
+///
+/// @note
 /// Should be called unless @p module was passed to fizzy_instantiate.
-/// If passed pointer is NULL, has no effect.
 void fizzy_free_module(const FizzyModule* module);
 
 /// Make a copy of a module.
@@ -189,6 +198,7 @@ FizzyFunctionType fizzy_get_type(const FizzyModule* module, uint32_t type_idx);
 /// @param  func_idx    Function index. Can be either index of an imported function or of a function
 ///                     defined in module. Behaviour is undefined, if index is not valid according
 ///                     to module definition.
+/// @return             Type of the function corresponding to the index.
 ///
 /// @note  All module function indices are greater than all imported function indices.
 FizzyFunctionType fizzy_get_function_type(const FizzyModule* module, uint32_t func_idx);
@@ -317,24 +327,32 @@ FizzyInstance* fizzy_resolve_instantiate(const FizzyModule* module,
     const FizzyExternalGlobal* imported_globals, size_t imported_globals_size);
 
 /// Free resources associated with the instance.
-/// If passed pointer is NULL, has no effect.
+///
+/// @param  instance    Pointer to instance. If NULL is passed, function has no effect.
 void fizzy_free_instance(FizzyInstance* instance);
 
 /// Get pointer to module of an instance.
 ///
-/// @note  The returned pointer represents non-owning, "view"-access to the module and must not be
-///        passed to fizzy_free_module.
+/// @param  instance    Pointer to instance. Cannot be NULL.
+/// @return             Pointer to a module.
+///
+/// @note    The returned pointer represents non-owning, "view"-access to the module and must not be
+///          passed to fizzy_free_module.
 const FizzyModule* fizzy_get_instance_module(FizzyInstance* instance);
 
 /// Get pointer to memory of an instance.
 ///
-/// @return  Pointer to memory data or NULL in case instance doesn't have any memory.
+/// @param  instance    Pointer to instance. Cannot be NULL.
+/// @return             Pointer to memory data or NULL in case instance doesn't have any memory.
+///
 /// @note    Function returns pointer to memory regardless of whether memory is exported or not.
 uint8_t* fizzy_get_instance_memory_data(FizzyInstance* instance);
 
 /// Get size of memory of an instance.
 ///
-/// @return  Size of memory in bytes or 0 in case instance doesn't have any memory.
+/// @param  instance    Pointer to instance. Cannot be NULL.
+/// @return             Size of memory in bytes or 0 in case instance doesn't have any memory.
+///
 /// @note    Function returns memory size regardless of whether memory is exported or not.
 size_t fizzy_get_instance_memory_size(FizzyInstance* instance);
 
@@ -397,6 +415,7 @@ bool fizzy_find_exported_global(
 /// @param  instance    Pointer to module instance. Cannot be NULL.
 /// @param  args        Pointer to the argument array. Can be NULL if function has 0 inputs.
 /// @param  depth       Call stack depth.
+/// @return             Result of execution.
 ///
 /// @note
 /// No validation is done on the number of arguments passed in @p args, nor on their types.
