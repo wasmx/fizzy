@@ -282,6 +282,37 @@ inline std::vector<fizzy::ExternalGlobal> unwrap(
         external_globals.begin(), unwrap_external_global_fn);
     return external_globals;
 }
+
+inline FizzyExternalKind wrap(fizzy::ExternalKind kind) noexcept
+{
+    return static_cast<FizzyExternalKind>(kind);
+}
+
+inline FizzyImportDescription wrap(
+    const fizzy::Import& import, const fizzy::Module& module) noexcept
+{
+    FizzyImportDescription c_import_description;
+    c_import_description.module = import.module.c_str();
+    c_import_description.name = import.name.c_str();
+    c_import_description.kind = wrap(import.kind);
+    switch (c_import_description.kind)
+    {
+    case FizzyExternalKindFunction:
+        c_import_description.desc.function_type =
+            wrap(module.typesec[import.desc.function_type_index]);
+        break;
+    case FizzyExternalKindTable:
+        c_import_description.desc.table_limits = wrap(import.desc.table.limits);
+        break;
+    case FizzyExternalKindMemory:
+        c_import_description.desc.memory_limits = wrap(import.desc.memory.limits);
+        break;
+    case FizzyExternalKindGlobal:
+        c_import_description.desc.global_type = wrap(import.desc.global);
+        break;
+    }
+    return c_import_description;
+}
 }  // namespace
 
 extern "C" {
@@ -337,6 +368,18 @@ uint32_t fizzy_get_type_count(const FizzyModule* module)
 FizzyFunctionType fizzy_get_type(const FizzyModule* module, uint32_t type_idx)
 {
     return wrap(unwrap(module)->typesec[type_idx]);
+}
+
+uint32_t fizzy_get_import_count(const FizzyModule* module)
+{
+    return static_cast<uint32_t>(unwrap(module)->importsec.size());
+}
+
+FizzyImportDescription fizzy_get_import_description(
+    const FizzyModule* c_module, uint32_t import_idx)
+{
+    const auto* module = unwrap(c_module);
+    return wrap(module->importsec[import_idx], *module);
 }
 
 FizzyFunctionType fizzy_get_function_type(const FizzyModule* module, uint32_t func_idx)
