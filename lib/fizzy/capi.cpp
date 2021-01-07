@@ -339,6 +339,11 @@ bool fizzy_module_has_table(const FizzyModule* module)
     return unwrap(module)->has_table();
 }
 
+bool fizzy_module_has_memory(const FizzyModule* module)
+{
+    return unwrap(module)->has_memory();
+}
+
 bool fizzy_find_exported_function_index(
     const FizzyModule* module, const char* name, uint32_t* out_func_idx)
 {

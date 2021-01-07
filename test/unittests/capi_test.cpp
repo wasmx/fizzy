@@ -132,6 +132,43 @@ TEST(capi, has_table)
     fizzy_free_module(module_imported_table);
 }
 
+TEST(capi, has_memory)
+{
+    /* wat2wasm
+      (module)
+    */
+    const auto wasm_no_memory = from_hex("0061736d01000000");
+    const auto module_no_memory = fizzy_parse(wasm_no_memory.data(), wasm_no_memory.size());
+    ASSERT_NE(module_no_memory, nullptr);
+
+    EXPECT_FALSE(fizzy_module_has_memory(module_no_memory));
+
+    fizzy_free_module(module_no_memory);
+
+    /* wat2wasm
+      (memory 1)
+    */
+    const auto wasm_memory = from_hex("0061736d010000000503010001");
+    const auto module_memory = fizzy_parse(wasm_memory.data(), wasm_memory.size());
+    ASSERT_NE(module_memory, nullptr);
+
+    EXPECT_TRUE(fizzy_module_has_memory(module_memory));
+
+    fizzy_free_module(module_memory);
+
+    /* wat2wasm
+      (memory (import "mod" "mem") 1)
+    */
+    const auto wasm_imported_mem = from_hex("0061736d01000000020c01036d6f64036d656d020001");
+    const auto module_imported_mem =
+        fizzy_parse(wasm_imported_mem.data(), wasm_imported_mem.size());
+    ASSERT_NE(module_imported_mem, nullptr);
+
+    EXPECT_TRUE(fizzy_module_has_memory(module_imported_mem));
+
+    fizzy_free_module(module_imported_mem);
+}
+
 TEST(capi, find_exported_function_index)
 {
     /* wat2wasm

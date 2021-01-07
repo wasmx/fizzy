@@ -185,6 +185,12 @@ FizzyFunctionType fizzy_get_function_type(const FizzyModule* module, uint32_t fu
 /// @return                 true if module has a table definition, false otherwise.
 bool fizzy_module_has_table(const FizzyModule* module);
 
+/// Check whether module has a memory.
+///
+/// @param  module          Pointer to module. Cannot be NULL.
+/// @return                 true if module has a memory definition, false otherwise.
+bool fizzy_module_has_memory(const FizzyModule* module);
+
 /// Find index of exported function by name.
 ///
 /// @param  module          Pointer to module. Cannot be NULL.
