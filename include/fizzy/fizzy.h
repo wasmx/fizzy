@@ -200,6 +200,12 @@ bool fizzy_module_has_memory(const FizzyModule* module);
 bool fizzy_find_exported_function_index(
     const FizzyModule* module, const char* name, uint32_t* out_func_idx);
 
+/// Check whether module has a start function.
+///
+/// @param  module          Pointer to module. Cannot be NULL.
+/// @return                 true if module has a start function, false otherwise.
+bool fizzy_module_has_start_function(const FizzyModule* module);
+
 /// Instantiate a module.
 ///
 /// The instance takes ownership of the module, i.e. fizzy_free_module must not be called on the

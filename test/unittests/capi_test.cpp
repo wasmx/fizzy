@@ -388,6 +388,32 @@ TEST(capi, find_exported_global)
     fizzy_free_instance(instance);
 }
 
+TEST(capi, has_start_function)
+{
+    /* wat2wasm
+      (module)
+    */
+    const auto wasm_no_start = from_hex("0061736d01000000");
+    const auto module_no_start = fizzy_parse(wasm_no_start.data(), wasm_no_start.size());
+    ASSERT_NE(module_no_start, nullptr);
+
+    EXPECT_FALSE(fizzy_module_has_start_function(module_no_start));
+
+    fizzy_free_module(module_no_start);
+
+    /* wat2wasm
+      (func)
+      (start 0)
+    */
+    const auto wasm_start = from_hex("0061736d01000000010401600000030201000801000a040102000b");
+    const auto module_start = fizzy_parse(wasm_start.data(), wasm_start.size());
+    ASSERT_NE(module_start, nullptr);
+
+    EXPECT_TRUE(fizzy_module_has_start_function(module_start));
+
+    fizzy_free_module(module_start);
+}
+
 TEST(capi, instantiate)
 {
     uint8_t wasm_prefix[]{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00};

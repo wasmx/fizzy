@@ -404,6 +404,11 @@ bool fizzy_find_exported_global(
     return true;
 }
 
+bool fizzy_module_has_start_function(const FizzyModule* module)
+{
+    return unwrap(module)->startfunc.has_value();
+}
+
 FizzyInstance* fizzy_instantiate(const FizzyModule* module,
     const FizzyExternalFunction* imported_functions, size_t imported_functions_size,
     const FizzyExternalTable* imported_table, const FizzyExternalMemory* imported_memory,
