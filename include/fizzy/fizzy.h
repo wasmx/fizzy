@@ -179,6 +179,18 @@ const FizzyModule* fizzy_clone_module(const FizzyModule* module);
 /// @note  All module function indices are greater than all imported function indices.
 FizzyFunctionType fizzy_get_function_type(const FizzyModule* module, uint32_t func_idx);
 
+/// Check whether module has a table.
+///
+/// @param  module          Pointer to module. Cannot be NULL.
+/// @return                 true if module has a table definition, false otherwise.
+bool fizzy_module_has_table(const FizzyModule* module);
+
+/// Check whether module has a memory.
+///
+/// @param  module          Pointer to module. Cannot be NULL.
+/// @return                 true if module has a memory definition, false otherwise.
+bool fizzy_module_has_memory(const FizzyModule* module);
+
 /// Find index of exported function by name.
 ///
 /// @param  module          Pointer to module. Cannot be NULL.
