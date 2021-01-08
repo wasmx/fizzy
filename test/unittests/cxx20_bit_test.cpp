@@ -48,19 +48,31 @@ TEST(cxx20_bit, bit_cast_uint32_to_array)
 TEST(cxx20_bit, popcount32)
 {
     EXPECT_EQ(popcount(uint32_t{0}), 0);
+    EXPECT_EQ(popcount(uint32_t{1}), 1);
+    EXPECT_EQ(popcount(uint32_t{0x7f}), 7);
+    EXPECT_EQ(popcount(uint32_t{0x80}), 1);
+    EXPECT_EQ(popcount(uint32_t{0x12345678}), 13);
     EXPECT_EQ(popcount(uint32_t{0xffffffff}), 32);
     EXPECT_EQ(popcount(uint32_t{0xffff0000}), 16);
     EXPECT_EQ(popcount(uint32_t{0x0000ffff}), 16);
     EXPECT_EQ(popcount(uint32_t{0x00ffff00}), 16);
     EXPECT_EQ(popcount(uint32_t{0x00ff00ff}), 16);
+    EXPECT_EQ(popcount(uint32_t{0x007f8001}), 9);
+    EXPECT_EQ(popcount(uint32_t{0x0055ffaa}), 16);
 }
 
 TEST(cxx20_bit, popcount64)
 {
     EXPECT_EQ(popcount(uint64_t{0}), 0);
+    EXPECT_EQ(popcount(uint64_t{1}), 1);
+    EXPECT_EQ(popcount(uint64_t{0x7f}), 7);
+    EXPECT_EQ(popcount(uint64_t{0x80}), 1);
+    EXPECT_EQ(popcount(uint64_t{0x1234567890abcdef}), 32);
     EXPECT_EQ(popcount(uint64_t{0xffffffffffffffff}), 64);
     EXPECT_EQ(popcount(uint64_t{0xffffffff00000000}), 32);
     EXPECT_EQ(popcount(uint64_t{0x00000000ffffffff}), 32);
     EXPECT_EQ(popcount(uint64_t{0x0000ffffffff0000}), 32);
     EXPECT_EQ(popcount(uint64_t{0x00ff00ff00ff00ff}), 32);
+    EXPECT_EQ(popcount(uint64_t{0x007f8001007f8001}), 18);
+    EXPECT_EQ(popcount(uint64_t{0x0055ffaa0055ffaa}), 32);
 }
