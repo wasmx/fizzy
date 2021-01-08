@@ -2,6 +2,7 @@
 // Copyright 2019-2020 The Fizzy Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#include "bitcount_test_cases.hpp"
 #include "execute.hpp"
 #include "instructions.hpp"
 #include "parser.hpp"
@@ -283,7 +284,8 @@ TEST(execute_numeric, i32_ctz)
 TEST(execute_numeric, i32_popcnt)
 {
     const auto i32_popcnt = create_unary_operation_executor(Instr::i32_popcnt);
-    EXPECT_THAT(i32_popcnt(0x7fff00), Result(7 + 8));
+    for (const auto& [input, expected] : popcount32_test_cases)
+        EXPECT_THAT(i32_popcnt(input), Result(expected)) << input;
 }
 
 TEST(execute_numeric, i32_add)
@@ -531,7 +533,8 @@ TEST(execute_numeric, i64_ctz)
 TEST(execute_numeric, i64_popcnt)
 {
     const auto i64_popcnt = create_unary_operation_executor(Instr::i64_popcnt);
-    EXPECT_THAT(i64_popcnt(0x7fff00_u64), Result(7 + 8));
+    for (const auto& [input, expected] : popcount64_test_cases)
+        EXPECT_THAT(i64_popcnt(input), Result(expected)) << input;
 }
 
 TEST(execute_numeric, i64_add)
