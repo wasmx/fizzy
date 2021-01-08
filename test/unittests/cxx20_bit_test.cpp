@@ -48,52 +48,42 @@ TEST(cxx20_bit, bit_cast_uint32_to_array)
 
 TEST(cxx20_bit, popcount32)
 {
-    for (const auto& [input, expected] : popcount32_test_cases)
-        EXPECT_EQ(popcount(input), expected) << input;
+    for (const auto& [input, expected_popcount, expected_countl_zero, expected_countr_zero] :
+        bitcount32_test_cases)
+        EXPECT_EQ(popcount(input), expected_popcount) << input;
 }
 
 TEST(cxx20_bit, popcount64)
 {
-    for (const auto& [input, expected] : popcount64_test_cases)
-        EXPECT_EQ(popcount(input), expected) << input;
+    for (const auto& [input, expected_popcount, expected_countl_zero, expected_countr_zero] :
+        bitcount64_test_cases)
+        EXPECT_EQ(popcount(input), expected_popcount) << input;
 }
 
 TEST(cxx20_bit, countl_zero32)
 {
-    EXPECT_EQ(countl_zero(uint32_t{0}), 32);
-    EXPECT_EQ(countl_zero(uint32_t{0xffffffff}), 0);
-    EXPECT_EQ(countl_zero(uint32_t{0x0000ffff}), 16);
-    EXPECT_EQ(countl_zero(uint32_t{0xffff0000}), 0);
-    EXPECT_EQ(countl_zero(uint32_t{0x00ffff00}), 8);
-    EXPECT_EQ(countl_zero(uint32_t{0x00ff00ff}), 8);
+    for (const auto& [input, expected_popcount, expected_countl_zero, expected_countr_zero] :
+        bitcount32_test_cases)
+        EXPECT_EQ(countl_zero(input), expected_countl_zero) << input;
 }
 
 TEST(cxx20_bit, countl_zero64)
 {
-    EXPECT_EQ(countl_zero(uint64_t{0}), 64);
-    EXPECT_EQ(countl_zero(uint64_t{0xffffffffffffffff}), 0);
-    EXPECT_EQ(countl_zero(uint64_t{0xffffffff00000000}), 0);
-    EXPECT_EQ(countl_zero(uint64_t{0x00000000ffffffff}), 32);
-    EXPECT_EQ(countl_zero(uint64_t{0x0000ffffffff0000}), 16);
-    EXPECT_EQ(countl_zero(uint64_t{0x00ff00ff00ff00ff}), 8);
+    for (const auto& [input, expected_popcount, expected_countl_zero, expected_countr_zero] :
+        bitcount64_test_cases)
+        EXPECT_EQ(countl_zero(input), expected_countl_zero) << input;
 }
 
 TEST(cxx20_bit, countr_zero32)
 {
-    EXPECT_EQ(countr_zero(uint32_t{0}), 32);
-    EXPECT_EQ(countr_zero(uint32_t{0xffffffff}), 0);
-    EXPECT_EQ(countr_zero(uint32_t{0x0000ffff}), 0);
-    EXPECT_EQ(countr_zero(uint32_t{0xffff0000}), 16);
-    EXPECT_EQ(countr_zero(uint32_t{0x00ffff00}), 8);
-    EXPECT_EQ(countr_zero(uint32_t{0x00ff00ff}), 0);
+    for (const auto& [input, expected_popcount, expected_countl_zero, expected_countr_zero] :
+        bitcount32_test_cases)
+        EXPECT_EQ(countr_zero(input), expected_countr_zero) << input;
 }
 
 TEST(cxx20_bit, countr_zero64)
 {
-    EXPECT_EQ(countr_zero(uint64_t{0}), 64);
-    EXPECT_EQ(countr_zero(uint64_t{0xffffffffffffffff}), 0);
-    EXPECT_EQ(countr_zero(uint64_t{0xffffffff00000000}), 32);
-    EXPECT_EQ(countr_zero(uint64_t{0x00000000ffffffff}), 0);
-    EXPECT_EQ(countr_zero(uint64_t{0x0000ffffffff0000}), 16);
-    EXPECT_EQ(countr_zero(uint64_t{0x00ff00ff00ff00ff}), 0);
+    for (const auto& [input, expected_popcount, expected_countl_zero, expected_countr_zero] :
+        bitcount64_test_cases)
+        EXPECT_EQ(countr_zero(input), expected_countr_zero) << input;
 }
