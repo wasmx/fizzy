@@ -102,8 +102,21 @@ MATCHER_P(CResult, value, "")  // NOLINT(readability-redundant-string-init)
             return arg.value.f64 == fizzy::test::FP{value};
         }
     }
-    else  // always check 64 bit of result for all integers, including 32-bit results
-        return arg.value.i64 == static_cast<std::make_unsigned_t<value_type>>(value);
+    else if constexpr (std::is_same_v<value_type, uint32_t>)
+    {
+        // always check 64 bit of result
+        return arg.value.i64 == uint64_t{value};
+    }
+    else if constexpr (std::is_same_v<value_type, uint64_t>)
+    {
+        return arg.value.i64 == value;
+    }
+    else
+    {
+        if (result_listener->IsInterested())
+            *result_listener << "unsupported type";
+        return false;
+    }
 }
 
 #define EXPECT_THROW_MESSAGE(stmt, ex_type, expected)                                        \
