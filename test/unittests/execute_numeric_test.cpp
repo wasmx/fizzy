@@ -512,8 +512,7 @@ TEST(execute_numeric, i64_extend_i32_u_2)
         "0061736d0100000001060160017f017e030201000a1201100042effdb6f5fdddefd65e1a2000ad0b");
 
     auto instance = instantiate(parse(wasm));
-    const auto r = execute(*instance, 0, {0xff000000});
-    EXPECT_THAT(r, Result(uint64_t{0x00000000ff000000}));
+    EXPECT_THAT(execute(*instance, 0, {0xff000000}), Result(0x00000000ff000000_u64));
 }
 
 TEST(execute_numeric, i64_clz)
