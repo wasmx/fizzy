@@ -169,6 +169,20 @@ void fizzy_free_module(const FizzyModule* module);
 /// @note  Input module is not modified neither in success nor in failure case.
 const FizzyModule* fizzy_clone_module(const FizzyModule* module);
 
+/// Get number of types defined in the module.
+///
+/// @param  module    Pointer to module. Cannot be NULL.
+/// @return           Number of type in the module.
+uint32_t fizzy_get_type_count(const FizzyModule* module);
+
+/// Get type defined in the module.
+///
+/// @param  module      Pointer to module. Cannot be NULL.
+/// @param  type_idx    Type index. Behaviour is undefined if index is not valid according
+///                     to module definition.
+/// @return             Type corresponding to the index.
+FizzyFunctionType fizzy_get_type(const FizzyModule* module, uint32_t type_idx);
+
 /// Get type of the function defined in the module.
 ///
 /// @param  module      Pointer to module. Cannot be NULL.
@@ -190,6 +204,23 @@ bool fizzy_module_has_table(const FizzyModule* module);
 /// @param  module          Pointer to module. Cannot be NULL.
 /// @return                 true if module has a memory definition, false otherwise.
 bool fizzy_module_has_memory(const FizzyModule* module);
+
+/// Get number of globals defined in the module.
+///
+/// @param  module    Pointer to module. Cannot be NULL.
+/// @return           Number of globals in the module.
+uint32_t fizzy_get_global_count(const FizzyModule* module);
+
+/// Get type of a given global defined in the module.
+///
+/// @param  module        Pointer to module. Cannot be NULL.
+/// @param  global_idx    Global index. Can be either index of an imported global or of a global
+///                       defined in module. Behaviour is undefined if index is not valid according
+///                       to module definition.
+/// @return               Type of the global corresponding to the index.
+///
+/// @note  All module global indices are greater than all imported global indices.
+FizzyGlobalType fizzy_get_global_type(const FizzyModule* module, uint32_t global_idx);
 
 /// Find index of exported function by name.
 ///

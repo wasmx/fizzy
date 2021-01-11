@@ -329,6 +329,16 @@ const FizzyModule* fizzy_clone_module(const FizzyModule* module)
     }
 }
 
+uint32_t fizzy_get_type_count(const FizzyModule* module)
+{
+    return static_cast<uint32_t>(unwrap(module)->typesec.size());
+}
+
+FizzyFunctionType fizzy_get_type(const FizzyModule* module, uint32_t type_idx)
+{
+    return wrap(unwrap(module)->typesec[type_idx]);
+}
+
 FizzyFunctionType fizzy_get_function_type(const FizzyModule* module, uint32_t func_idx)
 {
     return wrap(unwrap(module)->get_function_type(func_idx));
@@ -342,6 +352,16 @@ bool fizzy_module_has_table(const FizzyModule* module)
 bool fizzy_module_has_memory(const FizzyModule* module)
 {
     return unwrap(module)->has_memory();
+}
+
+uint32_t fizzy_get_global_count(const FizzyModule* module)
+{
+    return static_cast<uint32_t>(unwrap(module)->get_global_count());
+}
+
+FizzyGlobalType fizzy_get_global_type(const FizzyModule* module, uint32_t global_idx)
+{
+    return wrap(unwrap(module)->get_global_type(global_idx));
 }
 
 bool fizzy_find_exported_function_index(
