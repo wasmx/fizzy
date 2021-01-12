@@ -236,7 +236,7 @@ commands:
         default: false
       expected_passed:
         type: integer
-        default: 18979
+        default: 19044
       expected_failed:
         type: integer
         default: 0
@@ -251,7 +251,7 @@ commands:
           working_directory: ~/build
           command: |
             if [ ! -d wasm-spec ]; then
-              git clone https://github.com/wasmx/wasm-spec --branch w3c-1.0-tests-backported-20201113 --depth 1 wasm-spec
+              git clone https://github.com/wasmx/wasm-spec --branch w3c-1.0-tests-backported-20210212 --depth 1 wasm-spec
               mkdir json && cd json
               options='--disable-saturating-float-to-int --disable-sign-extension --disable-multi-value'
               find ../wasm-spec/test/core -name '*.wast' -exec wast2json $options {} \;
