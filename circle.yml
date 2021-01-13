@@ -270,6 +270,12 @@ jobs:
   lint:
     executor: linux-clang-latest
     steps:
+      - run:
+          name: "Install doxygen"
+          background: true
+          command: |
+            sudo apt-get -q update
+            sudo apt-get -qy install doxygen graphviz
       - checkout
       - run:
           name: "Run shellcheck"
@@ -319,6 +325,12 @@ jobs:
           cmake_options: -DCMAKE_TOOLCHAIN_FILE=~/project/cmake/toolchains/libc++.cmake -DCMAKE_CXX_STANDARD=20
       - install_testfloat
       - test
+      - run:
+          name: "Doxygen"
+          command: doxygen
+      - store_artifacts:
+          path: docs
+          destination: docs
 
   release-linux:
     executor: linux-gcc-latest
