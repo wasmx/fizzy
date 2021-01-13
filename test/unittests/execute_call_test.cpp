@@ -390,7 +390,7 @@ TEST(execute_call, imported_function_call_with_arguments)
 
     const auto module = parse(wasm);
 
-    auto host_foo = [](Instance&, const Value* args, int) { return Value{as_uint32(args[0]) * 2}; };
+    auto host_foo = [](Instance&, const Value* args, int) { return Value{args[0].i32 * 2}; };
     const auto host_foo_type = module->typesec[0];
 
     auto instance = instantiate(*module, {{host_foo, host_foo_type}});
@@ -433,12 +433,10 @@ TEST(execute_call, imported_functions_call_indirect)
     ASSERT_EQ(module->codesec.size(), 2);
 
     constexpr auto sqr = [](Instance&, const Value* args, int) {
-        const auto x = as_uint32(args[0]);
-        return Value{uint64_t{x} * uint64_t{x}};
+        return Value{uint64_t{args[0].i32} * uint64_t{args[0].i32}};
     };
     constexpr auto isqrt = [](Instance&, const Value* args, int) {
-        const auto x = as_uint32(args[0]);
-        return Value{(11 + uint64_t{x} / 11) / 2};
+        return Value{(11 + uint64_t{args[0].i32} / 11) / 2};
     };
 
     auto instance = instantiate(*module, {{sqr, module->typesec[0]}, {isqrt, module->typesec[0]}});

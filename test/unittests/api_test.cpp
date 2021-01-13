@@ -344,7 +344,7 @@ TEST(api, find_exported_global)
 
     auto opt_global = find_exported_global(*instance, "g1");
     ASSERT_TRUE(opt_global);
-    EXPECT_EQ(as_uint32(*opt_global->value), 0);
+    EXPECT_EQ(opt_global->value->i32, 0);
     EXPECT_EQ(opt_global->type.value_type, ValType::i32);
     EXPECT_TRUE(opt_global->type.is_mutable);
 
