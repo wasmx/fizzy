@@ -42,8 +42,42 @@ $ cmake ..
 $ cmake --build .
 ```
 
-This will build Fizzy as a library and since there is no public API
-(the so called *embedder API* in WebAssembly) yet, this is not very useful.
+This will build Fizzy as a library. [C API] is provided for embedding Fizzy engine in applications.
+
+A small example of using the C API, which loads a wasm binary and executes a function named `main`:
+
+```c
+#include <fizzy/fizzy.h>
+
+bool execute_main(const uint8_t* wasm_binary, size_t wasm_binary_size)
+{
+    // Parse and validate binary module.
+    const FizzyModule* module = fizzy_parse(wasm_binary, wasm_binary_size);
+
+    // Find main function.
+    uint32_t main_fn_index;
+    if (!fizzy_find_exported_function_index(module, "main", &main_fn_index))
+        return false;
+
+    // Instantiate module without imports.
+    FizzyInstance* instance = fizzy_instantiate(module, NULL, 0, NULL, NULL, NULL, 0);
+
+    // Execute main function without arguments.
+    const FizzyExecutionResult result = fizzy_execute(instance, main_fn_index, NULL, 0);
+    if (result.trapped)
+        return false;
+
+    fizzy_free_instance(instance);
+    return true;
+}
+```
+
+Fizzy also provides a CMake package for easy integration in projects that use it:
+```cmake
+find_package(fizzy CONFIG REQUIRED)
+...
+target_link_libraries(app_name PRIVATE fizzy::fizzy)
+```
 
 ## WASI
 
@@ -180,6 +214,8 @@ Licensed under the [Apache License, Version 2.0].
 [@axic]: https://github.com/axic
 [@chfast]: https://github.com/chfast
 [@gumb0]: https://github.com/gumb0
+
+[C API]: ./include/fizzy/fizzy.h
 
 [WASI]: https://github.com/WebAssembly/WASI
 [uvwasi]: https://github.com/cjihrig/uvwasi
