@@ -19,11 +19,14 @@ typedef struct FizzyInstance FizzyInstance;
 
 /// The data type representing numeric values.
 ///
-/// i64 member is used to represent values of both i32 and i64 type.
+/// The #i64 member is used to represent values of both i32 and i64 type.
 typedef union FizzyValue
 {
+    /// Integer value.
     uint64_t i64;
+    /// 32-bit floating-point value.
     float f32;
+    /// 64-bit floating-point value.
     double f64;
 } FizzyValue;
 
@@ -33,10 +36,10 @@ typedef struct FizzyExecutionResult
     /// Whether execution ended with a trap.
     bool trapped;
     /// Whether function returned a value.
-    /// Equals false if trapped equals true.
+    /// Equals false if #trapped equals true.
     bool has_value;
     /// Value returned from a function.
-    /// Valid only if has_value equals true.
+    /// Valid only if #has_value equals true.
     FizzyValue value;
 } FizzyExecutionResult;
 
@@ -47,6 +50,7 @@ typedef struct FizzyExecutionResult
 /// @param  instance    Pointer to module instance.
 /// @param  args        Pointer to the argument array. Can be NULL iff function has no inputs.
 /// @param  depth       Call stack depth.
+/// @return             Result of execution.
 typedef FizzyExecutionResult (*FizzyExternalFn)(
     void* context, FizzyInstance* instance, const FizzyValue* args, int depth);
 
@@ -62,7 +66,7 @@ static const FizzyValueType FizzyValueTypeVoid = 0;
 /// Function type.
 typedef struct FizzyFunctionType
 {
-    /// Output type, equals to FizzyValueTypeVoid, iff function has no output.
+    /// Output type, equals to ::FizzyValueTypeVoid iff function has no output.
     FizzyValueType output;
     /// Pointer to input types array.
     const FizzyValueType* inputs;
@@ -97,7 +101,7 @@ typedef struct FizzyLimits
     /// Minimum value.
     uint32_t min;
     /// Maximum value.
-    /// Valid only if has_max equals true.
+    /// Valid only if #has_max equals true.
     uint32_t max;
     /// Whether limits has maximum value.
     bool has_max;
@@ -145,23 +149,31 @@ typedef struct FizzyImportedFunction
 } FizzyImportedFunction;
 
 /// Validate binary module.
+///
+/// @param  wasm_binary         Pointer to module binary data.
+/// @param  wasm_binary_size    Size of the module binary data.
+/// @return                     true if module is valid, false otherwise.
 bool fizzy_validate(const uint8_t* wasm_binary, size_t wasm_binary_size);
 
 /// Parse binary module.
 ///
-/// @return  non-NULL pointer to module in case of success, NULL otherwise.
+/// @param  wasm_binary         Pointer to module binary data.
+/// @param  wasm_binary_size    Size of the module binary data.
+/// @return                     non-NULL pointer to module in case of success, NULL otherwise.
 const FizzyModule* fizzy_parse(const uint8_t* wasm_binary, size_t wasm_binary_size);
 
 /// Free resources associated with the module.
 ///
-/// Should be called unless @p module was passed to fizzy_instantiate.
-/// If passed pointer is NULL, has no effect.
+/// @param  module    Pointer to module. If NULL is passed, function has no effect.
+///
+/// @note
+/// Should be called unless @p module was passed to fizzy_instantiate().
 void fizzy_free_module(const FizzyModule* module);
 
 /// Make a copy of a module.
 ///
 /// @param  module    Pointer to module. Cannot be NULL.
-/// @return           Pointer to a newly allocated module, identical to @a module, or NULL in case
+/// @return           Pointer to a newly allocated module, identical to @p module, or NULL in case
 ///                   memory for a module could not be allocated.
 ///
 /// @note  Creating a copy is needed if more than single instance of a module is required, because
@@ -187,8 +199,9 @@ FizzyFunctionType fizzy_get_type(const FizzyModule* module, uint32_t type_idx);
 ///
 /// @param  module      Pointer to module. Cannot be NULL.
 /// @param  func_idx    Function index. Can be either index of an imported function or of a function
-///                     defined in module. Behaviour is undefined, if index is not valid according
+///                     defined in module. Behaviour is undefined if index is not valid according
 ///                     to module definition.
+/// @return             Type of the function corresponding to the index.
 ///
 /// @note  All module function indices are greater than all imported function indices.
 FizzyFunctionType fizzy_get_function_type(const FizzyModule* module, uint32_t func_idx);
@@ -239,15 +252,15 @@ bool fizzy_module_has_start_function(const FizzyModule* module);
 
 /// Instantiate a module.
 ///
-/// The instance takes ownership of the module, i.e. fizzy_free_module must not be called on the
+/// The instance takes ownership of the module, i.e. fizzy_free_module() must not be called on the
 /// module after this call.
-/// For simplicity a module cannot be shared among several instances (calling fizzy_instatiate more
-/// than once with the same module results in undefined behaviour), but after fizzy_instantiate
-/// functions querying module info can still be called with @p module.
+/// For simplicity a module cannot be shared among several instances (calling fizzy_instatiate()
+/// more than once with the same module results in undefined behaviour), but after
+/// fizzy_instantiate() functions querying module info can still be called with @p module.
 ///
 /// @param  module                     Pointer to module. Cannot be NULL.
 /// @param  imported_functions         Pointer to the imported function array. Can be NULL iff
-///                                    imported_functions_size equals 0.
+///                                    @p imported_functions_size equals 0.
 /// @param  imported_functions_size    Size of the imported function array. Can be zero.
 /// @param  imported_table             Pointer to the imported table. Can be NULL iff module doesn't
 ///                                    import a table. Not an array, because WebAssembly 1.0 doesn't
@@ -256,19 +269,19 @@ bool fizzy_module_has_start_function(const FizzyModule* module);
 ///                                    doesn't import a memory. Not an array, because WebAssembly
 ///                                    1.0 doesn't support more than one memory in a module.
 /// @param  imported_globals           Pointer to the imported globals array. Can be NULL iff
-///                                    imported_globals_size equals 0.
+///                                    @p imported_globals_size equals 0.
 /// @param  imported_globals_size      Size of the imported global array. Can be zero.
 /// @return                            non-NULL pointer to instance in case of success,
 ///                                    NULL otherwise.
 ///
 /// @note
-/// Function expects @a imported_functions to be in the order of imports defined in the module.
+/// Function expects @p imported_functions to be in the order of imports defined in the module.
 /// No validation is done on the number of functions passed in, nor on their order.
 /// When number of passed functions or their order is different from the one defined by the
 /// module, behaviour is undefined.
 ///
 /// @note
-/// Function expects @a imported_globals to be in the order of imports defined in the module.
+/// Function expects @p imported_globals to be in the order of imports defined in the module.
 /// No validation is done on the number of globals passed in, nor on their order.
 /// When number of passed globals or their order is different from the one defined by the
 /// module, behaviour is undefined.
@@ -279,15 +292,16 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 
 /// Instantiate a module resolving imported functions.
 ///
-/// The instance takes ownership of the module, i.e. fizzy_free_module must not be called on the
+/// The instance takes ownership of the module, i.e. fizzy_free_module() must not be called on the
 /// module after this call.
-/// For simplicity a module cannot be shared among several instances (calling fizzy_instatiate more
-/// than once with the same module results in undefined behaviour), but after fizzy_instantiate
-/// functions querying module info can still be called with @p module.
+/// For simplicity a module cannot be shared among several instances (calling
+/// fizzy_resolve_instatiate() more than once with the same module results in undefined behaviour),
+/// but after fizzy_resolve_instantiate() functions querying module info can still be called with
+/// @p module.
 ///
 /// @param  module                     Pointer to module. Cannot be NULL.
 /// @param  imported_functions         Pointer to the imported function array. Can be NULL iff
-///                                    imported_functions_size equals 0.
+///                                    @p imported_functions_size equals 0.
 /// @param  imported_functions_size    Size of the imported function array. Can be zero.
 /// @param  imported_table             Pointer to the imported table. Can be NULL iff module doesn't
 ///                                    import a table. Not an array, because WebAssembly 1.0 doesn't
@@ -296,18 +310,19 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 ///                                    doesn't import a memory. Not an array, because WebAssembly
 ///                                    1.0 doesn't support more than one memory in a module.
 /// @param  imported_globals           Pointer to the imported globals array. Can be NULL iff
-///                                    imported_globals_size equals 0.
+///                                    @p imported_globals_size equals 0.
 /// @param  imported_globals_size      Size of the imported global array. Can be zero.
 /// @return                            non-NULL pointer to instance in case of success,
 ///                                    NULL otherwise.
 ///
 /// @note
-/// Functions in @a imported_functions are allowed to be in any order and allowed to include some
+/// Functions in @p imported_functions are allowed to be in any order and allowed to include some
 /// functions not required by the module.
-/// Functions are matched to module's imports based on their module and name strings.
+/// Functions are matched to module's imports based on their FizzyImportedFunction::module and
+/// FizzyImportedFunction::name strings.
 ///
 /// @note
-/// Function expects @a imported_globals to be in the order of imports defined in the module.
+/// Function expects @p imported_globals to be in the order of imports defined in the module.
 /// No validation is done on the number of globals passed in, nor on their order.
 /// When number of passed globals or their order is different from the one defined by the
 /// module, behaviour is undefined.
@@ -317,24 +332,32 @@ FizzyInstance* fizzy_resolve_instantiate(const FizzyModule* module,
     const FizzyExternalGlobal* imported_globals, size_t imported_globals_size);
 
 /// Free resources associated with the instance.
-/// If passed pointer is NULL, has no effect.
+///
+/// @param  instance    Pointer to instance. If NULL is passed, function has no effect.
 void fizzy_free_instance(FizzyInstance* instance);
 
 /// Get pointer to module of an instance.
 ///
-/// @note  The returned pointer represents non-owning, "view"-access to the module and must not be
-///        passed to fizzy_free_module.
+/// @param  instance    Pointer to instance. Cannot be NULL.
+/// @return             Pointer to a module.
+///
+/// @note    The returned pointer represents non-owning, "view"-access to the module and must not be
+///          passed to fizzy_free_module().
 const FizzyModule* fizzy_get_instance_module(FizzyInstance* instance);
 
 /// Get pointer to memory of an instance.
 ///
-/// @return  Pointer to memory data or NULL in case instance doesn't have any memory.
+/// @param  instance    Pointer to instance. Cannot be NULL.
+/// @return             Pointer to memory data or NULL in case instance doesn't have any memory.
+///
 /// @note    Function returns pointer to memory regardless of whether memory is exported or not.
 uint8_t* fizzy_get_instance_memory_data(FizzyInstance* instance);
 
 /// Get size of memory of an instance.
 ///
-/// @return  Size of memory in bytes or 0 in case instance doesn't have any memory.
+/// @param  instance    Pointer to instance. Cannot be NULL.
+/// @return             Size of memory in bytes or 0 in case instance doesn't have any memory.
+///
 /// @note    Function returns memory size regardless of whether memory is exported or not.
 size_t fizzy_get_instance_memory_size(FizzyInstance* instance);
 
@@ -345,9 +368,9 @@ size_t fizzy_get_instance_memory_size(FizzyInstance* instance);
 /// @param  out_function    Pointer to output struct to store the found function. Cannot be NULL.
 ///                         If function is found, associated context is allocated, which must exist
 ///                         as long as the function can be called by some other instance, and should
-///                         be destroyed with fizzy_free_exported_function afterwards.
-///                         When function is not found (false returned), this out_function is not
-///                         modified, and fizzy_free_exported_function must not be called.
+///                         be destroyed with fizzy_free_exported_function() afterwards.
+///                         When function is not found (false returned), this @p out_function is not
+///                         modified, and fizzy_free_exported_function() must not be called.
 /// @return                 true if function was found, false otherwise.
 bool fizzy_find_exported_function(
     FizzyInstance* instance, const char* name, FizzyExternalFunction* out_function);
@@ -355,10 +378,10 @@ bool fizzy_find_exported_function(
 /// Free resources associated with exported function.
 ///
 /// @param  external_function    Pointer to external function struct filled by
-///                              fizzy_find_exported_function. Cannot be NULL.
+///                              fizzy_find_exported_function(). Cannot be NULL.
 ///
 /// @note  This function may not be called with external function, which was not returned from
-///        fizzy_find_exported_function.
+///        fizzy_find_exported_function().
 void fizzy_free_exported_function(FizzyExternalFunction* external_function);
 
 /// Find exported table by name.
@@ -397,6 +420,7 @@ bool fizzy_find_exported_global(
 /// @param  instance    Pointer to module instance. Cannot be NULL.
 /// @param  args        Pointer to the argument array. Can be NULL if function has 0 inputs.
 /// @param  depth       Call stack depth.
+/// @return             Result of execution.
 ///
 /// @note
 /// No validation is done on the number of arguments passed in @p args, nor on their types.
