@@ -18,11 +18,11 @@ typedef struct FizzyModule FizzyModule;
 typedef struct FizzyInstance FizzyInstance;
 
 /// The data type representing numeric values.
-///
-/// The #i64 member is used to represent values of both i32 and i64 type.
 typedef union FizzyValue
 {
-    /// Integer value.
+    /// 32-bit integer value.
+    uint32_t i32;
+    /// 64-bit integer value.
     uint64_t i64;
     /// 32-bit floating-point value.
     float f32;

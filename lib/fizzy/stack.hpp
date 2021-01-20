@@ -116,7 +116,7 @@ public:
         m_top = m_bottom - 1;
 
         const auto local_variables = std::copy_n(args, num_args, m_locals);
-        std::fill_n(local_variables, num_local_variables, 0);
+        std::fill_n(local_variables, num_local_variables, Value{});
     }
 
     OperandStack(const OperandStack&) = delete;

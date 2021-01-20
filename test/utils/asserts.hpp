@@ -61,7 +61,7 @@ MATCHER_P(Result, value, "")  // NOLINT(readability-redundant-string-init)
         {
             if (arg.type == ValType::i32)
             {
-                return arg.value.i64 == static_cast<uint32_t>(value);
+                return arg.value.i32 == static_cast<uint32_t>(value);
             }
             else if (arg.type == ValType::i64 && value >= 0)
             {
@@ -104,8 +104,7 @@ MATCHER_P(CResult, value, "")  // NOLINT(readability-redundant-string-init)
     }
     else if constexpr (std::is_same_v<value_type, uint32_t>)
     {
-        // always check 64 bit of result
-        return arg.value.i64 == uint64_t{value};
+        return arg.value.i32 == value;
     }
     else if constexpr (std::is_same_v<value_type, uint64_t>)
     {
@@ -156,8 +155,7 @@ namespace fizzy::test
 {
 inline uint32_t as_uint32(fizzy::Value value)
 {
-    EXPECT_EQ(value.i64 & 0xffffffff00000000, 0);
-    return static_cast<uint32_t>(value.i64);
+    return value.i32;
 }
 
 std::ostream& operator<<(std::ostream& os, const TypedExecutionResult&);

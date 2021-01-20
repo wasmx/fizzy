@@ -108,13 +108,18 @@ WasmEngine::Result FizzyCEngine::execute(
     WasmEngine::FuncRef func_ref, const std::vector<uint64_t>& args)
 {
     static_assert(sizeof(uint64_t) == sizeof(FizzyValue));
+    const auto func_idx = static_cast<uint32_t>(func_ref);
+    const auto* module = fizzy_get_instance_module(m_instance.get());
+    const auto func_type = fizzy_get_function_type(module, func_idx);
+    assert(args.size() == func_type.inputs_size);
+    assert(func_type.output != FizzyValueTypeF32 && func_type.output != FizzyValueTypeF64 &&
+           "floating point result types are not supported");
     const auto first_arg = reinterpret_cast<const FizzyValue*>(args.data());
-    const auto status =
-        fizzy_execute(m_instance.get(), static_cast<uint32_t>(func_ref), first_arg, 0);
+    const auto status = fizzy_execute(m_instance.get(), func_idx, first_arg, 0);
     if (status.trapped)
         return {true, std::nullopt};
     else if (status.has_value)
-        return {false, status.value.i64};
+        return {false, func_type.output == FizzyValueTypeI32 ? status.value.i32 : status.value.i64};
     else
         return {false, std::nullopt};
 }

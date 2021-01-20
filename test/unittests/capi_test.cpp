@@ -378,7 +378,7 @@ TEST(capi, find_exported_global)
     ASSERT_TRUE(fizzy_find_exported_global(instance, "g1", &global));
     EXPECT_EQ(global.type.value_type, FizzyValueTypeI32);
     EXPECT_FALSE(global.type.is_mutable);
-    EXPECT_EQ(global.value->i64, 42);
+    EXPECT_EQ(global.value->i32, 42);
 
     EXPECT_FALSE(fizzy_find_exported_global(instance, "g2", &global));
     EXPECT_FALSE(fizzy_find_exported_global(instance, "foo", &global));
@@ -729,7 +729,7 @@ TEST(capi, memory_access)
     memory[0] = 0xaa;
     memory[1] = 0xbb;
 
-    EXPECT_EQ(fizzy_execute(instance, 0, nullptr, 0).value.i64, 0x22bbaa);
+    EXPECT_THAT(fizzy_execute(instance, 0, nullptr, 0), CResult(0x22bbaa_u32));
 
     fizzy_free_instance(instance);
 }
@@ -771,7 +771,7 @@ TEST(capi, imported_memory_access)
     auto* instance = fizzy_instantiate(module, nullptr, 0, nullptr, &memory, nullptr, 0);
     ASSERT_NE(instance, nullptr);
 
-    EXPECT_EQ(fizzy_execute(instance, 0, nullptr, 0).value.i64, 0x221100);
+    EXPECT_EQ(fizzy_execute(instance, 0, nullptr, 0).value.i32, 0x221100);
 
     EXPECT_EQ(fizzy_get_instance_memory_size(instance), 65536);
 
@@ -781,8 +781,8 @@ TEST(capi, imported_memory_access)
     memory_data[0] = 0xaa;
     memory_data[1] = 0xbb;
 
-    EXPECT_EQ(fizzy_execute(instance_memory, 0, nullptr, 0).value.i64, 0x22bbaa);
-    EXPECT_EQ(fizzy_execute(instance, 0, nullptr, 0).value.i64, 0x22bbaa);
+    EXPECT_EQ(fizzy_execute(instance_memory, 0, nullptr, 0).value.i32, 0x22bbaa);
+    EXPECT_EQ(fizzy_execute(instance, 0, nullptr, 0).value.i32, 0x22bbaa);
 
     fizzy_free_instance(instance);
     fizzy_free_instance(instance_memory);
@@ -838,7 +838,9 @@ TEST(capi, execute_with_host_function)
                                               nullptr},
         {{FizzyValueTypeI32, &inputs[0], 2},
             [](void*, FizzyInstance*, const FizzyValue* args, int) {
-                return FizzyExecutionResult{false, true, {args[0].i64 / args[1].i64}};
+                FizzyValue v;
+                v.i32 = args[0].i32 / args[1].i32;
+                return FizzyExecutionResult{false, true, {v}};
             },
             nullptr}};
 

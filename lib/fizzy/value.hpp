@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <cassert>
 #include <cstdint>
 #include <limits>
 
@@ -12,6 +11,7 @@ namespace fizzy
 {
 union Value
 {
+    uint32_t i32;
     uint64_t i64;
     float f32;
     double f64;
@@ -26,11 +26,11 @@ union Value
     /// We need to support {signed,unsigned} x {32,64} integers. However, due to uint64_t being
     /// defined differently in different implementations we need to avoid the alias and provide
     /// constructors for unsigned long and unsigned long long independently.
-    constexpr Value(unsigned int v) noexcept : i64{v} {}
+    constexpr Value(unsigned int v) noexcept : i32{v} {}
     constexpr Value(unsigned long v) noexcept : i64{v} {}
     constexpr Value(unsigned long long v) noexcept : i64{v} {}
     constexpr Value(int64_t v) noexcept : i64{static_cast<uint64_t>(v)} {}
-    constexpr Value(int32_t v) noexcept : i64{static_cast<uint32_t>(v)} {}
+    constexpr Value(int32_t v) noexcept : i32{static_cast<uint32_t>(v)} {}
 
     constexpr Value(float v) noexcept : f32{v} {}
     constexpr Value(double v) noexcept : f64{v} {}
@@ -54,8 +54,7 @@ constexpr uint64_t Value::as<uint64_t>() const noexcept
 template <>
 constexpr uint32_t Value::as<uint32_t>() const noexcept
 {
-    assert((i64 & 0xffffffff00000000) == 0);
-    return static_cast<uint32_t>(i64);
+    return i32;
 }
 
 template <>
@@ -67,8 +66,7 @@ constexpr int64_t Value::as<int64_t>() const noexcept
 template <>
 constexpr int32_t Value::as<int32_t>() const noexcept
 {
-    assert((i64 & 0xffffffff00000000) == 0);
-    return static_cast<int32_t>(i64);
+    return static_cast<int32_t>(i32);
 }
 
 template <>
