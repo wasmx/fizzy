@@ -6,6 +6,7 @@
 
 #include "bytes.hpp"
 #include "value.hpp"
+#include <fizzy/fizzy.h>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -15,12 +16,12 @@
 namespace fizzy
 {
 // https://webassembly.github.io/spec/core/binary/types.html#binary-valtype
-enum class ValType : uint8_t
+enum class ValType : FizzyValueType
 {
-    i32 = 0x7f,
-    i64 = 0x7e,
-    f32 = 0x7d,
-    f64 = 0x7c,
+    i32 = FizzyValueTypeI32,
+    i64 = FizzyValueTypeI64,
+    f32 = FizzyValueTypeF32,
+    f64 = FizzyValueTypeF64,
 };
 
 // https://webassembly.github.io/spec/core/binary/types.html#table-types
