@@ -112,6 +112,8 @@ WasmEngine::Result FizzyCEngine::execute(
     const auto* module = fizzy_get_instance_module(m_instance.get());
     const auto func_type = fizzy_get_function_type(module, func_idx);
     assert(args.size() == func_type.inputs_size);
+    assert(func_type.output != FizzyValueTypeF32 && func_type.output != FizzyValueTypeF64 &&
+           "floating point result types are not supported");
     const auto first_arg = reinterpret_cast<const FizzyValue*>(args.data());
     const auto status = fizzy_execute(m_instance.get(), func_idx, first_arg, 0);
     if (status.trapped)

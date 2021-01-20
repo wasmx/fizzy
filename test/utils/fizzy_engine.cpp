@@ -142,7 +142,11 @@ WasmEngine::Result FizzyEngine::execute(
     if (status.trapped)
         return {true, std::nullopt};
     else if (status.has_value)
+    {
+        assert(func_type.outputs[0] != ValType::f32 && func_type.outputs[0] != ValType::f64 &&
+               "floating point result types are not supported");
         return {false, func_type.outputs[0] == ValType::i32 ? status.value.i32 : status.value.i64};
+    }
     else
         return {false, std::nullopt};
 }
