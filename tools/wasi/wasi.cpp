@@ -119,7 +119,7 @@ bool run(int argc, const char** argv)
     };
 
     // Initialisation settings.
-    // TODO: Make const after https://github.com/cjihrig/uvwasi/pull/155 is merged.
+    // TODO: Make const after https://github.com/nodejs/uvwasi/pull/155 is merged.
     uvwasi_options_t options = {
         3,           // sizeof fd_table
         0, nullptr,  // NOTE: no remappings
