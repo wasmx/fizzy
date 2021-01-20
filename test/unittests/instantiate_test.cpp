@@ -30,7 +30,7 @@ uint32_t call_table_func(Instance& instance, size_t idx)
     const auto& elem = (*instance.table)[idx];
     const auto res = execute(*elem.instance, elem.func_idx, {}, 0);
     EXPECT_TRUE(res.has_value);
-    return as_uint32(res.value);
+    return res.value.i32;
 }
 }  // namespace
 
@@ -319,7 +319,7 @@ TEST(instantiate, imported_globals)
     ASSERT_EQ(instance->imported_globals.size(), 1);
     EXPECT_EQ(instance->imported_globals[0].type.value_type, ValType::i32);
     EXPECT_TRUE(instance->imported_globals[0].type.is_mutable);
-    EXPECT_EQ(as_uint32(*instance->imported_globals[0].value), 42);
+    EXPECT_EQ(instance->imported_globals[0].value->i32, 42);
     ASSERT_EQ(instance->globals.size(), 0);
 }
 
@@ -342,8 +342,8 @@ TEST(instantiate, imported_globals_multiple)
     EXPECT_TRUE(instance->imported_globals[0].type.is_mutable);
     EXPECT_EQ(instance->imported_globals[1].type.value_type, ValType::i32);
     EXPECT_FALSE(instance->imported_globals[1].type.is_mutable);
-    EXPECT_EQ(as_uint32(*instance->imported_globals[0].value), 42);
-    EXPECT_EQ(as_uint32(*instance->imported_globals[1].value), 43);
+    EXPECT_EQ(instance->imported_globals[0].value->i32, 42);
+    EXPECT_EQ(instance->imported_globals[1].value->i32, 43);
     ASSERT_EQ(instance->globals.size(), 0);
 }
 
@@ -864,7 +864,7 @@ TEST(instantiate, globals_single)
     auto instance = instantiate(*module);
 
     ASSERT_EQ(instance->globals.size(), 1);
-    EXPECT_EQ(as_uint32(instance->globals[0]), 42);
+    EXPECT_EQ(instance->globals[0].i32, 42);
 }
 
 TEST(instantiate, globals_multiple)
@@ -878,8 +878,8 @@ TEST(instantiate, globals_multiple)
     auto instance = instantiate(*module);
 
     ASSERT_EQ(instance->globals.size(), 2);
-    EXPECT_EQ(as_uint32(instance->globals[0]), 42);
-    EXPECT_EQ(as_uint32(instance->globals[1]), 43);
+    EXPECT_EQ(instance->globals[0].i32, 42);
+    EXPECT_EQ(instance->globals[1].i32, 43);
 }
 
 TEST(instantiate, globals_with_imported)
@@ -898,11 +898,11 @@ TEST(instantiate, globals_with_imported)
     auto instance = instantiate(parse(bin), {}, {}, {}, {g});
 
     ASSERT_EQ(instance->imported_globals.size(), 1);
-    EXPECT_EQ(as_uint32(*instance->imported_globals[0].value), 41);
+    EXPECT_EQ(instance->imported_globals[0].value->i32, 41);
     EXPECT_EQ(instance->imported_globals[0].type.is_mutable, true);
     ASSERT_EQ(instance->globals.size(), 2);
-    EXPECT_EQ(as_uint32(instance->globals[0]), 42);
-    EXPECT_EQ(as_uint32(instance->globals[1]), 43);
+    EXPECT_EQ(instance->globals[0].i32, 42);
+    EXPECT_EQ(instance->globals[1].i32, 43);
 }
 
 TEST(instantiate, globals_initialized_from_imported)
@@ -919,7 +919,7 @@ TEST(instantiate, globals_initialized_from_imported)
     auto instance = instantiate(parse(bin), {}, {}, {}, {g});
 
     ASSERT_EQ(instance->globals.size(), 1);
-    EXPECT_EQ(as_uint32(instance->globals[0]), 42);
+    EXPECT_EQ(instance->globals[0].i32, 42);
 }
 
 TEST(instantiate, globals_float)

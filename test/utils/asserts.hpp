@@ -153,10 +153,5 @@ std::ostream& operator<<(std::ostream& os, ExecutionResult);
 
 namespace fizzy::test
 {
-inline uint32_t as_uint32(fizzy::Value value)
-{
-    return value.i32;
-}
-
 std::ostream& operator<<(std::ostream& os, const TypedExecutionResult&);
 }  // namespace fizzy::test

@@ -262,7 +262,7 @@ TEST(execute, global_set)
 
     auto instance = instantiate(parse(wasm));
     EXPECT_THAT(execute(*instance, 0, {}), Result());
-    EXPECT_EQ(as_uint32(instance->globals[0]), 42);
+    EXPECT_EQ(instance->globals[0].i32, 42);
 }
 
 TEST(execute, global_set_two_globals)
@@ -283,8 +283,8 @@ TEST(execute, global_set_two_globals)
 
     auto instance = instantiate(parse(wasm));
     EXPECT_THAT(execute(*instance, 0, {}), Result());
-    EXPECT_EQ(as_uint32(instance->globals[0]), 44);
-    EXPECT_EQ(as_uint32(instance->globals[1]), 45);
+    EXPECT_EQ(instance->globals[0].i32, 44);
+    EXPECT_EQ(instance->globals[1].i32, 45);
 }
 
 TEST(execute, global_set_imported)
@@ -303,7 +303,7 @@ TEST(execute, global_set_imported)
     auto instance =
         instantiate(parse(wasm), {}, {}, {}, {ExternalGlobal{&global_value, {ValType::i32, true}}});
     EXPECT_THAT(execute(*instance, 0, {}), Result());
-    EXPECT_EQ(as_uint32(global_value), 42);
+    EXPECT_EQ(global_value.i32, 42);
 }
 
 TEST(execute, global_set_float)
@@ -811,7 +811,7 @@ TEST(execute, imported_function)
     ASSERT_EQ(module->typesec.size(), 1);
 
     constexpr auto host_foo = [](Instance&, const Value* args, int) {
-        return Value{as_uint32(args[0]) + as_uint32(args[1])};
+        return Value{args[0].i32 + args[1].i32};
     };
 
     auto instance = instantiate(*module, {{host_foo, module->typesec[0]}});
@@ -831,10 +831,10 @@ TEST(execute, imported_two_functions)
     ASSERT_EQ(module->typesec.size(), 1);
 
     constexpr auto host_foo1 = [](Instance&, const Value* args, int) {
-        return Value{as_uint32(args[0]) + as_uint32(args[1])};
+        return Value{args[0].i32 + args[1].i32};
     };
     constexpr auto host_foo2 = [](Instance&, const Value* args, int) {
-        return Value{as_uint32(args[0]) * as_uint32(args[1])};
+        return Value{args[0].i32 * args[1].i32};
     };
 
     auto instance =
@@ -858,10 +858,10 @@ TEST(execute, imported_functions_and_regular_one)
         "000a0901070041aa80a8010b");
 
     constexpr auto host_foo1 = [](Instance&, const Value* args, int) {
-        return Value{as_uint32(args[0]) + as_uint32(args[1])};
+        return Value{args[0].i32 + args[1].i32};
     };
     constexpr auto host_foo2 = [](Instance&, const Value* args, int) {
-        return Value{as_uint32(args[0]) * as_uint32(args[1])};
+        return Value{args[0].i32 * args[1].i32};
     };
 
     const auto module = parse(wasm);
@@ -888,7 +888,7 @@ TEST(execute, imported_two_functions_different_type)
         "0001030201010a0901070042aa80a8010b");
 
     constexpr auto host_foo1 = [](Instance&, const Value* args, int) {
-        return Value{as_uint32(args[0]) + as_uint32(args[1])};
+        return Value{args[0].i32 + args[1].i32};
     };
     constexpr auto host_foo2 = [](Instance&, const Value* args, int) {
         return Value{args[0].i64 * args[0].i64};
