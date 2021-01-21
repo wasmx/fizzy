@@ -28,6 +28,15 @@ constexpr unsigned TestMemoryPagesLimit = (4 * 1024 * 1024 * 1024ULL) / fizzy::P
 // https://github.com/WebAssembly/spec/blob/99564b7eaa3452c2633b623c92fc286db2823f39/interpreter/README.md#spectest-host-module
 /* wat2wasm
 (module
+  (global (export "global_i32") i32 (i32.const 666))
+  (global (export "global_i64") i64 (i64.const 666))
+  (global (export "global_f32") f32 (f32.const 666))
+  (global (export "global_f64") f64 (f64.const 666))
+
+  (table (export "table") 10 20 anyfunc)
+
+  (memory (export "memory") 1 2)
+
   (func (export "print"))
   (func (export "print_i32") (param i32))
   (func (export "print_i64") (param i64))
@@ -35,21 +44,15 @@ constexpr unsigned TestMemoryPagesLimit = (4 * 1024 * 1024 * 1024ULL) / fizzy::P
   (func (export "print_f64_f64") (param f64) (param f64))
   (func (export "print_f32") (param f32))
   (func (export "print_f64") (param f64))
-  (global (export "global_i32") i32 (i32.const 666))
-  (global (export "global_i64") i64 (i64.const 666))
-  (global (export "global_f32") f32 (f32.const 666))
-  (global (export "global_f64") f64 (f64.const 666))
-  (table (export "table") 10 20 anyfunc)
-  (memory (export "memory") 1 2)
 )
 */
 const auto spectest_bin = fizzy::test::from_hex(
     "0061736d01000000011e0760000060017f0060017e0060027f7d0060027c7c0060017d0060017c0003080700010203"
     "04050604050170010a140504010101020621047f00419a050b7e00429a050b7d0043008026440b7c00440000000000"
-    "d084400b079e010d057072696e740000097072696e745f6933320001097072696e745f69363400020d7072696e745f"
-    "6933325f66333200030d7072696e745f6636345f6636340004097072696e745f6633320005097072696e745f663634"
-    "00060a676c6f62616c5f69333203000a676c6f62616c5f69363403010a676c6f62616c5f66333203020a676c6f6261"
-    "6c5f6636340303057461626c650100066d656d6f727902000a160702000b02000b02000b02000b02000b02000b0200"
+    "d084400b079e010d0a676c6f62616c5f69333203000a676c6f62616c5f69363403010a676c6f62616c5f6633320302"
+    "0a676c6f62616c5f6636340303057461626c650100066d656d6f72790200057072696e740000097072696e745f6933"
+    "320001097072696e745f69363400020d7072696e745f6933325f66333200030d7072696e745f6636345f6636340004"
+    "097072696e745f6633320005097072696e745f66363400060a160702000b02000b02000b02000b02000b02000b0200"
     "0b");
 const auto spectest_module = fizzy::parse(spectest_bin);
 const std::string spectest_name = "spectest";
