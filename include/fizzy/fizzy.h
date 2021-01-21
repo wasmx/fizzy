@@ -107,12 +107,15 @@ typedef FizzyExecutionResult (*FizzyExternalFn)(void* host_ctx, FizzyInstance* i
 
 /// Value type.
 typedef uint8_t FizzyValueType;
-static const FizzyValueType FizzyValueTypeI32 = 0x7f;
-static const FizzyValueType FizzyValueTypeI64 = 0x7e;
-static const FizzyValueType FizzyValueTypeF32 = 0x7d;
-static const FizzyValueType FizzyValueTypeF64 = 0x7c;
-/// Special value, can be used only as function output type.
-static const FizzyValueType FizzyValueTypeVoid = 0;
+enum FizzyValueTypeEnum
+{
+    FizzyValueTypeI32 = 0x7f,
+    FizzyValueTypeI64 = 0x7e,
+    FizzyValueTypeF32 = 0x7d,
+    FizzyValueTypeF64 = 0x7c,
+    /// Special value, can be used only as function output type.
+    FizzyValueTypeVoid = 0
+};
 
 /// Function type.
 typedef struct FizzyFunctionType
