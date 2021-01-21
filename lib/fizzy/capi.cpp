@@ -43,17 +43,16 @@ inline fizzy::ValType unwrap(FizzyValueType value_type) noexcept
     return static_cast<fizzy::ValType>(value_type);
 }
 
-inline FizzyFunctionType wrap(const fizzy::FuncType& type) noexcept
-{
-    return {(type.outputs.empty() ? FizzyValueTypeVoid : wrap(type.outputs[0])),
-        (type.inputs.empty() ? nullptr : wrap(&type.inputs[0])), type.inputs.size()};
-}
-
 inline FizzyFunctionType wrap(fizzy::span<const fizzy::ValType> input_types,
     fizzy::span<const fizzy::ValType> output_types) noexcept
 {
     return {(output_types.empty() ? FizzyValueTypeVoid : wrap(output_types[0])),
         (input_types.empty() ? nullptr : wrap(&input_types[0])), input_types.size()};
+}
+
+inline FizzyFunctionType wrap(const fizzy::FuncType& type) noexcept
+{
+    return wrap(type.inputs, type.outputs);
 }
 
 inline FizzyValue wrap(fizzy::Value value) noexcept
