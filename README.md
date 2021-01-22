@@ -218,7 +218,7 @@ Licensed under the [Apache License, Version 2.0].
 [C API]: ./include/fizzy/fizzy.h
 
 [WASI]: https://github.com/WebAssembly/WASI
-[uvwasi]: https://github.com/cjihrig/uvwasi
+[uvwasi]: https://github.com/nodejs/uvwasi
 [wasi_snapshot_preview1]: https://github.com/WebAssembly/WASI/blob/master/phases/snapshot/witx/wasi_snapshot_preview1.witx
 
 [webassembly badge]: https://img.shields.io/badge/WebAssembly-Engine-informational.svg?logo=webassembly

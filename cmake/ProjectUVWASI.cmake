@@ -23,7 +23,7 @@ ExternalProject_Add(uvwasi
     DOWNLOAD_DIR ${prefix}/downloads
     SOURCE_DIR ${source_dir}
     BINARY_DIR ${binary_dir}
-    URL https://github.com/cjihrig/uvwasi/archive/v0.0.10.tar.gz
+    URL https://github.com/nodejs/uvwasi/archive/v0.0.10.tar.gz
     URL_HASH SHA256=39135f4dd4a44013399ceed7166391ffc5c09655e4bfbf851da2be039e6985df
     CMAKE_ARGS
     -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
