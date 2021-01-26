@@ -169,6 +169,100 @@ TEST(capi, has_memory)
     fizzy_free_module(module_imported_mem);
 }
 
+TEST(capi, get_export_count)
+{
+    /* wat2wasm
+      (module)
+    */
+    const auto wasm_empty = from_hex("0061736d01000000");
+
+    const auto* module_empty = fizzy_parse(wasm_empty.data(), wasm_empty.size());
+    ASSERT_NE(module_empty, nullptr);
+
+    EXPECT_EQ(fizzy_get_export_count(module_empty), 0);
+    fizzy_free_module(module_empty);
+
+    /* wat2wasm
+      (func (export "f"))
+      (global (export "g") i32 (i32.const 0))
+      (table (export "t") 0 anyfunc)
+      (memory (export "m") 1)
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000104016000000302010004040170000005030100010606017f0041000b0711040166000001"
+        "67030001740100016d02000a040102000b");
+
+    const auto* module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+
+    EXPECT_EQ(fizzy_get_export_count(module), 4);
+    fizzy_free_module(module);
+}
+
+TEST(capi, get_export_description)
+{
+    /* wat2wasm
+      (func) ;; to make export have non-zero index
+      (func (export "fn"))
+      (table (export "tab") 10 anyfunc)
+      (memory (export "mem") 1 4)
+      (global i32 (i32.const 0))
+      (global i32 (i32.const 0))
+      (global (export "glob") i32 (i32.const 0))
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010401600000030302000004040170000a0504010101040610037f0041000b7f0041000b7f"
+        "0041000b07190402666e0001037461620100036d656d020004676c6f6203020a070202000b02000b");
+
+    const auto* module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+    ASSERT_EQ(fizzy_get_export_count(module), 4);
+
+    const auto export0 = fizzy_get_export_description(module, 0);
+    EXPECT_STREQ(export0.name, "fn");
+    EXPECT_EQ(export0.kind, FizzyExternalKindFunction);
+    EXPECT_EQ(export0.index, 1);
+
+    const auto export1 = fizzy_get_export_description(module, 1);
+    EXPECT_STREQ(export1.name, "tab");
+    EXPECT_EQ(export1.kind, FizzyExternalKindTable);
+    EXPECT_EQ(export1.index, 0);
+
+    const auto export2 = fizzy_get_export_description(module, 2);
+    EXPECT_STREQ(export2.name, "mem");
+    EXPECT_EQ(export2.kind, FizzyExternalKindMemory);
+    EXPECT_EQ(export2.index, 0);
+
+    const auto export3 = fizzy_get_export_description(module, 3);
+    EXPECT_STREQ(export3.name, "glob");
+    EXPECT_EQ(export3.kind, FizzyExternalKindGlobal);
+    EXPECT_EQ(export3.index, 2);
+
+    fizzy_free_module(module);
+}
+
+TEST(capi, export_name_after_instantiate)
+{
+    /* wat2wasm
+      (func (export "fn"))
+    */
+    const auto wasm = from_hex("0061736d010000000104016000000302010007060102666e00000a040102000b");
+
+    const auto* module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+    ASSERT_EQ(fizzy_get_export_count(module), 1);
+
+    const auto export0 = fizzy_get_export_description(module, 0);
+    EXPECT_STREQ(export0.name, "fn");
+
+    auto instance = fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0);
+    EXPECT_NE(instance, nullptr);
+
+    EXPECT_STREQ(export0.name, "fn");
+
+    fizzy_free_instance(instance);
+}
+
 TEST(capi, find_exported_function_index)
 {
     /* wat2wasm
