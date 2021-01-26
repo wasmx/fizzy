@@ -152,7 +152,7 @@ typedef enum FizzyExternalKind
 /// Import description.
 ///
 /// @note Only one member of #desc union corresponding to #kind is defined for each import.
-/// @note For the lifetime of the #module and #kind fields, please refer to the description provided
+/// @note For the lifetime of the #module and #name fields, please refer to the description provided
 /// by the function used to obtain this structure.
 typedef struct FizzyImportDescription
 {
@@ -171,6 +171,21 @@ typedef struct FizzyImportDescription
         FizzyGlobalType global_type;
     } desc;
 } FizzyImportDescription;
+
+/// Export description.
+///
+/// @note For the lifetime of the #name field, please refer to the description provided by the
+/// function used to obtain this structure.
+typedef struct FizzyExportDescription
+{
+    /// Export name.
+    const char* name;
+    /// Export kind.
+    FizzyExternalKind kind;
+    /// Index of exported function or table or memory or global.
+    /// #kind determines what is this the index of.
+    uint32_t index;
+} FizzyExportDescription;
 
 /// Imported function.
 typedef struct FizzyImportedFunction
@@ -286,6 +301,23 @@ uint32_t fizzy_get_global_count(const FizzyModule* module);
 ///
 /// @note  All module global indices are greater than all imported global indices.
 FizzyGlobalType fizzy_get_global_type(const FizzyModule* module, uint32_t global_idx);
+
+/// Get number of exports defined in the module.
+///
+/// @param  module    Pointer to module. Cannot be NULL.
+/// @return           Number of exports in the module.
+uint32_t fizzy_get_export_count(const FizzyModule* module);
+
+/// Get the export description defined in the module.
+///
+/// @param  module        Pointer to module. Cannot be NULL.
+/// @param  export_idx    Export index. Behaviour is undefined if index is not valid according
+///                       to module definition.
+/// @return               Description of the export corresponding to the index.
+///                       FizzyExportDescription::name field points to the string stored inside the
+///                       module and is valid as long as module is alive (including after successful
+///                       instantiation.)
+FizzyExportDescription fizzy_get_export_description(const FizzyModule* module, uint32_t export_idx);
 
 /// Find index of exported function by name.
 ///

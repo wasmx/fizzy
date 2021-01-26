@@ -313,6 +313,11 @@ inline FizzyImportDescription wrap(
     }
     return c_import_description;
 }
+
+inline FizzyExportDescription wrap(const fizzy::Export& exp) noexcept
+{
+    return {exp.name.c_str(), wrap(exp.kind), exp.index};
+}
 }  // namespace
 
 extern "C" {
@@ -405,6 +410,16 @@ uint32_t fizzy_get_global_count(const FizzyModule* module)
 FizzyGlobalType fizzy_get_global_type(const FizzyModule* module, uint32_t global_idx)
 {
     return wrap(unwrap(module)->get_global_type(global_idx));
+}
+
+uint32_t fizzy_get_export_count(const FizzyModule* module)
+{
+    return static_cast<uint32_t>(unwrap(module)->exportsec.size());
+}
+
+FizzyExportDescription fizzy_get_export_description(const FizzyModule* module, uint32_t export_idx)
+{
+    return wrap(unwrap(module)->exportsec[export_idx]);
 }
 
 bool fizzy_find_exported_function_index(
