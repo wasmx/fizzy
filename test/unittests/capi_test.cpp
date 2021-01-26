@@ -1197,6 +1197,146 @@ TEST(capi, get_type)
     fizzy_free_module(module_imported_func);
 }
 
+TEST(capi, get_import_count)
+{
+    /* wat2wasm
+      (module)
+    */
+    const auto wasm_empty = from_hex("0061736d01000000");
+
+    const auto* module_empty = fizzy_parse(wasm_empty.data(), wasm_empty.size());
+    ASSERT_NE(module_empty, nullptr);
+
+    EXPECT_EQ(fizzy_get_import_count(module_empty), 0);
+    fizzy_free_module(module_empty);
+
+    /* wat2wasm
+      (func (import "m" "f") (result i32))
+      (global (import "m" "g") i32)
+      (table (import "m" "t") 0 anyfunc)
+      (memory (import "m" "m") 1)
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000105016000017f021d04016d01660000016d0167037f00016d017401700000016d016d0200"
+        "01");
+
+    const auto* module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+
+    EXPECT_EQ(fizzy_get_import_count(module), 4);
+    fizzy_free_module(module);
+}
+
+TEST(capi, get_import_description)
+{
+    /* wat2wasm
+      (func (import "m" "f1"))
+      (func (import "m" "f2") (result i32))
+      (func (import "m" "f3") (param i64))
+      (func (import "m" "f4") (param f32 f64) (result i64))
+      (global (import "m" "g1") i32)
+      (global (import "m" "g2") (mut f64))
+      (table (import "m" "t") 10 anyfunc)
+      (memory (import "m" "mem") 1 4)
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000112046000006000017f60017e0060027d7c017e023f08016d0266310000016d0266320001"
+        "016d0266330002016d0266340003016d026731037f00016d026732037c01016d01740170000a016d036d656d02"
+        "010104");
+
+    const auto* module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+    ASSERT_EQ(fizzy_get_import_count(module), 8);
+
+    const auto import0 = fizzy_get_import_description(module, 0);
+    EXPECT_STREQ(import0.module, "m");
+    EXPECT_STREQ(import0.name, "f1");
+    EXPECT_EQ(import0.kind, FizzyExternalKindFunction);
+    EXPECT_EQ(import0.desc.function_type.inputs_size, 0);
+    EXPECT_EQ(import0.desc.function_type.output, FizzyValueTypeVoid);
+
+    const auto import1 = fizzy_get_import_description(module, 1);
+    EXPECT_STREQ(import1.module, "m");
+    EXPECT_STREQ(import1.name, "f2");
+    EXPECT_EQ(import1.kind, FizzyExternalKindFunction);
+    EXPECT_EQ(import1.desc.function_type.inputs_size, 0);
+    EXPECT_EQ(import1.desc.function_type.output, FizzyValueTypeI32);
+
+    const auto import2 = fizzy_get_import_description(module, 2);
+    EXPECT_STREQ(import2.module, "m");
+    EXPECT_STREQ(import2.name, "f3");
+    EXPECT_EQ(import2.kind, FizzyExternalKindFunction);
+    ASSERT_EQ(import2.desc.function_type.inputs_size, 1);
+    EXPECT_EQ(import2.desc.function_type.inputs[0], FizzyValueTypeI64);
+    EXPECT_EQ(import2.desc.function_type.output, FizzyValueTypeVoid);
+
+    const auto import3 = fizzy_get_import_description(module, 3);
+    EXPECT_STREQ(import3.module, "m");
+    EXPECT_STREQ(import3.name, "f4");
+    EXPECT_EQ(import3.kind, FizzyExternalKindFunction);
+    ASSERT_EQ(import3.desc.function_type.inputs_size, 2);
+    EXPECT_EQ(import3.desc.function_type.inputs[0], FizzyValueTypeF32);
+    EXPECT_EQ(import3.desc.function_type.inputs[1], FizzyValueTypeF64);
+    EXPECT_EQ(import3.desc.function_type.output, FizzyValueTypeI64);
+
+    const auto import4 = fizzy_get_import_description(module, 4);
+    EXPECT_STREQ(import4.module, "m");
+    EXPECT_STREQ(import4.name, "g1");
+    EXPECT_EQ(import4.kind, FizzyExternalKindGlobal);
+    EXPECT_EQ(import4.desc.global_type.value_type, FizzyValueTypeI32);
+    EXPECT_FALSE(import4.desc.global_type.is_mutable);
+
+    const auto import5 = fizzy_get_import_description(module, 5);
+    EXPECT_STREQ(import5.module, "m");
+    EXPECT_STREQ(import5.name, "g2");
+    EXPECT_EQ(import5.kind, FizzyExternalKindGlobal);
+    EXPECT_EQ(import5.desc.global_type.value_type, FizzyValueTypeF64);
+    EXPECT_TRUE(import5.desc.global_type.is_mutable);
+
+    const auto import6 = fizzy_get_import_description(module, 6);
+    EXPECT_STREQ(import6.module, "m");
+    EXPECT_STREQ(import6.name, "t");
+    EXPECT_EQ(import6.kind, FizzyExternalKindTable);
+    EXPECT_EQ(import6.desc.table_limits.min, 10);
+    EXPECT_FALSE(import6.desc.table_limits.has_max);
+
+    const auto import7 = fizzy_get_import_description(module, 7);
+    EXPECT_STREQ(import7.module, "m");
+    EXPECT_STREQ(import7.name, "mem");
+    EXPECT_EQ(import7.kind, FizzyExternalKindMemory);
+    EXPECT_EQ(import7.desc.memory_limits.min, 1);
+    EXPECT_TRUE(import7.desc.memory_limits.has_max);
+    EXPECT_EQ(import7.desc.memory_limits.max, 4);
+
+    fizzy_free_module(module);
+}
+
+TEST(capi, import_name_after_instantiate)
+{
+    /* wat2wasm
+      (func (import "m" "f1") (result i32))
+    */
+    const auto wasm = from_hex("0061736d010000000105016000017f020801016d0266310000");
+
+    const auto* module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+    ASSERT_EQ(fizzy_get_import_count(module), 1);
+
+    const auto import0 = fizzy_get_import_description(module, 0);
+    EXPECT_STREQ(import0.module, "m");
+    EXPECT_STREQ(import0.name, "f1");
+
+    FizzyExternalFunction host_funcs[] = {{{FizzyValueTypeI32, nullptr, 0}, NullFn, nullptr}};
+
+    auto instance = fizzy_instantiate(module, host_funcs, 1, nullptr, nullptr, nullptr, 0);
+    EXPECT_NE(instance, nullptr);
+
+    EXPECT_STREQ(import0.module, "m");
+    EXPECT_STREQ(import0.name, "f1");
+
+    fizzy_free_instance(instance);
+}
+
 TEST(capi, get_global_count)
 {
     /* wat2wasm
