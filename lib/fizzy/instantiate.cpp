@@ -264,6 +264,33 @@ ExternalFunction find_imported_function(const std::string& module, const std::st
     return {it->function, module_func_type};
 }
 
+ExternalGlobal find_imported_global(const std::string& module, const std::string& name,
+    GlobalType module_global_type, const std::vector<ImportedGlobal>& imported_globals)
+{
+    const auto it = std::find_if(imported_globals.begin(), imported_globals.end(),
+        [module, name](const auto& func) { return module == func.module && name == func.name; });
+
+    if (it == imported_globals.end())
+    {
+        throw instantiate_error{"imported global " + module + "." + name + " is required"};
+    }
+
+    if (module_global_type.value_type != it->type)
+    {
+        throw instantiate_error{"global " + module + "." + name +
+                                " value type doesn't match imported global in module"};
+    }
+    if (module_global_type.is_mutable != it->is_mutable)
+    {
+        throw instantiate_error{"global " + module + "." + name +
+                                " mutability doesn't match imported global in module"};
+    }
+
+    // instantiate function will validate whether `it->value` is not nullptr.
+
+    return {it->value, module_global_type};
+}
+
 std::optional<uint32_t> find_export(const Module& module, ExternalKind kind, std::string_view name)
 {
     const auto it = std::find_if(module.exportsec.begin(), module.exportsec.end(),
@@ -421,6 +448,21 @@ std::vector<ExternalFunction> resolve_imported_functions(
             import.module, import.name, module_func_type, imported_functions));
     }
     return external_functions;
+}
+
+std::vector<ExternalGlobal> resolve_imported_globals(
+    const Module& module, const std::vector<ImportedGlobal>& imported_globals)
+{
+    std::vector<ExternalGlobal> external_globals;
+    for (const auto& import : module.importsec)
+    {
+        if (import.kind != ExternalKind::Global)
+            continue;
+
+        external_globals.emplace_back(
+            find_imported_global(import.module, import.name, import.desc.global, imported_globals));
+    }
+    return external_globals;
 }
 
 std::optional<FuncIdx> find_exported_function(const Module& module, std::string_view name)
