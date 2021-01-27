@@ -121,7 +121,7 @@ std::unique_ptr<Instance> instantiate(std::unique_ptr<const Module> module,
     std::vector<ExternalGlobal> imported_globals = {},
     uint32_t memory_pages_limit = DefaultMemoryPagesLimit);
 
-/// Function that should be used by instantiate as imports, identified by module and function name.
+/// Function that should be used by instantiate as import, identified by module and function name.
 struct ImportedFunction
 {
     std::string module;
@@ -135,7 +135,23 @@ struct ImportedFunction
 /// @a imported_functions may be in any order, but must contain functions for all of the imported
 /// function names defined in the module.
 std::vector<ExternalFunction> resolve_imported_functions(
-    const Module& module, std::vector<ImportedFunction> imported_functions);
+    const Module& module, const std::vector<ImportedFunction>& imported_functions);
+
+// Global that should be used by instantiate as import, identified by module and global name.
+struct ImportedGlobal
+{
+    std::string module;
+    std::string name;
+    Value* value = nullptr;
+    ValType type = ValType::i32;
+    bool is_mutable = false;
+};
+
+// Create vector of ExternalGlobals ready to be passed to instantiate.
+// imported_globals may be in any order, but must contain globals for all of the imported global
+// names defined in the module.
+std::vector<ExternalGlobal> resolve_imported_globals(
+    const Module& module, const std::vector<ImportedGlobal>& imported_globals);
 
 /// Find exported function index by name.
 std::optional<FuncIdx> find_exported_function(const Module& module, std::string_view name);
