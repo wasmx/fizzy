@@ -131,13 +131,13 @@ struct ImportedFunction
     execute_function function;
 };
 
-/// Create vector of ExternalFunctions ready to be passed to instantiate.
+/// Create vector of fizzy::ExternalFunction ready to be passed to instantiate().
 /// @a imported_functions may be in any order, but must contain functions for all of the imported
 /// function names defined in the module.
 std::vector<ExternalFunction> resolve_imported_functions(
     const Module& module, const std::vector<ImportedFunction>& imported_functions);
 
-// Global that should be used by instantiate as import, identified by module and global name.
+/// Global that should be used by instantiate as import, identified by module and global name.
 struct ImportedGlobal
 {
     std::string module;
@@ -147,9 +147,9 @@ struct ImportedGlobal
     bool is_mutable = false;
 };
 
-// Create vector of ExternalGlobals ready to be passed to instantiate.
-// imported_globals may be in any order, but must contain globals for all of the imported global
-// names defined in the module.
+/// Create vector of fizzy::ExternalGlobal ready to be passed to instantiate().
+/// @a imported_globals may be in any order, but must contain globals for all of the imported global
+/// names defined in the module.
 std::vector<ExternalGlobal> resolve_imported_globals(
     const Module& module, const std::vector<ImportedGlobal>& imported_globals);
 
