@@ -375,7 +375,7 @@ std::unique_ptr<Instance> instantiate(std::unique_ptr<const Module> module,
 }
 
 std::vector<ExternalFunction> resolve_imported_functions(
-    const Module& module, std::vector<ImportedFunction> imported_functions)
+    const Module& module, const std::vector<ImportedFunction>& imported_functions)
 {
     std::vector<ExternalFunction> external_functions;
     for (const auto& import : module.importsec)
