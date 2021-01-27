@@ -233,6 +233,37 @@ Value eval_constant_expression(ConstantExpression expr,
         return globals[global_idx - imported_globals.size()];
 }
 
+ExternalFunction find_imported_function(const std::string& module, const std::string& name,
+    const FuncType& module_func_type, const std::vector<ImportedFunction>& imported_functions)
+{
+    const auto it = std::find_if(imported_functions.begin(), imported_functions.end(),
+        [module, name](const auto& func) { return module == func.module && name == func.name; });
+
+    if (it == imported_functions.end())
+    {
+        throw instantiate_error{"imported function " + module + "." + name + " is required"};
+    }
+
+    if (module_func_type.inputs != it->inputs)
+    {
+        throw instantiate_error{"function " + module + "." + name +
+                                " input types don't match imported function in module"};
+    }
+    if (module_func_type.outputs.empty() && it->output.has_value())
+    {
+        throw instantiate_error{
+            "function " + module + "." + name + " has output but is defined void in module"};
+    }
+    if (!module_func_type.outputs.empty() &&
+        (!it->output.has_value() || module_func_type.outputs[0] != *it->output))
+    {
+        throw instantiate_error{"function " + module + "." + name +
+                                " output type doesn't match imported function in module"};
+    }
+
+    return {it->function, module_func_type};
+}
+
 std::optional<uint32_t> find_export(const Module& module, ExternalKind kind, std::string_view name)
 {
     const auto it = std::find_if(module.exportsec.begin(), module.exportsec.end(),
@@ -383,40 +414,12 @@ std::vector<ExternalFunction> resolve_imported_functions(
         if (import.kind != ExternalKind::Function)
             continue;
 
-        const auto it = std::find_if(
-            imported_functions.begin(), imported_functions.end(), [&import](const auto& func) {
-                return import.module == func.module && import.name == func.name;
-            });
-
-        if (it == imported_functions.end())
-        {
-            throw instantiate_error{
-                "imported function " + import.module + "." + import.name + " is required"};
-        }
-
         assert(import.desc.function_type_index < module.typesec.size());
         const auto& module_func_type = module.typesec[import.desc.function_type_index];
 
-        if (module_func_type.inputs != it->inputs)
-        {
-            throw instantiate_error{"function " + import.module + "." + import.name +
-                                    " input types don't match imported function in module"};
-        }
-        if (module_func_type.outputs.empty() && it->output.has_value())
-        {
-            throw instantiate_error{"function " + import.module + "." + import.name +
-                                    " has output but is defined void in module"};
-        }
-        if (!module_func_type.outputs.empty() &&
-            (!it->output.has_value() || module_func_type.outputs[0] != *it->output))
-        {
-            throw instantiate_error{"function " + import.module + "." + import.name +
-                                    " output type doesn't match imported function in module"};
-        }
-
-        external_functions.emplace_back(ExternalFunction{it->function, module_func_type});
+        external_functions.emplace_back(find_imported_function(
+            import.module, import.name, module_func_type, imported_functions));
     }
-
     return external_functions;
 }
 
