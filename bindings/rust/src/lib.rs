@@ -79,10 +79,10 @@ pub type Value = sys::FizzyValue;
 // NOTE: the union does not have i32
 impl Value {
     pub fn as_i32(&self) -> i32 {
-        unsafe { self.i64 as i32 }
+        unsafe { self.i32 as i32 }
     }
     pub fn as_u32(&self) -> u32 {
-        unsafe { self.i64 as u32 }
+        unsafe { self.i32 }
     }
     pub fn as_i64(&self) -> i64 {
         unsafe { self.i64 as i64 }
@@ -100,13 +100,13 @@ impl Value {
 
 impl From<i32> for Value {
     fn from(v: i32) -> Self {
-        Value { i64: v as u64 }
+        Value { i32: v as u32 }
     }
 }
 
 impl From<u32> for Value {
     fn from(v: u32) -> Self {
-        Value { i64: v as u64 }
+        Value { i32: v }
     }
 }
 
@@ -198,6 +198,41 @@ impl Instance {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn value_conversions() {
+        // NOTE: since the underlying type is a union, a conversion or access to other members is undefined
+
+        let v: Value = i32::MIN.into();
+        assert_eq!(v.as_i32(), i32::MIN);
+        let v: Value = i32::MAX.into();
+        assert_eq!(v.as_i32(), i32::MAX);
+
+        let v: Value = u32::MIN.into();
+        assert_eq!(v.as_u32(), u32::MIN);
+        let v: Value = u32::MAX.into();
+        assert_eq!(v.as_u32(), u32::MAX);
+
+        let v: Value = i64::MIN.into();
+        assert_eq!(v.as_i64(), i64::MIN);
+        let v: Value = i64::MAX.into();
+        assert_eq!(v.as_i64(), i64::MAX);
+
+        let v: Value = u64::MIN.into();
+        assert_eq!(v.as_u64(), u64::MIN);
+        let v: Value = u64::MAX.into();
+        assert_eq!(v.as_u64(), u64::MAX);
+
+        let v: Value = f32::MIN.into();
+        assert_eq!(v.as_f32(), f32::MIN);
+        let v: Value = f32::MAX.into();
+        assert_eq!(v.as_f32(), f32::MAX);
+
+        let v: Value = f64::MIN.into();
+        assert_eq!(v.as_f64(), f64::MIN);
+        let v: Value = f64::MAX.into();
+        assert_eq!(v.as_f64(), f64::MAX);
+    }
 
     #[test]
     fn validate_wasm() {
