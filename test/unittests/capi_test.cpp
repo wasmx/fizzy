@@ -660,7 +660,7 @@ TEST(capi, resolve_instantiate_no_imports)
     fizzy_free_instance(instance);
 }
 
-TEST(capi, resolve_instantiate)
+TEST(capi, resolve_instantiate_functions)
 {
     /* wat2wasm
       (func (import "mod1" "foo1") (param i32) (result i32))
@@ -750,6 +750,130 @@ TEST(capi, resolve_instantiate_function_duplicate)
 
     fizzy_free_instance(instance);
 }
+
+TEST(capi, resolve_instantiate_globals)
+{
+    /* wat2wasm
+      (global (import "mod1" "g1") i32)
+      (global (import "mod1" "g2") (mut i32))
+      (global (import "mod2" "g1") i64)
+      (global (import "mod2" "g2") (mut i64))
+      (func (import "mod1" "foo1")) ;; just to test combination with other import types
+      (func (result i32) (global.get 0))
+      (func (result i32) (global.get 1))
+      (func (result i64) (global.get 2))
+      (func (result i64) (global.get 3))
+   */
+    const auto wasm = from_hex(
+        "0061736d01000000010c036000006000017f6000017e023905046d6f6431026731037f00046d6f643102673203"
+        "7f01046d6f6432026731037e00046d6f6432026732037e01046d6f643104666f6f310000030504010102020a15"
+        "04040023000b040023010b040023020b040023030b");
+    auto module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+
+    EXPECT_EQ(fizzy_resolve_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0), nullptr);
+
+    module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+
+    FizzyExternalFn host_fn = [](void*, FizzyInstance*, const FizzyValue*, int) {
+        return FizzyExecutionResult{true, false, {0}};
+    };
+    FizzyImportedFunction mod1foo1 = {
+        "mod1", "foo1", {{FizzyValueTypeVoid, nullptr, 0}, host_fn, nullptr}};
+
+    FizzyValue mod1g1value{42};
+    FizzyExternalGlobal mod1g1 = {&mod1g1value, {FizzyValueTypeI32, false}};
+    FizzyValue mod1g2value{43};
+    FizzyExternalGlobal mod1g2 = {&mod1g2value, {FizzyValueTypeI32, true}};
+    FizzyValue mod2g1value{44};
+    FizzyExternalGlobal mod2g1 = {&mod2g1value, {FizzyValueTypeI64, false}};
+    FizzyValue mod2g2value{45};
+    FizzyExternalGlobal mod2g2 = {&mod2g2value, {FizzyValueTypeI64, true}};
+
+    FizzyImportedGlobal host_globals[] = {{"mod1", "g1", mod1g1}, {"mod1", "g2", mod1g2},
+        {"mod2", "g1", mod2g1}, {"mod2", "g2", mod2g2}};
+
+    auto instance =
+        fizzy_resolve_instantiate(module, &mod1foo1, 1, nullptr, nullptr, host_globals, 4);
+    ASSERT_NE(instance, nullptr);
+
+    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, 0), CResult(42_u32));
+    EXPECT_THAT(fizzy_execute(instance, 2, nullptr, 0), CResult(43_u32));
+    EXPECT_THAT(fizzy_execute(instance, 3, nullptr, 0), CResult(44_u64));
+    EXPECT_THAT(fizzy_execute(instance, 4, nullptr, 0), CResult(45_u64));
+
+    fizzy_free_instance(instance);
+
+    // reordered globals
+    module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+    FizzyImportedGlobal host_globals_reordered[] = {{"mod1", "g2", mod1g2}, {"mod2", "g1", mod2g1},
+        {"mod2", "g2", mod2g2}, {"mod1", "g1", mod1g1}};
+    instance = fizzy_resolve_instantiate(
+        module, &mod1foo1, 1, nullptr, nullptr, host_globals_reordered, 4);
+    EXPECT_NE(instance, nullptr);
+
+    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, 0), CResult(42_u32));
+    EXPECT_THAT(fizzy_execute(instance, 2, nullptr, 0), CResult(43_u32));
+    EXPECT_THAT(fizzy_execute(instance, 3, nullptr, 0), CResult(44_u64));
+    EXPECT_THAT(fizzy_execute(instance, 4, nullptr, 0), CResult(45_u64));
+
+    fizzy_free_instance(instance);
+
+    // extra globals
+    module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+    FizzyImportedGlobal host_globals_extra[] = {{"mod1", "g1", mod1g1}, {"mod1", "g2", mod1g2},
+        {"mod2", "g1", mod2g1}, {"mod2", "g2", mod2g2}, {"mod3", "g1", mod1g1}};
+    instance =
+        fizzy_resolve_instantiate(module, &mod1foo1, 1, nullptr, nullptr, host_globals_extra, 4);
+    EXPECT_NE(instance, nullptr);
+
+    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, 0), CResult(42_u32));
+    EXPECT_THAT(fizzy_execute(instance, 2, nullptr, 0), CResult(43_u32));
+    EXPECT_THAT(fizzy_execute(instance, 3, nullptr, 0), CResult(44_u64));
+    EXPECT_THAT(fizzy_execute(instance, 4, nullptr, 0), CResult(45_u64));
+
+    fizzy_free_instance(instance);
+
+    // not enough globals
+    module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+    EXPECT_EQ(
+        fizzy_resolve_instantiate(module, &mod1foo1, 1, nullptr, nullptr, host_globals_extra, 3),
+        nullptr);
+}
+
+TEST(capi, resolve_instantiate_global_duplicate)
+{
+    /* wat2wasm
+      (global (import "mod1" "g1") i32)
+      (global (import "mod1" "g1") i32)
+      (func (result i32) (global.get 0))
+      (func (result i32) (global.get 1))
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000105016000017f021702046d6f6431026731037f00046d6f6431026731037f000303020000"
+        "0a0b02040023000b040023010b");
+    auto module = fizzy_parse(wasm.data(), wasm.size());
+    ASSERT_NE(module, nullptr);
+
+    FizzyValue mod1g1value{42};
+    FizzyExternalGlobal mod1g1 = {&mod1g1value, {FizzyValueTypeI32, false}};
+
+    FizzyImportedGlobal host_globals[] = {{"mod1", "g1", mod1g1}};
+
+    auto instance =
+        fizzy_resolve_instantiate(module, nullptr, 0, nullptr, nullptr, host_globals, 1);
+    ASSERT_NE(instance, nullptr);
+
+    EXPECT_THAT(fizzy_execute(instance, 0, nullptr, 0), CResult(42_u32));
+    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, 0), CResult(42_u32));
+
+    fizzy_free_instance(instance);
+}
+
 
 TEST(capi, free_instance_null)
 {
