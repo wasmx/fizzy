@@ -324,12 +324,34 @@ enum class ExternalKind : uint8_t
 // https://webassembly.github.io/spec/core/binary/modules.html#import-section
 struct Import
 {
+    Import() = default;
+    Import(const Import& other) : module(other.module), name(other.name), kind(other.kind)
+    {
+        switch (other.kind)
+        {
+        case ExternalKind::Function:
+            desc.function_type_index = other.desc.function_type_index;
+            break;
+        case ExternalKind::Table:
+            desc.table = other.desc.table;
+            break;
+        case ExternalKind::Memory:
+            desc.memory = other.desc.memory;
+            break;
+        case ExternalKind::Global:
+            desc.global = other.desc.global;
+            break;
+        }
+    }
+    // TODO needs move constructor
+
     std::string module;
     std::string name;
     ExternalKind kind = ExternalKind::Function;
-    union
+    union Desc
     {
-        TypeIdx function_type_index = 0;
+        Desc() : function_type_index(0) {}
+        TypeIdx function_type_index;
         Memory memory;
         GlobalType global;
         Table table;
