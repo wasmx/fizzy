@@ -35,7 +35,7 @@ commands:
             else
               [[ $OSTYPE = darwin* ]] && os=macos || os=ubuntu
               cd /usr/local
-              curl -L https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.0.20-$os.tar.gz | sudo tar xz --strip 1
+              curl -L https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.0.20-$os.tar.gz | (sudo tar xz --strip 1 || tar xz --strip 1)
             fi
 
   install_testfloat:
@@ -586,6 +586,13 @@ jobs:
           command: |
             rustfmt --version
             cargo fmt --all -- --check
+      - install_wabt
+      - run:
+          name: Check wat2wasm4tests
+          command: |
+            rustfmt --version
+            find bindings/rust -name '*.rs' -print -exec ./wat2wasm4tests.py {} \;
+            git diff --color --exit-code
       - run:
           name: Build (debug mode)
           command: cargo build
