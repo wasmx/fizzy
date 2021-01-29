@@ -29,6 +29,8 @@ fn main() {
         // https://github.com/rust-lang-nursery/rust-bindgen/issues/947#issuecomment-327100002
         .layout_tests(false)
         .whitelist_function("fizzy_.*")
+        .whitelist_var("Fizzy.*")
+        .whitelist_type("Fizzy.*")
         // TODO: consider removing this
         .size_t_is_usize(true)
         .generate()
