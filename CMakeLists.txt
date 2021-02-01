@@ -12,11 +12,11 @@ include(CableBuildType)
 include(CableCompilerSettings)
 include(CMakeDependentOption)
 
-option(FIZZY_WASI "Enable WASI support" OFF)
-
 option(FIZZY_TESTING "Enable Fizzy internal tests" OFF)
 cmake_dependent_option(HUNTER_ENABLED "Enable Hunter package manager" ON
     "FIZZY_TESTING" OFF)
+
+cmake_dependent_option(FIZZY_WASI "Enable WASI support" OFF "NOT FIZZY_TESTING" ON)
 
 cmake_dependent_option(FIZZY_FUZZING "Enable Fizzy fuzzing" OFF "FIZZY_TESTING" OFF)
 
