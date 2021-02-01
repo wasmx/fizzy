@@ -1,16 +1,16 @@
 #!/usr/bin/python3
 
-"""wat2wasm4cpp
+"""wat2wasm4tests
 
-This script converts C++ comments containing WebAssembly text format (WAT)
+This script converts C++ or Rust comments containing WebAssembly text format (WAT)
 into WebAssembly binary format.
 
 It uses wat2wasm tool from WABT (https://github.com/WebAssembly/wabt)
 and expect the tool be available in PATH.
-- On Linux/Debian wabt package is avialble.
-- On macos wabt can be installed via homebrew.
+- On Linux/Debian wabt package is available.
+- On macOS wabt can be installed via homebrew.
 
-It searches for the C++ block comments starting with `wat2wasm [options]`.
+It searches for the C++ or Rust block comments starting with `wat2wasm [options]`.
 Optional options are going to be passed to the wat2wasm tool.
 Example:
 
@@ -31,10 +31,16 @@ DEBUG = False
 WAT2WASM_TOOL = 'wat2wasm'
 WAT2WASM_DEFAULT_OPTIONS = ['--disable-saturating-float-to-int',
                             '--disable-sign-extension', '--disable-multi-value']
-FORMAT_TOOL = 'clang-format'
+CPP_FORMAT_TOOL = ['clang-format', '-i']
+RS_FORMAT_TOOL = ['rustfmt']
+
+CPP_EXTENSION = ".cpp"
+RS_EXTENSION = ".rs"
 
 WAT_RE = re.compile(r'/\* wat2wasm(.*)\n([^*]*)\*/', re.MULTILINE)
-WASM_RE = re.compile(r'\s*(?:const )?auto \w+ =\s*(?:fizzy\:\:test\:\:)?from_hex\(\s*"([^;]*)"\);',
+WASM_CPP_RE = re.compile(r'\s*(?:const )?auto \w+ =\s*(?:fizzy\:\:test\:\:)?from_hex\(\s*"([^;]*)"\);',
+                     re.MULTILINE)
+WASM_RUST_RE = re.compile(r'\s*let \w+ =\s*hex::decode\(\s*"([^;]*)"\).unwrap\(\);',
                      re.MULTILINE)
 
 TMP_WAT_FILE = sys.argv[0] + '.wat'
@@ -69,6 +75,15 @@ try:
         raise Exception("Missing FILE argument")
 
     source_path = sys.argv[1]
+
+    source_extension = os.path.splitext(source_path)[1]
+    if source_extension == CPP_EXTENSION:
+        cpp_source = True
+    elif source_extension == RS_EXTENSION:
+        cpp_source = False
+    else:
+        raise Exception("File extension not supported")
+
     with open(source_path, 'r') as f:
         source = f.read()
 
@@ -101,7 +116,8 @@ try:
         with open(TMP_WASM_FILE, 'rb') as f:
             new_wasm = f.read().hex()
 
-        wasm_match = WASM_RE.match(source, pos)
+        wasm_re = WASM_CPP_RE if cpp_source else WASM_RUST_RE
+        wasm_match = wasm_re.match(source, pos)
         if wasm_match:
             cur_wasm = wasm_match.group(1)
             cur_wasm = cur_wasm.translate({ord(c): '' for c in ' \r\n"'})
@@ -111,17 +127,23 @@ try:
                 source = "".join((source[:begin], new_wasm, source[end:]))
         else:
             modified = True
-            source = "".join((source[:pos], 'const auto wasm = from_hex("',
-                              new_wasm, '");', source[pos:]))
+            if cpp_source:
+                source = "".join((source[:pos], 'const auto wasm = from_hex("',
+                                  new_wasm, '");', source[pos:]))
+            else:
+                source = "".join((source[:pos], 'let wasm = hex::decode("',
+                                  new_wasm, '").unwrap();', source[pos:]))
+
 
     if modified:
         with open(source_path, 'w') as f:
             f.write(source)
 
-        # Format the modified file with clang-format, but ignore all the related
-        # errors, including clang-format not found.
+        # Format the modified file with clang-format / rustfmt, but ignore all the related
+        # errors, including formatting tool not found.
+        format_tool = CPP_FORMAT_TOOL if cpp_source else RS_FORMAT_TOOL
         try:
-            subprocess.run([FORMAT_TOOL, '-i', source_path],
+            subprocess.run(format_tool + [source_path],
                            capture_output=True)
         except:
             pass
