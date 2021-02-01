@@ -56,6 +56,7 @@ pub enum Error {
     ArgumentTypeMismatch,
     NoMemoryAvailable,
     InvalidMemoryOffsetOrSize,
+    Trapped,
 }
 
 impl From<String> for Error {
@@ -534,6 +535,9 @@ impl Instance {
         let args: Vec<Value> = args.iter().map(|v| v.into()).collect();
 
         let ret = unsafe { self.unsafe_execute(func_idx, &args) };
+        if ret.trapped() {
+            return Err(Error::Trapped);
+        }
         Ok(TypedExecutionResult {
             result: ret.0,
             value_type: func_type.output,
@@ -1402,7 +1406,7 @@ mod tests {
         let instance = module.unwrap().instantiate();
         assert!(instance.is_ok());
         let result = instance.unwrap().execute("test", &[]);
-        assert!(result.is_ok());
-        assert!(result.unwrap().trapped());
+        assert!(result.is_err());
+        assert_eq!(result.err().unwrap(), Error::Trapped);
     }
 }
