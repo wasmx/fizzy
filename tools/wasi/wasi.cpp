@@ -10,7 +10,7 @@
 #include <cassert>
 #include <filesystem>
 #include <fstream>
-#include <iostream>
+#include <ostream>
 
 namespace fizzy::wasi
 {
@@ -99,7 +99,7 @@ ExecutionResult environ_sizes_get(Instance& instance, const Value* args, int)
 }
 }  // namespace
 
-bool run(int argc, const char** argv)
+bool run(int argc, const char** argv, std::ostream& err)
 {
     constexpr auto ns = "wasi_snapshot_preview1";
     const std::vector<ImportedFunction> wasi_functions = {
@@ -126,24 +126,24 @@ bool run(int argc, const char** argv)
         nullptr,  // NOTE: no special allocator
     };
 
-    const uvwasi_errno_t err = uvwasi_init(&state, &options);
-    if (err != UVWASI_ESUCCESS)
+    const uvwasi_errno_t uvwasi_err = uvwasi_init(&state, &options);
+    if (uvwasi_err != UVWASI_ESUCCESS)
     {
-        std::cerr << "Failed to initialise UVWASI: " << uvwasi_embedder_err_code_to_string(err)
-                  << "\n";
+        err << "Failed to initialise UVWASI: " << uvwasi_embedder_err_code_to_string(uvwasi_err)
+            << "\n";
         return false;
     }
 
     if (!std::filesystem::is_regular_file(argv[0]))
     {
-        std::cerr << "File does not exists or is irregular: " << argv[0] << "\n";
+        err << "File does not exists or is irregular: " << argv[0] << "\n";
         return false;
     }
 
     std::ifstream wasm_file{argv[0]};
     if (!wasm_file)
     {
-        std::cerr << "Failed to open file: " << argv[0] << "\n";
+        err << "Failed to open file: " << argv[0] << "\n";
         return false;
     }
     const auto wasm_binary =
@@ -158,7 +158,7 @@ bool run(int argc, const char** argv)
     const auto start_function = find_exported_function(*instance->module, "_start");
     if (!start_function.has_value())
     {
-        std::cerr << "File is not WASI compatible (_start not found)\n";
+        err << "File is not WASI compatible (_start not found)\n";
         return false;
     }
 
@@ -166,20 +166,20 @@ bool run(int argc, const char** argv)
     // TODO: do this in find_exported_function
     if (instance->module->get_function_type(*start_function) != FuncType{})
     {
-        std::cerr << "File is not WASI compatible (_start has invalid signature)\n";
+        err << "File is not WASI compatible (_start has invalid signature)\n";
         return false;
     }
 
     if (!find_exported_memory(*instance, "memory").has_value())
     {
-        std::cerr << "File is not WASI compatible (no memory exported)\n";
+        err << "File is not WASI compatible (no memory exported)\n";
         return false;
     }
 
     const auto result = execute(*instance, *start_function, {});
     if (result.trapped)
     {
-        std::cerr << "Execution aborted with WebAssembly trap\n";
+        err << "Execution aborted with WebAssembly trap\n";
         return false;
     }
     assert(!result.has_value);

@@ -16,7 +16,7 @@ int main(int argc, const char** argv)
         }
 
         // Drop "fizzy-wasi" from the argv, but keep the wasm file name in argv[1].
-        const bool res = fizzy::wasi::run(argc - 1, argv + 1);
+        const bool res = fizzy::wasi::run(argc - 1, argv + 1, std::cerr);
         return res ? 0 : 1;
     }
     catch (const std::exception& ex)
