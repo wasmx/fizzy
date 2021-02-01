@@ -81,20 +81,37 @@ using bytes_ptr = std::unique_ptr<bytes, void (*)(bytes*)>;
 /// The module instance.
 struct Instance
 {
+    /// Module of this instance.
     std::unique_ptr<const Module> module;
-    // Memory is either allocated and owned by the instance or imported as already allocated bytes
-    // and owned externally.
-    // For these cases unique_ptr would either have a normal deleter or noop deleter respectively
+
+    /// Instance memory.
+    /// Memory is either allocated and owned by the instance or imported as already allocated bytes
+    /// and owned externally.
+    /// For these cases unique_ptr would either have a normal deleter or no-op deleter respectively
     bytes_ptr memory = {nullptr, [](bytes*) {}};
+
+    /// Memory limits.
     Limits memory_limits;
-    // Hard limit for memory growth in pages, checked when memory is defined as unbounded in module
+
+    /// Hard limit for memory growth in pages, checked when memory is defined as unbounded in
+    /// module.
     uint32_t memory_pages_limit = 0;
-    // Table is either allocated and owned by the instance or imported and owned externally.
-    // For these cases unique_ptr would either have a normal deleter or noop deleter respectively.
+
+    /// Instance table.
+    /// Table is either allocated and owned by the instance or imported and owned externally.
+    /// For these cases unique_ptr would either have a normal deleter or no-op deleter respectively.
     table_ptr table = {nullptr, [](table_elements*) {}};
+
+    /// Table limits.
     Limits table_limits;
+
+    /// Instance globals (excluding imported globals).
     std::vector<Value> globals;
+
+    /// Imported functions.
     std::vector<ExternalFunction> imported_functions;
+
+    /// Imported globals.
     std::vector<ExternalGlobal> imported_globals;
 
     Instance(std::unique_ptr<const Module> _module, bytes_ptr _memory, Limits _memory_limits,
@@ -124,10 +141,19 @@ std::unique_ptr<Instance> instantiate(std::unique_ptr<const Module> module,
 /// Function that should be used by instantiate as import, identified by module and function name.
 struct ImportedFunction
 {
+    /// Module name.
     std::string module;
+
+    /// Function name.
     std::string name;
+
+    /// Array of input types.
     std::vector<ValType> inputs;
+
+    /// Output type or empty optional if function has void return type.
     std::optional<ValType> output;
+
+    /// Function object, which will be called to execute the function.
     execute_function function;
 };
 
@@ -140,10 +166,19 @@ std::vector<ExternalFunction> resolve_imported_functions(
 /// Global that should be used by instantiate as import, identified by module and global name.
 struct ImportedGlobal
 {
+    /// Module name.
     std::string module;
+
+    /// Global name.
     std::string name;
+
+    /// Pointer to global value.
     Value* value = nullptr;
+
+    /// Value type of global.
     ValType type = ValType::i32;
+
+    /// Mutability of global.
     bool is_mutable = false;
 };
 
