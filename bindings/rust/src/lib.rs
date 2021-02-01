@@ -43,6 +43,28 @@ use std::ptr::NonNull;
 
 use crate::constnonnull::ConstNonNull;
 
+/// The various kinds of errors, which can be returned by any of the interfaces.
+#[derive(Eq, PartialEq, Debug, Clone)]
+pub enum Error {
+    MalformedModule(String),
+    InvalidModule(String),
+    InstantiationFailed(String),
+    MemoryAllocationFailed(String),
+    Other(String),
+}
+
+impl From<String> for Error {
+    fn from(error: String) -> Self {
+        Error::Other(error)
+    }
+}
+
+impl From<&str> for Error {
+    fn from(error: &str) -> Self {
+        Error::Other(error.to_string())
+    }
+}
+
 /// A safe container for handling the low-level FizzyError struct.
 struct FizzyErrorBox(Box<sys::FizzyError>);
 
