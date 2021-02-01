@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-"""wat2wasm4cpp
+"""wat2wasm4tests
 
 This script converts C++ or Rust comments containing WebAssembly text format (WAT)
 into WebAssembly binary format.

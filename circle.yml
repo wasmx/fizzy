@@ -287,27 +287,10 @@ jobs:
             codespell --quiet-level=4 -I .codespell-whitelist
       - install_wabt
       - run:
-          name: "Check wat2wasm4cpp"
+          name: "Check wat2wasm4tests"
           command: |
             export PATH=$PATH:~/bin
-            ./wat2wasm4cpp.py test/unittests/api_test.cpp
-            ./wat2wasm4cpp.py test/unittests/capi_test.cpp
-            ./wat2wasm4cpp.py test/unittests/end_to_end_test.cpp
-            ./wat2wasm4cpp.py test/unittests/execute_call_test.cpp
-            ./wat2wasm4cpp.py test/unittests/execute_control_test.cpp
-            ./wat2wasm4cpp.py test/unittests/execute_floating_point_test.cpp
-            ./wat2wasm4cpp.py test/unittests/execute_invalid_test.cpp
-            ./wat2wasm4cpp.py test/unittests/execute_numeric_test.cpp
-            ./wat2wasm4cpp.py test/unittests/execute_test.cpp
-            ./wat2wasm4cpp.py test/unittests/instantiate_test.cpp
-            ./wat2wasm4cpp.py test/unittests/module_test.cpp
-            ./wat2wasm4cpp.py test/unittests/parser_test.cpp
-            ./wat2wasm4cpp.py test/unittests/validation_stack_test.cpp
-            ./wat2wasm4cpp.py test/unittests/validation_stack_type_test.cpp
-            ./wat2wasm4cpp.py test/unittests/validation_test.cpp
-            ./wat2wasm4cpp.py test/unittests/wasm_engine_test.cpp
-            ./wat2wasm4cpp.py test/spectests/spectests.cpp
-            ./wat2wasm4cpp.py test/testfloat/testfloat.cpp
+            find test -name '*.cpp' -print -exec ./wat2wasm4tests.py {} \;
             git diff --color --exit-code
       - build:
           configuration_name: "Tidy"
