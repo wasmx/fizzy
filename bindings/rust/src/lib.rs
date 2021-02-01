@@ -46,9 +46,7 @@ impl Module {
     /// Create an instance of a module.
     // TODO: support imported functions
     pub fn instantiate(self) -> Result<Instance, ()> {
-        if self.0.is_null() {
-            return Err(());
-        }
+        assert!(!self.0.is_null());
         let ptr = unsafe {
             sys::fizzy_instantiate(
                 self.0,
@@ -307,6 +305,20 @@ mod tests {
         assert!(module.is_ok());
         let instance = module.unwrap().instantiate();
         assert!(instance.is_ok());
+    }
+
+    #[test]
+    fn instantiate_wasm_missing_import() {
+        /* wat2wasm
+        (module
+          (memory (import "mod" "m") 1)
+        )
+        */
+        let input = hex::decode("0061736d01000000020a01036d6f64016d020001").unwrap();
+        let module = parse(&input);
+        assert!(module.is_ok());
+        let instance = module.unwrap().instantiate();
+        assert!(instance.is_err());
     }
 
     #[test]
