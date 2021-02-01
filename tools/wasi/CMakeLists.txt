@@ -4,9 +4,16 @@
 
 include(ProjectUVWASI)
 
+add_library(wasi)
+add_library(fizzy::wasi ALIAS wasi)
+target_compile_features(wasi PUBLIC cxx_std_17)
+target_include_directories(wasi PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(wasi PRIVATE fizzy::fizzy-internal uvwasi::uvwasi)
+target_sources(wasi PRIVATE wasi.cpp wasi.hpp)
+
 add_executable(fizzy-wasi)
-target_link_libraries(fizzy-wasi PRIVATE fizzy::fizzy-internal uvwasi::uvwasi)
-target_sources(fizzy-wasi PRIVATE main.cpp wasi.cpp wasi.hpp)
+target_link_libraries(fizzy-wasi PRIVATE fizzy::wasi)
+target_sources(fizzy-wasi PRIVATE main.cpp)
 
 if(UNIX AND NOT APPLE)
     # For libstdc++ up to version 8 (included) this is needed for proper <filesystem> support.
