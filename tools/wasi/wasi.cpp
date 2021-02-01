@@ -1,7 +1,8 @@
 // Fizzy: A fast WebAssembly interpreter
-// Copyright 2019-2020 The Fizzy Authors.
+// Copyright 2020 The Fizzy Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#include "wasi.hpp"
 #include "execute.hpp"
 #include "limits.hpp"
 #include "parser.hpp"
@@ -96,6 +97,7 @@ ExecutionResult environ_sizes_get(Instance& instance, const Value* args, int)
     uvwasi_serdes_write_uint32_t(instance.memory->data(), environ_buf_size, 0);
     return Value{uint32_t{UVWASI_ESUCCESS}};
 }
+}  // namespace
 
 bool run(int argc, const char** argv)
 {
@@ -184,26 +186,4 @@ bool run(int argc, const char** argv)
 
     return true;
 }
-}  // namespace
 }  // namespace fizzy::wasi
-
-int main(int argc, const char** argv)
-{
-    try
-    {
-        if (argc < 2)
-        {
-            std::cerr << "Missing executable argument\n";
-            return -1;
-        }
-
-        // Drop "fizzy-wasi" from the argv, but keep the wasm file name in argv[1].
-        const bool res = fizzy::wasi::run(argc - 1, argv + 1);
-        return res ? 0 : 1;
-    }
-    catch (const std::exception& ex)
-    {
-        std::cerr << "Exception: " << ex.what() << "\n";
-        return -2;
-    }
-}
