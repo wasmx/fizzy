@@ -151,12 +151,6 @@ impl ExecutionResult {
     }
 }
 
-impl From<ExecutionResult> for sys::FizzyExecutionResult {
-    fn from(v: ExecutionResult) -> Self {
-        v.0
-    }
-}
-
 impl Instance {
     /// Get a read-only pointer to the module.
     unsafe fn get_module(&self) -> *const sys::FizzyModule {
