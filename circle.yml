@@ -638,6 +638,54 @@ jobs:
           name: Test (debug mode)
           command: RUSTFLAGS="-Z sanitizer=address -C opt-level=0" cargo +nightly test --target x86_64-unknown-linux-gnu
 
+  bindings-rust-coverage:
+    docker:
+      - image: rust:1-buster
+    steps:
+      - checkout
+      - run:
+          name: Update environment
+          command: |
+            echo 'deb http://deb.debian.org/debian buster-backports main' >> /etc/apt/sources.list
+            apt -qq update
+            apt -yq -t buster-backports install cmake --no-install-recommends
+            apt -yq install llvm-8-dev clang-8 --no-install-recommends
+            rustup toolchain install nightly-x86_64-unknown-linux-gnu
+            rustup component add llvm-tools-preview
+            cargo install cargo-binutils rustfilt
+      - run:
+          name: Build (debug mode)
+          command: RUSTFLAGS="-Z instrument-coverage" cargo +nightly build --target x86_64-unknown-linux-gnu
+      - run:
+          name: Test (debug mode)
+          command: RUSTFLAGS="-Z instrument-coverage -C opt-level=0" LLVM_PROFILE_FILE="fizzy-%m.profraw" cargo +nightly test --target x86_64-unknown-linux-gnu
+      - run:
+          name: Collect coverage data (Rust)
+          command: |
+            mkdir -p coverage
+
+            # Coverage from integration-test is ignored.
+            cargo profdata -- merge bindings/rust/fizzy-*.profraw -o default.profdata
+
+            # Guess the cargo test executable name.
+            OBJECT=$(find target/x86_64-unknown-linux-gnu/debug/deps -executable -name 'fizzy-*')
+
+            cargo cov -- report -use-color -instr-profile default.profdata -ignore-filename-regex='cargo/registry' -Xdemangler rustfilt $OBJECT
+            cargo cov -- report -instr-profile default.profdata -ignore-filename-regex='cargo/registry' -Xdemangler rustfilt $OBJECT > coverage/report.txt
+            cargo cov -- show -format=html -instr-profile default.profdata -ignore-filename-regex='cargo/registry' -Xdemangler rustfilt -region-coverage-lt=100 $OBJECT > coverage/missing.html
+            cargo cov -- show -format=html -instr-profile default.profdata -ignore-filename-regex='cargo/registry' -Xdemangler rustfilt $OBJECT > coverage/full.html
+            cargo cov -- export -instr-profile default.profdata -ignore-filename-regex='cargo/registry' -format=lcov $OBJECT > coverage.lcov
+      - store_artifacts:
+          path: coverage
+          destination: rust-coverage-unittests
+      - run:
+          name: "Upload to Codecov"
+          command: |
+            # Convert to relative paths
+            sed -i 's|$(pwd)/||' coverage.lcov
+
+            bash <(curl -s https://codecov.io/bash) -F rust -Z -f coverage.lcov -X gcov
+
 workflows:
   version: 2
 
@@ -666,6 +714,9 @@ workflows:
             - coverage-clang
       - bindings-rust
       - bindings-rust-asan:
+          requires:
+            - bindings-rust
+      - bindings-rust-coverage:
           requires:
             - bindings-rust
 
