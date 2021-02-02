@@ -22,10 +22,19 @@ if(TESTFLOAT_GEN)
     set(TESTFLOAT_SEED ${TESTFLOAT_SEED} CACHE INTERNAL "testfloat_get seed")  # Save in cache for lookup.
     message(VERBOSE "testfloat_gen seed: ${TESTFLOAT_SEED}")
 
+    # List of test names to ignore.
     set(IGNORE_LIST)
+
+    # Ignore NaN values in _some_ tests. The NaN checks in testfloat are more restrictive
+    # than required by the WebAssembly and the IEEE-754 specs.
+    set(IGNORE_NANS FALSE)
+
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         # TODO: Clang produces -0 for input 0, see https://bugs.llvm.org/show_bug.cgi?id=47393.
         list(APPEND IGNORE_LIST ui64_to_f64/min)
+    elseif(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_PROCESSOR STREQUAL arm64)
+        # Ignore NaNs in arithmetic functions.
+        set(IGNORE_NANS TRUE)
     endif()
 
     set(ROUNDING_MODES near_even minMag min max)
@@ -61,7 +70,7 @@ if(TESTFLOAT_GEN)
     # with non-sticky rounding direction while testfloat_gen has single function and rounding
     # direction options.
     #
-    # TODO: NaNs are ignored for these as Fizzy always return nan:canonical.
+    # TODO: NaNs are always ignored for these as Fizzy always return nan:canonical.
     set(ROUND_TO_INT_FUNCTIONS
         "f32_ceil\;-rmax f32_roundToInt"
         "f32_floor\;-rmin f32_roundToInt"
@@ -89,8 +98,15 @@ if(TESTFLOAT_GEN)
         endif()
     endmacro()
 
-    # Rounding sensitive functions - rounding mode must agree.
-    foreach(FUNCTION ${ARITHMETIC_FUNCTIONS} ${INEXACT_CONVERSION_FUNCTIONS})
+    # Arithmetic functions - rounding mode must agree.
+    foreach(FUNCTION ${ARITHMETIC_FUNCTIONS})
+        foreach(ROUNDING_MODE ${ROUNDING_MODES})
+            add_testfloat_test(${FUNCTION}/${ROUNDING_MODE} "-r${ROUNDING_MODE} ${FUNCTION}" "-r${ROUNDING_MODE} $<$<BOOL:${IGNORE_NANS}>:-ignoreNaNs> ${FUNCTION}")
+        endforeach()
+    endforeach()
+
+    # Rounding sensitive conversion functions - rounding mode must agree.
+    foreach(FUNCTION ${INEXACT_CONVERSION_FUNCTIONS})
         foreach(ROUNDING_MODE ${ROUNDING_MODES})
             add_testfloat_test(${FUNCTION}/${ROUNDING_MODE} "-r${ROUNDING_MODE} ${FUNCTION}" "-r${ROUNDING_MODE} ${FUNCTION}")
         endforeach()
