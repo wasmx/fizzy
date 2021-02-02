@@ -445,6 +445,22 @@ jobs:
           min_time: "0.01"
       - spectest
 
+  arm64-linux:
+    executor: linux-gcc-latest
+    steps:
+      - run:
+          name: "Install arm64 toolchain"
+          command: |
+            sudo apt-get -q update
+            sudo apt-get -qy install --no-install-recommends g++-aarch64-linux-gnu qemu-user-static
+      - install_testfloat
+      - checkout
+      - build:
+          build_type: Debug
+          cmake_options: -DCMAKE_TOOLCHAIN_FILE=~/project/cmake/toolchains/arm64-linux.cmake
+      - test
+      # TODO: Enable spectests
+
   benchmark:
     machine:
       image: ubuntu-1604:201903-01
@@ -702,6 +718,9 @@ workflows:
       - spectest:
           requires:
             - coverage-clang
+      - arm64-linux:
+          requires:
+            - coverage-gcc
       - bindings-rust
       - bindings-rust-asan:
           requires:
