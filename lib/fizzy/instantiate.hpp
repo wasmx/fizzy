@@ -21,23 +21,48 @@ namespace fizzy
 struct ExecutionResult;
 struct Instance;
 
+using ExecuteFunctionPtr = ExecutionResult (*)(void* context, Instance&, const Value*, int depth);
+using DeleteContextFunctionPtr = void (*)(void* context) noexcept;
+
 /// Function representing WebAssembly or host function execution.
-using execute_function = std::function<ExecutionResult(Instance&, const Value*, int depth)>;
+class ExecuteFunction
+{
+public:
+    ExecuteFunction() = default;
+
+    template <class F>
+    ExecuteFunction(
+        F f, void* context, DeleteContextFunctionPtr context_deleter = [](void*) noexcept {})
+      : m_function{f}, m_context{context, context_deleter}
+    {}
+
+    template <class F>
+    ExecuteFunction(F f) : m_function{f}, m_context{nullptr, [](void*) noexcept {}}
+    {}
+
+    ExecuteFunction(Instance& instance, FuncIdx func_idx);
+
+    ExecutionResult operator()(Instance& instance, const Value* args, int depth);
+
+private:
+    ExecuteFunctionPtr m_function = nullptr;
+    std::shared_ptr<void> m_context = {nullptr, [](void*) noexcept {}};
+};
 
 /// Function with associated input/output types,
 /// used to represent both imported and exported functions.
 struct ExternalFunction
 {
-    execute_function function;
+    ExecuteFunction function;
     span<const ValType> input_types;
     span<const ValType> output_types;
 
-    ExternalFunction(execute_function _function, span<const ValType> _input_types,
+    ExternalFunction(ExecuteFunction _function, span<const ValType> _input_types,
         span<const ValType> _output_types)
       : function(std::move(_function)), input_types(_input_types), output_types(_output_types)
     {}
 
-    ExternalFunction(execute_function _function, const FuncType& type)
+    ExternalFunction(ExecuteFunction _function, const FuncType& type)
       : function(std::move(_function)), input_types(type.inputs), output_types(type.outputs)
     {}
 };
@@ -128,7 +153,7 @@ struct ImportedFunction
     std::string name;
     std::vector<ValType> inputs;
     std::optional<ValType> output;
-    execute_function function;
+    ExecuteFunction function;
 };
 
 /// Create vector of fizzy::ExternalFunction ready to be passed to instantiate().

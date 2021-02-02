@@ -110,13 +110,22 @@ inline fizzy::ExecutionResult unwrap(const FizzyExecutionResult& result) noexcep
         return unwrap(result.value);
 }
 
-inline auto unwrap(FizzyExternalFn func, void* context) noexcept
+inline fizzy::ExecuteFunction unwrap(FizzyExternalFn func, void* c_context) noexcept
 {
-    return [func, context](fizzy::Instance& instance, const fizzy::Value* args,
-               int depth) noexcept -> fizzy::ExecutionResult {
-        const auto result = func(context, wrap(&instance), wrap(args), depth);
-        return unwrap(result);
+    auto context = std::make_unique<std::pair<FizzyExternalFn, void*>>(func, c_context);
+
+    auto context_deleter = [](void* context) noexcept {
+        delete static_cast<std::pair<FizzyExternalFn, void*>*>(context);
     };
+
+    static constexpr fizzy::ExecuteFunctionPtr function =
+        [](void* context, fizzy::Instance& instance, const fizzy::Value* args,
+            int depth) -> fizzy::ExecutionResult {
+        auto [c_func, c_context] = *static_cast<std::pair<FizzyExternalFn, void*>*>(context);
+        return unwrap(c_func(c_context, wrap(&instance), wrap(args), depth));
+    };
+
+    return fizzy::ExecuteFunction(function, context.release(), context_deleter);
 }
 
 inline FizzyExternalFunction wrap(fizzy::ExternalFunction external_func)

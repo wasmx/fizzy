@@ -665,7 +665,8 @@ TEST(execute_control, br_1_out_of_function_and_imported_function)
         "0a0d010b00034041010c010b41000b");
 
     const auto module = parse(bin);
-    auto instance = instantiate(*module, {{nullptr, module->typesec[0]}});
+    auto instance = instantiate(
+        *module, std::vector<ExternalFunction>(1, {ExecuteFunction{nullptr}, module->typesec[0]}));
     EXPECT_THAT(execute(*instance, 1, {}), Result(1));
 }
 
