@@ -124,16 +124,9 @@ endif()
 # fizzy-testfloat selftests
 
 function(add_testfloat_selftest NAME ARGS INPUT EXPECTED_ERROR)
-    if(INPUT)
-        set(command sh -c "echo ${INPUT} | $<TARGET_FILE:fizzy-testfloat> ${ARGS}")
-    else()
-        separate_arguments(ARGS)
-        set(command $<TARGET_FILE:fizzy-testfloat> ${ARGS})
-    endif()
-
     add_test(
         NAME fizzy/testfloat/selftest/${NAME}
-        COMMAND ${command}
+        COMMAND sh -c "$<$<BOOL:${INPUT}>:echo ${INPUT} | >$<TARGET_FILE:fizzy-testfloat> ${ARGS}"
     )
 
     if(EXPECTED_ERROR)
