@@ -30,39 +30,39 @@ if(TESTFLOAT_GEN)
 
     set(ROUNDING_MODES near_even minMag min max)
 
-    set(
-        ROUNDING_DEPENDENT_FUNCTIONS
+    # Arithmetic functions: sensitive to rounding and NaNs.
+    set(ARITHMETIC_FUNCTIONS
         f32_sqrt f64_sqrt
         f32_add f64_add
         f32_sub f64_sub
         f32_mul f64_mul
-        f32_div f64_div
+        f32_div f64_div)
 
+    # Comparison functions: insensitive to rounding and NaNs.
+    set(COMPARISON_FUNCTIONS
+        f32_eq f64_eq f32_lt f64_lt f32_le f64_le)
+
+    # Conversion functions sensitive to rounding.
+    set(INEXACT_CONVERSION_FUNCTIONS
         i32_to_f32 ui32_to_f32 i64_to_f32 ui64_to_f32 i64_to_f64 ui64_to_f64
-        f64_to_f32
-    )
+        f64_to_f32)
 
-    set(
-        ROUNDING_INDEPENDENT_FUNCTIONS
-        f32_eq f64_eq f32_lt f64_lt f32_le f64_le
-
-        # Always exact -> no rounding
+    # Conversion functions which are always exact -> no rounding.
+    set(EXACT_CONVERSION_FUNCTIONS
         i32_to_f64 ui32_to_f64
-        f32_to_f64
-    )
+        f32_to_f64)
 
-    set(
-        TRUNC_FUNCTIONS
-        f32_trunc_to_i32 f32_trunc_to_ui32 f32_trunc_to_i64 f32_trunc_to_ui64 f64_trunc_to_i32 f64_trunc_to_ui32 f64_trunc_to_i64 f64_trunc_to_ui64
-    )
+    # Truncate conversion functions - the minMag rounding mode is forced.
+    set(TRUNC_FUNCTIONS
+        f32_trunc_to_i32 f32_trunc_to_ui32 f32_trunc_to_i64 f32_trunc_to_ui64
+        f64_trunc_to_i32 f64_trunc_to_ui32 f64_trunc_to_i64 f64_trunc_to_ui64)
 
     # Here we need to map Wasm function to testfloat_gen arguments as Wasm has multiple functions
     # with non-sticky rounding direction while testfloat_gen has single function and rounding
     # direction options.
     #
     # TODO: NaNs are ignored for these as Fizzy always return nan:canonical.
-    set(
-        ROUND_TO_INT_FUNCTIONS
+    set(ROUND_TO_INT_FUNCTIONS
         "f32_ceil\;-rmax f32_roundToInt"
         "f32_floor\;-rmin f32_roundToInt"
         "f32_trunc\;-rminMag f32_roundToInt"
@@ -70,8 +70,7 @@ if(TESTFLOAT_GEN)
         "f64_ceil\;-rmax f64_roundToInt"
         "f64_floor\;-rmin f64_roundToInt"
         "f64_trunc\;-rminMag f64_roundToInt"
-        "f64_nearest\;-rnear_even f64_roundToInt"
-    )
+        "f64_nearest\;-rnear_even f64_roundToInt")
 
 
     macro(add_testfloat_test NAME TESTFLOAT_GEN_ARGS FIZZY_TESTFLOAT_ARGS)
@@ -88,13 +87,15 @@ if(TESTFLOAT_GEN)
         endif()
     endmacro()
 
-    foreach(FUNCTION ${ROUNDING_DEPENDENT_FUNCTIONS})
+    # Rounding sensitive functions - rounding mode must agree.
+    foreach(FUNCTION ${ARITHMETIC_FUNCTIONS} ${INEXACT_CONVERSION_FUNCTIONS})
         foreach(ROUNDING_MODE ${ROUNDING_MODES})
             add_testfloat_test(${FUNCTION}/${ROUNDING_MODE} "-r${ROUNDING_MODE} ${FUNCTION}" "-r${ROUNDING_MODE} ${FUNCTION}")
         endforeach()
     endforeach()
 
-    foreach(FUNCTION ${ROUNDING_INDEPENDENT_FUNCTIONS})
+    # Rounding insensitive functions - testfloat_gen generates rounding-independent test cases.
+    foreach(FUNCTION ${COMPARISON_FUNCTIONS} ${EXACT_CONVERSION_FUNCTIONS})
         foreach(ROUNDING_MODE ${ROUNDING_MODES})
             add_testfloat_test(${FUNCTION}/${ROUNDING_MODE} "${FUNCTION}" "-r${ROUNDING_MODE} ${FUNCTION}")
         endforeach()
@@ -123,16 +124,9 @@ endif()
 # fizzy-testfloat selftests
 
 function(add_testfloat_selftest NAME ARGS INPUT EXPECTED_ERROR)
-    if(INPUT)
-        set(command sh -c "echo ${INPUT} | $<TARGET_FILE:fizzy-testfloat> ${ARGS}")
-    else()
-        separate_arguments(ARGS)
-        set(command $<TARGET_FILE:fizzy-testfloat> ${ARGS})
-    endif()
-
     add_test(
         NAME fizzy/testfloat/selftest/${NAME}
-        COMMAND ${command}
+        COMMAND sh -c "$<$<BOOL:${INPUT}>:echo ${INPUT} | >$<TARGET_FILE:fizzy-testfloat> ${ARGS}"
     )
 
     if(EXPECTED_ERROR)
