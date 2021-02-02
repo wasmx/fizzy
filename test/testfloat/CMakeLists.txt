@@ -72,12 +72,14 @@ if(TESTFLOAT_GEN)
         "f64_trunc\;-rminMag f64_roundToInt"
         "f64_nearest\;-rnear_even f64_roundToInt")
 
+    # Convert ;-separated CROSSCOMPILING_EMULATOR arguments to space-separated command.
+    string(REPLACE ";" " " EMULATOR "${CMAKE_CROSSCOMPILING_EMULATOR}")
 
     macro(add_testfloat_test NAME TESTFLOAT_GEN_ARGS FIZZY_TESTFLOAT_ARGS)
         if(NOT ${NAME} IN_LIST IGNORE_LIST)
             add_test(
                 NAME fizzy/testfloat/${NAME}
-                COMMAND bash -c "set -o pipefail; ${TESTFLOAT_GEN} -seed ${TESTFLOAT_SEED} -level ${TESTFLOAT_LEVEL} ${TESTFLOAT_GEN_ARGS} | $<TARGET_FILE:fizzy-testfloat> ${FIZZY_TESTFLOAT_ARGS}"
+                COMMAND bash -c "set -o pipefail; ${TESTFLOAT_GEN} -seed ${TESTFLOAT_SEED} -level ${TESTFLOAT_LEVEL} ${TESTFLOAT_GEN_ARGS} | ${EMULATOR} $<TARGET_FILE:fizzy-testfloat> ${FIZZY_TESTFLOAT_ARGS}"
             )
             set_tests_properties(
                 fizzy/testfloat/${NAME}
@@ -126,7 +128,7 @@ endif()
 function(add_testfloat_selftest NAME ARGS INPUT EXPECTED_ERROR)
     add_test(
         NAME fizzy/testfloat/selftest/${NAME}
-        COMMAND sh -c "$<$<BOOL:${INPUT}>:echo ${INPUT} | >$<TARGET_FILE:fizzy-testfloat> ${ARGS}"
+        COMMAND sh -c "$<$<BOOL:${INPUT}>:echo ${INPUT} | >${EMULATOR} $<TARGET_FILE:fizzy-testfloat> ${ARGS}"
     )
 
     if(EXPECTED_ERROR)
