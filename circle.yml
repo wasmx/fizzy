@@ -15,6 +15,9 @@ executors:
   macos:
     macos:
       xcode: 11.6.0
+  rust:
+    docker:
+      - image: cimg/rust:1.49
 
 commands:
   install_macos_deps:
@@ -35,7 +38,7 @@ commands:
             else
               [[ $OSTYPE = darwin* ]] && os=macos || os=ubuntu
               cd /usr/local
-              curl -L https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.0.20-$os.tar.gz | (sudo tar xz --strip 1 || tar xz --strip 1)
+              curl -L https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.0.20-$os.tar.gz | sudo tar xz --strip 1
             fi
 
   install_testfloat:
@@ -264,6 +267,39 @@ commands:
             result=$(bin/fizzy-spectests <<#parameters.skip_validation>>--skip-validation<</parameters.skip_validation>> json | tail -1)
             echo $result
             if [ "$expected" != "$result" ]; then exit 1; fi
+
+  rust_restore_cargo_cache:
+    steps:
+      - restore_cache:
+          name: "Restore cargo cache"
+          key: cargo-
+
+  rust_save_cargo_cache:
+    steps:
+      - save_cache:
+          name: "Save cargo cache"
+          key: cargo-{{checksum "Cargo.lock"}}
+          paths:
+            - ~/.cargo
+
+  rust_install_system_dependencies:
+    steps:
+      - run:
+          name: "Install system build dependencies"
+          command: |
+            sudo apt-get -q update
+            sudo apt-get -qy install cmake --no-install-recommends
+            sudo apt-get -qy install llvm-10-dev clang-10 --no-install-recommends
+
+  rust_install_nightly:
+    steps:
+      - run:
+          name: "Install nightly toolchain"
+          command: |
+            rustup toolchain install nightly-x86_64-unknown-linux-gnu
+            rustup component add llvm-tools-preview
+            cargo install cargo-binutils rustfilt
+
 
 jobs:
 
@@ -585,18 +621,11 @@ jobs:
           objects: fizzy-spectests
 
   bindings-rust:
-    docker:
-      - image: rust:1-buster
+    executor: rust
     steps:
+      - rust_restore_cargo_cache
+      - rust_install_system_dependencies
       - checkout
-      - run:
-          name: Update environment
-          command: |
-            echo 'deb http://deb.debian.org/debian buster-backports main' >> /etc/apt/sources.list
-            apt -qq update
-            apt -yq -t buster-backports install cmake --no-install-recommends
-            apt -yq install libclang-dev clang cmake --no-install-recommends
-            rustup component add rustfmt
       - run:
           name: Check formatting
           command: |
@@ -623,20 +652,15 @@ jobs:
           # The package must be run within the actual crate and not in the workspace.
           working_directory: bindings/rust
           command: cargo package
+      - rust_save_cargo_cache
 
   bindings-rust-asan:
-    docker:
-      - image: rust:1-buster
+    executor: rust
     steps:
+      - rust_restore_cargo_cache
+      - rust_install_system_dependencies
+      - rust_install_nightly
       - checkout
-      - run:
-          name: Update environment
-          command: |
-            echo 'deb http://deb.debian.org/debian buster-backports main' >> /etc/apt/sources.list
-            apt -qq update
-            apt -yq -t buster-backports install cmake --no-install-recommends
-            apt -yq install llvm-8-dev clang-8 --no-install-recommends
-            rustup toolchain install nightly-x86_64-unknown-linux-gnu
       - run:
           name: Build (debug mode)
           command: RUSTFLAGS="-Z sanitizer=address" cargo +nightly build --target x86_64-unknown-linux-gnu
@@ -645,26 +669,19 @@ jobs:
           command: RUSTFLAGS="-Z sanitizer=address -C opt-level=0" cargo +nightly test --target x86_64-unknown-linux-gnu
 
   bindings-rust-coverage:
-    docker:
-      - image: rust:1-buster
+    executor: rust
     steps:
+      - rust_restore_cargo_cache
+      - rust_install_system_dependencies
+      - rust_install_nightly
       - checkout
-      - run:
-          name: Update environment
-          command: |
-            echo 'deb http://deb.debian.org/debian buster-backports main' >> /etc/apt/sources.list
-            apt -qq update
-            apt -yq -t buster-backports install cmake --no-install-recommends
-            apt -yq install llvm-8-dev clang-8 --no-install-recommends
-            rustup toolchain install nightly-x86_64-unknown-linux-gnu
-            rustup component add llvm-tools-preview
-            cargo install cargo-binutils rustfilt
       - run:
           name: Build (debug mode)
           command: RUSTFLAGS="-Z instrument-coverage" cargo +nightly build --target x86_64-unknown-linux-gnu
       - run:
           name: Test (debug mode)
           command: RUSTFLAGS="-Z instrument-coverage -C opt-level=0" LLVM_PROFILE_FILE="fizzy-%m.profraw" cargo +nightly test --target x86_64-unknown-linux-gnu
+      - rust_save_cargo_cache
       - run:
           name: Collect coverage data (Rust)
           command: |
