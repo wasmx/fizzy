@@ -159,6 +159,53 @@ TEST(test_utils, result_value_matcher)
     EXPECT_THAT(TypedExecutionResult(Value{1_u64}, ValType::i64), Not(Result(uint8_t{1})));
 }
 
+TEST(test_utils, cresult_value_matcher)
+{
+    using testing::Not;
+
+    FizzyExecutionResult trap{true, false, FizzyValue{}};
+    EXPECT_THAT(trap, CTraps());
+    EXPECT_THAT(trap, Not(CResult()));
+
+    FizzyExecutionResult result_void{false, false, FizzyValue{}};
+    EXPECT_THAT(result_void, CResult());
+    EXPECT_THAT(result_void, Not(CTraps()));
+
+    // Each result type is checked only against values with equal type, because for other types
+    // CResult matcher would access non-active union members of result's value, which presents UB.
+
+    EXPECT_THAT(trap, Not(CResult(0_u32)));
+    EXPECT_THAT(result_void, Not(CResult(0_u32)));
+    FizzyValue value_i32{-1_u32};
+    FizzyExecutionResult result_i32{false, true, value_i32};
+    EXPECT_THAT(result_i32, CResult(-1_u32));
+    EXPECT_THAT(result_i32, Not(CResult(-2_u32)));
+
+    EXPECT_THAT(trap, Not(CResult(0_u64)));
+    EXPECT_THAT(result_void, Not(CResult(0_u64)));
+    FizzyValue value_i64;
+    value_i64.i64 = -1_u64;
+    FizzyExecutionResult result_i64{false, true, value_i64};
+    EXPECT_THAT(result_i64, CResult(-1_u64));
+    EXPECT_THAT(result_i64, Not(CResult(-2_u64)));
+
+    EXPECT_THAT(trap, Not(CResult(0.0f)));
+    EXPECT_THAT(result_void, Not(CResult(0.0f)));
+    FizzyValue value_f32;
+    value_f32.f32 = 1.1f;
+    FizzyExecutionResult result_f32{false, true, value_f32};
+    EXPECT_THAT(result_f32, CResult(1.1f));
+    EXPECT_THAT(result_f32, Not(CResult(1.0f)));
+
+    EXPECT_THAT(trap, Not(CResult(0.0)));
+    EXPECT_THAT(result_void, Not(CResult(0.0)));
+    FizzyValue value_f64;
+    value_f64.f64 = 2.2;
+    FizzyExecutionResult result_f64{false, true, value_f64};
+    EXPECT_THAT(result_f64, CResult(2.2));
+    EXPECT_THAT(result_f64, Not(CResult(2.0)));
+}
+
 TEST(test_utils, result_value_matcher_explain_missing_result_type)
 {
     const auto result = testing::internal::MakePredicateFormatterFromMatcher(Result(1_u64))(
