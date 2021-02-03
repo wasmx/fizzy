@@ -52,7 +52,18 @@ pub struct Module(*const sys::FizzyModule);
 
 impl Drop for Module {
     fn drop(&mut self) {
+        debug_assert!(!self.0.is_null());
         unsafe { sys::fizzy_free_module(self.0) }
+    }
+}
+
+impl Clone for Module {
+    fn clone(&self) -> Self {
+        debug_assert!(!self.0.is_null());
+        let ptr = unsafe { sys::fizzy_clone_module(self.0) };
+        // TODO: this can be zero in case of memory allocation error, should this be gracefully handled?
+        assert!(!ptr.is_null());
+        Module { 0: ptr }
     }
 }
 
@@ -78,7 +89,7 @@ impl Module {
     /// Create an instance of a module.
     // TODO: support imported functions
     pub fn instantiate(self) -> Result<Instance, ()> {
-        assert!(!self.0.is_null());
+        debug_assert!(!self.0.is_null());
         let ptr = unsafe {
             sys::fizzy_instantiate(
                 self.0,
@@ -580,6 +591,18 @@ mod tests {
         assert!(module.is_ok());
         let instance = module.unwrap().instantiate();
         assert!(instance.is_err());
+    }
+
+    #[test]
+    fn clone_module() {
+        let module = parse(&[0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
+        assert!(module.is_ok());
+        let module = module.unwrap();
+        let module2 = module.clone();
+        let instance = module.instantiate();
+        assert!(instance.is_ok());
+        let instance = module2.instantiate();
+        assert!(instance.is_ok());
     }
 
     #[test]
