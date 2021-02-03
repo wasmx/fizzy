@@ -25,16 +25,16 @@ if(TESTFLOAT_GEN)
     # List of test names to ignore.
     set(IGNORE_LIST)
 
-    # Ignore NaN values in _some_ tests. The NaN checks in testfloat are more restrictive
+    # Ignore NaN payloads in _some_ tests. The NaN payload checks in testfloat are more restrictive
     # than required by the WebAssembly and the IEEE-754 specs.
-    set(IGNORE_NANS FALSE)
+    set(IGNORE_NAN_PAYLOADS FALSE)
 
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         # TODO: Clang produces -0 for input 0, see https://bugs.llvm.org/show_bug.cgi?id=47393.
         list(APPEND IGNORE_LIST ui64_to_f64/min)
     elseif(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_PROCESSOR STREQUAL arm64)
         # Ignore NaNs in arithmetic functions.
-        set(IGNORE_NANS TRUE)
+        set(IGNORE_NAN_PAYLOADS TRUE)
     endif()
 
     set(ROUNDING_MODES near_even minMag min max)
@@ -101,7 +101,7 @@ if(TESTFLOAT_GEN)
     # Arithmetic functions - rounding mode must agree.
     foreach(FUNCTION ${ARITHMETIC_FUNCTIONS})
         foreach(ROUNDING_MODE ${ROUNDING_MODES})
-            add_testfloat_test(${FUNCTION}/${ROUNDING_MODE} "-r${ROUNDING_MODE} ${FUNCTION}" "-r${ROUNDING_MODE} $<$<BOOL:${IGNORE_NANS}>:-ignoreNaNs> ${FUNCTION}")
+            add_testfloat_test(${FUNCTION}/${ROUNDING_MODE} "-r${ROUNDING_MODE} ${FUNCTION}" "-r${ROUNDING_MODE} $<$<BOOL:${IGNORE_NAN_PAYLOADS}>:-ignore_nan_payloads> ${FUNCTION}")
         endforeach()
     endforeach()
 
@@ -130,7 +130,7 @@ if(TESTFLOAT_GEN)
         list(GET FUNCTION_PAIR 0 FUNCTION)
         list(GET FUNCTION_PAIR 1 TESTFLOAT_GEN_ARGS)
         foreach(ROUNDING_MODE ${ROUNDING_MODES})
-            add_testfloat_test(${FUNCTION}/${ROUNDING_MODE} "${TESTFLOAT_GEN_ARGS}" "-r${ROUNDING_MODE} -ignoreNaNs ${FUNCTION}")
+            add_testfloat_test(${FUNCTION}/${ROUNDING_MODE} "${TESTFLOAT_GEN_ARGS}" "-r${ROUNDING_MODE} -ignore_nan_payloads ${FUNCTION}")
         endforeach()
     endforeach()
 
@@ -169,5 +169,5 @@ add_testfloat_selftest(result_failure_2 "i64_to_f64" "0000000000000000 800000000
 add_testfloat_selftest(result_failure_3 "f32_add" "00000000 00000000 00000001 00" "FAILURE: 00000000 <- 00000000 00000000\n         00000001 \\(expected\\)")
 add_testfloat_selftest(unexpected_trap "f32_trunc_to_i32" "7F7FFFFF 00000000 00" "FAILURE: 1 <- 7F7FFFFF\n         0 \\(expected\\)")
 add_testfloat_selftest(missing_trap "f32_trunc_to_i32" "00000000 00000000 10" "FAILURE: 0 <- 00000000\n         1 \\(expected\\)")
-add_testfloat_selftest(unexpected_signaling_nan_f32 "-ignoreNaNs f32_add" "7FA00000 7FA00000 7FA00000 00" "ERROR: invalid input: unexpected signaling NaN")
-add_testfloat_selftest(unexpected_signaling_nan_f64 "-ignoreNaNs f64_add" "7FF4000000000000 7FF4000000000000 7FF4000000000000 00" "ERROR: invalid input: unexpected signaling NaN")
+add_testfloat_selftest(unexpected_signaling_nan_f32 "-ignore_nan_payloads f32_add" "7FA00000 7FA00000 7FA00000 00" "ERROR: invalid input: unexpected signaling NaN")
+add_testfloat_selftest(unexpected_signaling_nan_f64 "-ignore_nan_payloads f64_add" "7FF4000000000000 7FF4000000000000 7FF4000000000000 00" "ERROR: invalid input: unexpected signaling NaN")
