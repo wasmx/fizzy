@@ -9,15 +9,24 @@ executors:
   linux-gcc-latest:
     docker:
       - image: ethereum/cpp-build-env:16-gcc-10
+        auth:
+          username: chfast
+          password: $DOCKERHUB_TOKEN
   linux-clang-latest:
     docker:
       - image: ethereum/cpp-build-env:16-clang-11
+        auth:
+          username: chfast
+          password: $DOCKERHUB_TOKEN
   macos:
     macos:
       xcode: 11.6.0
   rust:
     docker:
       - image: cimg/rust:1.49
+        auth:
+          username: chfast
+          password: $DOCKERHUB_TOKEN
 
 commands:
   install_macos_deps:
