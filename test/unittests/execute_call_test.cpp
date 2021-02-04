@@ -637,8 +637,10 @@ TEST(execute_call, call_max_depth)
 
     auto instance = instantiate(parse(bin));
 
-    EXPECT_THAT(execute(*instance, 0, {}, TestCallStackLimit - 1), Result(42));
-    EXPECT_THAT(execute(*instance, 1, {}, TestCallStackLimit - 1), Traps());
+    const auto max_depth = TestCallStackLimit - 1;
+    EXPECT_THAT(
+        TypedExecutionResult(execute(*instance, 0, {}, max_depth), ValType::i32), Result(42));
+    EXPECT_THAT(execute(*instance, 1, {}, max_depth), Traps());
 }
 
 TEST(execute_call, execute_imported_max_depth)
