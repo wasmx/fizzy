@@ -17,10 +17,10 @@ namespace
 {
 auto function_returning_value(Value value) noexcept
 {
-    return [value](Instance&, const Value*, int) { return value; };
+    return [value](Instance&, const Value*, ThreadContext&) { return value; };
 }
 
-ExecutionResult function_returning_void(Instance&, const Value*, int) noexcept
+ExecutionResult function_returning_void(Instance&, const Value*, ThreadContext&) noexcept
 {
     return Void;
 }
@@ -407,7 +407,8 @@ TEST(api, find_exported_function)
 
     auto opt_function = find_exported_function(*instance, "foo");
     ASSERT_TRUE(opt_function);
-    EXPECT_THAT(TypedExecutionResult(opt_function->function(*instance, {}, 0), ValType::i32),
+    ThreadContext ctx;
+    EXPECT_THAT(TypedExecutionResult(opt_function->function(*instance, {}, ctx), ValType::i32),
         Result(42_u32));
     EXPECT_TRUE(opt_function->input_types.empty());
     ASSERT_EQ(opt_function->output_types.size(), 1);
@@ -427,7 +428,7 @@ TEST(api, find_exported_function)
         "0061736d010000000105016000017f021001087370656374657374036261720000040401700000050401010102"
         "0606017f0041000b07170403666f6f000001670300037461620100036d656d0200");
 
-    auto bar = [](Instance&, const Value*, int) { return Value{42}; };
+    auto bar = [](Instance&, const Value*, ThreadContext&) { return Value{42}; };
     const auto bar_type = FuncType{{}, {ValType::i32}};
 
     auto instance_reexported_function =
@@ -436,7 +437,7 @@ TEST(api, find_exported_function)
     auto opt_reexported_function = find_exported_function(*instance_reexported_function, "foo");
     ASSERT_TRUE(opt_reexported_function);
     EXPECT_THAT(
-        TypedExecutionResult(opt_reexported_function->function(*instance, {}, 0), ValType::i32),
+        TypedExecutionResult(opt_reexported_function->function(*instance, {}, ctx), ValType::i32),
         Result(42_u32));
     EXPECT_TRUE(opt_reexported_function->input_types.empty());
     ASSERT_EQ(opt_reexported_function->output_types.size(), 1);

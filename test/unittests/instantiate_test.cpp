@@ -15,12 +15,12 @@ using namespace fizzy::test;
 
 namespace
 {
-ExecutionResult host_fn_1(Instance&, const Value*, int) noexcept
+ExecutionResult host_fn_1(Instance&, const Value*, ThreadContext&) noexcept
 {
     return Trap;
 }
 
-ExecutionResult host_fn_2(Instance&, const Value*, int) noexcept
+ExecutionResult host_fn_2(Instance&, const Value*, ThreadContext&) noexcept
 {
     return Trap;
 }
@@ -28,7 +28,7 @@ ExecutionResult host_fn_2(Instance&, const Value*, int) noexcept
 uint32_t call_table_func(Instance& instance, size_t idx)
 {
     const auto& elem = (*instance.table)[idx];
-    const auto res = execute(*elem.instance, elem.func_idx, {}, 0);
+    const auto res = execute(*elem.instance, elem.func_idx, {});
     EXPECT_TRUE(res.has_value);
     return res.value.i32;
 }
@@ -37,8 +37,9 @@ uint32_t call_table_func(Instance& instance, size_t idx)
 TEST(instantiate, check_test_host_functions)
 {
     Instance instance{{}, {nullptr, nullptr}, {}, {}, {nullptr, nullptr}, {}, {}, {}, {}};
-    EXPECT_THAT(host_fn_1(instance, nullptr, 0), Traps());
-    EXPECT_THAT(host_fn_2(instance, nullptr, 0), Traps());
+    ThreadContext ctx;
+    EXPECT_THAT(host_fn_1(instance, nullptr, ctx), Traps());
+    EXPECT_THAT(host_fn_2(instance, nullptr, ctx), Traps());
 }
 
 TEST(instantiate, imported_functions)

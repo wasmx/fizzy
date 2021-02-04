@@ -20,6 +20,8 @@ typedef struct FizzyModule FizzyModule;
 /// The opaque data type representing an instance (instantiated module).
 typedef struct FizzyInstance FizzyInstance;
 
+typedef struct FizzyThreadContext FizzyThreadContext;
+
 /// The data type representing numeric values.
 typedef union FizzyValue
 {
@@ -52,10 +54,10 @@ typedef struct FizzyExecutionResult
 /// @param  context     Opaque pointer to execution context.
 /// @param  instance    Pointer to module instance.
 /// @param  args        Pointer to the argument array. Can be NULL iff function has no inputs.
-/// @param  depth       Call stack depth.
+/// @param  ctx         Pointer to thread context. Cannot be NULL.
 /// @return             Result of execution.
 typedef FizzyExecutionResult (*FizzyExternalFn)(
-    void* context, FizzyInstance* instance, const FizzyValue* args, int depth);
+    void* context, FizzyInstance* instance, const FizzyValue* args, FizzyThreadContext* ctx);
 
 /// Value type.
 typedef uint8_t FizzyValueType;

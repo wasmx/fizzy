@@ -477,8 +477,8 @@ std::optional<ExternalFunction> find_exported_function(Instance& instance, std::
         return std::nullopt;
 
     const auto idx = *opt_index;
-    auto func = [idx, &instance](fizzy::Instance&, const Value* args, int depth) {
-        return execute(instance, idx, args, depth);
+    auto func = [idx, &instance](fizzy::Instance&, const Value* args, ThreadContext& ctx) {
+        return execute(instance, idx, args, ctx);
     };
 
     return ExternalFunction{std::move(func), instance.module->get_function_type(idx)};

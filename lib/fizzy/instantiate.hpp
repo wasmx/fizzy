@@ -45,7 +45,7 @@ public:
 };
 
 /// Function representing WebAssembly or host function execution.
-using execute_function = std::function<ExecutionResult(Instance&, const Value*, int depth)>;
+using execute_function = std::function<ExecutionResult(Instance&, const Value*, ThreadContext&)>;
 
 /// Function with associated input/output types,
 /// used to represent both imported and exported functions.
