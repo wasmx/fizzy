@@ -182,6 +182,15 @@ pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, Error> {
     }
 }
 
+/// A view of a moduel for inspection.
+pub struct ModuleInspector(*const sys::FizzyModule);
+
+impl ModuleInspector {
+    pub fn has_start_function(&self) -> bool {
+        unsafe { sys::fizzy_module_has_start_function(self.0) }
+    }
+}
+
 /// An instance of a module.
 pub struct Instance(NonNull<sys::FizzyInstance>);
 
@@ -218,6 +227,10 @@ impl Module {
             debug_assert!(err.code() == 0);
             Ok(Instance(unsafe { NonNull::new_unchecked(ptr) }))
         }
+    }
+
+    pub fn inspect(&self) -> &ModuleInspector {
+        &ModuleInspector { 0: self.0 }
     }
 }
 
@@ -455,13 +468,17 @@ impl Instance {
     }
 
     /// Get a read-only pointer to the module.
-    unsafe fn get_module(&self) -> *const sys::FizzyModule {
+    unsafe fn get_module_ptr(&self) -> *const sys::FizzyModule {
         sys::fizzy_get_instance_module(self.0.as_ptr())
+    }
+    
+    fn get_module(&self) -> &ModuleInspector {
+        &ModuleInspector { 0: unsafe { self.get_module_ptr() } }
     }
 
     /// Find index of exported function by name.
     pub fn find_exported_function_index(&self, name: &str) -> Option<u32> {
-        let module = unsafe { self.get_module() };
+        let module = unsafe { self.get_module_ptr() };
         let name = CString::new(name).expect("CString::new failed");
         let mut func_idx: u32 = 0;
         let found = unsafe {
@@ -491,7 +508,7 @@ impl Instance {
 
     /// Find function type for a given index. Must be a valid index otherwise behaviour is undefined.
     unsafe fn get_function_type(&self, func_idx: u32) -> sys::FizzyFunctionType {
-        let module = self.get_module();
+        let module = self.get_module_ptr();
         sys::fizzy_get_function_type(module, func_idx)
     }
 
