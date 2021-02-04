@@ -25,21 +25,19 @@ if(TESTFLOAT_GEN)
     # List of test names to ignore.
     set(IGNORE_LIST)
 
-    # Ignore NaN payloads in _some_ tests. The NaN payload checks in testfloat are more restrictive
-    # than required by the WebAssembly and the IEEE-754 specs.
-    set(IGNORE_NAN_PAYLOADS FALSE)
-
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         # TODO: Clang produces -0 for input 0, see https://bugs.llvm.org/show_bug.cgi?id=47393.
         list(APPEND IGNORE_LIST ui64_to_f64/min)
-    elseif(CMAKE_CROSSCOMPILING AND CMAKE_SYSTEM_PROCESSOR STREQUAL arm64)
-        # Ignore NaNs in arithmetic functions.
-        set(IGNORE_NAN_PAYLOADS TRUE)
     endif()
 
     set(ROUNDING_MODES near_even minMag min max)
 
     # Arithmetic functions: sensitive to rounding and NaNs.
+    # For these we always ignore NaN payloads:
+    # - different payloads are produced on arm64 than in SoftFloat,
+    # - add & mul are considered commutative therefore operands may be swapped
+    #   (we have evidences of compilers doing this when optimizing) -
+    #   what produces "unexpected" NaN payload.
     set(ARITHMETIC_FUNCTIONS
         f32_sqrt f64_sqrt
         f32_add f64_add
@@ -101,7 +99,7 @@ if(TESTFLOAT_GEN)
     # Arithmetic functions - rounding mode must agree.
     foreach(FUNCTION ${ARITHMETIC_FUNCTIONS})
         foreach(ROUNDING_MODE ${ROUNDING_MODES})
-            add_testfloat_test(${FUNCTION}/${ROUNDING_MODE} "-r${ROUNDING_MODE} ${FUNCTION}" "-r${ROUNDING_MODE} $<$<BOOL:${IGNORE_NAN_PAYLOADS}>:-ignore_nan_payloads> ${FUNCTION}")
+            add_testfloat_test(${FUNCTION}/${ROUNDING_MODE} "-r${ROUNDING_MODE} ${FUNCTION}" "-r${ROUNDING_MODE} -ignore_nan_payloads ${FUNCTION}")
         endforeach()
     endforeach()
 
