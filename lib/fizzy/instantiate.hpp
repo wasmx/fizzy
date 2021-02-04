@@ -21,6 +21,29 @@ namespace fizzy
 struct ExecutionResult;
 struct Instance;
 
+class ThreadContext
+{
+public:
+    int depth = 0;
+
+    void acquire() noexcept { ++depth; }
+
+    void release() noexcept { --depth; }
+
+    class [[nodiscard]] Guard
+    {
+        ThreadContext& m_thread_context;
+
+    public:
+        explicit Guard(ThreadContext& ctx) noexcept : m_thread_context{ctx}
+        {
+            m_thread_context.acquire();
+        }
+
+        ~Guard() noexcept { m_thread_context.release(); }
+    };
+};
+
 /// Function representing WebAssembly or host function execution.
 using execute_function = std::function<ExecutionResult(Instance&, const Value*, int depth)>;
 
