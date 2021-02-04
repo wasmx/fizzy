@@ -69,12 +69,9 @@ impl Module {
     }
 }
 
-// TODO: add a proper wrapper (enum type for Value, and Result<Value, Trap> for ExecutionResult)
-
 /// A WebAssembly value of i32/i64/f32/f64.
 pub type Value = sys::FizzyValue;
 
-// NOTE: the union does not have i32
 impl Value {
     pub fn as_i32(&self) -> i32 {
         unsafe { self.i32 as i32 }
@@ -131,6 +128,73 @@ impl From<f64> for Value {
     }
 }
 
+/// A WebAssembly value i32/i64/f32/f64 with its type specified.
+pub enum TypedValue {
+    U32(u32),
+    U64(u64),
+    F32(f32),
+    F64(f64),
+}
+
+impl TypedValue {
+    fn get_type(&self) -> sys::FizzyValueType {
+        match self {
+            TypedValue::U32(_) => sys::FizzyValueTypeI32,
+            TypedValue::U64(_) => sys::FizzyValueTypeI64,
+            TypedValue::F32(_) => sys::FizzyValueTypeF32,
+            TypedValue::F64(_) => sys::FizzyValueTypeF64,
+        }
+    }
+
+    pub fn as_i32(&self) -> Option<i32> {
+        match self {
+            TypedValue::U32(v) => Some(*v as i32),
+            _ => None,
+        }
+    }
+    pub fn as_u32(&self) -> Option<u32> {
+        match self {
+            TypedValue::U32(v) => Some(*v),
+            _ => None,
+        }
+    }
+    pub fn as_i64(&self) -> Option<i64> {
+        match self {
+            TypedValue::U64(v) => Some(*v as i64),
+            _ => None,
+        }
+    }
+    pub fn as_u64(&self) -> Option<u64> {
+        match self {
+            TypedValue::U64(v) => Some(*v),
+            _ => None,
+        }
+    }
+    pub fn as_f32(&self) -> Option<f32> {
+        match self {
+            TypedValue::F32(v) => Some(*v),
+            _ => None,
+        }
+    }
+    pub fn as_f64(&self) -> Option<f64> {
+        match self {
+            TypedValue::F64(v) => Some(*v),
+            _ => None,
+        }
+    }
+}
+
+impl From<&TypedValue> for sys::FizzyValue {
+    fn from(v: &TypedValue) -> sys::FizzyValue {
+        match v {
+            TypedValue::U32(v) => sys::FizzyValue { i32: *v },
+            TypedValue::U64(v) => sys::FizzyValue { i64: *v },
+            TypedValue::F32(v) => sys::FizzyValue { f32: *v },
+            TypedValue::F64(v) => sys::FizzyValue { f64: *v },
+        }
+    }
+}
+
 /// The result of an execution.
 pub struct ExecutionResult(sys::FizzyExecutionResult);
 
@@ -145,6 +209,36 @@ impl ExecutionResult {
         if self.0.has_value {
             assert!(!self.0.trapped);
             Some(self.0.value)
+        } else {
+            None
+        }
+    }
+}
+
+/// The result of an execution.
+pub struct TypedExecutionResult {
+    result: sys::FizzyExecutionResult,
+    value_type: sys::FizzyValueType,
+}
+
+impl TypedExecutionResult {
+    /// True if execution has resulted in a trap.
+    pub fn trapped(&self) -> bool {
+        self.result.trapped
+    }
+
+    /// The optional return value. Only a single return value is allowed in WebAssembly 1.0.
+    pub fn value(&self) -> Option<TypedValue> {
+        if self.result.has_value {
+            assert!(!self.result.trapped);
+            assert!(self.value_type != sys::FizzyValueTypeVoid);
+            Some(match self.value_type {
+                sys::FizzyValueTypeI32 => TypedValue::U32(unsafe { self.result.value.i32 }),
+                sys::FizzyValueTypeI64 => TypedValue::U64(unsafe { self.result.value.i64 }),
+                sys::FizzyValueTypeF32 => TypedValue::F32(unsafe { self.result.value.f32 }),
+                sys::FizzyValueTypeF64 => TypedValue::F64(unsafe { self.result.value.f64 }),
+                _ => panic!(),
+            })
         } else {
             None
         }
@@ -199,16 +293,17 @@ impl Instance {
 
     /// Execute a given function of `name` with the given values `args`.
     ///
-    /// An error is returned if the function can not be found, or inappropriate number of arguments are passed.
-    /// However the types of the arguments are not validated.
+    /// An error is returned if the function can not be found, inappropriate number of arguments are passed,
+    /// or the supplied types are mismatching.
     ///
     /// The `depth` argument sets the initial call depth. Should be set to `0`.
+    // TODO: consider different approach: Result<TypedValue, Error> where Error::Trap is used for traps
     pub fn execute(
         &mut self,
         name: &str,
-        args: &[Value],
+        args: &[TypedValue],
         depth: i32,
-    ) -> Result<ExecutionResult, ()> {
+    ) -> Result<TypedExecutionResult, ()> {
         let func_idx = self.find_exported_function_index(&name);
         if func_idx.is_none() {
             return Err(());
@@ -219,14 +314,28 @@ impl Instance {
         if func_type.inputs_size != args.len() {
             return Err(());
         }
-        // TODO: validate input types too
 
-        let ret = unsafe { self.unsafe_execute(func_idx, args, depth) };
-        if !ret.trapped() {
-            // Validate presence of output whether return type is void or not.
-            assert!((func_type.output == sys::FizzyValueTypeVoid) == !ret.value().is_some());
+        // Validate input types.
+        let supplied_types: Vec<sys::FizzyValueType> = args.iter().map(|v| v.get_type()).collect();
+        let expected_types = unsafe {
+            Vec::from_raw_parts(
+                func_type.inputs as *mut sys::FizzyValueType,
+                func_type.inputs_size,
+                func_type.inputs_size,
+            )
+        };
+        if expected_types != supplied_types {
+            return Err(());
         }
-        Ok(ret)
+
+        // Translate to untyped raw values.
+        let args: Vec<Value> = args.iter().map(|v| v.into()).collect();
+
+        let ret = unsafe { self.unsafe_execute(func_idx, &args, depth) };
+        Ok(TypedExecutionResult {
+            result: ret.0,
+            value_type: func_type.output,
+        })
     }
 }
 
@@ -267,6 +376,137 @@ mod tests {
         assert_eq!(v.as_f64(), f64::MIN);
         let v: Value = f64::MAX.into();
         assert_eq!(v.as_f64(), f64::MAX);
+    }
+
+    #[test]
+    fn typed_value_conversion() {
+        let v = TypedValue::U32(u32::MIN);
+        assert_eq!(v.as_u32().unwrap(), u32::MIN);
+        assert_eq!(v.as_i32().unwrap(), 0);
+        assert!(v.as_u64().is_none());
+        assert!(v.as_i64().is_none());
+        assert!(v.as_f32().is_none());
+        assert!(v.as_f64().is_none());
+        let v = TypedValue::U32(u32::MAX);
+        assert_eq!(v.as_u32().unwrap(), u32::MAX);
+        assert_eq!(v.as_i32().unwrap(), -1);
+        assert!(v.as_u64().is_none());
+        assert!(v.as_i64().is_none());
+        assert!(v.as_f32().is_none());
+        assert!(v.as_f64().is_none());
+
+        let v = TypedValue::U64(u64::MIN);
+        assert_eq!(v.as_u64().unwrap(), u64::MIN);
+        assert_eq!(v.as_i64().unwrap(), 0);
+        assert!(v.as_u32().is_none());
+        assert!(v.as_i32().is_none());
+        assert!(v.as_f32().is_none());
+        assert!(v.as_f64().is_none());
+        let v = TypedValue::U64(u64::MAX);
+        assert_eq!(v.as_u64().unwrap(), u64::MAX);
+        assert_eq!(v.as_i64().unwrap(), -1);
+        assert!(v.as_u32().is_none());
+        assert!(v.as_i32().is_none());
+        assert!(v.as_f32().is_none());
+        assert!(v.as_f64().is_none());
+
+        let v = TypedValue::F32(f32::MIN);
+        assert_eq!(v.as_f32().unwrap(), f32::MIN);
+        let v = TypedValue::F32(f32::MAX);
+        assert_eq!(v.as_f32().unwrap(), f32::MAX);
+        assert!(v.as_u32().is_none());
+        assert!(v.as_i32().is_none());
+        assert!(v.as_u64().is_none());
+        assert!(v.as_i64().is_none());
+
+        let v = TypedValue::F64(f64::MIN);
+        assert_eq!(v.as_f64().unwrap(), f64::MIN);
+        let v = TypedValue::F64(f64::MAX);
+        assert_eq!(v.as_f64().unwrap(), f64::MAX);
+        assert!(v.as_u32().is_none());
+        assert!(v.as_i32().is_none());
+        assert!(v.as_u64().is_none());
+        assert!(v.as_i64().is_none());
+    }
+
+    #[test]
+    fn typed_execution_result() {
+        let r_fail = sys::FizzyExecutionResult {
+            trapped: true,
+            has_value: false,
+            value: sys::FizzyValue { i32: 0 },
+        };
+        let r_success_void = sys::FizzyExecutionResult {
+            trapped: false,
+            has_value: false,
+            value: sys::FizzyValue { i32: 0 },
+        };
+        let r_success_u32 = sys::FizzyExecutionResult {
+            trapped: false,
+            has_value: true,
+            value: sys::FizzyValue { i32: u32::MAX },
+        };
+        let r_success_u64 = sys::FizzyExecutionResult {
+            trapped: false,
+            has_value: true,
+            value: sys::FizzyValue { i64: u64::MAX },
+        };
+        let r_success_f32 = sys::FizzyExecutionResult {
+            trapped: false,
+            has_value: true,
+            value: sys::FizzyValue { f32: f32::MAX },
+        };
+        let r_success_f64 = sys::FizzyExecutionResult {
+            trapped: false,
+            has_value: true,
+            value: sys::FizzyValue { f64: f64::MAX },
+        };
+
+        let r = TypedExecutionResult {
+            result: r_fail,
+            value_type: sys::FizzyValueTypeVoid,
+        };
+        assert!(r.trapped());
+        assert!(r.value().is_none());
+
+        let r = TypedExecutionResult {
+            result: r_success_void,
+            value_type: sys::FizzyValueTypeVoid,
+        };
+        assert!(!r.trapped());
+        assert!(r.value().is_none());
+
+        let r = TypedExecutionResult {
+            result: r_success_u32,
+            value_type: sys::FizzyValueTypeI32,
+        };
+        assert!(!r.trapped());
+        assert!(r.value().is_some());
+        assert_eq!(r.value().unwrap().as_u32().unwrap(), u32::MAX);
+
+        let r = TypedExecutionResult {
+            result: r_success_u64,
+            value_type: sys::FizzyValueTypeI64,
+        };
+        assert!(!r.trapped());
+        assert!(r.value().is_some());
+        assert_eq!(r.value().unwrap().as_u64().unwrap(), u64::MAX);
+
+        let r = TypedExecutionResult {
+            result: r_success_f32,
+            value_type: sys::FizzyValueTypeF32,
+        };
+        assert!(!r.trapped());
+        assert!(r.value().is_some());
+        assert_eq!(r.value().unwrap().as_f32().unwrap(), f32::MAX);
+
+        let r = TypedExecutionResult {
+            result: r_success_f64,
+            value_type: sys::FizzyValueTypeF64,
+        };
+        assert!(!r.trapped());
+        assert!(r.value().is_some());
+        assert_eq!(r.value().unwrap().as_f64().unwrap(), f64::MAX);
     }
 
     #[test]
@@ -414,7 +654,7 @@ mod tests {
         let result = result.unwrap();
         assert!(!result.trapped());
         assert!(result.value().is_some());
-        assert_eq!(result.value().unwrap().as_i32(), 42);
+        assert_eq!(result.value().unwrap().as_u32().unwrap(), 42);
 
         // Non-function export.
         let result = instance.execute("g1", &[], 0);
@@ -425,7 +665,7 @@ mod tests {
         assert!(result.is_err());
 
         // Passing more arguments than required.
-        let result = instance.execute("foo", &[42.into()], 0);
+        let result = instance.execute("foo", &[TypedValue::U32(42)], 0);
         assert!(result.is_err());
 
         // Passing less arguments than required.
