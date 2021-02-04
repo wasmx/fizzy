@@ -36,11 +36,11 @@ See http://www.jhauser.us/arithmetic/TestFloat-3/doc/TestFloat-general.html.
 Usage:
   fizzy-testfloat [options] <function>
 
-  -rnear_even     Round to nearest/even [default].
-  -rminMag        Round to minimum magnitude (toward zero).
-  -rmin           Round to minimum (down).
-  -rmax           Round to maximum (up).
-  -ignoreNaNs     Do not check for specific NaN results ("is NaN" is still checked).
+  -rnear_even           Round to nearest/even [default].
+  -rminMag              Round to minimum magnitude (toward zero).
+  -rmin                 Round to minimum (down).
+  -rmax                 Round to maximum (up).
+  -ignore_nan_payloads  Do not check for specific NaN payloads (NaN category is still checked).
 
 <function>:
   The function names match the ones from the testfloat_gen tool, with the following exceptions:
@@ -263,7 +263,7 @@ std::ostream& operator<<(std::ostream& os, const TypedValue& value)
     return os;
 }
 
-bool eq(TypedValue v, uint64_t expected_bits, bool ignore_nans)
+bool eq(TypedValue v, uint64_t expected_bits, bool ignore_nan_payloads)
 {
     switch (v.type)
     {
@@ -275,7 +275,7 @@ bool eq(TypedValue v, uint64_t expected_bits, bool ignore_nans)
     {
         const FP fp_value{v.value.f32};
         const FP expected{static_cast<uint32_t>(expected_bits)};
-        if (ignore_nans && std::isnan(expected.value))
+        if (ignore_nan_payloads && std::isnan(expected.value))
         {
             if (expected.is_canonical_nan())
                 return fp_value.is_canonical_nan();
@@ -290,7 +290,7 @@ bool eq(TypedValue v, uint64_t expected_bits, bool ignore_nans)
     {
         const FP fp_value{v.value.f64};
         const FP expected{expected_bits};
-        if (ignore_nans && std::isnan(expected.value))
+        if (ignore_nan_payloads && std::isnan(expected.value))
         {
             if (expected.is_canonical_nan())
                 return fp_value.is_canonical_nan();
@@ -304,8 +304,8 @@ bool eq(TypedValue v, uint64_t expected_bits, bool ignore_nans)
     __builtin_unreachable();
 }
 
-bool check(
-    const FunctionDescription& func, Instance& instance, const uint64_t inputs[], bool ignore_nans)
+bool check(const FunctionDescription& func, Instance& instance, const uint64_t inputs[],
+    bool ignore_nan_payloads)
 {
     const auto report_failure = [&](auto result, auto expected) {
         std::cerr << "FAILURE: " << result << " <-";
@@ -337,7 +337,7 @@ bool check(
     assert(!r.trapped && r.has_value);
     const auto result = TypedValue{func.result_type, r.value};
     const auto expected_result_bits = inputs[func.num_arguments];
-    if (!eq(result, expected_result_bits, ignore_nans))
+    if (!eq(result, expected_result_bits, ignore_nan_payloads))
     {
         report_failure(result, from_bits(func.result_type, expected_result_bits));
         return false;
@@ -352,7 +352,7 @@ int main(int argc, const char* argv[])
     {
         std::string_view function_name;
         int rounding_direction = FE_TONEAREST;
-        bool ignore_nans = false;
+        bool ignore_nan_payloads = false;
 
         for (int i = 1; i < argc; ++i)
         {
@@ -368,8 +368,8 @@ int main(int argc, const char* argv[])
                     rounding_direction = FE_DOWNWARD;
                 else if (arg == "-rmax")
                     rounding_direction = FE_UPWARD;
-                else if (arg == "-ignoreNaNs")
-                    ignore_nans = true;
+                else if (arg == "-ignore_nan_payloads")
+                    ignore_nan_payloads = true;
                 else
                     throw std::invalid_argument{"unknown option: " + std::string{arg}};
             }
@@ -412,7 +412,7 @@ int main(int argc, const char* argv[])
             if (std::cin.fail())
                 throw std::invalid_argument{"invalid input format"};
 
-            num_failures += !check(func, *instance, inputs, ignore_nans);
+            num_failures += !check(func, *instance, inputs, ignore_nan_payloads);
         }
 
         return num_failures;
