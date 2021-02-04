@@ -14,7 +14,7 @@ Fizzy aims to be a fast, deterministic, and pedantic WebAssembly interpreter wri
 
 I) Code quality
 - [x] Clean and modern C++17 codebase without external dependencies
-- [ ] Easily embeddable (*and take part of the standardisation of the "C/C++ embedding API"*)
+- [x] Easily embeddable (*and take part of the standardisation of the "C/C++ embedding API"*)
 
 II) Simplicity
 - [x] Only implement WebAssembly 1.0 (and none of the proposals)
@@ -78,6 +78,9 @@ find_package(fizzy CONFIG REQUIRED)
 ...
 target_link_libraries(app_name PRIVATE fizzy::fizzy)
 ```
+
+Fizzy also has a Rust binding. It is published on [crates.io](https://crates.io/crates/fizzy) and the
+official documentation with examples can be read on [docs.rs](https://docs.rs/fizzy/).
 
 ## WASI
 
