@@ -518,7 +518,6 @@ bool fizzy_find_exported_global(
 ///
 /// @param  instance    Pointer to module instance. Cannot be NULL.
 /// @param  args        Pointer to the argument array. Can be NULL if function has 0 inputs.
-/// @param  depth       Call stack depth.
 /// @return             Result of execution.
 ///
 /// @note
@@ -526,7 +525,7 @@ bool fizzy_find_exported_global(
 /// When number of passed arguments or their types are different from the ones defined by the
 /// function type, behaviour is undefined.
 FizzyExecutionResult fizzy_execute(
-    FizzyInstance* instance, uint32_t func_idx, const FizzyValue* args, int depth);
+    FizzyInstance* instance, uint32_t func_idx, const FizzyValue* args);
 
 #ifdef __cplusplus
 }
