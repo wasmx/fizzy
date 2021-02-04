@@ -317,13 +317,8 @@ impl Instance {
 
         // Validate input types.
         let supplied_types: Vec<sys::FizzyValueType> = args.iter().map(|v| v.get_type()).collect();
-        let expected_types = unsafe {
-            Vec::from_raw_parts(
-                func_type.inputs as *mut sys::FizzyValueType,
-                func_type.inputs_size,
-                func_type.inputs_size,
-            )
-        };
+        let expected_types =
+            unsafe { std::slice::from_raw_parts(func_type.inputs, func_type.inputs_size) };
         if expected_types != supplied_types {
             return Err(());
         }
