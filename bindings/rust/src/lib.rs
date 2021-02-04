@@ -633,14 +633,16 @@ mod tests {
         /* wat2wasm
         (module
           (func (export "foo") (result i32) (i32.const 42))
-          (func (export "bar") (param i32) (result i32) (i32.const 42))
+          (func (export "bar") (param i32) (param i64) (result i32) (local.get 0) (i32.wrap_i64 (local.get 1)) (i32.add))
+          (func (export "pi32") (param f32) (result f32) (local.get 0) (f32.const 3.14) (f32.div))
+          (func (export "pi64") (param f64) (result f64) (local.get 0) (f64.const 3.14) (f64.div))
           (global (export "g1") i32 (i32.const 0))
           (table (export "tab") 0 anyfunc)
           (memory (export "mem") 1 2)
         )
         */
         let input = hex::decode(
-        "0061736d01000000010a026000017f60017f017f03030200010404017000000504010101020606017f0041000b071e0503666f6f00000362617200010267310300037461620100036d656d02000a0b020400412a0b0400412a0b").unwrap();
+        "0061736d010000000115046000017f60027f7e017f60017d017d60017c017c030504000102030404017000000504010101020606017f0041000b072c0703666f6f000003626172000104706933320002047069363400030267310300037461620100036d656d02000a29040400412a0b080020002001a76a0b0a00200043c3f54840950b0e002000441f85eb51b81e0940a30b").unwrap();
 
         let module = parse(&input);
         assert!(module.is_ok());
@@ -656,6 +658,33 @@ mod tests {
         assert!(result.value().is_some());
         assert_eq!(result.value().unwrap().as_u32().unwrap(), 42);
 
+        // Successful execution with arguments.
+        let result = instance.execute("bar", &[TypedValue::U32(42), TypedValue::U64(24)], 0);
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert!(!result.trapped());
+        assert!(result.value().is_some());
+        assert_eq!(result.value().unwrap().as_u32().unwrap(), 66);
+
+        // Successful execution with 32-bit float argument.
+        let result = instance.execute("pi32", &[TypedValue::F32(0.5)], 0);
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert!(!result.trapped());
+        assert!(result.value().is_some());
+        assert_eq!(result.value().unwrap().as_f32().unwrap(), 0.15923566);
+
+        // Successful execution with 64-bit float argument.
+        let result = instance.execute("pi64", &[TypedValue::F64(0.5)], 0);
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert!(!result.trapped());
+        assert!(result.value().is_some());
+        assert_eq!(
+            result.value().unwrap().as_f64().unwrap(),
+            0.1592356687898089
+        );
+
         // Non-function export.
         let result = instance.execute("g1", &[], 0);
         assert!(result.is_err());
@@ -670,6 +699,10 @@ mod tests {
 
         // Passing less arguments than required.
         let result = instance.execute("bar", &[], 0);
+        assert!(result.is_err());
+
+        // Passing mismatched types.
+        let result = instance.execute("bar", &[TypedValue::F32(1.0), TypedValue::F64(2.0)], 0);
         assert!(result.is_err());
     }
 }
