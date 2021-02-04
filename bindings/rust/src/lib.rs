@@ -146,20 +146,28 @@ pub fn validate<T: AsRef<[u8]>>(input: T) -> Result<(), Error> {
 }
 
 /// A parsed and validated WebAssembly 1.0 module.
-pub struct Module(ConstNonNull<sys::FizzyModule>);
+pub struct Module {
+    ptr: ConstNonNull<sys::FizzyModule>,
+    owned: bool,
+}
 
 impl Drop for Module {
     fn drop(&mut self) {
-        unsafe { sys::fizzy_free_module(self.0.as_ptr()) }
+        if self.owned {
+            unsafe { sys::fizzy_free_module(self.ptr.as_ptr()) }
+        }
     }
 }
 
 impl Clone for Module {
     fn clone(&self) -> Self {
-        let ptr = unsafe { sys::fizzy_clone_module(self.0.as_ptr()) };
+        let ptr = unsafe { sys::fizzy_clone_module(self.ptr.as_ptr()) };
         // TODO: this can be zero in case of memory allocation error, should this be gracefully handled?
         assert!(!ptr.is_null());
-        Module(unsafe { ConstNonNull::new_unchecked(ptr) })
+        Module {
+            ptr: unsafe { ConstNonNull::new_unchecked(ptr) },
+            owned: true,
+        }
     }
 }
 
@@ -178,7 +186,10 @@ pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, Error> {
         Err(err.error().unwrap())
     } else {
         debug_assert!(err.code() == 0);
-        Ok(Module(unsafe { ConstNonNull::new_unchecked(ptr) }))
+        Ok(Module {
+            ptr: unsafe { ConstNonNull::new_unchecked(ptr) },
+            owned: true,
+        })
     }
 }
 
@@ -204,10 +215,13 @@ impl Module {
     /// Create an instance of a module.
     // TODO: support imported functions
     pub fn instantiate(self) -> Result<Instance, Error> {
+        if !self.owned {
+            return Err("Not owned".into());
+        }
         let mut err = FizzyErrorBox::new();
         let ptr = unsafe {
             sys::fizzy_instantiate(
-                self.0.as_ptr(),
+                self.ptr.as_ptr(),
                 std::ptr::null(),
                 0,
                 std::ptr::null(),
@@ -229,8 +243,8 @@ impl Module {
         }
     }
 
-    pub fn inspect(&self) -> &ModuleInspector {
-        &ModuleInspector { 0: self.0 }
+    pub fn has_start_function(&self) -> bool {
+        unsafe { sys::fizzy_module_has_start_function(self.ptr.as_ptr()) }
     }
 }
 
@@ -471,9 +485,12 @@ impl Instance {
     unsafe fn get_module_ptr(&self) -> *const sys::FizzyModule {
         sys::fizzy_get_instance_module(self.0.as_ptr())
     }
-    
-    fn get_module(&self) -> &ModuleInspector {
-        &ModuleInspector { 0: unsafe { self.get_module_ptr() } }
+
+    pub fn get_module(&self) -> Module {
+        Module {
+            ptr: unsafe { ConstNonNull::new_unchecked(self.get_module_ptr()) },
+            owned: false,
+        }
     }
 
     /// Find index of exported function by name.
