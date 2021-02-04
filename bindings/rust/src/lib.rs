@@ -117,57 +117,57 @@ pub type Value = sys::FizzyValue;
 
 impl Value {
     pub fn as_i32(&self) -> i32 {
-        unsafe { self.i32 as i32 }
+        unsafe { self.i32_ as i32 }
     }
     pub fn as_u32(&self) -> u32 {
-        unsafe { self.i32 }
+        unsafe { self.i32_ }
     }
     pub fn as_i64(&self) -> i64 {
-        unsafe { self.i64 as i64 }
+        unsafe { self.i64_ as i64 }
     }
     pub fn as_u64(&self) -> u64 {
-        unsafe { self.i64 }
+        unsafe { self.i64_ }
     }
     pub fn as_f32(&self) -> f32 {
-        unsafe { self.f32 }
+        unsafe { self.f32_ }
     }
     pub fn as_f64(&self) -> f64 {
-        unsafe { self.f64 }
+        unsafe { self.f64_ }
     }
 }
 
 impl From<i32> for Value {
     fn from(v: i32) -> Self {
-        Value { i32: v as u32 }
+        Value { i32_: v as u32 }
     }
 }
 
 impl From<u32> for Value {
     fn from(v: u32) -> Self {
-        Value { i32: v }
+        Value { i32_: v }
     }
 }
 
 impl From<i64> for Value {
     fn from(v: i64) -> Self {
-        Value { i64: v as u64 }
+        Value { i64_: v as u64 }
     }
 }
 
 impl From<u64> for Value {
     fn from(v: u64) -> Self {
-        Value { i64: v }
+        Value { i64_: v }
     }
 }
 impl From<f32> for Value {
     fn from(v: f32) -> Self {
-        Value { f32: v }
+        Value { f32_: v }
     }
 }
 
 impl From<f64> for Value {
     fn from(v: f64) -> Self {
-        Value { f64: v }
+        Value { f64_: v }
     }
 }
 
@@ -230,10 +230,10 @@ impl TypedValue {
 impl From<&TypedValue> for sys::FizzyValue {
     fn from(v: &TypedValue) -> sys::FizzyValue {
         match v {
-            TypedValue::U32(v) => sys::FizzyValue { i32: *v },
-            TypedValue::U64(v) => sys::FizzyValue { i64: *v },
-            TypedValue::F32(v) => sys::FizzyValue { f32: *v },
-            TypedValue::F64(v) => sys::FizzyValue { f64: *v },
+            TypedValue::U32(v) => sys::FizzyValue { i32_: *v },
+            TypedValue::U64(v) => sys::FizzyValue { i64_: *v },
+            TypedValue::F32(v) => sys::FizzyValue { f32_: *v },
+            TypedValue::F64(v) => sys::FizzyValue { f64_: *v },
         }
     }
 }
@@ -276,10 +276,10 @@ impl TypedExecutionResult {
             assert!(!self.result.trapped);
             assert!(self.value_type != sys::FizzyValueTypeVoid);
             Some(match self.value_type {
-                sys::FizzyValueTypeI32 => TypedValue::U32(unsafe { self.result.value.i32 }),
-                sys::FizzyValueTypeI64 => TypedValue::U64(unsafe { self.result.value.i64 }),
-                sys::FizzyValueTypeF32 => TypedValue::F32(unsafe { self.result.value.f32 }),
-                sys::FizzyValueTypeF64 => TypedValue::F64(unsafe { self.result.value.f64 }),
+                sys::FizzyValueTypeI32 => TypedValue::U32(unsafe { self.result.value.i32_ }),
+                sys::FizzyValueTypeI64 => TypedValue::U64(unsafe { self.result.value.i64_ }),
+                sys::FizzyValueTypeF32 => TypedValue::F32(unsafe { self.result.value.f32_ }),
+                sys::FizzyValueTypeF64 => TypedValue::F64(unsafe { self.result.value.f64_ }),
                 _ => panic!(),
             })
         } else {
@@ -472,32 +472,32 @@ mod tests {
         let r_fail = sys::FizzyExecutionResult {
             trapped: true,
             has_value: false,
-            value: sys::FizzyValue { i32: 0 },
+            value: sys::FizzyValue { i32_: 0 },
         };
         let r_success_void = sys::FizzyExecutionResult {
             trapped: false,
             has_value: false,
-            value: sys::FizzyValue { i32: 0 },
+            value: sys::FizzyValue { i32_: 0 },
         };
         let r_success_u32 = sys::FizzyExecutionResult {
             trapped: false,
             has_value: true,
-            value: sys::FizzyValue { i32: u32::MAX },
+            value: sys::FizzyValue { i32_: u32::MAX },
         };
         let r_success_u64 = sys::FizzyExecutionResult {
             trapped: false,
             has_value: true,
-            value: sys::FizzyValue { i64: u64::MAX },
+            value: sys::FizzyValue { i64_: u64::MAX },
         };
         let r_success_f32 = sys::FizzyExecutionResult {
             trapped: false,
             has_value: true,
-            value: sys::FizzyValue { f32: f32::MAX },
+            value: sys::FizzyValue { f32_: f32::MAX },
         };
         let r_success_f64 = sys::FizzyExecutionResult {
             trapped: false,
             has_value: true,
-            value: sys::FizzyValue { f64: f64::MAX },
+            value: sys::FizzyValue { f64_: f64::MAX },
         };
 
         let r = TypedExecutionResult {
