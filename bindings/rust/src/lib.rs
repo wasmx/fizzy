@@ -485,7 +485,9 @@ impl Instance {
 
     /// Get a read-only pointer to the module.
     unsafe fn get_module_ptr(&self) -> *const sys::FizzyModule {
-        sys::fizzy_get_instance_module(self.0.as_ptr())
+        let ptr = sys::fizzy_get_instance_module(self.0.as_ptr());
+        debug_assert!(!ptr.is_null());
+        ptr
     }
 
     /// Get a non-owned module instance.
