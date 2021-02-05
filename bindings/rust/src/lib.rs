@@ -2,7 +2,39 @@
 // Copyright 2019-2020 The Fizzy Authors.
 // SPDX-License-Identifier: Apache-2.0
 
-//! This is a Rust interface to [Fizzy](https://github.com/wasmx/fizzy), a WebAssembly virtual machine.
+//! This is a Rust interface to [Fizzy](https://github.com/wasmx/fizzy), a fast, deterministic, and pedantic WebAssembly interpreter.
+//!
+//! # Examples
+//!
+//! This is a generic example for parsing and instantiating a module, and executing a simple function with inputs and an output.
+//!
+//! ```
+//! extern crate fizzy;
+//!
+//! fn main() {
+//!     // This wasm binary exports a single sum(u32, u32) -> u32 function.
+//!     let wasm = [
+//!         0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x01, 0x07, 0x01, 0x60, 0x02, 0x7f,
+//!         0x7f, 0x01, 0x7f, 0x03, 0x02, 0x01, 0x00, 0x07, 0x07, 0x01, 0x03, 0x73, 0x75, 0x6d,
+//!         0x00, 0x00, 0x0a, 0x09, 0x01, 0x07, 0x00, 0x20, 0x00, 0x20, 0x01, 0x6a, 0x0b,
+//!     ];
+//!     let module = fizzy::parse(&wasm).expect("parsing failed");
+//!     let mut instance = module.instantiate().expect("instantiation failed");
+//!     let result = instance
+//!         .execute(
+//!             "sum",
+//!             &[fizzy::TypedValue::U32(42), fizzy::TypedValue::U32(24)],
+//!             0,
+//!         )
+//!         .expect("execution failed");
+//!     let result = result
+//!         .value()
+//!         .expect("return value expected")
+//!         .as_u32()
+//!         .expect("u32 expected as a return type");
+//!     assert_eq!(result, 66);
+//! }
+//! ```
 
 mod sys;
 
