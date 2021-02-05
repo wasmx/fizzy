@@ -243,6 +243,8 @@ impl Module {
         }
     }
 
+    /// Returns true if the module has a start function defined.
+    /// This function will be executed automatically as part of instantiation.
     pub fn has_start_function(&self) -> bool {
         unsafe { sys::fizzy_module_has_start_function(self.ptr.as_ptr()) }
     }
@@ -486,6 +488,7 @@ impl Instance {
         sys::fizzy_get_instance_module(self.0.as_ptr())
     }
 
+    /// Get a non-owned module instance.
     pub fn get_module(&self) -> Module {
         Module {
             ptr: unsafe { ConstNonNull::new_unchecked(self.get_module_ptr()) },
