@@ -203,11 +203,14 @@ impl ModuleInspector {
 }
 
 /// An instance of a module.
-pub struct Instance(NonNull<sys::FizzyInstance>);
+pub struct Instance {
+    instance: NonNull<sys::FizzyInstance>,
+    module: Module,
+}
 
 impl Drop for Instance {
     fn drop(&mut self) {
-        unsafe { sys::fizzy_free_instance(self.0.as_ptr()) }
+        unsafe { sys::fizzy_free_instance(self.instance.as_ptr()) }
     }
 }
 
@@ -235,12 +238,18 @@ impl Module {
         // Forget Module (and avoid calling drop) because it has been consumed by instantiate (even if it failed).
         core::mem::forget(self);
         if ptr.is_null() {
-            debug_assert!(err.code() != 0);
-            Err(err.error().unwrap())
-        } else {
-            debug_assert!(err.code() == 0);
-            Ok(Instance(unsafe { NonNull::new_unchecked(ptr) }))
+            return Err("Invalid ptr".into());
         }
+        let instance = unsafe { NonNull::new_unchecked(ptr) };
+        Ok(Instance {
+            instance: instance,
+            module: Module {
+                ptr: unsafe {
+                    ConstNonNull::new_unchecked(sys::fizzy_get_instance_module(instance.as_ptr()))
+                },
+                owned: false,
+            },
+        })
     }
 
     /// Returns true if the module has a start function defined.
@@ -437,8 +446,8 @@ impl Instance {
     /// # Safety
     /// These slices turn invalid if the memory is resized (i.e. via the WebAssembly `memory.grow` instruction)
     pub unsafe fn checked_memory_slice(&self, offset: u32, size: usize) -> Result<&[u8], Error> {
-        let memory_data = sys::fizzy_get_instance_memory_data(self.0.as_ptr());
-        let memory_size = sys::fizzy_get_instance_memory_size(self.0.as_ptr());
+        let memory_data = sys::fizzy_get_instance_memory_data(self.instance.as_ptr());
+        let memory_size = sys::fizzy_get_instance_memory_size(self.instance.as_ptr());
         let range = Instance::checked_memory_range(memory_data, memory_size, offset, size)?;
         // Slices allow empty length, but data must be a valid pointer.
         debug_assert!(!memory_data.is_null());
@@ -455,8 +464,8 @@ impl Instance {
         offset: u32,
         size: usize,
     ) -> Result<&mut [u8], Error> {
-        let memory_data = sys::fizzy_get_instance_memory_data(self.0.as_ptr());
-        let memory_size = sys::fizzy_get_instance_memory_size(self.0.as_ptr());
+        let memory_data = sys::fizzy_get_instance_memory_data(self.instance.as_ptr());
+        let memory_size = sys::fizzy_get_instance_memory_size(self.instance.as_ptr());
         let range = Instance::checked_memory_range(memory_data, memory_size, offset, size)?;
         // Slices allow empty length, but data must be a valid pointer.
         debug_assert!(!memory_data.is_null());
@@ -466,7 +475,7 @@ impl Instance {
 
     /// Returns the current memory size, in bytes.
     pub fn memory_size(&self) -> usize {
-        unsafe { sys::fizzy_get_instance_memory_size(self.0.as_ptr()) }
+        unsafe { sys::fizzy_get_instance_memory_size(self.instance.as_ptr()) }
     }
 
     /// Copies memory from `offset` to `target`, for the length of `target.len()`.
@@ -485,17 +494,14 @@ impl Instance {
 
     /// Get a read-only pointer to the module.
     unsafe fn get_module_ptr(&self) -> *const sys::FizzyModule {
-        let ptr = sys::fizzy_get_instance_module(self.0.as_ptr());
+        let ptr = sys::fizzy_get_instance_module(self.instance.as_ptr());
         debug_assert!(!ptr.is_null());
         ptr
     }
 
     /// Get a non-owned module instance.
-    pub fn get_module(&self) -> Module {
-        Module {
-            ptr: unsafe { ConstNonNull::new_unchecked(self.get_module_ptr()) },
-            owned: false,
-        }
+    pub fn get_module(&self) -> &Module {
+        &self.module
     }
 
     /// Find index of exported function by name.
@@ -521,7 +527,7 @@ impl Instance {
     /// This function expects a valid `func_idx` and appropriate number of `args`.
     pub unsafe fn unsafe_execute(&mut self, func_idx: u32, args: &[Value]) -> ExecutionResult {
         ExecutionResult(sys::fizzy_execute(
-            self.0.as_ptr(),
+            self.instance.as_ptr(),
             func_idx,
             args.as_ptr(),
             std::ptr::null_mut(),
