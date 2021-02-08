@@ -481,7 +481,7 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
     assert(stack.size() >= num_args);
     const auto call_args = stack.rend() - num_args;
 
-    const auto guard = ThreadContext::Guard{ctx};
+    const auto guard = ctx.bump_call_depth();
     const auto ret = execute(instance, func_idx, call_args, ctx);
     // Bubble up traps
     if (ret.trapped)

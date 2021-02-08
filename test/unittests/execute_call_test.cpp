@@ -710,7 +710,7 @@ TEST(execute_call, imported_function_from_another_module_max_depth)
     ASSERT_TRUE(func_idx.has_value());
 
     auto sub = [&instance1, func_idx](Instance&, const Value* args, ThreadContext& ctx) {
-        const auto guard = ThreadContext::Guard{ctx};
+        const auto guard = ctx.bump_call_depth();
         return fizzy::execute(*instance1, *func_idx, args, ctx);
     };
 
@@ -793,7 +793,7 @@ TEST(execute_call, call_imported_infinite_recursion)
     auto host_foo = [&counter](Instance& instance, const Value* args, ThreadContext& ctx) {
         EXPECT_LE(ctx.depth, TestCallStackLimit - 1);
         ++counter;
-        const auto guard = ThreadContext::Guard{ctx};
+        const auto guard = ctx.bump_call_depth();
         return execute(instance, 0, args, ctx);
     };
     const auto host_foo_type = module->typesec[0];
@@ -827,7 +827,7 @@ TEST(execute_call, call_imported_interleaved_infinite_recursion)
         EXPECT_LT(ctx.depth, CallStackLimit);
         ++counter;
 
-        const auto guard = ThreadContext::Guard{ctx};
+        const auto guard = ctx.bump_call_depth();
         return execute(instance, 1, args, ctx);
     };
     const auto host_foo_type = module->typesec[0];
@@ -858,7 +858,7 @@ TEST(execute_call, call_imported_max_depth_recursion)
         if (ctx.depth == TestCallStackLimit - 1)
             return Value{uint32_t{1}};  // Terminate recursion on the max depth.
 
-        const auto guard = ThreadContext::Guard{ctx};
+        const auto guard = ctx.bump_call_depth();
         return execute(instance, 0, args, ctx);
     };
     const auto host_foo_type = module->typesec[0];
@@ -886,7 +886,7 @@ TEST(execute_call, call_via_imported_max_depth_recursion)
         if (ctx.depth == TestCallStackLimit - 1)
             return Value{uint32_t{1}};  // Terminate recursion on the max depth.
 
-        const auto guard = ThreadContext::Guard{ctx};
+        const auto guard = ctx.bump_call_depth();
         return execute(instance, 1, args, ctx);
     };
     const auto host_foo_type = module->typesec[0];
