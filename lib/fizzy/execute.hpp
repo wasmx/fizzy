@@ -41,6 +41,28 @@ constexpr ExecutionResult Void{true};
 /// Shortcut for execution that resulted in a trap.
 constexpr ExecutionResult Trap{false};
 
+
+class ThreadContext
+{
+    class [[nodiscard]] Guard
+    {
+        ThreadContext& m_thread_context;
+
+    public:
+        explicit Guard(ThreadContext& ctx) noexcept : m_thread_context{ctx} {}
+        ~Guard() noexcept { --m_thread_context.depth; }
+    };
+
+public:
+    int depth = 0;
+
+    Guard bump_call_depth() noexcept
+    {
+        ++depth;
+        return Guard{*this};
+    }
+};
+
 /// Execute a function from an instance.
 ///
 /// @param  instance    The instance.
