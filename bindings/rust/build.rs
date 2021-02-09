@@ -23,11 +23,7 @@ fn main() {
 
     let bindings = bindgen::Builder::default()
         .header("fizzy/include/fizzy/fizzy.h")
-        // See https://github.com/rust-lang-nursery/rust-bindgen/issues/947
-        .trust_clang_mangling(false)
         .generate_comments(true)
-        // https://github.com/rust-lang-nursery/rust-bindgen/issues/947#issuecomment-327100002
-        .layout_tests(false)
         .whitelist_function("fizzy_.*")
         .whitelist_var("Fizzy.*")
         .whitelist_type("Fizzy.*")
