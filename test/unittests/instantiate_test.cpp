@@ -440,6 +440,21 @@ TEST(instantiate, memory_default)
     EXPECT_FALSE(instance->memory);
 }
 
+TEST(instantiate, memory_empty)
+{
+    /* wat2wasm
+      (memory 0)
+    */
+    const auto bin = from_hex("0061736d010000000503010000");
+
+    auto instance = instantiate(parse(bin));
+
+    EXPECT_EQ(instance->memory_limits.min, 0);
+    EXPECT_FALSE(instance->memory_limits.max.has_value());
+    EXPECT_EQ(instance->memory->size(), 0);
+    EXPECT_NE(instance->memory->data(), nullptr);
+}
+
 TEST(instantiate, memory_single)
 {
     const auto module{std::make_unique<Module>()};

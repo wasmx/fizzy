@@ -450,6 +450,8 @@ const FizzyModule* fizzy_get_instance_module(FizzyInstance* instance);
 /// @return             Pointer to memory data or NULL in case instance doesn't have any memory.
 ///
 /// @note    Function returns pointer to memory regardless of whether memory is exported or not.
+/// @note    For instances of the modules defined with memory of size 0 the returned pointer is not
+///          NULL.
 uint8_t* fizzy_get_instance_memory_data(FizzyInstance* instance);
 
 /// Get size of memory of an instance.
