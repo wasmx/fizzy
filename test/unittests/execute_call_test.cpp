@@ -489,6 +489,46 @@ TEST(execute_call, imported_function_from_another_module)
     EXPECT_THAT(execute(*instance2, 0, {44, 2}), Result(42));
 }
 
+TEST(execute_call, imported_function_from_another_module_via_func_idx)
+{
+    /* wat2wasm
+    (module
+      (func $sub (param $lhs i32) (param $rhs i32) (result i32)
+        local.get $lhs
+        local.get $rhs
+        i32.sub)
+      (export "sub" (func $sub))
+    )
+    */
+    const auto bin1 = from_hex(
+        "0061736d0100000001070160027f7f017f030201000707010373756200000a09010700200020016b0b");
+    const auto module1 = parse(bin1);
+    auto instance1 = instantiate(*module1);
+
+    /* wat2wasm
+    (module
+      (func $sub (import "m1" "sub") (param $lhs i32) (param $rhs i32) (result i32))
+
+      (func $main (param i32) (param i32) (result i32)
+        local.get 0
+        local.get 1
+        call $sub
+      )
+    )
+    */
+    const auto bin2 = from_hex(
+        "0061736d0100000001070160027f7f017f020a01026d31037375620000030201000a0a0108002000200110000"
+        "b");
+
+    const auto func_idx = fizzy::find_exported_function(*module1, "sub");
+    ASSERT_TRUE(func_idx.has_value());
+
+    auto instance2 = instantiate(parse(bin2), {{{*instance1, *func_idx}, module1->typesec[0]}});
+
+    EXPECT_THAT(execute(*instance2, 1, {44, 2}), Result(42));
+    EXPECT_THAT(execute(*instance2, 0, {44, 2}), Result(42));
+}
+
 TEST(execute_call, imported_function_from_another_module_via_host_function)
 {
     /* wat2wasm
