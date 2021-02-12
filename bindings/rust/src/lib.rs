@@ -27,7 +27,6 @@
 //!         )
 //!         .expect("execution failed");
 //!     let result = result
-//!         .value()
 //!         .expect("return value expected")
 //!         .as_u32()
 //!         .expect("u32 expected as a return type");
@@ -508,12 +507,11 @@ impl Instance {
     ///
     /// An error is returned if the function can not be found, inappropriate number of arguments are passed,
     /// or the supplied types are mismatching.
-    // TODO: consider different approach: Result<TypedValue, Error> where Error::Trap is used for traps
     pub fn execute(
         &mut self,
         name: &str,
         args: &[TypedValue],
-    ) -> Result<TypedExecutionResult, Error> {
+    ) -> Result<Option<TypedValue>, Error> {
         let func_idx = self
             .find_exported_function_index(name)
             .ok_or(Error::FunctionNotFound)?;
@@ -534,14 +532,23 @@ impl Instance {
         // Translate to untyped raw values.
         let args: Vec<Value> = args.iter().map(|v| v.into()).collect();
 
-        let ret = unsafe { self.unsafe_execute(func_idx, &args) };
-        if ret.trapped() {
+        let ret: sys::FizzyExecutionResult =
+            unsafe { sys::fizzy_execute(self.0.as_ptr(), func_idx, args.as_ptr()) };
+        if ret.trapped {
             return Err(Error::Trapped);
         }
-        Ok(TypedExecutionResult {
-            result: ret.0,
-            value_type: func_type.output,
-        })
+        if ret.has_value {
+            assert!(func_type.output != sys::FizzyValueTypeVoid);
+            Ok(Some(match func_type.output {
+                sys::FizzyValueTypeI32 => TypedValue::U32(unsafe { ret.value.i32 }),
+                sys::FizzyValueTypeI64 => TypedValue::U64(unsafe { ret.value.i64 }),
+                sys::FizzyValueTypeF32 => TypedValue::F32(unsafe { ret.value.f32 }),
+                sys::FizzyValueTypeF64 => TypedValue::F64(unsafe { ret.value.f64 }),
+                _ => panic!(),
+            }))
+        } else {
+            Ok(None)
+        }
     }
 }
 
@@ -895,35 +902,23 @@ mod tests {
         // Successful execution.
         let result = instance.execute("foo", &[]);
         assert!(result.is_ok());
-        let result = result.unwrap();
-        assert!(!result.trapped());
-        assert!(result.value().is_some());
-        assert_eq!(result.value().unwrap().as_u32().unwrap(), 42);
+        assert_eq!(result.unwrap().unwrap().as_u32().unwrap(), 42);
 
         // Successful execution with arguments.
         let result = instance.execute("bar", &[TypedValue::U32(42), TypedValue::U64(24)]);
         assert!(result.is_ok());
-        let result = result.unwrap();
-        assert!(!result.trapped());
-        assert!(result.value().is_some());
-        assert_eq!(result.value().unwrap().as_u32().unwrap(), 66);
+        assert_eq!(result.unwrap().unwrap().as_u32().unwrap(), 66);
 
         // Successful execution with 32-bit float argument.
         let result = instance.execute("pi32", &[TypedValue::F32(0.5)]);
         assert!(result.is_ok());
-        let result = result.unwrap();
-        assert!(!result.trapped());
-        assert!(result.value().is_some());
-        assert_eq!(result.value().unwrap().as_f32().unwrap(), 0.15923566);
+        assert_eq!(result.unwrap().unwrap().as_f32().unwrap(), 0.15923566);
 
         // Successful execution with 64-bit float argument.
         let result = instance.execute("pi64", &[TypedValue::F64(0.5)]);
         assert!(result.is_ok());
-        let result = result.unwrap();
-        assert!(!result.trapped());
-        assert!(result.value().is_some());
         assert_eq!(
-            result.value().unwrap().as_f64().unwrap(),
+            result.unwrap().unwrap().as_f64().unwrap(),
             0.1592356687898089
         );
 
@@ -1186,10 +1181,8 @@ mod tests {
         let result = instance
             .execute("grow", &[TypedValue::U32(1)])
             .expect("successful execution");
-        assert!(!result.trapped());
         assert_eq!(
             result
-                .value()
                 .expect("expected value")
                 .as_u32()
                 .expect("expected u32 result"),
@@ -1220,10 +1213,8 @@ mod tests {
         let result = instance
             .execute("peek", &[TypedValue::U32(0)])
             .expect("successful execution");
-        assert!(!result.trapped());
         assert_eq!(
             result
-                .value()
                 .expect("expected value")
                 .as_u32()
                 .expect("expected u32 result"),
@@ -1283,10 +1274,8 @@ mod tests {
         let result = instance
             .execute("peek", &[TypedValue::U32(0)])
             .expect("successful execution");
-        assert!(!result.trapped());
         assert_eq!(
             result
-                .value()
                 .expect("expected value")
                 .as_u32()
                 .expect("expected u32 result"),
@@ -1297,7 +1286,6 @@ mod tests {
         let result = instance
             .execute("poke", &[TypedValue::U32(0), TypedValue::U32(0x88776655)])
             .expect("successful execution");
-        assert!(!result.trapped());
 
         // Read memory via safe helper.
         let mut dst: Vec<u8> = Vec::new();
