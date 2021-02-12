@@ -40,9 +40,6 @@ mod sys;
 use std::ffi::CString;
 use std::ptr::NonNull;
 
-// TODO: consider using a newtype or an enum
-pub type Error = String;
-
 /// Parse and validate the input according to WebAssembly 1.0 rules. Returns true if the supplied input is valid.
 pub fn validate<T: AsRef<[u8]>>(input: T) -> bool {
     unsafe {
@@ -76,7 +73,7 @@ impl Clone for Module {
 }
 
 /// Parse and validate the input according to WebAssembly 1.0 rules.
-pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, Error> {
+pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, String> {
     let ptr = unsafe {
         sys::fizzy_parse(
             input.as_ref().as_ptr(),
@@ -85,7 +82,7 @@ pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, Error> {
         )
     };
     if ptr.is_null() {
-        return Err("parsing failure".into());
+        return Err("parsing failure".to_string());
     }
     Ok(Module { 0: ptr })
 }
@@ -102,7 +99,7 @@ impl Drop for Instance {
 impl Module {
     /// Create an instance of a module.
     // TODO: support imported functions
-    pub fn instantiate(self) -> Result<Instance, Error> {
+    pub fn instantiate(self) -> Result<Instance, String> {
         debug_assert!(!self.0.is_null());
         let ptr = unsafe {
             sys::fizzy_instantiate(
@@ -119,7 +116,7 @@ impl Module {
         // Forget Module (and avoid calling drop) because it has been consumed by instantiate (even if it failed).
         core::mem::forget(self);
         if ptr.is_null() {
-            return Err("instantiation failure".into());
+            return Err("instantiation failure".to_string());
         }
         Ok(Instance {
             0: unsafe { NonNull::new_unchecked(ptr) },
@@ -310,15 +307,15 @@ impl Instance {
         memory_size: usize,
         offset: u32,
         size: usize,
-    ) -> Result<core::ops::Range<usize>, Error> {
+    ) -> Result<core::ops::Range<usize>, String> {
         // This is safe given usize::BITS >= u32::BITS, see https://doc.rust-lang.org/std/primitive.usize.html.
         let offset = offset as usize;
         let has_memory = memory_data != std::ptr::null_mut();
         if !has_memory {
-            return Err("no memory is available".into());
+            return Err("no memory is available".to_string());
         }
         if offset.checked_add(size).is_none() || (offset + size) > memory_size {
-            return Err("invalid offset or size".into());
+            return Err("invalid offset or size".to_string());
         }
         Ok(offset..offset + size)
     }
@@ -327,7 +324,7 @@ impl Instance {
     ///
     /// # Safety
     /// These slices turn invalid if the memory is resized (i.e. via the WebAssembly `memory.grow` instruction)
-    pub unsafe fn checked_memory_slice(&self, offset: u32, size: usize) -> Result<&[u8], Error> {
+    pub unsafe fn checked_memory_slice(&self, offset: u32, size: usize) -> Result<&[u8], String> {
         let memory_data = sys::fizzy_get_instance_memory_data(self.0.as_ptr());
         let memory_size = sys::fizzy_get_instance_memory_size(self.0.as_ptr());
         let range = Instance::checked_memory_range(memory_data, memory_size, offset, size)?;
@@ -345,7 +342,7 @@ impl Instance {
         &mut self,
         offset: u32,
         size: usize,
-    ) -> Result<&mut [u8], Error> {
+    ) -> Result<&mut [u8], String> {
         let memory_data = sys::fizzy_get_instance_memory_data(self.0.as_ptr());
         let memory_size = sys::fizzy_get_instance_memory_size(self.0.as_ptr());
         let range = Instance::checked_memory_range(memory_data, memory_size, offset, size)?;
@@ -361,14 +358,14 @@ impl Instance {
     }
 
     /// Copies memory from `offset` to `target`, for the length of `target.len()`.
-    pub fn memory_get(&self, offset: u32, target: &mut [u8]) -> Result<(), Error> {
+    pub fn memory_get(&self, offset: u32, target: &mut [u8]) -> Result<(), String> {
         let slice = unsafe { self.checked_memory_slice(offset, target.len())? };
         target.copy_from_slice(slice);
         Ok(())
     }
 
     /// Copies memory from `source` to `offset`, for the length of `source.len()`.
-    pub fn memory_set(&mut self, offset: u32, source: &[u8]) -> Result<(), Error> {
+    pub fn memory_set(&mut self, offset: u32, source: &[u8]) -> Result<(), String> {
         let slice = unsafe { self.checked_memory_slice_mut(offset, source.len())? };
         slice.copy_from_slice(source);
         Ok(())
@@ -421,16 +418,16 @@ impl Instance {
         &mut self,
         name: &str,
         args: &[TypedValue],
-    ) -> Result<TypedExecutionResult, Error> {
+    ) -> Result<TypedExecutionResult, String> {
         let func_idx = self.find_exported_function_index(&name);
         if func_idx.is_none() {
-            return Err("function not found".into());
+            return Err("function not found".to_string());
         }
         let func_idx = func_idx.unwrap();
 
         let func_type = unsafe { self.get_function_type(func_idx) };
         if func_type.inputs_size != args.len() {
-            return Err("argument count mismatch".into());
+            return Err("argument count mismatch".to_string());
         }
 
         // Validate input types.
@@ -438,7 +435,7 @@ impl Instance {
         let expected_types =
             unsafe { std::slice::from_raw_parts(func_type.inputs, func_type.inputs_size) };
         if expected_types != supplied_types {
-            return Err("argument type mistmatch".into());
+            return Err("argument type mistmatch".to_string());
         }
 
         // Translate to untyped raw values.
