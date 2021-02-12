@@ -40,22 +40,8 @@ mod sys;
 use std::ffi::CString;
 use std::ptr::NonNull;
 
-#[derive(Debug)]
-pub struct Error(String);
-
-impl From<String> for Error {
-    fn from(error: String) -> Self {
-        Error { 0: error }
-    }
-}
-
-impl From<&str> for Error {
-    fn from(error: &str) -> Self {
-        Error {
-            0: error.to_string(),
-        }
-    }
-}
+// TODO: consider using a newtype or an enum
+pub type Error = String;
 
 /// Parse and validate the input according to WebAssembly 1.0 rules. Returns true if the supplied input is valid.
 pub fn validate<T: AsRef<[u8]>>(input: T) -> bool {
