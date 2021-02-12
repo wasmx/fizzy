@@ -289,6 +289,73 @@ impl TypedExecutionResult {
 }
 
 impl Instance {
+    /// Ensure the range is valid according to the currently available memory size.
+    fn checked_memory_range(
+        memory_data: *mut u8,
+        memory_size: usize,
+        offset: u32,
+        size: usize,
+    ) -> Result<core::ops::Range<usize>, ()> {
+        // This is safe given usize::BITS >= u32::BITS, see https://doc.rust-lang.org/std/primitive.usize.html.
+        let offset = offset as usize;
+        let has_memory = memory_data != std::ptr::null_mut();
+        if !has_memory || offset.checked_add(size).is_none() || (offset + size) > memory_size {
+            return Err(());
+        }
+        Ok(offset..offset + size)
+    }
+
+    /// Obtain a read-only slice of underlying memory.
+    ///
+    /// # Safety
+    /// These slices turn invalid if the memory is resized (i.e. via the WebAssembly `memory.grow` instruction)
+    pub unsafe fn checked_memory_slice(&self, offset: u32, size: usize) -> Result<&[u8], ()> {
+        let memory_data = sys::fizzy_get_instance_memory_data(self.0.as_ptr());
+        let memory_size = sys::fizzy_get_instance_memory_size(self.0.as_ptr());
+        let range = Instance::checked_memory_range(memory_data, memory_size, offset, size)?;
+        // Slices allow empty length, but data must be a valid pointer.
+        debug_assert!(memory_data != std::ptr::null_mut());
+        let memory = std::slice::from_raw_parts(memory_data, memory_size);
+        Ok(&memory[range])
+    }
+
+    /// Obtain a mutable slice of underlying memory.
+    ///
+    /// # Safety
+    /// These slices turn invalid if the memory is resized (i.e. via the WebAssembly `memory.grow` instruction)
+    pub unsafe fn checked_memory_slice_mut(
+        &mut self,
+        offset: u32,
+        size: usize,
+    ) -> Result<&mut [u8], ()> {
+        let memory_data = sys::fizzy_get_instance_memory_data(self.0.as_ptr());
+        let memory_size = sys::fizzy_get_instance_memory_size(self.0.as_ptr());
+        let range = Instance::checked_memory_range(memory_data, memory_size, offset, size)?;
+        // Slices allow empty length, but data must be a valid pointer.
+        debug_assert!(memory_data != std::ptr::null_mut());
+        let memory = std::slice::from_raw_parts_mut(memory_data, memory_size);
+        Ok(&mut memory[range])
+    }
+
+    /// Returns the current memory size, in bytes.
+    pub fn memory_size(&self) -> usize {
+        unsafe { sys::fizzy_get_instance_memory_size(self.0.as_ptr()) }
+    }
+
+    /// Copies memory from `offset` to `target`, for the length of `target.len()`.
+    pub fn memory_get(&self, offset: u32, target: &mut [u8]) -> Result<(), ()> {
+        let slice = unsafe { self.checked_memory_slice(offset, target.len())? };
+        target.copy_from_slice(slice);
+        Ok(())
+    }
+
+    /// Copies memory from `source` to `offset`, for the length of `source.len()`.
+    pub fn memory_set(&mut self, offset: u32, source: &[u8]) -> Result<(), ()> {
+        let slice = unsafe { self.checked_memory_slice_mut(offset, source.len())? };
+        slice.copy_from_slice(source);
+        Ok(())
+    }
+
     /// Get a read-only pointer to the module.
     unsafe fn get_module(&self) -> *const sys::FizzyModule {
         sys::fizzy_get_instance_module(self.0.as_ptr())
@@ -754,5 +821,259 @@ mod tests {
         // Passing mismatched types.
         let result = instance.execute("bar", &[TypedValue::F32(1.0), TypedValue::F64(2.0)], 0);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn no_memory() {
+        /* wat2wasm
+        (module)
+        */
+        let input = hex::decode("0061736d01000000").unwrap();
+
+        let module = parse(&input);
+        assert!(module.is_ok());
+        let instance = module.unwrap().instantiate();
+        assert!(instance.is_ok());
+        let mut instance = instance.unwrap();
+
+        assert_eq!(instance.memory_size(), 0);
+
+        // If there is no memory, do not allow any slice.
+        unsafe {
+            assert!(instance.checked_memory_slice(0, 0).is_err());
+            assert!(instance.checked_memory_slice_mut(0, 0).is_err());
+            assert!(instance.checked_memory_slice(0, 65536).is_err());
+            assert!(instance.checked_memory_slice_mut(0, 65536).is_err());
+            assert!(instance.checked_memory_slice(65535, 1).is_err());
+            assert!(instance.checked_memory_slice_mut(65535, 1).is_err());
+            assert!(instance.checked_memory_slice(65535, 2).is_err());
+            assert!(instance.checked_memory_slice_mut(65535, 2).is_err());
+            assert!(instance.checked_memory_slice(65536, 0).is_err());
+            assert!(instance.checked_memory_slice_mut(65536, 0).is_err());
+            assert!(instance.checked_memory_slice(65536, 1).is_err());
+            assert!(instance.checked_memory_slice_mut(65536, 1).is_err());
+        }
+
+        // Set memory via safe helper.
+        assert!(instance.memory_set(0, &[]).is_err());
+        assert!(instance.memory_set(0, &[0x11, 0x22]).is_err());
+        // Get memory via safe helper.
+        let mut dst: Vec<u8> = Vec::new();
+        dst.resize(65536, 0);
+        // Reading empty slice.
+        assert!(instance.memory_get(0, &mut dst[0..0]).is_err());
+        // Reading 65536 bytes.
+        assert!(instance.memory_get(0, &mut dst).is_err());
+    }
+
+    #[test]
+    fn empty_memory() {
+        /* wat2wasm
+        (module
+          ;; Memory is allowed, but no memory is allocated at start.
+          (memory 0)
+        )
+        */
+        let input = hex::decode("0061736d010000000503010000").unwrap();
+
+        let module = parse(&input);
+        assert!(module.is_ok());
+        let instance = module.unwrap().instantiate();
+        assert!(instance.is_ok());
+        let mut instance = instance.unwrap();
+
+        assert_eq!(instance.memory_size(), 0);
+
+        // If there is no memory, do not allow any slice.
+        unsafe {
+            assert!(instance.checked_memory_slice(0, 0).is_ok());
+            assert!(instance.checked_memory_slice_mut(0, 0).is_ok());
+            assert!(instance.checked_memory_slice(0, 65536).is_err());
+            assert!(instance.checked_memory_slice_mut(0, 65536).is_err());
+            assert!(instance.checked_memory_slice(65535, 1).is_err());
+            assert!(instance.checked_memory_slice_mut(65535, 1).is_err());
+            assert!(instance.checked_memory_slice(65535, 2).is_err());
+            assert!(instance.checked_memory_slice_mut(65535, 2).is_err());
+            assert!(instance.checked_memory_slice(65536, 0).is_err());
+            assert!(instance.checked_memory_slice_mut(65536, 0).is_err());
+            assert!(instance.checked_memory_slice(65536, 1).is_err());
+            assert!(instance.checked_memory_slice_mut(65536, 1).is_err());
+        }
+
+        // Set memory via safe helper.
+        assert!(instance.memory_set(0, &[]).is_ok());
+        assert!(instance.memory_set(0, &[0x11, 0x22]).is_err());
+        // Get memory via safe helper.
+        let mut dst: Vec<u8> = Vec::new();
+        dst.resize(65536, 0);
+        // Reading empty slice.
+        assert!(instance.memory_get(0, &mut dst[0..0]).is_ok());
+        // Reading 65536 bytes.
+        assert!(instance.memory_get(0, &mut dst).is_err());
+    }
+
+    #[test]
+    fn memory() {
+        /* wat2wasm
+        (module
+          (func (export "grow") (param i32) (result i32) (memory.grow (local.get 0)))
+          (func (export "peek") (param i32) (result i32) (i32.load (local.get 0)))
+          (func (export "poke") (param i32) (param i32) (i32.store (local.get 0) (local.get 1)))
+          (memory (export "mem") 1 2)
+        )
+        */
+        let input = hex::decode("0061736d01000000010b0260017f017f60027f7f00030403000001050401010102071c040467726f770000047065656b000104706f6b650002036d656d02000a1a030600200040000b070020002802000b0900200020013602000b").unwrap();
+        let module = parse(&input);
+        assert!(module.is_ok());
+        let instance = module.unwrap().instantiate();
+        assert!(instance.is_ok());
+        let mut instance = instance.unwrap();
+
+        assert_eq!(instance.memory_size(), 65536);
+        unsafe {
+            // Allow empty slices.
+            assert!(instance.checked_memory_slice(0, 0).is_ok());
+            assert!(instance.checked_memory_slice_mut(0, 0).is_ok());
+            // Entire memory.
+            assert!(instance.checked_memory_slice(0, 65536).is_ok());
+            assert!(instance.checked_memory_slice_mut(0, 65536).is_ok());
+            // Allow empty slices.
+            assert!(instance.checked_memory_slice(65535, 0).is_ok());
+            assert!(instance.checked_memory_slice_mut(65535, 0).is_ok());
+            assert!(instance.checked_memory_slice(65536, 0).is_ok());
+            assert!(instance.checked_memory_slice_mut(65536, 0).is_ok());
+            // Single byte.
+            assert!(instance.checked_memory_slice(65535, 1).is_ok());
+            assert!(instance.checked_memory_slice_mut(65535, 1).is_ok());
+            // Reading over.
+            assert!(instance.checked_memory_slice(65535, 2).is_err());
+            assert!(instance.checked_memory_slice_mut(65535, 2).is_err());
+            assert!(instance.checked_memory_slice(65536, 1).is_err());
+            assert!(instance.checked_memory_slice_mut(65536, 1).is_err());
+            // Offset overflow.
+            assert!(instance.checked_memory_slice(65537, 0).is_err());
+            assert!(instance.checked_memory_slice_mut(65537, 0).is_err());
+        }
+
+        // Grow with a single page.
+        let result = instance
+            .execute("grow", &[TypedValue::U32(1)], 0)
+            .expect("successful execution");
+        assert!(!result.trapped());
+        assert_eq!(
+            result
+                .value()
+                .expect("expected value")
+                .as_u32()
+                .expect("expected u32 result"),
+            1
+        );
+        // Expect new total memory size.
+        assert_eq!(instance.memory_size(), 65536 * 2);
+
+        // Set memory via slices.
+        unsafe {
+            let mem = instance
+                .checked_memory_slice_mut(0, 65536)
+                .expect("valid mutable slice");
+            assert_eq!(mem[0], 0);
+            assert_eq!(mem[1], 0);
+            assert_eq!(mem[2], 0);
+            assert_eq!(mem[3], 0);
+            mem[0] = 42;
+        }
+        unsafe {
+            // Check that const slice matches up.
+            let mem = instance.checked_memory_slice(0, 5).expect("valid slice");
+            assert_eq!(mem[0], 42);
+            assert_eq!(mem[1], 0);
+            assert_eq!(mem[2], 0);
+            assert_eq!(mem[3], 0);
+        }
+        let result = instance
+            .execute("peek", &[TypedValue::U32(0)], 0)
+            .expect("successful execution");
+        assert!(!result.trapped());
+        assert_eq!(
+            result
+                .value()
+                .expect("expected value")
+                .as_u32()
+                .expect("expected u32 result"),
+            42
+        );
+
+        // Remember, by now we have grown memory to two pages.
+
+        // Set memory via safe helper.
+        assert!(instance.memory_set(0, &[]).is_ok());
+        assert!(instance.memory_set(65536 + 65535, &[]).is_ok());
+        assert!(instance.memory_set(65536 + 65536, &[]).is_ok());
+        assert!(instance.memory_set(65536 + 65537, &[]).is_err());
+        assert!(instance.memory_set(0, &[0x11, 0x22, 0x33, 0x44]).is_ok());
+        assert!(instance
+            .memory_set(65536 + 65532, &[0x11, 0x22, 0x33, 0x44])
+            .is_ok());
+        assert!(instance
+            .memory_set(65536 + 65533, &[0x11, 0x22, 0x33, 0x44])
+            .is_err());
+        assert!(instance
+            .memory_set(65536 + 65534, &[0x11, 0x22, 0x33, 0x44])
+            .is_err());
+        assert!(instance
+            .memory_set(65536 + 65535, &[0x11, 0x22, 0x33, 0x44])
+            .is_err());
+        assert!(instance
+            .memory_set(65536 + 65536, &[0x11, 0x22, 0x33, 0x44])
+            .is_err());
+        assert!(instance
+            .memory_set(65536 + 65537, &[0x11, 0x22, 0x33, 0x44])
+            .is_err());
+
+        let result = instance
+            .execute("peek", &[TypedValue::U32(0)], 0)
+            .expect("successful execution");
+        assert!(!result.trapped());
+        assert_eq!(
+            result
+                .value()
+                .expect("expected value")
+                .as_u32()
+                .expect("expected u32 result"),
+            0x44332211
+        );
+
+        // Change memory via wasm.
+        let result = instance
+            .execute(
+                "poke",
+                &[TypedValue::U32(0), TypedValue::U32(0x88776655)],
+                0,
+            )
+            .expect("successful execution");
+        assert!(!result.trapped());
+
+        // Read memory via safe helper.
+        let mut dst: Vec<u8> = Vec::new();
+        dst.resize(65536, 0);
+        // Reading 65536 bytes.
+        assert!(instance.memory_get(0, &mut dst).is_ok());
+        // Only checking the first 4.
+        assert_eq!(dst[0..4], [0x55, 0x66, 0x77, 0x88]);
+
+        // Read into empty slice.
+        assert!(instance.memory_get(0, &mut dst[0..0]).is_ok());
+        assert!(instance.memory_get(65536 + 65535, &mut dst[0..0]).is_ok());
+        assert!(instance.memory_get(65536 + 65536, &mut dst[0..0]).is_ok());
+        assert!(instance.memory_get(65536 + 65537, &mut dst[0..0]).is_err());
+
+        // Read into short slice.
+        assert!(instance.memory_get(0, &mut dst[0..4]).is_ok());
+        assert!(instance.memory_get(65536 + 65532, &mut dst[0..4]).is_ok());
+        assert!(instance.memory_get(65536 + 65533, &mut dst[0..4]).is_err());
+        assert!(instance.memory_get(65536 + 65534, &mut dst[0..4]).is_err());
+        assert!(instance.memory_get(65536 + 65535, &mut dst[0..4]).is_err());
+        assert!(instance.memory_get(65536 + 65536, &mut dst[0..4]).is_err());
+        assert!(instance.memory_get(65536 + 65537, &mut dst[0..4]).is_err());
     }
 }
