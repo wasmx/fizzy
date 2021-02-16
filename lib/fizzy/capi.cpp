@@ -163,32 +163,34 @@ inline std::vector<fizzy::ExternalFunction> unwrap(
 
 inline fizzy::ImportedFunction unwrap(const FizzyImportedFunction& c_imported_func)
 {
-    fizzy::ImportedFunction imported_func;
-    imported_func.module = c_imported_func.module;
-    imported_func.name = c_imported_func.name;
-
     const auto& c_type = c_imported_func.external_function.type;
-    imported_func.inputs.resize(c_type.inputs_size);
-    fizzy::ValType (*unwrap_valtype_fn)(FizzyValueType value) = &unwrap;
-    std::transform(c_type.inputs, c_type.inputs + c_type.inputs_size, imported_func.inputs.begin(),
-        unwrap_valtype_fn);
-    imported_func.output = c_type.output == FizzyValueTypeVoid ?
-                               std::nullopt :
-                               std::make_optional(unwrap(c_type.output));
 
-    imported_func.function = unwrap(
+    std::vector<fizzy::ValType> inputs(c_type.inputs_size);
+    fizzy::ValType (*unwrap_valtype_fn)(FizzyValueType value) = &unwrap;
+    std::transform(
+        c_type.inputs, c_type.inputs + c_type.inputs_size, inputs.begin(), unwrap_valtype_fn);
+
+    const std::optional<fizzy::ValType> output(c_type.output == FizzyValueTypeVoid ?
+                                                   std::nullopt :
+                                                   std::make_optional(unwrap(c_type.output)));
+
+    auto function = unwrap(
         c_imported_func.external_function.function, c_imported_func.external_function.context);
 
-    return imported_func;
+    return {c_imported_func.module, c_imported_func.name, std::move(inputs), output,
+        std::move(function)};
 }
 
 inline std::vector<fizzy::ImportedFunction> unwrap(
     const FizzyImportedFunction* c_imported_functions, size_t imported_functions_size)
 {
-    std::vector<fizzy::ImportedFunction> imported_functions(imported_functions_size);
+    std::vector<fizzy::ImportedFunction> imported_functions;
+    imported_functions.reserve(imported_functions_size);
+
     fizzy::ImportedFunction (*unwrap_imported_func_fn)(const FizzyImportedFunction&) = &unwrap;
     std::transform(c_imported_functions, c_imported_functions + imported_functions_size,
-        imported_functions.begin(), unwrap_imported_func_fn);
+        std::back_inserter(imported_functions), unwrap_imported_func_fn);
+
     return imported_functions;
 }
 

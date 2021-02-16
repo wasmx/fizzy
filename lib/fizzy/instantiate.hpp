@@ -46,9 +46,6 @@ class ExecuteFunction
     std::any m_host_context;
 
 public:
-    /// Default function constructor.
-    ExecuteFunction() noexcept = default;
-
     // WebAssembly function constructor.
     ExecuteFunction(Instance& instance, FuncIdx func_idx) noexcept
       : m_instance{&instance}, m_func_idx{func_idx}
