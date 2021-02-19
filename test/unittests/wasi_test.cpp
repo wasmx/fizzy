@@ -16,5 +16,5 @@ TEST(wasi, no_file)
 
     std::ostringstream err;
     EXPECT_FALSE(wasi::run(std::size(args), args, err));
-    EXPECT_EQ(err.str(), "File does not exists or is irregular: ABC\n");
+    EXPECT_EQ(err.str(), "File does not exist: \"ABC\"\n");
 }

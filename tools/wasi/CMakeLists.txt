@@ -6,9 +6,8 @@ include(ProjectUVWASI)
 
 add_library(wasi)
 add_library(fizzy::wasi ALIAS wasi)
-target_compile_features(wasi PUBLIC cxx_std_17)
 target_include_directories(wasi PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(wasi PRIVATE fizzy::fizzy-internal uvwasi::uvwasi)
+target_link_libraries(wasi PUBLIC fizzy::fizzy-internal PRIVATE uvwasi::uvwasi)
 target_sources(wasi PRIVATE wasi.cpp wasi.hpp)
 
 add_executable(fizzy-wasi)

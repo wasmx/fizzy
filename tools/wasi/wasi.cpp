@@ -99,6 +99,39 @@ ExecutionResult environ_sizes_get(Instance& instance, const Value* args, int)
 }
 }  // namespace
 
+std::optional<bytes> load_file(std::string_view file, std::ostream& err) noexcept
+{
+    try
+    {
+        std::filesystem::path path{file};
+
+        if (!std::filesystem::exists(path))
+        {
+            err << "File does not exist: " << path << "\n";
+            return std::nullopt;
+        }
+        if (!std::filesystem::is_regular_file(path))
+        {
+            err << "Not a file: " << path << "\n";
+            return std::nullopt;
+        }
+
+        std::ifstream wasm_file{path};
+        if (!wasm_file)
+        {
+            err << "Failed to open file: " << path << "\n";
+            return std::nullopt;
+        }
+        return bytes(std::istreambuf_iterator<char>{wasm_file}, std::istreambuf_iterator<char>{});
+    }
+    catch (...)
+    {
+        // Generic error message due to other exceptions.
+        err << "Failed to load: " << file << "\n";
+        return std::nullopt;
+    }
+}
+
 bool run(int argc, const char** argv, std::ostream& err)
 {
     constexpr auto ns = "wasi_snapshot_preview1";
@@ -134,20 +167,9 @@ bool run(int argc, const char** argv, std::ostream& err)
         return false;
     }
 
-    if (!std::filesystem::is_regular_file(argv[0]))
-    {
-        err << "File does not exists or is irregular: " << argv[0] << "\n";
+    const auto wasm_binary = load_wasm_binary(argv[0], err);
+    if (wasm_binary.empty())
         return false;
-    }
-
-    std::ifstream wasm_file{argv[0]};
-    if (!wasm_file)
-    {
-        err << "Failed to open file: " << argv[0] << "\n";
-        return false;
-    }
-    const auto wasm_binary =
-        bytes(std::istreambuf_iterator<char>{wasm_file}, std::istreambuf_iterator<char>{});
 
     auto module = parse(wasm_binary);
     auto imports = resolve_imported_functions(*module, wasi_functions);
