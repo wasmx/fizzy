@@ -15,13 +15,23 @@ namespace fizzy::wasi
 /// @return         Content of the loaded file.
 std::optional<bytes> load_file(std::string_view file, std::ostream& err) noexcept;
 
-/// Executes WASI main function with given CLI arguments.
+/// Loads the wasm file (path in first CLI argument) and
+/// executes WASI main function with given CLI arguments.
 ///
-/// @param  argc    Number of CLI arguments.
-/// @param  argv    Array of CLI arguments.
+/// @param  argc    Number of CLI arguments. Must be >= 1.
+/// @param  argv    Array of CLI arguments. The first argument must be wasm file path.
 /// @param  err     Error output stream.
 /// @return         False in case of error.
 ///
 /// @todo Make noexcept.
-bool run(int argc, const char** argv, std::ostream& err);
+bool load_and_run(int argc, const char** argv, std::ostream& err);
+
+/// Executes WASI main function from the wasm binary with given CLI arguments.
+///
+/// @param  wasm_binary    Wasm binary.
+/// @param  argc           Number of CLI arguments.
+/// @param  argv           Array of CLI arguments. The first argument should be wasm file path.
+/// @param  err            Error output stream.
+/// @return                False in case of error.
+bool run(bytes_view wasm_binary, int argc, const char* argv[], std::ostream& err);
 }  // namespace fizzy::wasi

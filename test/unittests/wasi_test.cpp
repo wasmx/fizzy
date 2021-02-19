@@ -15,6 +15,6 @@ TEST(wasi, no_file)
     const char* args[]{"ABC"};
 
     std::ostringstream err;
-    EXPECT_FALSE(wasi::run(std::size(args), args, err));
+    EXPECT_FALSE(wasi::load_and_run(std::size(args), args, err));
     EXPECT_EQ(err.str(), "File does not exist: \"ABC\"\n");
 }

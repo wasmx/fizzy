@@ -132,7 +132,7 @@ std::optional<bytes> load_file(std::string_view file, std::ostream& err) noexcep
     }
 }
 
-bool run(int argc, const char** argv, std::ostream& err)
+bool run(bytes_view wasm_binary, int argc, const char* argv[], std::ostream& err)
 {
     constexpr auto ns = "wasi_snapshot_preview1";
     const std::vector<ImportedFunction> wasi_functions = {
@@ -166,10 +166,6 @@ bool run(int argc, const char** argv, std::ostream& err)
             << "\n";
         return false;
     }
-
-    const auto wasm_binary = load_wasm_binary(argv[0], err);
-    if (wasm_binary.empty())
-        return false;
 
     auto module = parse(wasm_binary);
     auto imports = resolve_imported_functions(*module, wasi_functions);
@@ -207,5 +203,14 @@ bool run(int argc, const char** argv, std::ostream& err)
     assert(!result.has_value);
 
     return true;
+}
+
+bool load_and_run(int argc, const char** argv, std::ostream& err)
+{
+    const auto wasm_binary = load_file(argv[0], err);
+    if (!wasm_binary)
+        return false;
+
+    return run(*wasm_binary, argc, argv, err);
 }
 }  // namespace fizzy::wasi
