@@ -38,7 +38,8 @@ public:
 
 namespace
 {
-const void* env_adler32(IM3Runtime /*runtime*/, uint64_t* stack, void* mem) noexcept
+const void* env_adler32(
+    IM3Runtime /*runtime*/, uint64_t* stack, void* mem, void* /*userdata*/) noexcept
 {
     const uint32_t offset = static_cast<uint32_t>(stack[0]);
     const uint32_t length = static_cast<uint32_t>(stack[1]);
@@ -115,6 +116,8 @@ std::optional<WasmEngine::FuncRef> Wasm3Engine::find_function(
 {
     IM3Function function;
     if (m3_FindFunction(&function, m_runtime, name.data()) == m3Err_none)
+        // TODO: validate input/output types
+        // (m3_GetArgCount/m3_GetArgType/m3_GetRetCount/m3_GetRetType)
         return reinterpret_cast<WasmEngine::FuncRef>(function);
     return std::nullopt;
 }
@@ -122,13 +125,24 @@ std::optional<WasmEngine::FuncRef> Wasm3Engine::find_function(
 WasmEngine::Result Wasm3Engine::execute(
     WasmEngine::FuncRef func_ref, const std::vector<uint64_t>& args)
 {
-    unsigned ret_valid;
-    uint64_t ret_value;
     auto function = reinterpret_cast<IM3Function>(func_ref);  // NOLINT(performance-no-int-to-ptr)
-    auto const result = m3_CallProper(
-        function, static_cast<uint32_t>(args.size()), args.data(), &ret_valid, &ret_value);
+
+    std::vector<const void*> argPtrs;
+    for (auto const& arg : args)
+        argPtrs.push_back(&arg);
+
+    // This ensures input count/type matches. For the return value we assume find_function did the
+    // validation.
+    auto const result = m3_Call(function, static_cast<uint32_t>(args.size()), argPtrs.data());
     if (result == m3Err_none)
-        return {false, ret_valid ? ret_value : std::optional<uint64_t>{}};
+    {
+        if (m3_GetRetCount(function) == 0)
+            return {false, std::nullopt};
+
+        uint64_t ret_value = 0;
+        assert(m3_GetResultsV(function, &ret_value) == m3Err_none);
+        return {false, ret_value};
+    }
     return {true, std::nullopt};
 }
 }  // namespace fizzy::test
