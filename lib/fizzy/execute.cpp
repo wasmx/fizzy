@@ -109,6 +109,54 @@ inline bool store_into_memory(
     return true;
 }
 
+/// Checks that exception is one of the types expected to be thrown from bytes::resize().
+/// We catch ... in memory.grow implementation for the sake of smaller binary code and assert it's
+/// one of expected exceptions.
+[[maybe_unused]] bool is_resize_exception(std::exception_ptr exception) noexcept
+{
+    try
+    {
+        std::rethrow_exception(exception);
+    }
+    catch (const std::bad_alloc&)
+    {
+        return true;
+    }
+    catch (const std::length_error&)
+    {
+        return true;
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
+/// Increases the size of memory by @a delta_pages.
+/// @return    Number of memory pages before expansion if successful, otherwise 2^32-1 in case
+///            requested resize goes above @a memory_pages_limit or if allocation failed.
+inline uint32_t grow_memory(
+    bytes& memory, uint32_t delta_pages, uint32_t memory_pages_limit) noexcept
+{
+    const auto cur_pages = memory.size() / PageSize;
+    assert(cur_pages <= size_t(std::numeric_limits<int32_t>::max()));
+    const auto new_pages = cur_pages + delta_pages;
+    assert(new_pages >= cur_pages);
+    if (new_pages > memory_pages_limit)
+        return static_cast<uint32_t>(-1);
+
+    try
+    {
+        memory.resize(new_pages * PageSize);
+        return static_cast<uint32_t>(cur_pages);
+    }
+    catch (...)
+    {
+        assert(is_resize_exception(std::current_exception()));
+        return static_cast<uint32_t>(-1);
+    }
+}
+
 /// Converts the top stack item by truncating a float value to an integer value.
 template <typename SrcT, typename DstT>
 inline bool trunc(OperandStack& stack) noexcept
@@ -828,23 +876,8 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::memory_grow:
         {
-            const auto delta = stack.pop().as<uint32_t>();
-            const auto cur_pages = memory->size() / PageSize;
-            assert(cur_pages <= size_t(std::numeric_limits<int32_t>::max()));
-            const auto new_pages = cur_pages + delta;
-            assert(new_pages >= cur_pages);
-            uint32_t ret = static_cast<uint32_t>(cur_pages);
-            try
-            {
-                if (new_pages > instance.memory_pages_limit)
-                    throw std::bad_alloc();
-                memory->resize(new_pages * PageSize);
-            }
-            catch (std::bad_alloc const&)
-            {
-                ret = static_cast<uint32_t>(-1);
-            }
-            stack.push(ret);
+            stack.top() =
+                grow_memory(*memory, stack.top().as<uint32_t>(), instance.memory_pages_limit);
             break;
         }
         case Instr::i32_const:
