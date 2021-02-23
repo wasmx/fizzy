@@ -217,6 +217,40 @@ TEST(api, resolve_imported_function_duplicate)
     EXPECT_THAT(execute(*instance, 1, {0_u32}), Result(42));
 }
 
+TEST(api, resolve_imported_function_duplicate_with_context)
+{
+    /* wat2wasm
+      (func (import "mod1" "foo1"))
+      (func (import "mod1" "foo1"))
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010401600000021902046d6f643104666f6f310000046d6f643104666f6f310000");
+    const auto module = parse(wasm);
+
+    constexpr auto host_func = [](std::any& context, Instance&, const Value*, int) {
+        auto* counter = std::any_cast<int*>(context);
+        ++(*counter);
+        return Void;
+    };
+
+    int counter = 0;
+    auto context = std::make_any<int*>(&counter);
+
+    std::vector<ImportedFunction> imported_functions = {
+        {"mod1", "foo1", {}, std::nullopt, {host_func, std::move(context)}},
+    };
+
+    const auto external_functions = resolve_imported_functions(*module, imported_functions);
+
+    EXPECT_EQ(external_functions.size(), 2);
+
+    auto instance = instantiate(*module, external_functions, {}, {}, {});
+
+    EXPECT_THAT(execute(*instance, 0, nullptr), Result());
+    EXPECT_THAT(execute(*instance, 1, nullptr), Result());
+    EXPECT_EQ(counter, 2);
+}
+
 TEST(api, resolve_imported_globals)
 {
     /* wat2wasm
