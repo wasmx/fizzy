@@ -577,6 +577,116 @@ TEST(execute_call, imported_function_from_another_module_via_host_function)
     EXPECT_THAT(execute(*instance2, 0, {44, 2}), Result(42));
 }
 
+TEST(execute_call, imported_function_with_context)
+{
+    /* wat2wasm
+    (import "mod" "foo" (func))
+    (func
+      call 0
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d01000000010401600000020b01036d6f6403666f6f0000030201000a0601040010000b");
+
+    const auto module = parse(wasm);
+
+    constexpr auto host_func = [](std::any& host_context, Instance&, const Value*,
+                                   int) -> ExecutionResult {
+        ++(*std::any_cast<int*>(host_context));
+        return Void;
+    };
+    const auto& host_func_type = module->typesec[0];
+
+    int counter = 0;
+    auto host_context = std::make_any<int*>(&counter);
+
+    auto instance = instantiate(*module, {{{host_func, std::move(host_context)}, host_func_type}});
+
+    EXPECT_THAT(execute(*instance, 0, {}), Result());
+    EXPECT_EQ(counter, 1);
+    EXPECT_THAT(execute(*instance, 1, {}), Result());
+    EXPECT_EQ(counter, 2);
+}
+
+TEST(execute_call, imported_functions_with_shared_context)
+{
+    /* wat2wasm
+    (import "mod" "foo1" (func))
+    (import "mod" "foo2" (func (result i32)))
+    (func (result i32)
+      call 0
+      call 1
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000108026000006000017f021702036d6f6404666f6f310000036d6f6404666f6f3200010302"
+        "01010a08010600100010010b");
+
+    const auto module = parse(wasm);
+
+    constexpr auto host_func1 = [](std::any& host_context, Instance&, const Value*,
+                                    int) -> ExecutionResult {
+        ++(*std::any_cast<uint32_t*>(host_context));
+        return Void;
+    };
+    constexpr auto host_func2 = [](std::any& host_context, Instance&, const Value*,
+                                    int) -> ExecutionResult {
+        return Value{*std::any_cast<uint32_t*>(host_context)};
+    };
+
+    uint32_t counter = 0;
+    auto host_context = std::make_any<uint32_t*>(&counter);
+
+    // host_context is copied here but all copies contain the pointer to the same value
+    auto instance = instantiate(*module, {{{host_func1, host_context}, module->typesec[0]},
+                                             {{host_func2, host_context}, module->typesec[1]}});
+
+    EXPECT_THAT(execute(*instance, 0, {}), Result());
+    EXPECT_EQ(counter, 1);
+    EXPECT_THAT(execute(*instance, 1, {}), Result(1));
+    EXPECT_EQ(counter, 1);
+    EXPECT_THAT(execute(*instance, 2, {}), Result(2));
+    EXPECT_EQ(counter, 2);
+}
+
+TEST(execute_call, imported_functions_with_non_shared_context)
+{
+    /* wat2wasm
+    (import "mod" "foo1" (func))
+    (import "mod" "foo2" (func (result i32)))
+    (func (result i32)
+      call 0
+      call 1
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000108026000006000017f021702036d6f6404666f6f310000036d6f6404666f6f3200010302"
+        "01010a08010600100010010b");
+
+    const auto module = parse(wasm);
+
+    constexpr auto host_func1 = [](std::any& host_context, Instance&, const Value*,
+                                    int) -> ExecutionResult {
+        ++(std::any_cast<uint32_t&>(host_context));
+        return Void;
+    };
+    constexpr auto host_func2 = [](std::any& host_context, Instance&, const Value*,
+                                    int) -> ExecutionResult {
+        return Value{std::any_cast<uint32_t>(host_context)};
+    };
+
+    auto host_context = std::make_any<uint32_t>();
+
+    // host_context is copied here, each copy contains its own value
+    auto instance = instantiate(*module, {{{host_func1, host_context}, module->typesec[0]},
+                                             {{host_func2, host_context}, module->typesec[1]}});
+
+    EXPECT_THAT(execute(*instance, 0, {}), Result());
+    EXPECT_THAT(execute(*instance, 1, {}), Result(0));
+    EXPECT_THAT(execute(*instance, 2, {}), Result(0));
+    EXPECT_EQ(std::any_cast<uint32_t>(host_context), 0);
+}
+
 TEST(execute_call, imported_table_from_another_module)
 {
     /* wat2wasm
