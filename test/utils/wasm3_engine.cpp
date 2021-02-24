@@ -6,8 +6,10 @@
 
 #include <test/utils/adler32.hpp>
 #include <test/utils/wasm_engine.hpp>
+#include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <stdexcept>
 
 namespace fizzy::test
 {
@@ -115,14 +117,30 @@ fizzy::bytes_view Wasm3Engine::get_memory() const
 }
 
 std::optional<WasmEngine::FuncRef> Wasm3Engine::find_function(
-    std::string_view name, std::string_view) const
+    std::string_view name, std::string_view signature) const
 {
     IM3Function function;
-    if (m3_FindFunction(&function, m_runtime, name.data()) == m3Err_none)
-        // TODO: validate input/output types
-        // (m3_GetArgCount/m3_GetArgType/m3_GetRetCount/m3_GetRetType)
-        return reinterpret_cast<WasmEngine::FuncRef>(function);
-    return std::nullopt;
+    if (m3_FindFunction(&function, m_runtime, name.data()) != m3Err_none)
+        return std::nullopt;
+
+    std::vector<M3ValueType> inputs;
+    std::vector<M3ValueType> outputs;
+    std::tie(inputs, outputs) = translate_function_signature<M3ValueType, M3ValueType::c_m3Type_i32,
+        M3ValueType::c_m3Type_i64>(signature);
+
+    if (inputs.size() != m3_GetArgCount(function))
+        return std::nullopt;
+    for (unsigned i = 0; i < m3_GetArgCount(function); i++)
+        if (inputs[i] != m3_GetArgType(function, i))
+            return std::nullopt;
+
+    if (outputs.size() != m3_GetRetCount(function))
+        return std::nullopt;
+    for (unsigned i = 0; i < m3_GetRetCount(function); i++)
+        if (outputs[i] != m3_GetRetType(function, i))
+            return std::nullopt;
+
+    return reinterpret_cast<WasmEngine::FuncRef>(function);
 }
 
 WasmEngine::Result Wasm3Engine::execute(
@@ -137,7 +155,7 @@ WasmEngine::Result Wasm3Engine::execute(
 
     // This ensures input count/type matches. For the return value we assume find_function did the
     // validation.
-    if (m3_Call(function, static_cast<uint32_t>(args.size()), argPtrs.data()) == m3Err_none)
+    if (m3_Call(function, static_cast<uint32_t>(argPtrs.size()), argPtrs.data()) == m3Err_none)
     {
         if (m3_GetRetCount(function) == 0)
             return {false, std::nullopt};
