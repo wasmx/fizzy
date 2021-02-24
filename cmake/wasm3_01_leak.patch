@@ -1,0 +1,43 @@
+diff --git a/source/m3_env.c b/source/m3_env.c
+index e170242..3dc0403 100644
+--- a/source/m3_env.c
++++ b/source/m3_env.c
+@@ -177,6 +177,8 @@ IM3Environment  m3_NewEnvironment  ()
+     // create FuncTypes for all simple block return ValueTypes
+     for (int t = c_m3Type_none; t <= c_m3Type_f64; t++)
+     {
++        d_m3Assert (t < 5);
++
+         IM3FuncType ftype;
+         AllocFuncType (& ftype, 1);
+         ftype->numArgs = 0;
+@@ -199,7 +201,15 @@ void  Environment_Release  (IM3Environment i_environment)
+         IM3FuncType next = ftype->next;
+         m3Free (ftype);
+         ftype = next;
+-    }                                                       m3log (runtime, "freeing %d pages from environment", CountCodePages (i_environment->pagesReleased));
++    }
++    for (int t = c_m3Type_none; t <= c_m3Type_f64; t++)
++    {
++        d_m3Assert (t < 5);
++        ftype = i_environment->retFuncTypes[t];
++        d_m3Assert (ftype->next == NULL);
++        m3Free (ftype);
++    }
++    m3log (runtime, "freeing %d pages from environment", CountCodePages (i_environment->pagesReleased));
+     FreeCodePages (& i_environment->pagesReleased);
+ }
+ 
+diff --git a/source/m3_env.h b/source/m3_env.h
+index d778b54..feeb9a4 100644
+--- a/source/m3_env.h
++++ b/source/m3_env.h
+@@ -190,7 +190,7 @@ typedef struct M3Environment
+ 
+     IM3FuncType             funcTypes;          // linked list
+ 
+-    IM3FuncType             retFuncTypes[5];
++    IM3FuncType             retFuncTypes[5];    // the number of elements must match the basic types as per M3ValueType
+ 
+     M3CodePage *            pagesReleased;
+ }
