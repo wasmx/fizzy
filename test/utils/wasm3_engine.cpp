@@ -39,7 +39,7 @@ public:
 namespace
 {
 const void* env_adler32(
-    IM3Runtime /*runtime*/, uint64_t* stack, void* mem, void* /*userdata*/) noexcept
+    IM3Runtime /*runtime*/, IM3ImportContext /*context*/, uint64_t* stack, void* mem) noexcept
 {
     const uint32_t offset = static_cast<uint32_t>(stack[0]);
     const uint32_t length = static_cast<uint32_t>(stack[1]);
@@ -88,8 +88,11 @@ bool Wasm3Engine::instantiate(bytes_view wasm_binary)
         return false;
     }
 
-    auto ret = m3_LinkRawFunction(module, "env", "adler32", "i(ii)", env_adler32);
-    return ret == m3Err_none || ret == m3Err_functionLookupFailed;
+    auto const ret = m3_LinkRawFunction(module, "env", "adler32", "i(ii)", env_adler32);
+    if (ret != m3Err_none && ret != m3Err_functionLookupFailed)
+        return false;
+
+    return m3_RunStart(module) == m3Err_none;
 }
 
 bool Wasm3Engine::init_memory(fizzy::bytes_view memory)
@@ -133,14 +136,15 @@ WasmEngine::Result Wasm3Engine::execute(
 
     // This ensures input count/type matches. For the return value we assume find_function did the
     // validation.
-    auto const result = m3_Call(function, static_cast<uint32_t>(args.size()), argPtrs.data());
-    if (result == m3Err_none)
+    if (m3_Call(function, static_cast<uint32_t>(args.size()), argPtrs.data()) == m3Err_none)
     {
         if (m3_GetRetCount(function) == 0)
             return {false, std::nullopt};
 
         uint64_t ret_value = 0;
-        assert(m3_GetResultsV(function, &ret_value) == m3Err_none);
+        [[maybe_unused]] auto const ret = m3_GetResultsV(function, &ret_value);
+        // This should not fail.
+        assert(ret == m3Err_none);
         return {false, ret_value};
     }
     return {true, std::nullopt};
