@@ -131,6 +131,7 @@ WasmEngine::Result Wasm3Engine::execute(
     auto function = reinterpret_cast<IM3Function>(func_ref);  // NOLINT(performance-no-int-to-ptr)
 
     std::vector<const void*> argPtrs;
+    argPtrs.reserve(args.size());
     for (auto const& arg : args)
         argPtrs.push_back(&arg);
 
@@ -142,8 +143,8 @@ WasmEngine::Result Wasm3Engine::execute(
             return {false, std::nullopt};
 
         uint64_t ret_value = 0;
+        // This should not fail because we check GetRetCount.
         [[maybe_unused]] auto const ret = m3_GetResultsV(function, &ret_value);
-        // This should not fail.
         assert(ret == m3Err_none);
         return {false, ret_value};
     }
