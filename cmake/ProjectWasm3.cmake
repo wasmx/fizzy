@@ -18,19 +18,17 @@ endif()
 ExternalProject_Add(wasm3
     EXCLUDE_FROM_ALL 1
     PREFIX ${prefix}
-    DOWNLOAD_NAME wasm3-d339389d.tar.gz
+    DOWNLOAD_NAME wasm3-11f813d7.tar.gz
     DOWNLOAD_DIR ${prefix}/downloads
     SOURCE_DIR ${source_dir}
     BINARY_DIR ${binary_dir}
-    URL https://github.com/wasm3/wasm3/archive/dee9389d831a6ed5101155f31d217e47c4ad8175.tar.gz
-    URL_HASH SHA256=8ef1470884ecadad105e7e2bc37fb9cbf2242c87157201f02861874c8b419bbd
-    PATCH_COMMAND ${CMAKE_CURRENT_LIST_DIR}/apply_patches.sh
+    URL https://github.com/wasm3/wasm3/archive/11f813d7ed659ed7c5b3faf6df0ff6e8f715f4e5.tar.gz
+    URL_HASH SHA256=e24849bcc69100c5d25f93b0079c8e9b229780ec06110dbc09d2b4a6a362a84a
     CMAKE_ARGS
     ${toolchain_file}
     -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
     -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-    -DCMAKE_C_FLAGS="-Wno-sign-compare"
     -DBUILD_WASI=none
     -DBUILD_NATIVE=OFF
     INSTALL_COMMAND ""
