@@ -5,8 +5,11 @@
 #pragma once
 
 #include "bytes.hpp"
+#include <algorithm>
+#include <cassert>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string_view>
 #include <vector>
 
@@ -58,7 +61,45 @@ public:
     virtual Result execute(FuncRef func_ref, const std::vector<uint64_t>& args) = 0;
 };
 
+/// Throws exception if the signature is non-conformant.
+///
+/// A function signature consist of input and output types delimited by a colon. Zero number of
+/// types is allowed. A type is represented with a single character, where `i` means i32, and
+/// `I` means i64.
+///
+/// As an example `iI:i` translates to `(i32, i64) -> (i32)`, `I:` to `(i64) -> void`, etc.
 void validate_function_signature(std::string_view signature);
+
+/// Parses a validated signature and returns a pair of input and output type vectors of type
+/// `ValueType`.
+///
+/// Note that calling `validate_function_signature` first is advised for better error reporting.
+template <typename ValueType, ValueType i32_type, ValueType i64_type>
+std::pair<std::vector<ValueType>, std::vector<ValueType>> translate_function_signature(
+    std::string_view signature)
+{
+    constexpr auto translate_valtype = [](char input) {
+        if (input == 'i')
+            return i32_type;
+        else if (input == 'I')
+            return i64_type;
+        else
+            throw std::runtime_error{"invalid type"};
+    };
+
+    const auto delimiter_pos = signature.find(':');
+    assert(delimiter_pos != std::string_view::npos);
+    const auto inputs = signature.substr(0, delimiter_pos);
+    const auto outputs = signature.substr(delimiter_pos + 1);
+
+    std::vector<ValueType> input_types;
+    std::vector<ValueType> output_types;
+    std::transform(
+        std::begin(inputs), std::end(inputs), std::back_inserter(input_types), translate_valtype);
+    std::transform(std::begin(outputs), std::end(outputs), std::back_inserter(output_types),
+        translate_valtype);
+    return {std::move(input_types), std::move(output_types)};
+}
 
 std::unique_ptr<WasmEngine> create_fizzy_engine();
 std::unique_ptr<WasmEngine> create_fizzy_c_engine();
