@@ -18,39 +18,6 @@
 
 namespace fizzy
 {
-/// The result of an execution.
-struct ExecutionResult
-{
-    /// This is true if the execution has trapped.
-    const bool trapped = false;
-    /// This is true if value contains valid data.
-    const bool has_value = false;
-    /// The result value. Valid if `has_value == true`.
-    const Value value{};
-
-    /// Constructs result with a value.
-    constexpr ExecutionResult(Value _value) noexcept : has_value{true}, value{_value} {}
-
-    /// Constructs result in "void" or "trap" state depending on the success flag.
-    /// Prefer using Void and Trap constants instead.
-    constexpr explicit ExecutionResult(bool success) noexcept : trapped{!success} {}
-};
-
-/// Shortcut for execution that resulted in successful execution, but without a result.
-constexpr ExecutionResult Void{true};
-/// Shortcut for execution that resulted in a trap.
-constexpr ExecutionResult Trap{false};
-
-template <typename F>
-ExecuteFunction::ExecuteFunction(F f)
-  : m_host_function{[](std::any& host_context, Instance& instance, const Value* args,
-                        int depth) noexcept -> ExecutionResult {
-        return (*std::any_cast<F>(&host_context))(instance, args, depth);
-    }},
-    m_host_context{std::make_any<F>(std::move(f))}
-{}
-
-
 /// Execute a function from an instance.
 ///
 /// @param  instance    The instance.

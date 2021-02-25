@@ -15,12 +15,35 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <type_traits>
 #include <vector>
 
 namespace fizzy
 {
-struct ExecutionResult;
 struct Instance;
+
+/// The result of an execution.
+struct ExecutionResult
+{
+    /// This is true if the execution has trapped.
+    const bool trapped = false;
+    /// This is true if value contains valid data.
+    const bool has_value = false;
+    /// The result value. Valid if `has_value == true`.
+    const Value value{};
+
+    /// Constructs result with a value.
+    constexpr ExecutionResult(Value _value) noexcept : has_value{true}, value{_value} {}
+
+    /// Constructs result in "void" or "trap" state depending on the success flag.
+    /// Prefer using Void and Trap constants instead.
+    constexpr explicit ExecutionResult(bool success) noexcept : trapped{!success} {}
+};
+
+/// Shortcut for execution that resulted in successful execution, but without a result.
+constexpr ExecutionResult Void{true};
+/// Shortcut for execution that resulted in a trap.
+constexpr ExecutionResult Trap{false};
 
 /// Function pointer to the execution function.
 using HostFunctionPtr = ExecutionResult (*)(
@@ -58,8 +81,15 @@ public:
       : m_host_function{f}, m_host_context{std::move(host_context)}
     {}
 
-    template <typename F>
-    ExecuteFunction(F f);
+    template <typename F, typename = typename std::enable_if_t<std::is_nothrow_invocable_r_v<
+                              ExecutionResult, F, Instance&, const Value*, int>>>
+    ExecuteFunction(F f)
+      : m_host_function{[](std::any& host_context, Instance& instance, const Value* args,
+                            int depth) noexcept -> ExecutionResult {
+            return (*std::any_cast<F>(&host_context))(instance, args, depth);
+        }},
+        m_host_context{std::make_any<F>(std::move(f))}
+    {}
 
     /// Function call operator.
     ExecutionResult operator()(Instance& instance, const Value* args, int depth) noexcept;
