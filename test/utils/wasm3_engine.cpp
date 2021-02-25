@@ -6,10 +6,8 @@
 
 #include <test/utils/adler32.hpp>
 #include <test/utils/wasm_engine.hpp>
-#include <algorithm>
 #include <cassert>
 #include <cstring>
-#include <stdexcept>
 
 namespace fizzy::test
 {
@@ -90,7 +88,7 @@ bool Wasm3Engine::instantiate(bytes_view wasm_binary)
         return false;
     }
 
-    auto const ret = m3_LinkRawFunction(module, "env", "adler32", "i(ii)", env_adler32);
+    const auto ret = m3_LinkRawFunction(module, "env", "adler32", "i(ii)", env_adler32);
     if (ret != m3Err_none && ret != m3Err_functionLookupFailed)
         return false;
 
@@ -123,10 +121,8 @@ std::optional<WasmEngine::FuncRef> Wasm3Engine::find_function(
     if (m3_FindFunction(&function, m_runtime, name.data()) != m3Err_none)
         return std::nullopt;
 
-    std::vector<M3ValueType> inputs;
-    std::vector<M3ValueType> outputs;
-    std::tie(inputs, outputs) = translate_function_signature<M3ValueType, M3ValueType::c_m3Type_i32,
-        M3ValueType::c_m3Type_i64>(signature);
+    const auto [inputs, outputs] = translate_function_signature<M3ValueType,
+        M3ValueType::c_m3Type_i32, M3ValueType::c_m3Type_i64>(signature);
 
     if (inputs.size() != m3_GetArgCount(function))
         return std::nullopt;
@@ -150,7 +146,7 @@ WasmEngine::Result Wasm3Engine::execute(
 
     std::vector<const void*> argPtrs;
     argPtrs.reserve(args.size());
-    for (auto const& arg : args)
+    for (const auto& arg : args)
         argPtrs.push_back(&arg);
 
     // This ensures input count/type matches. For the return value we assume find_function did the
@@ -162,7 +158,7 @@ WasmEngine::Result Wasm3Engine::execute(
 
         uint64_t ret_value = 0;
         // This should not fail because we check GetRetCount.
-        [[maybe_unused]] auto const ret = m3_GetResultsV(function, &ret_value);
+        [[maybe_unused]] const auto ret = m3_GetResultsV(function, &ret_value);
         assert(ret == m3Err_none);
         return {false, ret_value};
     }
