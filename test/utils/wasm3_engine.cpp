@@ -8,6 +8,7 @@
 #include <test/utils/wasm_engine.hpp>
 #include <cassert>
 #include <cstring>
+#include <stdexcept>
 
 namespace fizzy::test
 {
@@ -144,14 +145,15 @@ WasmEngine::Result Wasm3Engine::execute(
 {
     auto function = reinterpret_cast<IM3Function>(func_ref);  // NOLINT(performance-no-int-to-ptr)
 
-    std::vector<const void*> argPtrs;
-    argPtrs.reserve(args.size());
-    for (const auto& arg : args)
-        argPtrs.push_back(&arg);
+    if (args.size() > 32)
+        throw std::runtime_error{"Does not support more than 32 arguments"};
+    const void* argPtrs[32];
+    for (unsigned i = 0; i < args.size(); i++)
+        argPtrs[i] = &args[i];
 
     // This ensures input count/type matches. For the return value we assume find_function did the
     // validation.
-    if (m3_Call(function, static_cast<uint32_t>(argPtrs.size()), argPtrs.data()) == m3Err_none)
+    if (m3_Call(function, static_cast<uint32_t>(args.size()), argPtrs) == m3Err_none)
     {
         if (m3_GetRetCount(function) == 0)
             return {false, std::nullopt};
