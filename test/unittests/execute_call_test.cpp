@@ -363,8 +363,8 @@ TEST(execute_call, imported_function_call_void)
 
     const auto module = parse(wasm);
 
-    static bool called = false;
-    constexpr auto host_foo = [](Instance&, const Value*, int) noexcept {
+    bool called = false;
+    const auto host_foo = [&called](Instance&, const Value*, int) noexcept {
         called = true;
         return Void;
     };
@@ -998,8 +998,8 @@ TEST(execute_call, call_imported_infinite_recursion)
         "0061736d010000000105016000017f020b01036d6f6403666f6f0000030201000a0601040010000b");
 
     const auto module = parse(wasm);
-    static int counter = 0;
-    constexpr auto host_foo = [](Instance& instance, const Value* args, int depth) noexcept {
+    int counter = 0;
+    const auto host_foo = [&counter](Instance& instance, const Value* args, int depth) noexcept {
         ++counter;
         return execute(instance, 0, args, depth + 1);
     };
@@ -1028,8 +1028,8 @@ TEST(execute_call, call_imported_interleaved_infinite_recursion)
         "0061736d010000000105016000017f020b01036d6f6403666f6f0000030201000a0601040010000b");
 
     const auto module = parse(wasm);
-    static int counter = 0;
-    constexpr auto host_foo = [](Instance& instance, const Value* args, int depth) noexcept {
+    int counter = 0;
+    const auto host_foo = [&counter](Instance& instance, const Value* args, int depth) noexcept {
         // Function $f will increase depth. This means each iteration goes 2 steps deeper.
         EXPECT_LT(depth, CallStackLimit);
         ++counter;
