@@ -638,7 +638,12 @@ mod tests {
     #[test]
     fn parse_wasm() {
         assert!(parse(&[0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]).is_ok());
-        assert!(parse(&[0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x01]).is_err());
+        assert_eq!(
+            parse(&[0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x01])
+                .err()
+                .unwrap(),
+            "parsing failure"
+        );
     }
 
     #[test]
@@ -660,7 +665,7 @@ mod tests {
         let module = parse(&input);
         assert!(module.is_ok());
         let instance = module.unwrap().instantiate();
-        assert!(instance.is_err());
+        assert_eq!(instance.err().unwrap(), "instantiation failure");
     }
 
     #[test]
@@ -807,23 +812,23 @@ mod tests {
 
         // Non-function export.
         let result = instance.execute("g1", &[], 0);
-        assert!(result.is_err());
+        assert_eq!(result.err().unwrap(), "function not found");
 
         // Export not found.
         let result = instance.execute("baz", &[], 0);
-        assert!(result.is_err());
+        assert_eq!(result.err().unwrap(), "function not found");
 
         // Passing more arguments than required.
         let result = instance.execute("foo", &[TypedValue::U32(42)], 0);
-        assert!(result.is_err());
+        assert_eq!(result.err().unwrap(), "argument count mismatch");
 
         // Passing less arguments than required.
         let result = instance.execute("bar", &[], 0);
-        assert!(result.is_err());
+        assert_eq!(result.err().unwrap(), "argument count mismatch");
 
         // Passing mismatched types.
         let result = instance.execute("bar", &[TypedValue::F32(1.0), TypedValue::F64(2.0)], 0);
-        assert!(result.is_err());
+        assert_eq!(result.err().unwrap(), "argument type mismatch");
     }
 
     #[test]
@@ -843,30 +848,78 @@ mod tests {
 
         // If there is no memory, do not allow any slice.
         unsafe {
-            assert!(instance.checked_memory_slice(0, 0).is_err());
-            assert!(instance.checked_memory_slice_mut(0, 0).is_err());
-            assert!(instance.checked_memory_slice(0, 65536).is_err());
-            assert!(instance.checked_memory_slice_mut(0, 65536).is_err());
-            assert!(instance.checked_memory_slice(65535, 1).is_err());
-            assert!(instance.checked_memory_slice_mut(65535, 1).is_err());
-            assert!(instance.checked_memory_slice(65535, 2).is_err());
-            assert!(instance.checked_memory_slice_mut(65535, 2).is_err());
-            assert!(instance.checked_memory_slice(65536, 0).is_err());
-            assert!(instance.checked_memory_slice_mut(65536, 0).is_err());
-            assert!(instance.checked_memory_slice(65536, 1).is_err());
-            assert!(instance.checked_memory_slice_mut(65536, 1).is_err());
+            assert_eq!(
+                instance.checked_memory_slice(0, 0).err().unwrap(),
+                "no memory is available"
+            );
+            assert_eq!(
+                instance.checked_memory_slice_mut(0, 0).err().unwrap(),
+                "no memory is available"
+            );
+            assert_eq!(
+                instance.checked_memory_slice(0, 65536).err().unwrap(),
+                "no memory is available"
+            );
+            assert_eq!(
+                instance.checked_memory_slice_mut(0, 65536).err().unwrap(),
+                "no memory is available"
+            );
+            assert_eq!(
+                instance.checked_memory_slice(65535, 1).err().unwrap(),
+                "no memory is available"
+            );
+            assert_eq!(
+                instance.checked_memory_slice_mut(65535, 1).err().unwrap(),
+                "no memory is available"
+            );
+            assert_eq!(
+                instance.checked_memory_slice(65535, 2).err().unwrap(),
+                "no memory is available"
+            );
+            assert_eq!(
+                instance.checked_memory_slice_mut(65535, 2).err().unwrap(),
+                "no memory is available"
+            );
+            assert_eq!(
+                instance.checked_memory_slice(65536, 0).err().unwrap(),
+                "no memory is available"
+            );
+            assert_eq!(
+                instance.checked_memory_slice_mut(65536, 0).err().unwrap(),
+                "no memory is available"
+            );
+            assert_eq!(
+                instance.checked_memory_slice(65536, 1).err().unwrap(),
+                "no memory is available"
+            );
+            assert_eq!(
+                instance.checked_memory_slice_mut(65536, 1).err().unwrap(),
+                "no memory is available"
+            );
         }
 
         // Set memory via safe helper.
-        assert!(instance.memory_set(0, &[]).is_err());
-        assert!(instance.memory_set(0, &[0x11, 0x22]).is_err());
+        assert_eq!(
+            instance.memory_set(0, &[]).err().unwrap(),
+            "no memory is available"
+        );
+        assert_eq!(
+            instance.memory_set(0, &[0x11, 0x22]).err().unwrap(),
+            "no memory is available"
+        );
         // Get memory via safe helper.
         let mut dst: Vec<u8> = Vec::new();
         dst.resize(65536, 0);
         // Reading empty slice.
-        assert!(instance.memory_get(0, &mut dst[0..0]).is_err());
+        assert_eq!(
+            instance.memory_get(0, &mut dst[0..0]).err().unwrap(),
+            "no memory is available"
+        );
         // Reading 65536 bytes.
-        assert!(instance.memory_get(0, &mut dst).is_err());
+        assert_eq!(
+            instance.memory_get(0, &mut dst).err().unwrap(),
+            "no memory is available"
+        );
     }
 
     #[test]
@@ -891,28 +944,64 @@ mod tests {
         unsafe {
             assert!(instance.checked_memory_slice(0, 0).is_ok());
             assert!(instance.checked_memory_slice_mut(0, 0).is_ok());
-            assert!(instance.checked_memory_slice(0, 65536).is_err());
-            assert!(instance.checked_memory_slice_mut(0, 65536).is_err());
-            assert!(instance.checked_memory_slice(65535, 1).is_err());
-            assert!(instance.checked_memory_slice_mut(65535, 1).is_err());
-            assert!(instance.checked_memory_slice(65535, 2).is_err());
-            assert!(instance.checked_memory_slice_mut(65535, 2).is_err());
-            assert!(instance.checked_memory_slice(65536, 0).is_err());
-            assert!(instance.checked_memory_slice_mut(65536, 0).is_err());
-            assert!(instance.checked_memory_slice(65536, 1).is_err());
-            assert!(instance.checked_memory_slice_mut(65536, 1).is_err());
+            assert_eq!(
+                instance.checked_memory_slice(0, 65536).err().unwrap(),
+                "invalid offset or size"
+            );
+            assert_eq!(
+                instance.checked_memory_slice_mut(0, 65536).err().unwrap(),
+                "invalid offset or size"
+            );
+            assert_eq!(
+                instance.checked_memory_slice(65535, 1).err().unwrap(),
+                "invalid offset or size"
+            );
+            assert_eq!(
+                instance.checked_memory_slice_mut(65535, 1).err().unwrap(),
+                "invalid offset or size"
+            );
+            assert_eq!(
+                instance.checked_memory_slice(65535, 2).err().unwrap(),
+                "invalid offset or size"
+            );
+            assert_eq!(
+                instance.checked_memory_slice_mut(65535, 2).err().unwrap(),
+                "invalid offset or size"
+            );
+            assert_eq!(
+                instance.checked_memory_slice(65536, 0).err().unwrap(),
+                "invalid offset or size"
+            );
+            assert_eq!(
+                instance.checked_memory_slice_mut(65536, 0).err().unwrap(),
+                "invalid offset or size"
+            );
+            assert_eq!(
+                instance.checked_memory_slice(65536, 1).err().unwrap(),
+                "invalid offset or size"
+            );
+            assert_eq!(
+                instance.checked_memory_slice_mut(65536, 1).err().unwrap(),
+                "invalid offset or size"
+            );
         }
 
         // Set memory via safe helper.
         assert!(instance.memory_set(0, &[]).is_ok());
-        assert!(instance.memory_set(0, &[0x11, 0x22]).is_err());
+        assert_eq!(
+            instance.memory_set(0, &[0x11, 0x22]).err().unwrap(),
+            "invalid offset or size"
+        );
         // Get memory via safe helper.
         let mut dst: Vec<u8> = Vec::new();
         dst.resize(65536, 0);
         // Reading empty slice.
         assert!(instance.memory_get(0, &mut dst[0..0]).is_ok());
         // Reading 65536 bytes.
-        assert!(instance.memory_get(0, &mut dst).is_err());
+        assert_eq!(
+            instance.memory_get(0, &mut dst).err().unwrap(),
+            "invalid offset or size"
+        );
     }
 
     #[test]
@@ -949,13 +1038,31 @@ mod tests {
             assert!(instance.checked_memory_slice(65535, 1).is_ok());
             assert!(instance.checked_memory_slice_mut(65535, 1).is_ok());
             // Reading over.
-            assert!(instance.checked_memory_slice(65535, 2).is_err());
-            assert!(instance.checked_memory_slice_mut(65535, 2).is_err());
-            assert!(instance.checked_memory_slice(65536, 1).is_err());
-            assert!(instance.checked_memory_slice_mut(65536, 1).is_err());
+            assert_eq!(
+                instance.checked_memory_slice(65535, 2).err().unwrap(),
+                "invalid offset or size"
+            );
+            assert_eq!(
+                instance.checked_memory_slice_mut(65535, 2).err().unwrap(),
+                "invalid offset or size"
+            );
+            assert_eq!(
+                instance.checked_memory_slice(65536, 1).err().unwrap(),
+                "invalid offset or size"
+            );
+            assert_eq!(
+                instance.checked_memory_slice_mut(65536, 1).err().unwrap(),
+                "invalid offset or size"
+            );
             // Offset overflow.
-            assert!(instance.checked_memory_slice(65537, 0).is_err());
-            assert!(instance.checked_memory_slice_mut(65537, 0).is_err());
+            assert_eq!(
+                instance.checked_memory_slice(65537, 0).err().unwrap(),
+                "invalid offset or size"
+            );
+            assert_eq!(
+                instance.checked_memory_slice_mut(65537, 0).err().unwrap(),
+                "invalid offset or size"
+            );
         }
 
         // Grow with a single page.
@@ -1012,26 +1119,49 @@ mod tests {
         assert!(instance.memory_set(0, &[]).is_ok());
         assert!(instance.memory_set(65536 + 65535, &[]).is_ok());
         assert!(instance.memory_set(65536 + 65536, &[]).is_ok());
-        assert!(instance.memory_set(65536 + 65537, &[]).is_err());
+        assert_eq!(
+            instance.memory_set(65536 + 65537, &[]).err().unwrap(),
+            "invalid offset or size"
+        );
         assert!(instance.memory_set(0, &[0x11, 0x22, 0x33, 0x44]).is_ok());
         assert!(instance
             .memory_set(65536 + 65532, &[0x11, 0x22, 0x33, 0x44])
             .is_ok());
-        assert!(instance
-            .memory_set(65536 + 65533, &[0x11, 0x22, 0x33, 0x44])
-            .is_err());
-        assert!(instance
-            .memory_set(65536 + 65534, &[0x11, 0x22, 0x33, 0x44])
-            .is_err());
-        assert!(instance
-            .memory_set(65536 + 65535, &[0x11, 0x22, 0x33, 0x44])
-            .is_err());
-        assert!(instance
-            .memory_set(65536 + 65536, &[0x11, 0x22, 0x33, 0x44])
-            .is_err());
-        assert!(instance
-            .memory_set(65536 + 65537, &[0x11, 0x22, 0x33, 0x44])
-            .is_err());
+        assert_eq!(
+            instance
+                .memory_set(65536 + 65533, &[0x11, 0x22, 0x33, 0x44])
+                .err()
+                .unwrap(),
+            "invalid offset or size"
+        );
+        assert_eq!(
+            instance
+                .memory_set(65536 + 65534, &[0x11, 0x22, 0x33, 0x44])
+                .err()
+                .unwrap(),
+            "invalid offset or size"
+        );
+        assert_eq!(
+            instance
+                .memory_set(65536 + 65535, &[0x11, 0x22, 0x33, 0x44])
+                .err()
+                .unwrap(),
+            "invalid offset or size"
+        );
+        assert_eq!(
+            instance
+                .memory_set(65536 + 65536, &[0x11, 0x22, 0x33, 0x44])
+                .err()
+                .unwrap(),
+            "invalid offset or size"
+        );
+        assert_eq!(
+            instance
+                .memory_set(65536 + 65537, &[0x11, 0x22, 0x33, 0x44])
+                .err()
+                .unwrap(),
+            "invalid offset or size"
+        );
 
         let result = instance
             .execute("peek", &[TypedValue::U32(0)], 0)
@@ -1068,15 +1198,51 @@ mod tests {
         assert!(instance.memory_get(0, &mut dst[0..0]).is_ok());
         assert!(instance.memory_get(65536 + 65535, &mut dst[0..0]).is_ok());
         assert!(instance.memory_get(65536 + 65536, &mut dst[0..0]).is_ok());
-        assert!(instance.memory_get(65536 + 65537, &mut dst[0..0]).is_err());
+        assert_eq!(
+            instance
+                .memory_get(65536 + 65537, &mut dst[0..0])
+                .err()
+                .unwrap(),
+            "invalid offset or size"
+        );
 
         // Read into short slice.
         assert!(instance.memory_get(0, &mut dst[0..4]).is_ok());
         assert!(instance.memory_get(65536 + 65532, &mut dst[0..4]).is_ok());
-        assert!(instance.memory_get(65536 + 65533, &mut dst[0..4]).is_err());
-        assert!(instance.memory_get(65536 + 65534, &mut dst[0..4]).is_err());
-        assert!(instance.memory_get(65536 + 65535, &mut dst[0..4]).is_err());
-        assert!(instance.memory_get(65536 + 65536, &mut dst[0..4]).is_err());
-        assert!(instance.memory_get(65536 + 65537, &mut dst[0..4]).is_err());
+        assert_eq!(
+            instance
+                .memory_get(65536 + 65533, &mut dst[0..4])
+                .err()
+                .unwrap(),
+            "invalid offset or size"
+        );
+        assert_eq!(
+            instance
+                .memory_get(65536 + 65534, &mut dst[0..4])
+                .err()
+                .unwrap(),
+            "invalid offset or size"
+        );
+        assert_eq!(
+            instance
+                .memory_get(65536 + 65535, &mut dst[0..4])
+                .err()
+                .unwrap(),
+            "invalid offset or size"
+        );
+        assert_eq!(
+            instance
+                .memory_get(65536 + 65536, &mut dst[0..4])
+                .err()
+                .unwrap(),
+            "invalid offset or size"
+        );
+        assert_eq!(
+            instance
+                .memory_get(65536 + 65537, &mut dst[0..4])
+                .err()
+                .unwrap(),
+            "invalid offset or size"
+        );
     }
 }
