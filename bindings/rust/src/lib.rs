@@ -41,6 +41,28 @@ mod sys;
 use std::ffi::CString;
 use std::ptr::NonNull;
 
+#[derive(Eq, PartialEq, Debug, Clone)]
+pub enum Error {
+    ParsingFailure,
+    InstantiationFailure,
+    FunctionNotFound,
+    ArgumentCountMismatch,
+    Trapped,
+    Custom(String),
+}
+
+impl From<String> for Error {
+    fn from(error: String) -> Self {
+        Error::Custom(error)
+    }
+}
+
+impl From<&str> for Error {
+    fn from(error: &str) -> Self {
+        Error::Custom(error.to_string())
+    }
+}
+
 /// Parse and validate the input according to WebAssembly 1.0 rules. Returns true if the supplied input is valid.
 pub fn validate<T: AsRef<[u8]>>(input: T) -> bool {
     unsafe { sys::fizzy_validate(input.as_ref().as_ptr(), input.as_ref().len()) }
@@ -68,10 +90,10 @@ impl Clone for Module {
 }
 
 /// Parse and validate the input according to WebAssembly 1.0 rules.
-pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, ()> {
+pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, Error> {
     let ptr = unsafe { sys::fizzy_parse(input.as_ref().as_ptr(), input.as_ref().len()) };
     if ptr.is_null() {
-        return Err(());
+        return Err(Error::ParsingFailure);
     }
     Ok(Module { 0: ptr })
 }
@@ -88,7 +110,7 @@ impl Drop for Instance {
 impl Module {
     /// Create an instance of a module.
     // TODO: support imported functions
-    pub fn instantiate(self) -> Result<Instance, ()> {
+    pub fn instantiate(self) -> Result<Instance, Error> {
         debug_assert!(!self.0.is_null());
         let ptr = unsafe {
             sys::fizzy_instantiate(
@@ -104,7 +126,7 @@ impl Module {
         // Forget Module (and avoid calling drop) because it has been consumed by instantiate (even if it failed).
         core::mem::forget(self);
         if ptr.is_null() {
-            return Err(());
+            return Err(Error::InstantiationFailure);
         }
         Ok(Instance {
             0: unsafe { NonNull::new_unchecked(ptr) },
@@ -413,16 +435,16 @@ impl Instance {
         name: &str,
         args: &[TypedValue],
         depth: i32,
-    ) -> Result<TypedExecutionResult, ()> {
+    ) -> Result<TypedValue, Error> {
         let func_idx = self.find_exported_function_index(&name);
         if func_idx.is_none() {
-            return Err(());
+            return Err("function not found".into());
         }
         let func_idx = func_idx.unwrap();
 
         let func_type = unsafe { self.get_function_type(func_idx) };
         if func_type.inputs_size != args.len() {
-            return Err(());
+            return Err("argument count mismatch".into());
         }
 
         // Validate input types.
@@ -430,17 +452,31 @@ impl Instance {
         let expected_types =
             unsafe { std::slice::from_raw_parts(func_type.inputs, func_type.inputs_size) };
         if expected_types != supplied_types {
-            return Err(());
+            return Err("argument type mistmatch".into());
         }
 
         // Translate to untyped raw values.
         let args: Vec<Value> = args.iter().map(|v| v.into()).collect();
 
+        // TODO: could actually use sys::fizzy_execute directly to avoid the ExecutionResult struct
         let ret = unsafe { self.unsafe_execute(func_idx, &args, depth) };
-        Ok(TypedExecutionResult {
-            result: ret.0,
-            value_type: func_type.output,
-        })
+        let ret: ExecutionResult = ret;
+        if ret.trapped() {
+            return Err(Error::Trapped);
+        }
+        let ret = ret.value();
+        if ret.is_none() {
+            return Ok(None);
+        }
+        assert!(func_type.output != sys::FizzyValueTypeVoid);
+        let ret = match self.value_type {
+            sys::FizzyValueTypeI32 => TypedValue::U32(ret.as_u32()),
+            sys::FizzyValueTypeI64 => TypedValue::U64(ret.as_u64()),
+            sys::FizzyValueTypeF32 => TypedValue::F32(ret.as_f32()),
+            sys::FizzyValueTypeF64 => TypedValue::F64(ret.as_f64()),
+            _ => panic!(),
+        };
+        Ok(Some(ret))
     }
 }
 
