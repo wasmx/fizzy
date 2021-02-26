@@ -48,22 +48,30 @@ pub fn validate<T: AsRef<[u8]>>(input: T) -> bool {
 
 /// A parsed and validated WebAssembly 1.0 module.
 // NOTE: cannot use NonNull here given this is *const
-pub struct Module(*const sys::FizzyModule);
+pub struct Module {
+    ptr: *const sys::FizzyModule,
+    owned: bool,
+}
 
 impl Drop for Module {
     fn drop(&mut self) {
-        debug_assert!(!self.0.is_null());
-        unsafe { sys::fizzy_free_module(self.0) }
+        if self.owned {
+            debug_assert!(!self.ptr.is_null());
+            unsafe { sys::fizzy_free_module(self.ptr) }
+        }
     }
 }
 
 impl Clone for Module {
     fn clone(&self) -> Self {
-        debug_assert!(!self.0.is_null());
-        let ptr = unsafe { sys::fizzy_clone_module(self.0) };
+        debug_assert!(!self.ptr.is_null());
+        let ptr = unsafe { sys::fizzy_clone_module(self.ptr) };
         // TODO: this can be zero in case of memory allocation error, should this be gracefully handled?
         assert!(!ptr.is_null());
-        Module { 0: ptr }
+        Module {
+            ptr: ptr,
+            owned: true,
+        }
     }
 }
 
@@ -73,15 +81,21 @@ pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, ()> {
     if ptr.is_null() {
         return Err(());
     }
-    Ok(Module { 0: ptr })
+    Ok(Module {
+        ptr: ptr,
+        owned: true,
+    })
 }
 
 /// An instance of a module.
-pub struct Instance(NonNull<sys::FizzyInstance>);
+pub struct Instance {
+    instance: NonNull<sys::FizzyInstance>,
+    module: Module,
+}
 
 impl Drop for Instance {
     fn drop(&mut self) {
-        unsafe { sys::fizzy_free_instance(self.0.as_ptr()) }
+        unsafe { sys::fizzy_free_instance(self.instance.as_ptr()) }
     }
 }
 
@@ -89,10 +103,13 @@ impl Module {
     /// Create an instance of a module.
     // TODO: support imported functions
     pub fn instantiate(self) -> Result<Instance, ()> {
-        debug_assert!(!self.0.is_null());
+        if !self.owned {
+            return Err(());
+        }
+        debug_assert!(!self.ptr.is_null());
         let ptr = unsafe {
             sys::fizzy_instantiate(
-                self.0,
+                self.ptr,
                 std::ptr::null(),
                 0,
                 std::ptr::null(),
@@ -106,9 +123,20 @@ impl Module {
         if ptr.is_null() {
             return Err(());
         }
+        let instance = unsafe { NonNull::new_unchecked(ptr) };
         Ok(Instance {
-            0: unsafe { NonNull::new_unchecked(ptr) },
+            instance: instance,
+            module: Module {
+                ptr: unsafe { sys::fizzy_get_instance_module(instance.as_ptr()) },
+                owned: false,
+            },
         })
+    }
+
+    /// Returns true if the module has a start function defined.
+    /// This function will be executed automatically as part of instantiation.
+    pub fn has_start_function(&self) -> bool {
+        unsafe { sys::fizzy_module_has_start_function(self.ptr) }
     }
 }
 
@@ -310,8 +338,8 @@ impl Instance {
     /// # Safety
     /// These slices turn invalid if the memory is resized (i.e. via the WebAssembly `memory.grow` instruction)
     pub unsafe fn checked_memory_slice(&self, offset: u32, size: usize) -> Result<&[u8], ()> {
-        let memory_data = sys::fizzy_get_instance_memory_data(self.0.as_ptr());
-        let memory_size = sys::fizzy_get_instance_memory_size(self.0.as_ptr());
+        let memory_data = sys::fizzy_get_instance_memory_data(self.instance.as_ptr());
+        let memory_size = sys::fizzy_get_instance_memory_size(self.instance.as_ptr());
         let range = Instance::checked_memory_range(memory_data, memory_size, offset, size)?;
         // Slices allow empty length, but data must be a valid pointer.
         debug_assert!(memory_data != std::ptr::null_mut());
@@ -328,8 +356,8 @@ impl Instance {
         offset: u32,
         size: usize,
     ) -> Result<&mut [u8], ()> {
-        let memory_data = sys::fizzy_get_instance_memory_data(self.0.as_ptr());
-        let memory_size = sys::fizzy_get_instance_memory_size(self.0.as_ptr());
+        let memory_data = sys::fizzy_get_instance_memory_data(self.instance.as_ptr());
+        let memory_size = sys::fizzy_get_instance_memory_size(self.instance.as_ptr());
         let range = Instance::checked_memory_range(memory_data, memory_size, offset, size)?;
         // Slices allow empty length, but data must be a valid pointer.
         debug_assert!(memory_data != std::ptr::null_mut());
@@ -339,7 +367,7 @@ impl Instance {
 
     /// Returns the current memory size, in bytes.
     pub fn memory_size(&self) -> usize {
-        unsafe { sys::fizzy_get_instance_memory_size(self.0.as_ptr()) }
+        unsafe { sys::fizzy_get_instance_memory_size(self.instance.as_ptr()) }
     }
 
     /// Copies memory from `offset` to `target`, for the length of `target.len()`.
@@ -357,13 +385,20 @@ impl Instance {
     }
 
     /// Get a read-only pointer to the module.
-    unsafe fn get_module(&self) -> *const sys::FizzyModule {
-        sys::fizzy_get_instance_module(self.0.as_ptr())
+    unsafe fn get_module_ptr(&self) -> *const sys::FizzyModule {
+        let ptr = sys::fizzy_get_instance_module(self.instance.as_ptr());
+        debug_assert!(!ptr.is_null());
+        ptr
+    }
+
+    /// Get a non-owned module instance.
+    pub fn get_module(&self) -> &Module {
+        &self.module
     }
 
     /// Find index of exported function by name.
     pub fn find_exported_function_index(&self, name: &str) -> Option<u32> {
-        let module = unsafe { self.get_module() };
+        let module = unsafe { self.get_module_ptr() };
         let name = CString::new(name).expect("CString::new failed");
         let mut func_idx: u32 = 0;
         let found = unsafe {
@@ -391,13 +426,13 @@ impl Instance {
         depth: i32,
     ) -> ExecutionResult {
         ExecutionResult {
-            0: sys::fizzy_execute(self.0.as_ptr(), func_idx, args.as_ptr(), depth),
+            0: sys::fizzy_execute(self.instance.as_ptr(), func_idx, args.as_ptr(), depth),
         }
     }
 
     /// Find function type for a given index. Must be a valid index otherwise behaviour is undefined.
     unsafe fn get_function_type(&self, func_idx: u32) -> sys::FizzyFunctionType {
-        let module = self.get_module();
+        let module = self.get_module_ptr();
         sys::fizzy_get_function_type(module, func_idx)
     }
 
