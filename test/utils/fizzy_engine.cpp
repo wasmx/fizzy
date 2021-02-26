@@ -28,31 +28,6 @@ public:
 
 namespace
 {
-ValType translate_valtype(char input)
-{
-    if (input == 'i')
-        return fizzy::ValType::i32;
-    else if (input == 'I')
-        return fizzy::ValType::i64;
-    else
-        throw std::runtime_error{"invalid type"};
-}
-
-FuncType translate_signature(std::string_view signature)
-{
-    const auto delimiter_pos = signature.find(':');
-    assert(delimiter_pos != std::string_view::npos);
-    const auto inputs = signature.substr(0, delimiter_pos);
-    const auto outputs = signature.substr(delimiter_pos + 1);
-
-    FuncType func_type;
-    std::transform(std::begin(inputs), std::end(inputs), std::back_inserter(func_type.inputs),
-        translate_valtype);
-    std::transform(std::begin(outputs), std::end(outputs), std::back_inserter(func_type.outputs),
-        translate_valtype);
-    return func_type;
-}
-
 fizzy::ExecutionResult env_adler32(fizzy::Instance& instance, const fizzy::Value* args, int)
 {
     assert(instance.memory != nullptr);
@@ -124,7 +99,9 @@ std::optional<WasmEngine::FuncRef> FizzyEngine::find_function(
     if (func_idx.has_value())
     {
         const auto func_type = m_instance->module->get_function_type(*func_idx);
-        const auto sig_type = translate_signature(signature);
+        FuncType sig_type;
+        std::tie(sig_type.inputs, sig_type.outputs) =
+            translate_function_signature<ValType, ValType::i32, ValType::i64>(signature);
         if (sig_type != func_type)
             return std::nullopt;
     }
