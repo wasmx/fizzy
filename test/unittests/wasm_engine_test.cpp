@@ -363,3 +363,48 @@ TEST(wasm_engine, host_function)
         ASSERT_EQ(*result.value, 8388679);
     }
 }
+
+TEST(wasm_engine, start_with_host_function)
+{
+    /* wat2wasm
+    (func $adler32 (import "env" "adler32") (param i32 i32) (result i32))
+    (global $g1 (mut i32) (i32.const 0))
+    (memory (export "memory") 1)
+    (func $start
+      i32.const 0
+      i32.const 0x55aa55aa
+      i32.store
+      i32.const 0
+      i32.const 32
+      call $adler32
+      global.set $g1
+    )
+    (start $start)
+    (func $test (export "test") (result i32)
+      global.get $g1
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010e0360027f7f017f6000006000017f020f0103656e760761646c65723332000003030201"
+        "0205030100010606017f0141000b071102066d656d6f72790200047465737400020801010a1c021500410041aa"
+        "aba9ad0536020041004120100024000b040023000b");
+
+    // wasm3 fails on this
+    for (auto engine_create_fn : {create_fizzy_engine, create_fizzy_c_engine, create_wabt_engine})
+    {
+        auto engine = engine_create_fn();
+        ASSERT_TRUE(engine->parse(wasm));
+        ASSERT_TRUE(engine->instantiate(wasm));
+        const auto func = engine->find_function("test", ":i");
+        ASSERT_TRUE(func.has_value());
+
+        const auto mem_check = engine->get_memory();
+        const auto mem_expected = bytes{0xaa, 0x55, 0xaa, 0x55};
+        EXPECT_EQ(mem_check.substr(0, 4), mem_expected);
+
+        const auto result = engine->execute(*func, {});
+        ASSERT_FALSE(result.trapped);
+        ASSERT_TRUE(result.value.has_value());
+        ASSERT_EQ(*result.value, 0x3d3801ff);
+    }
+}
