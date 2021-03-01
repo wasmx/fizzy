@@ -12,4 +12,4 @@ edition = "2018"
 publish = false
 
 [dependencies]
-fizzy = { path = "../", version = "0.7.0-dev" }
+fizzy = { path = "../", version = "0.7.0" }
