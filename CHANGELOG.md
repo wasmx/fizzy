@@ -5,7 +5,82 @@ Documentation of all notable changes to the **Fizzy** project.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
-## [0.7.0] - unreleased
+## [0.7.0] — unreleased
+
+With this release we aim to provide a much improved C and Rust API, including a clear separation of i32 and i64 types.
+
+Fizzy passes all of the official WebAssembly 1.0 tests. We are maintaining the WebAssembly 1.0 test suite
+with corrections and additions backported from the WebAssembly specification master branch. For this
+Fizzy release [the snapshot from 2021-02-12](https://github.com/wasmx/wasm-spec/tree/w3c-1.0-tests-backported-20210212/test/core) is used:
+- 19044 of 19044 binary parser and execution tests,
+- 1009 of 1009 validation tests,
+- 499 skipped due to testing text format parser.
+
+There are no performance changes expected nor observed in this release.
+With one exception: the `i32` member added to the `Value` union causes machine code being generated with different layout.
+This may impact the execution performance depending on the compiler and build configuration.
+In some isolated cases differences up to ±30% were observed.
+
+### Added
+
+- `Value` union now has a separate `i32` member instead of putting 32-bit integers into `i64`.
+  [#517](https://github.com/wasmx/fizzy/pull/517) [#702](https://github.com/wasmx/fizzy/pull/702)
+- New function to resolve imported globals by name similar to `resolve_imported_functions`.
+  [#637](https://github.com/wasmx/fizzy/pull/637) [#697](https://github.com/wasmx/fizzy/pull/697)
+- Public C API:
+  - Inspecting module's type and global definitions. [#675](https://github.com/wasmx/fizzy/pull/675)
+  - Check if module has table, memory, or start function.
+  [#684](https://github.com/wasmx/fizzy/pull/684) [#685](https://github.com/wasmx/fizzy/pull/685)
+  - Inspecting module's import definitions. [#683](https://github.com/wasmx/fizzy/pull/683)
+  - Inspecting module's export definitions. [#686](https://github.com/wasmx/fizzy/pull/686)
+  - `fizzy_resolve_instantiate` now resolves imported globals besides functions.
+    [#660](https://github.com/wasmx/fizzy/pull/660)
+  - Example of usage added to [README.md](./README.md#building-and-using).
+    [#682](https://github.com/wasmx/fizzy/pull/682)
+- Rust bindings:
+  - Memory manipulation functions added. [#609](https://github.com/wasmx/fizzy/pull/609)
+  - Safe `execute` function with typed value and execution added. It performs type checking on function and passed arguments.
+    [#652](https://github.com/wasmx/fizzy/pull/652) [#705](https://github.com/wasmx/fizzy/pull/705)
+    [#725](https://github.com/wasmx/fizzy/pull/725)
+  - `Module` can be cloned. [#719](https://github.com/wasmx/fizzy/pull/719)
+  - Example of usage added. [#724](https://github.com/wasmx/fizzy/pull/724)
+  - Errors are returned as string error messages.[#743](https://github.com/wasmx/fizzy/pull/743)
+- Doxygen config added and documentation generated on CI. [#692](https://github.com/wasmx/fizzy/pull/692)
+  [#703](https://github.com/wasmx/fizzy/pull/703)
+
+### Changed
+
+- Changed maximum call depth level to 2047. [#669](https://github.com/wasmx/fizzy/pull/669)
+- `fizzy::ExternalFunction` now uses `span` type to represent input and output types of a function.
+  [#668](https://github.com/wasmx/fizzy/pull/668)
+- C API minor optimizations. [#699](https://github.com/wasmx/fizzy/pull/699)
+- Rust bindings build and CI improvements. [#706](https://github.com/wasmx/fizzy/pull/706)
+  [#717](https://github.com/wasmx/fizzy/pull/717) [#731](https://github.com/wasmx/fizzy/pull/731)
+- Support building for ARM architecture and test it on CI. [#714](https://github.com/wasmx/fizzy/pull/714)
+- Unit tests are now checking the types of arguments passed to `execute()` and the type of returned result.
+  [#655](https://github.com/wasmx/fizzy/pull/655) [#659](https://github.com/wasmx/fizzy/pull/659)
+  [#687](https://github.com/wasmx/fizzy/pull/687)
+- Other unit test additions and improvements. [#648](https://github.com/wasmx/fizzy/pull/648)
+  [#679](https://github.com/wasmx/fizzy/pull/679) [#680](https://github.com/wasmx/fizzy/pull/680)
+  [#688](https://github.com/wasmx/fizzy/pull/688) [#701](https://github.com/wasmx/fizzy/pull/701)
+  [#711](https://github.com/wasmx/fizzy/pull/711) [#712](https://github.com/wasmx/fizzy/pull/712)
+  [#732](https://github.com/wasmx/fizzy/pull/732) [#733](https://github.com/wasmx/fizzy/pull/733)
+  [#742](https://github.com/wasmx/fizzy/pull/742)
+- Test utils improvements. [#651](https://github.com/wasmx/fizzy/pull/651)
+  [#691](https://github.com/wasmx/fizzy/pull/691) [#695](https://github.com/wasmx/fizzy/pull/695)
+  [#704](https://github.com/wasmx/fizzy/pull/704) [#715](https://github.com/wasmx/fizzy/pull/715)
+  [#718](https://github.com/wasmx/fizzy/pull/718) [#721](https://github.com/wasmx/fizzy/pull/721)
+  [#741](https://github.com/wasmx/fizzy/pull/741)
+- Updated WebAssembly spec test suite. [#690](https://github.com/wasmx/fizzy/pull/690)
+- Documentation comments improvements. [#681](https://github.com/wasmx/fizzy/pull/681)
+  [#707](https://github.com/wasmx/fizzy/pull/707)
+- Hunter dependencies updated. [#736](https://github.com/wasmx/fizzy/pull/736)
+- uvwasi library repository address updated. [#693](https://github.com/wasmx/fizzy/pull/693)
+
+### Fixed
+
+- Potential undefined behaviour for functions without locals. [#630](https://github.com/wasmx/fizzy/pull/630)
+- Make sure that `memory.grow` implementation doesn't throw exceptions. [#737](https://github.com/wasmx/fizzy/pull/737)
 
 ## [0.6.0] — 2020-12-24
 
