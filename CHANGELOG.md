@@ -5,6 +5,8 @@ Documentation of all notable changes to the **Fizzy** project.
 The format is based on [Keep a Changelog],
 and this project adheres to [Semantic Versioning].
 
+## [0.8.0] - unreleased
+
 ## [0.7.0] — 2021-03-01
 
 With this release we aim to provide a much improved C and Rust API, including a clear separation of i32 and i64 types.
@@ -717,6 +719,7 @@ First release!
 [0.5.0]: https://github.com/wasmx/fizzy/releases/tag/v0.5.0
 [0.6.0]: https://github.com/wasmx/fizzy/releases/tag/v0.6.0
 [0.7.0]: https://github.com/wasmx/fizzy/releases/tag/v0.7.0
+[0.8.0]: https://github.com/wasmx/fizzy/compare/v0.7.0...master
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
 [Semantic Versioning]: https://semver.org
