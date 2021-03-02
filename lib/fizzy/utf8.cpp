@@ -53,16 +53,17 @@ bool utf8_validate(const uint8_t* pos, const uint8_t* end) noexcept
 {
     while (pos < end)
     {
-        int required_bytes = 1;
-        auto byte2_rule = Rule::Range80BF;
-
         const uint8_t byte1 = *pos++;
         if (byte1 <= 0x7F)
-            // Shortcut for valid ASCII (also valid UTF-8)
-            continue;
-        else if (byte1 < 0xC2)
-            return false;  // NOLINT(bugprone-branch-clone)
-        else if (byte1 <= 0xDF)
+            continue;  // Shortcut for valid ASCII (also valid UTF-8)
+
+        if (byte1 < 0xC2)
+            return false;
+
+        // Discover requirements.
+        int required_bytes;
+        Rule byte2_rule;
+        if (byte1 <= 0xDF)
         {
             required_bytes = 2;
             byte2_rule = Rule::Range80BF;
