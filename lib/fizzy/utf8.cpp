@@ -53,7 +53,7 @@ bool utf8_validate(const uint8_t* pos, const uint8_t* end) noexcept
 {
     while (pos < end)
     {
-        unsigned required_bytes = 1;
+        int required_bytes = 1;
         auto byte2_rule = Rule::Range80BF;
 
         const uint8_t byte1 = *pos++;
@@ -108,7 +108,7 @@ bool utf8_validate(const uint8_t* pos, const uint8_t* end) noexcept
 
         // At this point need to read at least one more byte.
         assert(required_bytes > 1);
-        if ((end - pos) < required_bytes - 1)
+        if ((end - pos) < (required_bytes - 1))
             return false;
 
 
