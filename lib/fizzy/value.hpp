@@ -23,14 +23,13 @@ union Value
 
     /// Converting constructors from integer types
     ///
-    /// We need to support {signed,unsigned} x {32,64} integers. However, due to uint64_t being
-    /// defined differently in different implementations we need to avoid the alias and provide
-    /// constructors for unsigned long and unsigned long long independently.
-    constexpr Value(unsigned int v) noexcept : i32{v} {}
-    constexpr Value(unsigned long v) noexcept : i64{v} {}
-    constexpr Value(unsigned long long v) noexcept : i64{v} {}
-    constexpr Value(int64_t v) noexcept : i64{static_cast<uint64_t>(v)} {}
+    /// Only fixed-size integer types are supported: {signed,unsigned} x {32,64}.
+    /// On the platforms where uint64_t is not unsigned long, it is expected that
+    /// Value cannot be constructed out of unsigned long literals.
+    constexpr Value(uint32_t v) noexcept : i32{v} {}
+    constexpr Value(uint64_t v) noexcept : i64{v} {}
     constexpr Value(int32_t v) noexcept : i32{static_cast<uint32_t>(v)} {}
+    constexpr Value(int64_t v) noexcept : i64{static_cast<uint64_t>(v)} {}
 
     constexpr Value(float v) noexcept : f32{v} {}
     constexpr Value(double v) noexcept : f64{v} {}
