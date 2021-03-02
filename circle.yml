@@ -151,7 +151,7 @@ commands:
             lcov --capture --directory . --output-file coverage.lcov --exclude='/usr/include/*' --exclude="$HOME/.hunter/*" --exclude="$PWD/_deps/*"
             lcov --zerocounters --directory .
             rm -rf coverage
-            genhtml coverage.lcov --output-directory coverage --title Fizzy
+            genhtml coverage.lcov --output-directory coverage --title $CIRCLE_PROJECT_REPONAME
 
   collect_coverage_clang:
     description: "Collect coverage data (Clang)"
@@ -482,6 +482,19 @@ jobs:
           min_time: "0.01"
       - spectest
 
+  x86-linux:
+    docker:
+      - image: ethereum/cpp-build-env:17-gcc-11-multilib
+    steps:
+      - install_testfloat
+      - checkout
+      - build:
+          build_type: Debug
+          cmake_options: -DCMAKE_TOOLCHAIN_FILE=~/project/cmake/toolchains/32bit.cmake
+      - test
+      # TODO: Disabled, because fixes to NaN payload handling in the tool are needed.
+      # - spectest
+
   arm64-linux:
     executor: linux-gcc-latest
     steps:
@@ -733,6 +746,7 @@ workflows:
       - spectest:
           requires:
             - coverage-clang
+      - x86-linux
       - arm64-linux
       - bindings-rust
       - bindings-rust-asan
