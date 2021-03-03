@@ -61,8 +61,6 @@ TEST(value, constructor_from_unsigned_ints)
 {
     EXPECT_EQ(Value{uint32_t{0xdededefe}}.i32, 0xdededefe);
     EXPECT_EQ(Value{uint64_t{0xdededededededefe}}.i64, 0xdededededededefe);
-    EXPECT_EQ(Value{static_cast<unsigned long>(0xdededededededefe)}.i64, 0xdededededededefe);
-    EXPECT_EQ(Value{static_cast<unsigned long long>(0xdededededededefe)}.i64, 0xdededededededefe);
 }
 
 TEST(value, constructor_from_signed_ints)
@@ -88,7 +86,7 @@ TEST(value, as_integer_32bit_value)
 
 TEST(value, as_integer_64bit_value)
 {
-    const Value v{0xfffffffffffffffe};
+    const Value v{uint64_t{0xfffffffffffffffe}};
     EXPECT_EQ(v.as<uint64_t>(), 0xfffffffffffffffe);
     EXPECT_EQ(v.as<int64_t>(), -2);
 }
