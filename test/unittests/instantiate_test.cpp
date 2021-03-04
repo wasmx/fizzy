@@ -285,6 +285,11 @@ TEST(instantiate, imported_memory_invalid)
     EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{nullptr, {1, 3}}}), instantiate_error,
         "provided imported memory has a null pointer to data");
 
+    // Allocated not multiple of 64K
+    bytes memory_not_aligned(PageSize + 10, 0);
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{&memory_not_aligned, {1, 3}}}),
+        instantiate_error, "provided imported memory size must be multiple of page size");
+
     // Allocated less than min
     EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{&memory_empty, {1, 3}}}), instantiate_error,
         "provided imported memory doesn't fit provided limits");
