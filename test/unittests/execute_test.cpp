@@ -673,6 +673,7 @@ TEST(execute, memory_grow_custom_hard_limit)
         {1, 1},
         {15, 1},
         {16, -1},
+        {65535, -1},
         {0xffffffff, -1},
     };
 
@@ -691,6 +692,15 @@ TEST(execute, memory_grow_custom_hard_limit)
     {
         const auto instance = instantiate(*module, {}, {}, {}, {}, 16);
         EXPECT_THAT(execute(*instance, 0, {input}), Result(expected));
+    }
+
+    {
+        const auto instance_huge_hard_limit = instantiate(*module, {}, {}, {}, {}, 65536);
+        // For huge hard limit we test only failure cases, because allocating 4GB of memory would
+        // be too slow for unit tests.
+        // EXPECT_THAT(execute(*instance_huge_hard_limit, 0, {65535}), Result(1));
+        EXPECT_THAT(execute(*instance_huge_hard_limit, 0, {65536}), Result(-1));
+        EXPECT_THAT(execute(*instance_huge_hard_limit, 0, {0xffffffff}), Result(-1));
     }
 
     /* wat2wasm
@@ -732,6 +742,14 @@ TEST(execute, memory_grow_custom_hard_limit)
         const auto instance_max_limit =
             instantiate(*module_imported, {}, {}, {{&memory_max_limit, {1, 16}}}, {}, 32);
         EXPECT_THAT(execute(*instance_max_limit, 0, {input}), Result(expected));
+    }
+
+    {
+        bytes memory(PageSize, 0);
+        const auto instance_huge_hard_limit =
+            instantiate(*module_imported, {}, {}, {{&memory, {1, std::nullopt}}}, {}, 65536);
+        EXPECT_THAT(execute(*instance_huge_hard_limit, 0, {65536}), Result(-1));
+        EXPECT_THAT(execute(*instance_huge_hard_limit, 0, {0xffffffff}), Result(-1));
     }
 
     /* wat2wasm

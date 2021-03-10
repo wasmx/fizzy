@@ -257,8 +257,8 @@ inline parser_result<Memory> parse(const uint8_t* pos, const uint8_t* end)
 {
     Limits limits;
     std::tie(limits, pos) = parse_limits(pos, end);
-    if ((limits.min > MemoryPagesValidationLimit) ||
-        (limits.max.has_value() && *limits.max > MemoryPagesValidationLimit))
+    if ((limits.min > MaxMemoryPagesLimit) ||
+        (limits.max.has_value() && *limits.max > MaxMemoryPagesLimit))
         throw validation_error{"maximum memory page limit exceeded"};
     return {{limits}, pos};
 }

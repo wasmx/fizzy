@@ -155,7 +155,7 @@ bool run(int argc, const char** argv)
     auto module = fizzy::parse(wasm_binary);
     auto imports = fizzy::resolve_imported_functions(*module, wasi_functions);
     auto instance = fizzy::instantiate(
-        std::move(module), std::move(imports), {}, {}, {}, fizzy::MemoryPagesValidationLimit);
+        std::move(module), std::move(imports), {}, {}, {}, fizzy::MaxMemoryPagesLimit);
     assert(instance != nullptr);
 
     const auto start_function = fizzy::find_exported_function(*instance->module, "_start");

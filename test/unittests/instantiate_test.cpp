@@ -518,6 +518,11 @@ TEST(instantiate, memory_single_custom_hard_limit)
 
     EXPECT_NO_THROW(instantiate(*module, {}, {}, {}, {}, 4));
     EXPECT_NO_THROW(instantiate(*module, {}, {}, {}, {}, 8));
+    EXPECT_NO_THROW(instantiate(*module, {}, {}, {}, {}, 65536));
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {}, {}, 65537), instantiate_error,
+        "hard memory limit cannot exceed 4294967296 bytes");
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {}, {}, std::numeric_limits<uint32_t>::max()),
+        instantiate_error, "hard memory limit cannot exceed 4294967296 bytes");
 }
 
 TEST(instantiate, imported_memory_custom_hard_limit)
