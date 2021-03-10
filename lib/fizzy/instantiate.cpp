@@ -113,6 +113,9 @@ void match_imported_memories(const std::vector<Memory>& module_imported_memories
             throw instantiate_error{"provided imported memory has a null pointer to data"};
 
         const auto size = imported_memories[0].data->size();
+        if (size % PageSize != 0)
+            throw instantiate_error{"provided imported memory size must be multiple of page size"};
+
         const auto min = imported_memories[0].limits.min;
         const auto& max = imported_memories[0].limits.max;
         if (size < min * PageSize || (max.has_value() && size > *max * PageSize))
