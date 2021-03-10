@@ -13,8 +13,8 @@ constexpr uint32_t PageSize = 65536;
 
 /// The maximum memory page limit as defined by the specification.
 /// It is only possible to address 4 GB (32-bit) of memory.
-constexpr uint32_t MemoryPagesValidationLimit = (4 * 1024 * 1024 * 1024ULL) / PageSize;
-static_assert(MemoryPagesValidationLimit == 65536);
+constexpr uint32_t MaxMemoryPagesLimit = (4 * 1024 * 1024 * 1024ULL) / PageSize;
+static_assert(MaxMemoryPagesLimit == 65536);
 
 /// The default hard limit of the memory size (256MB) as number of pages.
 constexpr uint32_t DefaultMemoryPagesLimit = (256 * 1024 * 1024ULL) / PageSize;
