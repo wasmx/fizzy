@@ -1,14 +1,18 @@
 # Fizzy: A fast WebAssembly interpreter
-# Copyright 2019-2020 The Fizzy Authors.
+# Copyright 2020 The Fizzy Authors.
 # SPDX-License-Identifier: Apache-2.0
 
 include(ProjectUVWASI)
 
-set(fizzy_include_dir ${PROJECT_SOURCE_DIR}/lib/fizzy)
+add_library(wasi)
+add_library(fizzy::wasi ALIAS wasi)
+target_include_directories(wasi PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(wasi PUBLIC fizzy::fizzy-internal PRIVATE uvwasi::uvwasi)
+target_sources(wasi PRIVATE wasi.cpp wasi.hpp)
 
-add_executable(fizzy-wasi wasi.cpp)
-target_link_libraries(fizzy-wasi PRIVATE fizzy::fizzy-internal uvwasi::uvwasi)
-target_include_directories(fizzy-wasi PRIVATE ${fizzy_include_dir})
+add_executable(fizzy-wasi)
+target_link_libraries(fizzy-wasi PRIVATE fizzy::wasi)
+target_sources(fizzy-wasi PRIVATE main.cpp)
 
 if(UNIX AND NOT APPLE)
     # For libstdc++ up to version 8 (included) this is needed for proper <filesystem> support.

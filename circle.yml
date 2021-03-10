@@ -448,8 +448,9 @@ jobs:
     executor: linux-gcc-latest
     environment:
       CMAKE_BUILD_PARALLEL_LEVEL: 2
-      # TODO: Enable detect_stack_use_after_return=1 when https://gcc.gnu.org/bugzilla/show_bug.cgi?id=97414 is fixed.
-      ASAN_OPTIONS: detect_invalid_pointer_pairs=2:check_initialization_order=1
+      # TODO: Enable detect_stack_use_after_return=1 with GCC11: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=97414.
+      # TODO: Enable detect_invalid_pointer_pairs=2 with GCC11: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=97415.
+      ASAN_OPTIONS: detect_invalid_pointer_pairs=1:check_initialization_order=1
       UBSAN_OPTIONS: halt_on_error=1
     steps:
       - checkout

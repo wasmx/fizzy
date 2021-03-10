@@ -19,7 +19,7 @@ add_test(
 set_tests_properties(
     fizzy/smoketests/wasi/cli-invalid-file
     PROPERTIES
-    PASS_REGULAR_EXPRESSION "File does not exists or is irregular:"
+    PASS_REGULAR_EXPRESSION "Not a file:"
 )
 
 add_test(
@@ -29,7 +29,7 @@ add_test(
 set_tests_properties(
     fizzy/smoketests/wasi/cli-missing-file
     PROPERTIES
-    PASS_REGULAR_EXPRESSION "File does not exists or is irregular:"
+    PASS_REGULAR_EXPRESSION "File does not exist:"
 )
 
 add_test(

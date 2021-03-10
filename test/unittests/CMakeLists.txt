@@ -5,7 +5,7 @@
 include(GoogleTest)
 
 add_executable(fizzy-unittests)
-target_link_libraries(fizzy-unittests PRIVATE fizzy::fizzy-internal fizzy::test-utils GTest::gtest_main GTest::gmock)
+target_link_libraries(fizzy-unittests PRIVATE fizzy::fizzy-internal fizzy::wasi fizzy::test-utils GTest::gtest_main GTest::gmock)
 
 target_sources(
     fizzy-unittests PRIVATE
@@ -40,6 +40,7 @@ target_sources(
     validation_stack_type_test.cpp
     validation_test.cpp
     value_test.cpp
+    wasi_test.cpp
     wasm_engine_test.cpp
 )
 

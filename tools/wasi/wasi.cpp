@@ -1,7 +1,8 @@
 // Fizzy: A fast WebAssembly interpreter
-// Copyright 2019-2020 The Fizzy Authors.
+// Copyright 2020 The Fizzy Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#include "wasi.hpp"
 #include "execute.hpp"
 #include "limits.hpp"
 #include "parser.hpp"
@@ -9,8 +10,10 @@
 #include <cassert>
 #include <filesystem>
 #include <fstream>
-#include <iostream>
+#include <ostream>
 
+namespace fizzy::wasi
+{
 namespace
 {
 // Global state.
@@ -18,19 +21,19 @@ namespace
 // and we are a single-run tool. This may change in the future and should reevaluate.
 uvwasi_t state;
 
-fizzy::ExecutionResult wasi_return_enosys(fizzy::Instance&, const fizzy::Value*, int)
+ExecutionResult return_enosys(Instance&, const Value*, int)
 {
-    return fizzy::Value{uint32_t{UVWASI_ENOSYS}};
+    return Value{uint32_t{UVWASI_ENOSYS}};
 }
 
-fizzy::ExecutionResult wasi_proc_exit(fizzy::Instance&, const fizzy::Value* args, int)
+ExecutionResult proc_exit(Instance&, const Value* args, int)
 {
     uvwasi_proc_exit(&state, static_cast<uvwasi_exitcode_t>(args[0].as<uint32_t>()));
     // Should not reach this.
-    return fizzy::Trap;
+    return Trap;
 }
 
-fizzy::ExecutionResult wasi_fd_write(fizzy::Instance& instance, const fizzy::Value* args, int)
+ExecutionResult fd_write(Instance& instance, const Value* args, int)
 {
     const auto fd = args[0].as<uint32_t>();
     const auto iov_ptr = args[1].as<uint32_t>();
@@ -42,16 +45,16 @@ fizzy::ExecutionResult wasi_fd_write(fizzy::Instance& instance, const fizzy::Val
     uvwasi_errno_t ret = uvwasi_serdes_readv_ciovec_t(
         instance.memory->data(), instance.memory->size(), iov_ptr, iovs.data(), iov_cnt);
     if (ret != UVWASI_ESUCCESS)
-        return fizzy::Value{uint32_t{ret}};
+        return Value{uint32_t{ret}};
 
     uvwasi_size_t nwritten;
     ret = uvwasi_fd_write(&state, static_cast<uvwasi_fd_t>(fd), iovs.data(), iov_cnt, &nwritten);
     uvwasi_serdes_write_uint32_t(instance.memory->data(), nwritten_ptr, nwritten);
 
-    return fizzy::Value{uint32_t{ret}};
+    return Value{uint32_t{ret}};
 }
 
-fizzy::ExecutionResult wasi_fd_read(fizzy::Instance& instance, const fizzy::Value* args, int)
+ExecutionResult fd_read(Instance& instance, const Value* args, int)
 {
     const auto fd = args[0].as<uint32_t>();
     const auto iov_ptr = args[1].as<uint32_t>();
@@ -63,16 +66,16 @@ fizzy::ExecutionResult wasi_fd_read(fizzy::Instance& instance, const fizzy::Valu
     uvwasi_errno_t ret = uvwasi_serdes_readv_iovec_t(
         instance.memory->data(), instance.memory->size(), iov_ptr, iovs.data(), iov_cnt);
     if (ret != UVWASI_ESUCCESS)
-        return fizzy::Value{uint32_t{ret}};
+        return Value{uint32_t{ret}};
 
     uvwasi_size_t nread;
     ret = uvwasi_fd_read(&state, static_cast<uvwasi_fd_t>(fd), iovs.data(), iov_cnt, &nread);
     uvwasi_serdes_write_uint32_t(instance.memory->data(), nread_ptr, nread);
 
-    return fizzy::Value{uint32_t{ret}};
+    return Value{uint32_t{ret}};
 }
 
-fizzy::ExecutionResult wasi_fd_prestat_get(fizzy::Instance& instance, const fizzy::Value* args, int)
+ExecutionResult fd_prestat_get(Instance& instance, const Value* args, int)
 {
     const auto fd = args[0].as<uint32_t>();
     const auto prestat_ptr = args[1].as<uint32_t>();
@@ -82,40 +85,67 @@ fizzy::ExecutionResult wasi_fd_prestat_get(fizzy::Instance& instance, const fizz
 
     uvwasi_serdes_write_prestat_t(instance.memory->data(), prestat_ptr, &buf);
 
-    return fizzy::Value{uint32_t{ret}};
+    return Value{uint32_t{ret}};
 }
 
-fizzy::ExecutionResult wasi_environ_sizes_get(
-    fizzy::Instance& instance, const fizzy::Value* args, int)
+ExecutionResult environ_sizes_get(Instance& instance, const Value* args, int)
 {
     const auto environc = args[0].as<uint32_t>();
     const auto environ_buf_size = args[1].as<uint32_t>();
     // TODO: implement properly (only returns 0 now)
     uvwasi_serdes_write_uint32_t(instance.memory->data(), environc, 0);
     uvwasi_serdes_write_uint32_t(instance.memory->data(), environ_buf_size, 0);
-    return fizzy::Value{uint32_t{UVWASI_ESUCCESS}};
+    return Value{uint32_t{UVWASI_ESUCCESS}};
+}
+}  // namespace
+
+std::optional<bytes> load_file(std::string_view file, std::ostream& err) noexcept
+{
+    try
+    {
+        std::filesystem::path path{file};
+
+        if (!std::filesystem::exists(path))
+        {
+            err << "File does not exist: " << path << "\n";
+            return std::nullopt;
+        }
+        if (!std::filesystem::is_regular_file(path))
+        {
+            err << "Not a file: " << path << "\n";
+            return std::nullopt;
+        }
+
+        std::ifstream wasm_file{path};
+        if (!wasm_file)
+        {
+            err << "Failed to open file: " << path << "\n";
+            return std::nullopt;
+        }
+        return bytes(std::istreambuf_iterator<char>{wasm_file}, std::istreambuf_iterator<char>{});
+    }
+    catch (...)
+    {
+        // Generic error message due to other exceptions.
+        err << "Failed to load: " << file << "\n";
+        return std::nullopt;
+    }
 }
 
-bool run(int argc, const char** argv)
+bool run(bytes_view wasm_binary, int argc, const char* argv[], std::ostream& err)
 {
-    const std::vector<fizzy::ImportedFunction> wasi_functions = {
-        {"wasi_snapshot_preview1", "proc_exit", {fizzy::ValType::i32}, std::nullopt,
-            wasi_proc_exit},
-        {"wasi_snapshot_preview1", "fd_read",
-            {fizzy::ValType::i32, fizzy::ValType::i32, fizzy::ValType::i32, fizzy::ValType::i32},
-            fizzy::ValType::i32, wasi_fd_read},
-        {"wasi_snapshot_preview1", "fd_write",
-            {fizzy::ValType::i32, fizzy::ValType::i32, fizzy::ValType::i32, fizzy::ValType::i32},
-            fizzy::ValType::i32, wasi_fd_write},
-        {"wasi_snapshot_preview1", "fd_prestat_get", {fizzy::ValType::i32, fizzy::ValType::i32},
-            fizzy::ValType::i32, wasi_fd_prestat_get},
-        {"wasi_snapshot_preview1", "fd_prestat_dir_name",
-            {fizzy::ValType::i32, fizzy::ValType::i32, fizzy::ValType::i32}, fizzy::ValType::i32,
-            wasi_return_enosys},
-        {"wasi_snapshot_preview1", "environ_sizes_get", {fizzy::ValType::i32, fizzy::ValType::i32},
-            fizzy::ValType::i32, wasi_environ_sizes_get},
-        {"wasi_snapshot_preview1", "environ_get", {fizzy::ValType::i32, fizzy::ValType::i32},
-            fizzy::ValType::i32, wasi_return_enosys},
+    constexpr auto ns = "wasi_snapshot_preview1";
+    const std::vector<ImportedFunction> wasi_functions = {
+        {ns, "proc_exit", {ValType::i32}, std::nullopt, proc_exit},
+        {ns, "fd_read", {ValType::i32, ValType::i32, ValType::i32, ValType::i32}, ValType::i32,
+            fd_read},
+        {ns, "fd_write", {ValType::i32, ValType::i32, ValType::i32, ValType::i32}, ValType::i32,
+            fd_write},
+        {ns, "fd_prestat_get", {ValType::i32, ValType::i32}, ValType::i32, fd_prestat_get},
+        {ns, "fd_prestat_dir_name", {ValType::i32, ValType::i32, ValType::i32}, ValType::i32,
+            return_enosys},
+        {ns, "environ_sizes_get", {ValType::i32, ValType::i32}, ValType::i32, environ_sizes_get},
+        {ns, "environ_get", {ValType::i32, ValType::i32}, ValType::i32, return_enosys},
     };
 
     // Initialisation settings.
@@ -129,85 +159,58 @@ bool run(int argc, const char** argv)
         nullptr,  // NOTE: no special allocator
     };
 
-    const uvwasi_errno_t err = uvwasi_init(&state, &options);
-    if (err != UVWASI_ESUCCESS)
+    const uvwasi_errno_t uvwasi_err = uvwasi_init(&state, &options);
+    if (uvwasi_err != UVWASI_ESUCCESS)
     {
-        std::cerr << "Failed to initialise UVWASI: " << uvwasi_embedder_err_code_to_string(err)
-                  << "\n";
+        err << "Failed to initialise UVWASI: " << uvwasi_embedder_err_code_to_string(uvwasi_err)
+            << "\n";
         return false;
     }
 
-    if (!std::filesystem::is_regular_file(argv[0]))
-    {
-        std::cerr << "File does not exists or is irregular: " << argv[0] << "\n";
-        return false;
-    }
-
-    std::ifstream wasm_file{argv[0]};
-    if (!wasm_file)
-    {
-        std::cerr << "Failed to open file: " << argv[0] << "\n";
-        return false;
-    }
-    const auto wasm_binary =
-        fizzy::bytes(std::istreambuf_iterator<char>{wasm_file}, std::istreambuf_iterator<char>{});
-
-    auto module = fizzy::parse(wasm_binary);
-    auto imports = fizzy::resolve_imported_functions(*module, wasi_functions);
-    auto instance = fizzy::instantiate(
-        std::move(module), std::move(imports), {}, {}, {}, fizzy::MaxMemoryPagesLimit);
+    auto module = parse(wasm_binary);
+    auto imports = resolve_imported_functions(*module, wasi_functions);
+    auto instance =
+        instantiate(std::move(module), std::move(imports), {}, {}, {}, MaxMemoryPagesLimit);
     assert(instance != nullptr);
 
-    const auto start_function = fizzy::find_exported_function(*instance->module, "_start");
+    const auto start_function = find_exported_function(*instance->module, "_start");
     if (!start_function.has_value())
     {
-        std::cerr << "File is not WASI compatible (_start not found)\n";
+        err << "File is not WASI compatible (_start not found)\n";
         return false;
     }
 
     // Manually validate type signature here
     // TODO: do this in find_exported_function
-    if (instance->module->get_function_type(*start_function) != fizzy::FuncType{})
+    if (instance->module->get_function_type(*start_function) != FuncType{})
     {
-        std::cerr << "File is not WASI compatible (_start has invalid signature)\n";
+        err << "File is not WASI compatible (_start has invalid signature)\n";
         return false;
     }
 
-    if (!fizzy::find_exported_memory(*instance, "memory").has_value())
+    if (!find_exported_memory(*instance, "memory").has_value())
     {
-        std::cerr << "File is not WASI compatible (no memory exported)\n";
+        err << "File is not WASI compatible (no memory exported)\n";
         return false;
     }
 
-    const auto result = fizzy::execute(*instance, *start_function, {});
+    const auto result = execute(*instance, *start_function, {});
     if (result.trapped)
     {
-        std::cerr << "Execution aborted with WebAssembly trap\n";
+        err << "Execution aborted with WebAssembly trap\n";
         return false;
     }
     assert(!result.has_value);
 
     return true;
 }
-}  // namespace
 
-int main(int argc, const char** argv)
+bool load_and_run(int argc, const char** argv, std::ostream& err)
 {
-    try
-    {
-        if (argc < 2)
-        {
-            std::cerr << "Missing executable argument\n";
-            return -1;
-        }
+    const auto wasm_binary = load_file(argv[0], err);
+    if (!wasm_binary)
+        return false;
 
-        // Remove fizzy-wasi from the argv, but keep "argv[1]"
-        const bool res = run(argc - 1, argv + 1);
-        return res ? 0 : 1;
-    }
-    catch (const std::exception& ex)
-    {
-        std::cerr << "Exception: " << ex.what() << "\n";
-        return -2;
-    }
+    return run(*wasm_binary, argc, argv, err);
 }
+}  // namespace fizzy::wasi
