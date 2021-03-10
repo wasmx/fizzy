@@ -23,6 +23,7 @@ target_sources(
     leb128_encode.cpp
     leb128_encode.hpp
     typed_value.hpp
+    utf8_demo.cpp
     wabt_engine.cpp
     wasm3_engine.cpp
     wasm_binary.hpp

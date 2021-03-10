@@ -5,6 +5,7 @@
 #include "utf8.hpp"
 #include <gtest/gtest.h>
 #include <test/utils/hex.hpp>
+#include <test/utils/utf8_demo.hpp>
 
 using namespace fizzy;
 using namespace fizzy::test;
@@ -164,4 +165,11 @@ TEST(utf8, missing_forth_byte)
         const uint8_t input[]{b, 0xA0, 0xA0};
         EXPECT_FALSE(utf8_validate({input, std::size(input)}));
     }
+}
+
+TEST(utf8, validate_utf8_demo)
+{
+    const bytes_view utf8_demo_bytes{
+        reinterpret_cast<const uint8_t*>(utf8_demo.data()), utf8_demo.size()};
+    EXPECT_TRUE(utf8_validate(utf8_demo_bytes));
 }
