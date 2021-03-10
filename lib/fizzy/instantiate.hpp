@@ -10,6 +10,7 @@
 #include "module.hpp"
 #include "types.hpp"
 #include "value.hpp"
+#include <any>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -21,23 +22,70 @@ namespace fizzy
 struct ExecutionResult;
 struct Instance;
 
-/// Function representing WebAssembly or host function execution.
-using execute_function = std::function<ExecutionResult(Instance&, const Value*, int depth)>;
+/// Function pointer to the execution function.
+using HostFunctionPtr = ExecutionResult (*)(
+    std::any& host_context, Instance&, const Value* args, int depth);
+
+/// Function representing either WebAssembly or host function execution.
+class ExecuteFunction
+{
+    /// Pointer to WebAssembly function instance.
+    /// Equals nullptr in case this ExecuteFunction represents host function.
+    Instance* m_instance = nullptr;
+
+    /// Index of WebAssembly function.
+    /// Equals 0 in case this ExecuteFunction represents host function.
+    FuncIdx m_func_idx = 0;
+
+    /// Pointer to a host function.
+    /// Equals nullptr in case this ExecuteFunction represents WebAssembly function.
+    HostFunctionPtr m_host_function = nullptr;
+
+    /// Opaque context of host function execution, which is passed to it as host_context parameter.
+    /// Doesn't have value in case this ExecuteFunction represents WebAssembly function.
+    std::any m_host_context;
+
+public:
+    /// Default function constructor.
+    ExecuteFunction() noexcept = default;
+
+    // WebAssembly function constructor.
+    ExecuteFunction(Instance& instance, FuncIdx func_idx) noexcept
+      : m_instance{&instance}, m_func_idx{func_idx}
+    {}
+
+    /// Host function constructor without context.
+    /// The function will always be called with empty host_context argument.
+    ExecuteFunction(HostFunctionPtr f) noexcept : m_host_function{f} {}
+
+    /// Host function constructor with context.
+    /// The function will be called with a reference to @a host_context.
+    /// Copies of the function will have their own copy of @a host_context.
+    ExecuteFunction(HostFunctionPtr f, std::any host_context)
+      : m_host_function{f}, m_host_context{std::move(host_context)}
+    {}
+
+    /// Function call operator.
+    ExecutionResult operator()(Instance& instance, const Value* args, int depth);
+
+    /// Function pointer stored inside this object.
+    HostFunctionPtr get_host_function() const noexcept { return m_host_function; }
+};
 
 /// Function with associated input/output types,
 /// used to represent both imported and exported functions.
 struct ExternalFunction
 {
-    execute_function function;
+    ExecuteFunction function;
     span<const ValType> input_types;
     span<const ValType> output_types;
 
-    ExternalFunction(execute_function _function, span<const ValType> _input_types,
+    ExternalFunction(ExecuteFunction _function, span<const ValType> _input_types,
         span<const ValType> _output_types)
       : function(std::move(_function)), input_types(_input_types), output_types(_output_types)
     {}
 
-    ExternalFunction(execute_function _function, const FuncType& type)
+    ExternalFunction(ExecuteFunction _function, const FuncType& type)
       : function(std::move(_function)), input_types(type.inputs), output_types(type.outputs)
     {}
 };
@@ -154,7 +202,7 @@ struct ImportedFunction
     std::optional<ValType> output;
 
     /// Function object, which will be called to execute the function.
-    execute_function function;
+    ExecuteFunction function;
 };
 
 /// Create vector of fizzy::ExternalFunction ready to be passed to instantiate().
