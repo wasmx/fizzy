@@ -9,6 +9,7 @@ target_sources(fizzy-bench-internal PRIVATE
     experimental.cpp
     experimental.hpp
     parser_benchmarks.cpp
+    utf8_benchmarks.cpp
 )
 
 target_link_libraries(fizzy-bench-internal PRIVATE fizzy::fizzy-internal fizzy::test-utils benchmark::benchmark_main)
