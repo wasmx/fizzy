@@ -558,7 +558,10 @@ std::optional<ExternalMemory> find_exported_memory(
     if (!find_export(*instance.module, ExternalKind::Memory, name))
         return std::nullopt;
 
-    return ExternalMemory{instance.memory.get(), instance.memory_limits};
+    // Memory lower limit should be updated in case it was grown.
+    const Limits limits{
+        static_cast<uint32_t>(instance.memory->size() / PageSize), instance.memory_limits.max};
+    return ExternalMemory{instance.memory.get(), limits};
 }
 
 }  // namespace fizzy

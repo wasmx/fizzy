@@ -810,3 +810,26 @@ TEST(api, find_exported_memory_reimport)
     // importing the same table into the module with equal limits, instantiate should succeed
     instantiate(parse(wasm_reimported_memory), {}, {}, {*opt_memory});
 }
+
+TEST(api, find_exported_memory_after_grow)
+{
+    /* wat2wasm
+    (module
+      (memory (export "mem") 1 2)
+      (func (drop (memory.grow (i32.const 1))))
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001040160000003020100050401010102070701036d656d02000a09010700410140001a0b");
+
+    auto instance = instantiate(parse(wasm));
+
+    EXPECT_THAT(execute(*instance, 0, {}), Result());
+
+    auto opt_memory = find_exported_memory(*instance, "mem");
+    ASSERT_TRUE(opt_memory);
+    EXPECT_EQ(opt_memory->data->size(), 2 * PageSize);
+    EXPECT_EQ(opt_memory->limits.min, 2);
+    ASSERT_TRUE(opt_memory->limits.max.has_value());
+    EXPECT_EQ(opt_memory->limits.max, 2);
+}
