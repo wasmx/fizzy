@@ -340,8 +340,9 @@ TEST(execute_call, imported_function_call)
 
     const auto module = parse(wasm);
 
-    constexpr auto host_foo = [](std::any&, Instance&, const Value*,
-                                  int) noexcept -> ExecutionResult { return Value{42}; };
+    constexpr auto host_foo = [](Instance&, const Value*, int) noexcept -> ExecutionResult {
+        return Value{42};
+    };
     const auto& host_foo_type = module->typesec[0];
 
     auto instance = instantiate(*module, {{{host_foo}, host_foo_type}});
@@ -363,7 +364,7 @@ TEST(execute_call, imported_function_call_void)
     const auto module = parse(wasm);
 
     static bool called = false;
-    constexpr auto host_foo = [](std::any&, Instance&, const Value*, int) noexcept {
+    constexpr auto host_foo = [](Instance&, const Value*, int) noexcept {
         called = true;
         return Void;
     };
@@ -391,8 +392,7 @@ TEST(execute_call, imported_function_call_with_arguments)
 
     const auto module = parse(wasm);
 
-    constexpr auto host_foo = [](std::any&, Instance&, const Value* args,
-                                  int) noexcept -> ExecutionResult {
+    constexpr auto host_foo = [](Instance&, const Value* args, int) noexcept -> ExecutionResult {
         return Value{args[0].i32 * 2};
     };
     const auto host_foo_type = module->typesec[0];
@@ -436,13 +436,11 @@ TEST(execute_call, imported_functions_call_indirect)
     ASSERT_EQ(module->importsec.size(), 2);
     ASSERT_EQ(module->codesec.size(), 2);
 
-    constexpr auto sqr = [](std::any&, Instance&, const Value* args,
-                             int) noexcept -> ExecutionResult {
+    constexpr auto sqr = [](Instance&, const Value* args, int) noexcept -> ExecutionResult {
         const auto x = args[0].i32;
         return Value{uint64_t{x} * uint64_t{x}};
     };
-    constexpr auto isqrt = [](std::any&, Instance&, const Value* args,
-                               int) noexcept -> ExecutionResult {
+    constexpr auto isqrt = [](Instance&, const Value* args, int) noexcept -> ExecutionResult {
         const auto x = args[0].i32;
         return Value{(11 + uint64_t{x} / 11) / 2};
     };
@@ -813,7 +811,7 @@ TEST(execute_call, call_initial_depth)
     const auto wasm = from_hex("0061736d01000000010401600000020b01036d6f6403666f6f0000");
 
     auto module = parse(wasm);
-    constexpr auto host_foo = [](std::any&, Instance&, const Value*, int depth) noexcept {
+    constexpr auto host_foo = [](Instance&, const Value*, int depth) noexcept {
         EXPECT_EQ(depth, 0);
         return Void;
     };
@@ -850,7 +848,7 @@ TEST(execute_call, execute_imported_max_depth)
         from_hex("0061736d01000000010401600000020b01036d6f6403666f6f0000030201000a040102000b");
 
     auto module = parse(wasm);
-    constexpr auto host_foo = [](std::any&, Instance&, const Value*, int depth) noexcept {
+    constexpr auto host_foo = [](Instance&, const Value*, int depth) noexcept {
         EXPECT_LE(depth, TestCallStackLimit - 1);
         return Void;
     };
@@ -973,8 +971,7 @@ TEST(execute_call, call_imported_infinite_recursion)
 
     const auto module = parse(wasm);
     static int counter = 0;
-    constexpr auto host_foo = [](std::any&, Instance& instance, const Value* args,
-                                  int depth) noexcept {
+    constexpr auto host_foo = [](Instance& instance, const Value* args, int depth) noexcept {
         ++counter;
         return execute(instance, 0, args, depth + 1);
     };
@@ -1004,8 +1001,7 @@ TEST(execute_call, call_imported_interleaved_infinite_recursion)
 
     const auto module = parse(wasm);
     static int counter = 0;
-    constexpr auto host_foo = [](std::any&, Instance& instance, const Value* args,
-                                  int depth) noexcept {
+    constexpr auto host_foo = [](Instance& instance, const Value* args, int depth) noexcept {
         // Function $f will increase depth. This means each iteration goes 2 steps deeper.
         EXPECT_LT(depth, CallStackLimit);
         ++counter;
@@ -1034,7 +1030,7 @@ TEST(execute_call, call_imported_max_depth_recursion)
     const auto wasm = from_hex("0061736d010000000105016000017f020b01036d6f6403666f6f0000");
 
     const auto module = parse(wasm);
-    constexpr auto host_foo = [](std::any&, Instance& instance, const Value* args,
+    constexpr auto host_foo = [](Instance& instance, const Value* args,
                                   int depth) noexcept -> ExecutionResult {
         if (depth == TestCallStackLimit - 1)
             return Value{uint32_t{1}};  // Terminate recursion on the max depth.
@@ -1059,7 +1055,7 @@ TEST(execute_call, call_via_imported_max_depth_recursion)
         "0061736d010000000105016000017f020b01036d6f6403666f6f0000030201000a0601040010000b");
 
     const auto module = parse(wasm);
-    auto host_foo = [](std::any&, Instance& instance, const Value* args,
+    auto host_foo = [](Instance& instance, const Value* args,
                         int depth) noexcept -> ExecutionResult {
         // Function $f will increase depth. This means each iteration goes 2 steps deeper.
         if (depth == TestCallStackLimit - 1)

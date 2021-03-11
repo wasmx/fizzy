@@ -41,6 +41,16 @@ constexpr ExecutionResult Void{true};
 /// Shortcut for execution that resulted in a trap.
 constexpr ExecutionResult Trap{false};
 
+template <typename F>
+ExecuteFunction::ExecuteFunction(F f)
+  : m_host_function{[](std::any& host_context, Instance& instance, const Value* args,
+                        int depth) noexcept -> ExecutionResult {
+        return (*std::any_cast<F>(&host_context))(instance, args, depth);
+    }},
+    m_host_context{std::make_any<F>(std::move(f))}
+{}
+
+
 /// Execute a function from an instance.
 ///
 /// @param  instance    The instance.

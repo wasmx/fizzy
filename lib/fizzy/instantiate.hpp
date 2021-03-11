@@ -51,16 +51,15 @@ public:
       : m_instance{&instance}, m_func_idx{func_idx}
     {}
 
-    /// Host function constructor without context.
-    /// The function will always be called with empty host_context argument.
-    ExecuteFunction(HostFunctionPtr f) noexcept : m_host_function{f} {}
-
     /// Host function constructor with context.
     /// The function will be called with a reference to @a host_context.
     /// Copies of the function will have their own copy of @a host_context.
     ExecuteFunction(HostFunctionPtr f, std::any host_context)
       : m_host_function{f}, m_host_context{std::move(host_context)}
     {}
+
+    template <typename F>
+    ExecuteFunction(F f);
 
     /// Function call operator.
     ExecutionResult operator()(Instance& instance, const Value* args, int depth) noexcept;
