@@ -214,7 +214,6 @@ fn create_function_import_list(host_functions: &[HostFunction]) -> Vec<sys::Fizz
         inputs: std::ptr::null(),
         inputs_size: 0,
     };
-    let fn_ptr: sys::FizzyExternalFn = None;
     let ext_fn = sys::FizzyExternalFunction {
         type_: fn_type,
         function: Some(host_callback),
