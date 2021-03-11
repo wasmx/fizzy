@@ -276,6 +276,7 @@ inline fizzy::ImportedFunction unwrap(const FizzyImportedFunction& c_imported_fu
 
     auto function = unwrap(
         c_imported_func.external_function.function, c_imported_func.external_function.context);
+    std::cout << "c_imported_func:" << c_imported_func.module << ":" << c_imported_func.name << std::endl;
 
     return {c_imported_func.module, c_imported_func.name, std::move(inputs), output,
         std::move(function)};

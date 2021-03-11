@@ -222,6 +222,11 @@ fn create_function_import_list(host_functions: &[HostFunction]) -> Vec<sys::Fizz
         function: Some(host_callback),
         context: std::ptr::null_mut(),
     };
+    print!(
+        "{:?} {:?}",
+        host_function.module.as_bytes_with_nul(),
+        host_function.name.as_bytes_with_nul()
+    );
     vec![sys::FizzyImportedFunction {
         module: host_function.module.as_ptr(),
         name: host_function.name.as_ptr(),
@@ -235,14 +240,14 @@ impl Module {
     pub fn instantiate(self) -> Result<Instance, Error> {
         let mut err = FizzyErrorBox::new();
         let host_fn1 = HostFunction {
-            module: CString::new("env").unwrap(),
-            name: CString::new("print").unwrap(),
+            module: CString::new("env").expect("cstring to work"),
+            name: CString::new("print").expect("cstring to work"),
             inputs: vec![],
             output: sys::FizzyValueTypeVoid,
             index: 0,
         };
         let import_list = create_function_import_list(&[host_fn1]);
-        println!("{}", import_list.len());
+        println!("{:?} {}", import_list.as_ptr(), import_list.len());
         let ptr = unsafe {
             sys::fizzy_resolve_instantiate(
                 self.0.as_ptr(),
