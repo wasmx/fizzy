@@ -139,15 +139,23 @@ inline uint32_t grow_memory(
     bytes& memory, uint32_t delta_pages, uint32_t memory_pages_limit) noexcept
 {
     const auto cur_pages = memory.size() / PageSize;
-    assert(cur_pages <= size_t(std::numeric_limits<int32_t>::max()));
-    const auto new_pages = cur_pages + delta_pages;
-    assert(new_pages >= cur_pages);
+    // These assertions are guaranteed by allocation in instantiate and this function for subsequent
+    // increases.
+    assert(memory.size() % PageSize == 0);
+    assert(memory_pages_limit <= MaxMemoryPagesLimit);
+    assert(cur_pages <= memory_pages_limit);
+
+    const auto new_pages = uint64_t{cur_pages} + delta_pages;
     if (new_pages > memory_pages_limit)
         return static_cast<uint32_t>(-1);
 
     try
     {
-        memory.resize(new_pages * PageSize);
+        // new_pages <= memory_pages_limit <= MaxMemoryPagesLimit guarantees multiplication
+        // will not overflow uint32_t.
+        assert(new_pages * PageSize <= std::numeric_limits<uint32_t>::max());
+        static_assert(sizeof(size_t) >= sizeof(uint32_t));
+        memory.resize(static_cast<size_t>(new_pages) * PageSize);
         return static_cast<uint32_t>(cur_pages);
     }
     catch (...)
@@ -871,6 +879,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::memory_size:
         {
+            assert(memory->size() % PageSize == 0);
             stack.push(static_cast<uint32_t>(memory->size() / PageSize));
             break;
         }
