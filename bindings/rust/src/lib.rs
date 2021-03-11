@@ -197,6 +197,7 @@ unsafe extern "C" fn host_callback(
     args: *const sys::FizzyValue,
     depth: i32,
 ) -> sys::FizzyExecutionResult {
+    println!("host fuction called!");
     unimplemented!()
 }
 
@@ -1326,5 +1327,32 @@ mod tests {
         let result = instance.unwrap().execute("test", &[]);
         assert!(result.is_err());
         assert_eq!(result.err().unwrap(), Error::Trapped);
+    }
+
+    #[test]
+    fn execute_host_function2() {
+        /* wat2wasm
+        (module
+          (func $print (import "env" "print"))
+          (func (export "foo")
+            call $print
+          )
+        )
+        */
+        let input = hex::decode(
+        "0061736d01000000010401600000020d0103656e76057072696e7400000302010007070103666f6f00010a0601040010000b").unwrap();
+
+        let module = parse(&input);
+        assert!(module.is_ok());
+        let instance = module.unwrap().instantiate();
+        assert!(instance.is_ok());
+        let mut instance = instance.unwrap();
+
+        // Successful execution.
+        let result = instance.execute("foo", &[], 0);
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert!(!result.trapped());
+        assert!(result.value().is_none());
     }
 }
