@@ -21,19 +21,19 @@ namespace
 // and we are a single-run tool. This may change in the future and should reevaluate.
 uvwasi_t state;
 
-ExecutionResult return_enosys(Instance&, const Value*, int)
+ExecutionResult return_enosys(std::any&, Instance&, const Value*, int)
 {
     return Value{uint32_t{UVWASI_ENOSYS}};
 }
 
-ExecutionResult proc_exit(Instance&, const Value* args, int)
+ExecutionResult proc_exit(std::any&, Instance&, const Value* args, int)
 {
     uvwasi_proc_exit(&state, static_cast<uvwasi_exitcode_t>(args[0].as<uint32_t>()));
     // Should not reach this.
     return Trap;
 }
 
-ExecutionResult fd_write(Instance& instance, const Value* args, int)
+ExecutionResult fd_write(std::any&, Instance& instance, const Value* args, int)
 {
     const auto fd = args[0].as<uint32_t>();
     const auto iov_ptr = args[1].as<uint32_t>();
@@ -54,7 +54,7 @@ ExecutionResult fd_write(Instance& instance, const Value* args, int)
     return Value{uint32_t{ret}};
 }
 
-ExecutionResult fd_read(Instance& instance, const Value* args, int)
+ExecutionResult fd_read(std::any&, Instance& instance, const Value* args, int)
 {
     const auto fd = args[0].as<uint32_t>();
     const auto iov_ptr = args[1].as<uint32_t>();
@@ -75,7 +75,7 @@ ExecutionResult fd_read(Instance& instance, const Value* args, int)
     return Value{uint32_t{ret}};
 }
 
-ExecutionResult fd_prestat_get(Instance& instance, const Value* args, int)
+ExecutionResult fd_prestat_get(std::any&, Instance& instance, const Value* args, int)
 {
     const auto fd = args[0].as<uint32_t>();
     const auto prestat_ptr = args[1].as<uint32_t>();
@@ -88,7 +88,7 @@ ExecutionResult fd_prestat_get(Instance& instance, const Value* args, int)
     return Value{uint32_t{ret}};
 }
 
-ExecutionResult environ_sizes_get(Instance& instance, const Value* args, int)
+ExecutionResult environ_sizes_get(std::any&, Instance& instance, const Value* args, int)
 {
     const auto environc = args[0].as<uint32_t>();
     const auto environ_buf_size = args[1].as<uint32_t>();

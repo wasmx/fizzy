@@ -15,12 +15,17 @@ using namespace fizzy::test;
 
 namespace
 {
-auto function_returning_value(Value value) noexcept
+ExecuteFunction function_returning_value(Value value)
 {
-    return [value](Instance&, const Value*, int) { return value; };
+    static constexpr HostFunctionPtr func = [](std::any& host_context, Instance&, const Value*,
+                                                int) -> ExecutionResult {
+        return std::any_cast<Value>(host_context);
+    };
+
+    return {func, std::make_any<Value>(value)};
 }
 
-ExecutionResult function_returning_void(Instance&, const Value*, int) noexcept
+ExecutionResult function_returning_void(std::any&, Instance&, const Value*, int) noexcept
 {
     return Void;
 }
@@ -210,6 +215,40 @@ TEST(api, resolve_imported_function_duplicate)
 
     EXPECT_THAT(execute(*instance, 0, {0_u32}), Result(42));
     EXPECT_THAT(execute(*instance, 1, {0_u32}), Result(42));
+}
+
+TEST(api, resolve_imported_function_duplicate_with_context)
+{
+    /* wat2wasm
+      (func (import "mod1" "foo1"))
+      (func (import "mod1" "foo1"))
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010401600000021902046d6f643104666f6f310000046d6f643104666f6f310000");
+    const auto module = parse(wasm);
+
+    constexpr auto host_func = [](std::any& context, Instance&, const Value*, int) {
+        auto* counter = std::any_cast<int*>(context);
+        ++(*counter);
+        return Void;
+    };
+
+    int counter = 0;
+    auto context = std::make_any<int*>(&counter);
+
+    std::vector<ImportedFunction> imported_functions = {
+        {"mod1", "foo1", {}, std::nullopt, {host_func, std::move(context)}},
+    };
+
+    const auto external_functions = resolve_imported_functions(*module, imported_functions);
+
+    EXPECT_EQ(external_functions.size(), 2);
+
+    auto instance = instantiate(*module, external_functions, {}, {}, {});
+
+    EXPECT_THAT(execute(*instance, 0, nullptr), Result());
+    EXPECT_THAT(execute(*instance, 1, nullptr), Result());
+    EXPECT_EQ(counter, 2);
 }
 
 TEST(api, resolve_imported_globals)
@@ -427,11 +466,13 @@ TEST(api, find_exported_function)
         "0061736d010000000105016000017f021001087370656374657374036261720000040401700000050401010102"
         "0606017f0041000b07170403666f6f000001670300037461620100036d656d0200");
 
-    auto bar = [](Instance&, const Value*, int) { return Value{42}; };
+    constexpr auto bar = [](std::any&, Instance&, const Value*, int) -> ExecutionResult {
+        return Value{42};
+    };
     const auto bar_type = FuncType{{}, {ValType::i32}};
 
     auto instance_reexported_function =
-        instantiate(parse(wasm_reexported_function), {{bar, bar_type.inputs, bar_type.outputs}});
+        instantiate(parse(wasm_reexported_function), {{{bar}, bar_type}});
 
     auto opt_reexported_function = find_exported_function(*instance_reexported_function, "foo");
     ASSERT_TRUE(opt_reexported_function);
