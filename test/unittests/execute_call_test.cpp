@@ -608,6 +608,34 @@ TEST(execute_call, imported_function_with_context)
     EXPECT_EQ(counter, 2);
 }
 
+TEST(execute_call, imported_function_with_capture)
+{
+    /* wat2wasm
+    (import "mod" "foo" (func))
+    (func
+      call 0
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d01000000010401600000020b01036d6f6403666f6f0000030201000a0601040010000b");
+
+    const auto module = parse(wasm);
+
+    int counter = 0;
+    const auto host_func = [&counter](Instance&, const Value*, int) noexcept -> ExecutionResult {
+        ++counter;
+        return Void;
+    };
+    const auto& host_func_type = module->typesec[0];
+
+    auto instance = instantiate(*module, {{{host_func}, host_func_type}});
+
+    EXPECT_THAT(execute(*instance, 0, {}), Result());
+    EXPECT_EQ(counter, 1);
+    EXPECT_THAT(execute(*instance, 1, {}), Result());
+    EXPECT_EQ(counter, 2);
+}
+
 TEST(execute_call, imported_functions_with_shared_context)
 {
     /* wat2wasm
