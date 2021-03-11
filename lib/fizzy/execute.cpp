@@ -523,7 +523,7 @@ void branch(const Code& code, OperandStack& stack, const uint8_t*& pc, uint32_t 
 }
 
 inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
-    OperandStack& stack, int depth)
+    OperandStack& stack, int depth) noexcept
 {
     const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
@@ -549,7 +549,7 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
 
 }  // namespace
 
-ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args, int depth)
+ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args, int depth) noexcept
 {
     assert(depth >= 0);
     if (depth >= CallStackLimit)

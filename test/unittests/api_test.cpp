@@ -18,8 +18,8 @@ namespace
 ExecuteFunction function_returning_value(Value value)
 {
     static constexpr HostFunctionPtr func = [](std::any& host_context, Instance&, const Value*,
-                                                int) -> ExecutionResult {
-        return std::any_cast<Value>(host_context);
+                                                int) noexcept -> ExecutionResult {
+        return *std::any_cast<Value>(&host_context);
     };
 
     return {func, std::make_any<Value>(value)};
@@ -227,8 +227,8 @@ TEST(api, resolve_imported_function_duplicate_with_context)
         "0061736d01000000010401600000021902046d6f643104666f6f310000046d6f643104666f6f310000");
     const auto module = parse(wasm);
 
-    constexpr auto host_func = [](std::any& context, Instance&, const Value*, int) {
-        auto* counter = std::any_cast<int*>(context);
+    constexpr auto host_func = [](std::any& context, Instance&, const Value*, int) noexcept {
+        auto* counter = *std::any_cast<int*>(&context);
         ++(*counter);
         return Void;
     };
@@ -466,7 +466,7 @@ TEST(api, find_exported_function)
         "0061736d010000000105016000017f021001087370656374657374036261720000040401700000050401010102"
         "0606017f0041000b07170403666f6f000001670300037461620100036d656d0200");
 
-    constexpr auto bar = [](std::any&, Instance&, const Value*, int) -> ExecutionResult {
+    constexpr auto bar = [](std::any&, Instance&, const Value*, int) noexcept -> ExecutionResult {
         return Value{42};
     };
     const auto bar_type = FuncType{{}, {ValType::i32}};

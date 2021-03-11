@@ -51,5 +51,6 @@ constexpr ExecutionResult Trap{false};
 ///                     behaviour (including crash) happens.
 /// @param  depth       The call depth (indexing starts at 0). Can be left at the default setting.
 /// @return             The result of the execution.
-ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args, int depth = 0);
+ExecutionResult execute(
+    Instance& instance, FuncIdx func_idx, const Value* args, int depth = 0) noexcept;
 }  // namespace fizzy
