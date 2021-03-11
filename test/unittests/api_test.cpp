@@ -833,3 +833,54 @@ TEST(api, find_exported_memory_after_grow)
     ASSERT_TRUE(opt_memory->limits.max.has_value());
     EXPECT_EQ(opt_memory->limits.max, 2);
 }
+
+TEST(api, import_grown_memory)
+{
+    /* wat2wasm
+    (module
+      (memory (export "mem") 1)
+      (func (drop (memory.grow (i32.const 1))))
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010401600000030201000503010001070701036d656d02000a09010700410140001a0b");
+
+    auto instance = instantiate(parse(wasm));
+
+    EXPECT_THAT(execute(*instance, 0, {}), Result());
+
+    auto memory = find_exported_memory(*instance, "mem");
+    ASSERT_TRUE(memory);
+    EXPECT_EQ(memory->data->size(), 2 * PageSize);
+    EXPECT_EQ(memory->limits.min, 2);
+    ASSERT_FALSE(memory->limits.max.has_value());
+
+    /* wat2wasm
+    (module
+      (memory (export "mem2") (import "m" "mem") 2)
+      (func (drop (memory.grow (i32.const 1))))
+    )
+    */
+    const auto wasm_reexported_mem = from_hex(
+        "0061736d01000000010401600000020a01016d036d656d02000203020100070801046d656d3202000a09010700"
+        "410140001a0b");
+
+    auto instance_reexported_mem = instantiate(parse(wasm_reexported_mem), {}, {}, {*memory});
+
+    EXPECT_THAT(execute(*instance_reexported_mem, 0, {}), Result());
+
+    auto reexported_memory = find_exported_memory(*instance_reexported_mem, "mem2");
+    ASSERT_TRUE(reexported_memory);
+    EXPECT_EQ(reexported_memory->data->size(), 3 * PageSize);
+    EXPECT_EQ(reexported_memory->limits.min, 3);
+    ASSERT_FALSE(reexported_memory->limits.max.has_value());
+
+    /* wat2wasm
+    (module
+      (memory (import "m" "mem2") 2)
+    )
+    */
+    const auto wasm_imported_mem = from_hex("0061736d01000000020b01016d046d656d32020002");
+
+    EXPECT_NO_THROW(instantiate(parse(wasm_imported_mem), {}, {}, {*reexported_memory}));
+}
