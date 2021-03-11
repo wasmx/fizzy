@@ -312,7 +312,8 @@ std::optional<uint32_t> find_export(const Module& module, ExternalKind kind, std
 
 }  // namespace
 
-ExecutionResult ExecuteFunction::operator()(Instance& instance, const Value* args, int depth)
+ExecutionResult ExecuteFunction::operator()(
+    Instance& instance, const Value* args, int depth) noexcept
 {
     if (m_instance)
         return execute(*m_instance, m_func_idx, args, depth);
