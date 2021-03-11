@@ -194,6 +194,8 @@ impl Drop for Instance {
 struct HostFunction {
     module: CString,
     name: CString,
+    inputs: Vec<sys::FizzyValueType>,
+    output: sys::FizzyValueType,
     index: usize,
 }
 
@@ -209,10 +211,11 @@ unsafe extern "C" fn host_callback(
 
 fn create_function_import_list(host_functions: &[HostFunction]) -> Vec<sys::FizzyImportedFunction> {
     assert!(host_functions.len() == 1);
+    let host_function = &host_functions[0];
     let fn_type = sys::FizzyFunctionType {
-        output: sys::FizzyValueTypeVoid,
-        inputs: std::ptr::null(),
-        inputs_size: 0,
+        output: host_function.output,
+        inputs: host_function.inputs.as_ptr(),
+        inputs_size: host_function.inputs.len(),
     };
     let ext_fn = sys::FizzyExternalFunction {
         type_: fn_type,
@@ -220,8 +223,8 @@ fn create_function_import_list(host_functions: &[HostFunction]) -> Vec<sys::Fizz
         context: std::ptr::null_mut(),
     };
     vec![sys::FizzyImportedFunction {
-        module: host_functions[0].module.as_ptr(),
-        name: host_functions[0].name.as_ptr(),
+        module: host_function.module.as_ptr(),
+        name: host_function.name.as_ptr(),
         external_function: ext_fn,
     }]
 }
@@ -231,11 +234,15 @@ impl Module {
     // TODO: support imported functions
     pub fn instantiate(self) -> Result<Instance, Error> {
         let mut err = FizzyErrorBox::new();
-        let import_list = create_function_import_list(&[HostFunction {
+        let host_fn1 = HostFunction {
             module: CString::new("env").unwrap(),
             name: CString::new("print").unwrap(),
+            inputs: vec![],
+            output: sys::FizzyValueTypeVoid,
             index: 0,
-        }]);
+        };
+        let import_list = create_function_import_list(&[host_fn1]);
+        println!("{}", import_list.len());
         let ptr = unsafe {
             sys::fizzy_resolve_instantiate(
                 self.0.as_ptr(),
