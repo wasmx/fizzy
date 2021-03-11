@@ -879,6 +879,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
         }
         case Instr::memory_size:
         {
+            assert(memory->size() % PageSize == 0);
             stack.push(static_cast<uint32_t>(memory->size() / PageSize));
             break;
         }
