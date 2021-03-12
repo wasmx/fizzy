@@ -16,6 +16,7 @@ target_sources(
     cxx20_bit_test.cpp
     cxx20_span_test.cpp
     end_to_end_test.cpp
+    execute_call_depth_test.cpp
     execute_call_test.cpp
     execute_control_test.cpp
     execute_death_test.cpp
