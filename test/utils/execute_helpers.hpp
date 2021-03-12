@@ -13,7 +13,7 @@
 namespace fizzy::test
 {
 inline TypedExecutionResult execute(Instance& instance, FuncIdx func_idx,
-    std::initializer_list<TypedValue> typed_args, int depth = 0)
+    std::initializer_list<TypedValue> typed_args, int depth = -1)
 {
     const auto& func_type = instance.module->get_function_type(func_idx);
     const auto [typed_arg_it, type_it] = std::mismatch(std::cbegin(typed_args),

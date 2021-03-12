@@ -57,7 +57,7 @@ ExecutionResult execute(
 /// Execute a function from an instance starting at default depth of 0.
 inline ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args) noexcept
 {
-    const int depth = 0;
+    const int depth = -1;
     return execute(instance, func_idx, args, depth);
 }
 }  // namespace fizzy
