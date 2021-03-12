@@ -49,8 +49,15 @@ constexpr ExecutionResult Trap{false};
 /// @param  args        The pointer to the arguments. The number of items and their types must match
 ///                     the expected number of input parameters of the function, otherwise undefined
 ///                     behaviour (including crash) happens.
-/// @param  depth       The call depth (indexing starts at 0). Can be left at the default setting.
+/// @param  depth       The call depth (indexing starts at 0).
 /// @return             The result of the execution.
 ExecutionResult execute(
-    Instance& instance, FuncIdx func_idx, const Value* args, int depth = 0) noexcept;
+    Instance& instance, FuncIdx func_idx, const Value* args, int depth) noexcept;
+
+/// Execute a function from an instance starting at default depth of 0.
+inline ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args) noexcept
+{
+    const int depth = 0;
+    return execute(instance, func_idx, args, depth);
+}
 }  // namespace fizzy
