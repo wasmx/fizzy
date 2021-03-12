@@ -24,7 +24,6 @@
 //!         .execute(
 //!             "sum",
 //!             &[fizzy::TypedValue::U32(42), fizzy::TypedValue::U32(24)],
-//!             0,
 //!         )
 //!         .expect("execution failed");
 //!     let result = result
@@ -383,18 +382,11 @@ impl Instance {
     ///
     /// An invalid index, invalid inputs, or invalid depth can cause undefined behaviour.
     ///
-    /// The `depth` argument sets the initial call depth. Should be set to `0`.
-    ///
     /// # Safety
-    /// This function expects a valid `func_idx`, appropriate number of `args`, and valid `depth`.
-    pub unsafe fn unsafe_execute(
-        &mut self,
-        func_idx: u32,
-        args: &[Value],
-        depth: i32,
-    ) -> ExecutionResult {
+    /// This function expects a valid `func_idx` and appropriate number of `args`.
+    pub unsafe fn unsafe_execute(&mut self, func_idx: u32, args: &[Value]) -> ExecutionResult {
         ExecutionResult {
-            0: sys::fizzy_execute(self.0.as_ptr(), func_idx, args.as_ptr(), depth),
+            0: sys::fizzy_execute(self.0.as_ptr(), func_idx, args.as_ptr()),
         }
     }
 
@@ -408,14 +400,11 @@ impl Instance {
     ///
     /// An error is returned if the function can not be found, inappropriate number of arguments are passed,
     /// or the supplied types are mismatching.
-    ///
-    /// The `depth` argument sets the initial call depth. Should be set to `0`.
     // TODO: consider different approach: Result<TypedValue, Error> where Error::Trap is used for traps
     pub fn execute(
         &mut self,
         name: &str,
         args: &[TypedValue],
-        depth: i32,
     ) -> Result<TypedExecutionResult, String> {
         let func_idx = self.find_exported_function_index(&name);
         if func_idx.is_none() {
@@ -439,7 +428,7 @@ impl Instance {
         // Translate to untyped raw values.
         let args: Vec<Value> = args.iter().map(|v| v.into()).collect();
 
-        let ret = unsafe { self.unsafe_execute(func_idx, &args, depth) };
+        let ret = unsafe { self.unsafe_execute(func_idx, &args) };
         Ok(TypedExecutionResult {
             result: ret.0,
             value_type: func_type.output,
@@ -726,29 +715,29 @@ mod tests {
         assert!(instance.is_ok());
         let mut instance = instance.unwrap();
 
-        let result = unsafe { instance.unsafe_execute(0, &[], 0) };
+        let result = unsafe { instance.unsafe_execute(0, &[]) };
         assert!(!result.trapped());
         assert!(!result.value().is_some());
 
-        let result = unsafe { instance.unsafe_execute(1, &[], 0) };
+        let result = unsafe { instance.unsafe_execute(1, &[]) };
         assert!(!result.trapped());
         assert!(result.value().is_some());
         assert_eq!(result.value().unwrap().as_i32(), 42);
 
         // Explicit type specification
         let result =
-            unsafe { instance.unsafe_execute(2, &[(42 as i32).into(), (2 as i32).into()], 0) };
+            unsafe { instance.unsafe_execute(2, &[(42 as i32).into(), (2 as i32).into()]) };
         assert!(!result.trapped());
         assert!(result.value().is_some());
         assert_eq!(result.value().unwrap().as_i32(), 21);
 
         // Implicit i64 types (even though the code expects i32)
-        let result = unsafe { instance.unsafe_execute(2, &[42.into(), 2.into()], 0) };
+        let result = unsafe { instance.unsafe_execute(2, &[42.into(), 2.into()]) };
         assert!(!result.trapped());
         assert!(result.value().is_some());
         assert_eq!(result.value().unwrap().as_i32(), 21);
 
-        let result = unsafe { instance.unsafe_execute(3, &[], 0) };
+        let result = unsafe { instance.unsafe_execute(3, &[]) };
         assert!(result.trapped());
         assert!(!result.value().is_some());
     }
@@ -776,7 +765,7 @@ mod tests {
         let mut instance = instance.unwrap();
 
         // Successful execution.
-        let result = instance.execute("foo", &[], 0);
+        let result = instance.execute("foo", &[]);
         assert!(result.is_ok());
         let result = result.unwrap();
         assert!(!result.trapped());
@@ -784,7 +773,7 @@ mod tests {
         assert_eq!(result.value().unwrap().as_u32().unwrap(), 42);
 
         // Successful execution with arguments.
-        let result = instance.execute("bar", &[TypedValue::U32(42), TypedValue::U64(24)], 0);
+        let result = instance.execute("bar", &[TypedValue::U32(42), TypedValue::U64(24)]);
         assert!(result.is_ok());
         let result = result.unwrap();
         assert!(!result.trapped());
@@ -792,7 +781,7 @@ mod tests {
         assert_eq!(result.value().unwrap().as_u32().unwrap(), 66);
 
         // Successful execution with 32-bit float argument.
-        let result = instance.execute("pi32", &[TypedValue::F32(0.5)], 0);
+        let result = instance.execute("pi32", &[TypedValue::F32(0.5)]);
         assert!(result.is_ok());
         let result = result.unwrap();
         assert!(!result.trapped());
@@ -800,7 +789,7 @@ mod tests {
         assert_eq!(result.value().unwrap().as_f32().unwrap(), 0.15923566);
 
         // Successful execution with 64-bit float argument.
-        let result = instance.execute("pi64", &[TypedValue::F64(0.5)], 0);
+        let result = instance.execute("pi64", &[TypedValue::F64(0.5)]);
         assert!(result.is_ok());
         let result = result.unwrap();
         assert!(!result.trapped());
@@ -811,23 +800,23 @@ mod tests {
         );
 
         // Non-function export.
-        let result = instance.execute("g1", &[], 0);
+        let result = instance.execute("g1", &[]);
         assert_eq!(result.err().unwrap(), "function not found");
 
         // Export not found.
-        let result = instance.execute("baz", &[], 0);
+        let result = instance.execute("baz", &[]);
         assert_eq!(result.err().unwrap(), "function not found");
 
         // Passing more arguments than required.
-        let result = instance.execute("foo", &[TypedValue::U32(42)], 0);
+        let result = instance.execute("foo", &[TypedValue::U32(42)]);
         assert_eq!(result.err().unwrap(), "argument count mismatch");
 
         // Passing less arguments than required.
-        let result = instance.execute("bar", &[], 0);
+        let result = instance.execute("bar", &[]);
         assert_eq!(result.err().unwrap(), "argument count mismatch");
 
         // Passing mismatched types.
-        let result = instance.execute("bar", &[TypedValue::F32(1.0), TypedValue::F64(2.0)], 0);
+        let result = instance.execute("bar", &[TypedValue::F32(1.0), TypedValue::F64(2.0)]);
         assert_eq!(result.err().unwrap(), "argument type mismatch");
     }
 
@@ -1067,7 +1056,7 @@ mod tests {
 
         // Grow with a single page.
         let result = instance
-            .execute("grow", &[TypedValue::U32(1)], 0)
+            .execute("grow", &[TypedValue::U32(1)])
             .expect("successful execution");
         assert!(!result.trapped());
         assert_eq!(
@@ -1101,7 +1090,7 @@ mod tests {
             assert_eq!(mem[3], 0);
         }
         let result = instance
-            .execute("peek", &[TypedValue::U32(0)], 0)
+            .execute("peek", &[TypedValue::U32(0)])
             .expect("successful execution");
         assert!(!result.trapped());
         assert_eq!(
@@ -1164,7 +1153,7 @@ mod tests {
         );
 
         let result = instance
-            .execute("peek", &[TypedValue::U32(0)], 0)
+            .execute("peek", &[TypedValue::U32(0)])
             .expect("successful execution");
         assert!(!result.trapped());
         assert_eq!(
@@ -1178,11 +1167,7 @@ mod tests {
 
         // Change memory via wasm.
         let result = instance
-            .execute(
-                "poke",
-                &[TypedValue::U32(0), TypedValue::U32(0x88776655)],
-                0,
-            )
+            .execute("poke", &[TypedValue::U32(0), TypedValue::U32(0x88776655)])
             .expect("successful execution");
         assert!(!result.trapped());
 
