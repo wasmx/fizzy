@@ -42,7 +42,7 @@ macro(cable_set_build_type)
             endif()
             message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
         endif()
-    elseif(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)  # After the main project().
+    elseif(PROJECT_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)  # After the main project().
         message(FATAL_ERROR "cable_set_build_type() must be used before project()")
     endif()  # Sub-project - silently ignore.
 endmacro()
