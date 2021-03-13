@@ -564,13 +564,22 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
 {
     assert(depth >= -1);
 
-    // Clain new call depth level.
-    ++depth;
-    if (depth >= CallStackLimit)
-        return Trap;
-
     assert(instance.module->imported_function_types.size() == instance.imported_functions.size());
-    if (func_idx < instance.imported_functions.size())
+
+    const auto is_imported = func_idx < instance.imported_functions.size();
+    const auto is_imported_host_function =
+        is_imported &&
+        (instance.imported_functions[func_idx].function.get_host_function() != nullptr);
+
+    // Clain new call depth level for "execute_impl" or for imported host function.
+    if (!is_imported || is_imported_host_function)
+    {
+        ++depth;
+        if (depth >= CallStackLimit)
+            return Trap;
+    }
+
+    if (is_imported)
         return instance.imported_functions[func_idx].function(instance, args, depth);
 
     return execute_impl(instance, func_idx, args, depth);

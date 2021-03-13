@@ -835,8 +835,8 @@ TEST(execute_call, call_max_depth)
 
     auto instance = instantiate(parse(bin));
 
-    EXPECT_THAT(execute(*instance, 0, {}, TestCallStackLimit - 1), Result(42));
-    EXPECT_THAT(execute(*instance, 1, {}, TestCallStackLimit - 1), Traps());
+    EXPECT_THAT(execute(*instance, 0, {}, TestCallStackLimit - 2), Result(42));
+    EXPECT_THAT(execute(*instance, 1, {}, TestCallStackLimit - 2), Traps());
 }
 
 TEST(execute_call, execute_imported_max_depth)
@@ -858,10 +858,10 @@ TEST(execute_call, execute_imported_max_depth)
 
     auto instance = instantiate(std::move(module), {{{host_foo}, host_foo_type}});
 
-    EXPECT_THAT(execute(*instance, 0, {}, TestCallStackLimit - 1), Result());
-    EXPECT_THAT(execute(*instance, 1, {}, TestCallStackLimit - 1), Result());
-    EXPECT_THAT(execute(*instance, 0, {}, TestCallStackLimit), Traps());
-    EXPECT_THAT(execute(*instance, 1, {}, TestCallStackLimit), Traps());
+    EXPECT_THAT(execute(*instance, 0, {}, TestCallStackLimit - 2), Result());
+    EXPECT_THAT(execute(*instance, 1, {}, TestCallStackLimit - 2), Result());
+    EXPECT_THAT(execute(*instance, 0, {}, TestCallStackLimit - 1), Traps());
+    EXPECT_THAT(execute(*instance, 1, {}, TestCallStackLimit - 1), Traps());
 }
 
 TEST(execute_call, imported_function_from_another_module_max_depth)
@@ -895,7 +895,7 @@ TEST(execute_call, imported_function_from_another_module_max_depth)
     constexpr auto sub = [](std::any& host_context, Instance&, const Value* args,
                              int depth) noexcept {
         auto [inst1, idx] = *std::any_cast<std::pair<Instance*, FuncIdx>>(&host_context);
-        return fizzy::execute(*inst1, idx, args, depth + 1);
+        return fizzy::execute(*inst1, idx, args, depth);
     };
 
     auto host_context = std::make_any<std::pair<Instance*, FuncIdx>>(instance1.get(), *func_idx);
@@ -903,8 +903,8 @@ TEST(execute_call, imported_function_from_another_module_max_depth)
     auto instance2 = instantiate(
         std::move(module2), {{{sub, std::move(host_context)}, instance1->module->typesec[0]}});
 
-    EXPECT_THAT(execute(*instance2, 2, {}, TestCallStackLimit - 1 - 1), Traps());
-    EXPECT_THAT(execute(*instance2, 3, {}, TestCallStackLimit - 1 - 1), Result());
+    EXPECT_THAT(execute(*instance2, 2, {}, TestCallStackLimit - 3), Traps());
+    EXPECT_THAT(execute(*instance2, 3, {}, TestCallStackLimit - 3), Result());
 }
 
 TEST(execute_call, count_calls_to_imported_function)
@@ -976,7 +976,7 @@ TEST(execute_call, call_imported_infinite_recursion)
     constexpr auto host_foo = [](std::any&, Instance& instance, const Value* args,
                                   int depth) noexcept {
         ++counter;
-        return execute(instance, 0, args, depth + 1);
+        return execute(instance, 0, args, depth);
     };
     const auto host_foo_type = module->typesec[0];
 
@@ -1009,7 +1009,7 @@ TEST(execute_call, call_imported_interleaved_infinite_recursion)
         // Function $f will increase depth. This means each iteration goes 2 steps deeper.
         EXPECT_LT(depth, CallStackLimit);
         ++counter;
-        return execute(instance, 1, args, depth + 1);
+        return execute(instance, 1, args, depth);
     };
     const auto host_foo_type = module->typesec[0];
 
@@ -1038,7 +1038,7 @@ TEST(execute_call, call_imported_max_depth_recursion)
                                   int depth) noexcept -> ExecutionResult {
         if (depth == TestCallStackLimit - 1)
             return Value{uint32_t{1}};  // Terminate recursion on the max depth.
-        return execute(instance, 0, args, depth + 1);
+        return execute(instance, 0, args, depth);
     };
     const auto host_foo_type = module->typesec[0];
 
@@ -1064,7 +1064,7 @@ TEST(execute_call, call_via_imported_max_depth_recursion)
         // Function $f will increase depth. This means each iteration goes 2 steps deeper.
         if (depth == TestCallStackLimit - 1)
             return Value{uint32_t{1}};  // Terminate recursion on the max depth.
-        return execute(instance, 1, args, depth + 1);
+        return execute(instance, 1, args, depth);
     };
     const auto host_foo_type = module->typesec[0];
 
