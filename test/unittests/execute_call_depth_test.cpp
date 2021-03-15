@@ -85,7 +85,7 @@ TEST(execute_call_depth, execute_imported_host_function)
 TEST(execute_call_depth, execute_imported_host_function_calling_wasm_function)
 {
     // The imported host function $host_f is executed first. It then calls $leaf internal wasm
-    // function. The host function is obligated to bump depth and pass it along.
+    // function. The host function does not bump the call depth.
 
     /* wat2wasm
     (func $host_f (import "host" "f") (result i32))
@@ -97,7 +97,7 @@ TEST(execute_call_depth, execute_imported_host_function_calling_wasm_function)
     static int recorded_depth;
     constexpr auto host_f = [](std::any&, Instance& instance, const Value*, int depth) noexcept {
         recorded_depth = depth;
-        return fizzy::execute(instance, 1, {}, depth + 1);
+        return fizzy::execute(instance, 1, {}, depth);
     };
 
     const auto module = parse(wasm);
@@ -111,8 +111,9 @@ TEST(execute_call_depth, execute_imported_host_function_calling_wasm_function)
     EXPECT_THAT(execute(*instance, 0, {}, DepthLimit - 2), Result(1_u32));
     EXPECT_EQ(recorded_depth, DepthLimit - 2);
 
+    // Host function is not included in the depth limit, so 1 slot is enough.
     recorded_depth = -1000;
-    EXPECT_THAT(execute(*instance, 0, {}, DepthLimit - 1), Traps());
+    EXPECT_THAT(execute(*instance, 0, {}, DepthLimit - 1), Result(1_u32));
     EXPECT_EQ(recorded_depth, DepthLimit - 1);
 
     recorded_depth = -1000;
