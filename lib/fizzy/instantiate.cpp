@@ -121,9 +121,9 @@ void match_imported_memories(const std::vector<Memory>& module_imported_memories
 
         const auto min = imported_memories[0].limits.min;
         const auto& max = imported_memories[0].limits.max;
-        if (size < memory_pages_to_bytes(min) ||
+        if (size != memory_pages_to_bytes(min) ||
             (max.has_value() && size > memory_pages_to_bytes(*max)))
-            throw instantiate_error{"provided imported memory doesn't fit provided limits"};
+            throw instantiate_error{"provided imported memory size must be equal to its min limit"};
     }
 }
 
