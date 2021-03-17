@@ -177,6 +177,10 @@ TEST(instantiate, imported_table_invalid)
     EXPECT_THROW_MESSAGE(instantiate(*module, {}, {{&table, {10, std::nullopt}}}),
         instantiate_error, "provided import's max is above import's max defined in module");
 
+    // Provided limits have max less than min
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {{&table, {10, 0}}}), instantiate_error,
+        "provided imported table doesn't fit provided limits");
+
     // Null pointer
     EXPECT_THROW_MESSAGE(instantiate(*module, {}, {{nullptr, {10, 30}}}), instantiate_error,
         "provided imported table has a null pointer to data");
@@ -282,6 +286,10 @@ TEST(instantiate, imported_memory_invalid)
     // Provided max is unlimited
     EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{&memory, {1, std::nullopt}}}),
         instantiate_error, "provided import's max is above import's max defined in module");
+
+    // Provided limits have max less than min
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{&memory, {1, 0}}}), instantiate_error,
+        "provided imported memory doesn't fit provided limits");
 
     // Null pointer
     EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{nullptr, {1, 3}}}), instantiate_error,
