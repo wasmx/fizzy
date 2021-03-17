@@ -54,6 +54,10 @@ typedef struct FizzyExecutionResult
 /// @param  args        Pointer to the argument array. Can be NULL iff function has no inputs.
 /// @param  depth       Call stack depth.
 /// @return             Result of execution.
+///
+/// @note
+/// External functions implemented in C++ must be non-throwing, i.e. the effect of any exception
+/// escaping the function is std::terminate being called.
 typedef FizzyExecutionResult (*FizzyExternalFn)(
     void* context, FizzyInstance* instance, const FizzyValue* args, int depth);
 

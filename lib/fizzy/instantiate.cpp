@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "instantiate.hpp"
-#include "execute.hpp"  // needed for table elements initialization
+#include "execute.hpp"  // needed for implementation of ExecuteFunction for Wasm functions
 #include <algorithm>
 #include <cassert>
 #include <cstring>
