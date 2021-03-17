@@ -40,6 +40,9 @@ void match_imported_functions(const std::vector<FuncType>& module_imported_types
 
 void match_limits(const Limits& external_limits, const Limits& module_limits)
 {
+    if (external_limits.max.has_value() && external_limits.min > *external_limits.max)
+        throw instantiate_error{"provided import's min limit is above import's max limit"};
+
     if (external_limits.min < module_limits.min)
         throw instantiate_error{"provided import's min is below import's min defined in module"};
 

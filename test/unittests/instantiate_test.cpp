@@ -179,7 +179,7 @@ TEST(instantiate, imported_table_invalid)
 
     // Provided limits have max less than min
     EXPECT_THROW_MESSAGE(instantiate(*module, {}, {{&table, {10, 0}}}), instantiate_error,
-        "provided imported table doesn't fit provided limits");
+        "provided import's min limit is above import's max limit");
 
     // Null pointer
     EXPECT_THROW_MESSAGE(instantiate(*module, {}, {{nullptr, {10, 30}}}), instantiate_error,
@@ -289,7 +289,7 @@ TEST(instantiate, imported_memory_invalid)
 
     // Provided limits have max less than min
     EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{&memory, {1, 0}}}), instantiate_error,
-        "provided imported memory doesn't fit provided limits");
+        "provided import's min limit is above import's max limit");
 
     // Null pointer
     EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{nullptr, {1, 3}}}), instantiate_error,
