@@ -8,6 +8,24 @@
 
 namespace fizzy::wasi
 {
+/// WASI error code.
+/// @todo Make it [[nodiscard]].
+using error_code = uint16_t;
+
+/// WASI interface.
+class WASI
+{
+public:
+    virtual ~WASI() noexcept = 0;
+
+    virtual error_code init(int argc, const char* argv[]) noexcept = 0;
+
+    virtual error_code proc_exit(uint32_t exit_code) noexcept = 0;
+
+    virtual error_code fd_write(uint8_t* memory, uint32_t fd, uint32_t iov_ptr, uint32_t iov_cnt,
+        uint32_t nwritten_ptr) noexcept = 0;
+};
+
 /// Loads a binary file at the given path.
 ///
 /// @param  file    Path to the file.

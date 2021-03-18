@@ -6,7 +6,6 @@
 #include "execute.hpp"
 #include "limits.hpp"
 #include "parser.hpp"
-#include <uvwasi.h>
 #include <cassert>
 #include <filesystem>
 #include <fstream>
@@ -16,10 +15,7 @@ namespace fizzy::wasi
 {
 namespace
 {
-// Global state.
-// NOTE: we do not care about uvwasi_destroy(), because it only clears file descriptors (currently)
-// and we are a single-run tool. This may change in the future and should reevaluate.
-uvwasi_t state;
+WASI* wasi_impl = nullptr;
 
 ExecutionResult return_enosys(std::any&, Instance&, const Value*, ExecutionContext&) noexcept
 {
@@ -28,9 +24,9 @@ ExecutionResult return_enosys(std::any&, Instance&, const Value*, ExecutionConte
 
 ExecutionResult proc_exit(std::any&, Instance&, const Value* args, ExecutionContext&) noexcept
 {
-    uvwasi_proc_exit(&state, static_cast<uvwasi_exitcode_t>(args[0].as<uint32_t>()));
-    // Should not reach this.
-    return Trap;
+    // TODO: Handle error code.
+    wasi_impl->proc_exit(args[0].as<uint32_t>());
+    return Trap;  // Should never be reached.
 }
 
 ExecutionResult fd_write(
@@ -40,6 +36,7 @@ ExecutionResult fd_write(
     const auto iov_ptr = args[1].as<uint32_t>();
     const auto iov_cnt = args[2].as<uint32_t>();
     const auto nwritten_ptr = args[3].as<uint32_t>();
+
 
     std::vector<uvwasi_ciovec_t> iovs(iov_cnt);
     // TODO: not sure what to pass as end, passing memory size...
@@ -152,16 +149,6 @@ bool run(bytes_view wasm_binary, int argc, const char* argv[], std::ostream& err
         {ns, "environ_get", {ValType::i32, ValType::i32}, ValType::i32, return_enosys},
     };
 
-    // Initialisation settings.
-    // TODO: Make const after https://github.com/nodejs/uvwasi/pull/155 is merged.
-    uvwasi_options_t options = {
-        3,           // sizeof fd_table
-        0, nullptr,  // NOTE: no remappings
-        static_cast<uvwasi_size_t>(argc), argv,
-        nullptr,  // TODO: support env
-        0, 1, 2,
-        nullptr,  // NOTE: no special allocator
-    };
 
     const uvwasi_errno_t uvwasi_err = uvwasi_init(&state, &options);
     if (uvwasi_err != UVWASI_ESUCCESS)
