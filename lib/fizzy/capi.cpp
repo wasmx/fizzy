@@ -588,9 +588,9 @@ size_t fizzy_get_instance_memory_size(FizzyInstance* instance)
 }
 
 FizzyExecutionResult fizzy_execute(
-    FizzyInstance* instance, uint32_t func_idx, const FizzyValue* args, int depth)
+    FizzyInstance* instance, uint32_t func_idx, const FizzyValue* args)
 {
-    const auto result = fizzy::execute(*unwrap(instance), func_idx, unwrap(args), depth);
+    const auto result = fizzy::execute(*unwrap(instance), func_idx, unwrap(args));
     return wrap(result);
 }
 }
