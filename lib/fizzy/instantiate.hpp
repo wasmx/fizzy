@@ -20,6 +20,7 @@
 namespace fizzy
 {
 struct ExecutionResult;
+class ExecutionContext;
 struct Instance;
 
 /// Function pointer to the execution function.
