@@ -341,7 +341,9 @@ TEST(execute_call, imported_function_call)
     const auto module = parse(wasm);
 
     constexpr auto host_foo = [](std::any&, Instance&, const Value*,
-                                  int) noexcept -> ExecutionResult { return Value{42}; };
+                                  ExecutionContext&) noexcept -> ExecutionResult {
+        return Value{42};
+    };
     const auto& host_foo_type = module->typesec[0];
 
     auto instance = instantiate(*module, {{{host_foo}, host_foo_type}});
@@ -363,7 +365,7 @@ TEST(execute_call, imported_function_call_void)
     const auto module = parse(wasm);
 
     static bool called = false;
-    constexpr auto host_foo = [](std::any&, Instance&, const Value*, int) noexcept {
+    constexpr auto host_foo = [](std::any&, Instance&, const Value*, ExecutionContext&) noexcept {
         called = true;
         return Void;
     };
@@ -392,7 +394,7 @@ TEST(execute_call, imported_function_call_with_arguments)
     const auto module = parse(wasm);
 
     constexpr auto host_foo = [](std::any&, Instance&, const Value* args,
-                                  int) noexcept -> ExecutionResult {
+                                  ExecutionContext&) noexcept -> ExecutionResult {
         return Value{args[0].i32 * 2};
     };
     const auto host_foo_type = module->typesec[0];
@@ -437,12 +439,12 @@ TEST(execute_call, imported_functions_call_indirect)
     ASSERT_EQ(module->codesec.size(), 2);
 
     constexpr auto sqr = [](std::any&, Instance&, const Value* args,
-                             int) noexcept -> ExecutionResult {
+                             ExecutionContext&) noexcept -> ExecutionResult {
         const auto x = args[0].i32;
         return Value{uint64_t{x} * uint64_t{x}};
     };
     constexpr auto isqrt = [](std::any&, Instance&, const Value* args,
-                               int) noexcept -> ExecutionResult {
+                               ExecutionContext&) noexcept -> ExecutionResult {
         const auto x = args[0].i32;
         return Value{(11 + uint64_t{x} / 11) / 2};
     };
@@ -566,9 +568,9 @@ TEST(execute_call, imported_function_from_another_module_via_host_function)
     ASSERT_TRUE(func_idx.has_value());
 
     constexpr auto sub = [](std::any& host_context, Instance&, const Value* args,
-                             int depth) noexcept {
+                             ExecutionContext& ctx) noexcept {
         auto [inst1, idx] = *std::any_cast<std::pair<Instance*, FuncIdx>>(&host_context);
-        return fizzy::execute(*inst1, idx, args, depth);
+        return fizzy::execute(*inst1, idx, args, ctx.depth);
     };
 
     auto host_context = std::make_any<std::pair<Instance*, FuncIdx>>(instance1.get(), *func_idx);
@@ -593,7 +595,8 @@ TEST(execute_call, imported_function_with_context)
 
     const auto module = parse(wasm);
 
-    constexpr auto host_func = [](std::any& host_context, Instance&, const Value*, int) noexcept {
+    constexpr auto host_func = [](std::any& host_context, Instance&, const Value*,
+                                   ExecutionContext&) noexcept {
         ++(**std::any_cast<int*>(&host_context));
         return Void;
     };
@@ -626,12 +629,13 @@ TEST(execute_call, imported_functions_with_shared_context)
 
     const auto module = parse(wasm);
 
-    constexpr auto host_func1 = [](std::any& host_context, Instance&, const Value*, int) noexcept {
+    constexpr auto host_func1 = [](std::any& host_context, Instance&, const Value*,
+                                    ExecutionContext&) noexcept {
         ++(**std::any_cast<uint32_t*>(&host_context));
         return Void;
     };
     constexpr auto host_func2 = [](std::any& host_context, Instance&, const Value*,
-                                    int) noexcept -> ExecutionResult {
+                                    ExecutionContext&) noexcept -> ExecutionResult {
         return Value{**std::any_cast<uint32_t*>(&host_context)};
     };
 
@@ -666,12 +670,13 @@ TEST(execute_call, imported_functions_with_non_shared_context)
 
     const auto module = parse(wasm);
 
-    constexpr auto host_func1 = [](std::any& host_context, Instance&, const Value*, int) noexcept {
+    constexpr auto host_func1 = [](std::any& host_context, Instance&, const Value*,
+                                    ExecutionContext&) noexcept {
         ++(*std::any_cast<uint32_t>(&host_context));
         return Void;
     };
     constexpr auto host_func2 = [](std::any& host_context, Instance&, const Value*,
-                                    int) noexcept -> ExecutionResult {
+                                    ExecutionContext&) noexcept -> ExecutionResult {
         return Value{*std::any_cast<uint32_t>(&host_context)};
     };
 

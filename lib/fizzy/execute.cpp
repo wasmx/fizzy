@@ -559,6 +559,9 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
 
 ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args, int depth) noexcept
 {
+    ExecutionContext ctx;
+    ctx.depth = depth;
+
     assert(depth >= 0);
     if (depth >= CallStackLimit)
         return Trap;
@@ -567,7 +570,7 @@ ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args,
 
     assert(instance.module->imported_function_types.size() == instance.imported_functions.size());
     if (func_idx < instance.imported_functions.size())
-        return instance.imported_functions[func_idx].function(instance, args, depth);
+        return instance.imported_functions[func_idx].function(instance, args, ctx);
 
     const auto& code = instance.module->get_code(func_idx);
     auto* const memory = instance.memory.get();

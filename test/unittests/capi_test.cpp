@@ -330,7 +330,9 @@ TEST(capi, find_exported_function)
     EXPECT_EQ(function.type.output, FizzyValueTypeI32);
     EXPECT_NE(function.context, nullptr);
     ASSERT_NE(function.function, nullptr);
-    EXPECT_THAT(function.function(function.context, instance, nullptr, 0), CResult(42_u32));
+    fizzy::ExecutionContext ctx;
+    auto* const c_ctx = reinterpret_cast<FizzyExecutionContext*>(&ctx);
+    EXPECT_THAT(function.function(function.context, instance, nullptr, c_ctx), CResult(42_u32));
 
     fizzy_free_exported_function(&function);
 
@@ -696,7 +698,8 @@ TEST(capi, resolve_instantiate_functions)
     module = fizzy_parse(wasm.data(), wasm.size());
     ASSERT_NE(module, nullptr);
 
-    FizzyExternalFn host_fn = [](void* context, FizzyInstance*, const FizzyValue*, int) {
+    FizzyExternalFn host_fn = [](void* context, FizzyInstance*, const FizzyValue*,
+                                  FizzyExecutionContext*) {
         return FizzyExecutionResult{false, true, *static_cast<FizzyValue*>(context)};
     };
 
@@ -764,7 +767,7 @@ TEST(capi, resolve_instantiate_function_duplicate)
     auto module = fizzy_parse(wasm.data(), wasm.size());
     ASSERT_NE(module, nullptr);
 
-    FizzyExternalFn host_fn = [](void*, FizzyInstance*, const FizzyValue*, int) {
+    FizzyExternalFn host_fn = [](void*, FizzyInstance*, const FizzyValue*, FizzyExecutionContext*) {
         return FizzyExecutionResult{false, true, FizzyValue{42}};
     };
 
@@ -805,7 +808,7 @@ TEST(capi, resolve_instantiate_globals)
     module = fizzy_parse(wasm.data(), wasm.size());
     ASSERT_NE(module, nullptr);
 
-    FizzyExternalFn host_fn = [](void*, FizzyInstance*, const FizzyValue*, int) {
+    FizzyExternalFn host_fn = [](void*, FizzyInstance*, const FizzyValue*, FizzyExecutionContext*) {
         return FizzyExecutionResult{true, false, {0}};
     };
     FizzyImportedFunction mod1foo1 = {
@@ -1096,13 +1099,14 @@ TEST(capi, execute_with_host_function)
 
     const FizzyValueType inputs[] = {FizzyValueTypeI32, FizzyValueTypeI32};
 
-    FizzyExternalFunction host_funcs[] = {{{FizzyValueTypeI32, nullptr, 0},
-                                              [](void*, FizzyInstance*, const FizzyValue*, int) {
-                                                  return FizzyExecutionResult{false, true, {42}};
-                                              },
-                                              nullptr},
+    FizzyExternalFunction host_funcs[] = {
+        {{FizzyValueTypeI32, nullptr, 0},
+            [](void*, FizzyInstance*, const FizzyValue*, FizzyExecutionContext*) {
+                return FizzyExecutionResult{false, true, {42}};
+            },
+            nullptr},
         {{FizzyValueTypeI32, &inputs[0], 2},
-            [](void*, FizzyInstance*, const FizzyValue* args, int) {
+            [](void*, FizzyInstance*, const FizzyValue* args, FizzyExecutionContext*) {
                 FizzyValue v;
                 v.i32 = args[0].i32 / args[1].i32;
                 return FizzyExecutionResult{false, true, {v}};
@@ -1134,7 +1138,7 @@ TEST(capi, imported_function_traps)
     ASSERT_NE(module, nullptr);
 
     FizzyExternalFunction host_funcs[] = {{{FizzyValueTypeI32, nullptr, 0},
-        [](void*, FizzyInstance*, const FizzyValue*, int) {
+        [](void*, FizzyInstance*, const FizzyValue*, FizzyExecutionContext*) {
             return FizzyExecutionResult{true, false, {}};
         },
         nullptr}};
@@ -1162,7 +1166,7 @@ TEST(capi, imported_function_void)
 
     bool called = false;
     FizzyExternalFunction host_funcs[] = {{{},
-        [](void* context, FizzyInstance*, const FizzyValue*, int) {
+        [](void* context, FizzyInstance*, const FizzyValue*, FizzyExecutionContext*) {
             *static_cast<bool*>(context) = true;
             return FizzyExecutionResult{false, false, {}};
         },

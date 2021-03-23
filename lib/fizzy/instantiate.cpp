@@ -313,12 +313,12 @@ std::optional<uint32_t> find_export(const Module& module, ExternalKind kind, std
 }  // namespace
 
 ExecutionResult ExecuteFunction::operator()(
-    Instance& instance, const Value* args, int depth) noexcept
+    Instance& instance, const Value* args, ExecutionContext& ctx) noexcept
 {
     if (m_instance)
-        return execute(*m_instance, m_func_idx, args, depth);
+        return execute(*m_instance, m_func_idx, args, ctx.depth);
     else
-        return m_host_function(m_host_context, instance, args, depth);
+        return m_host_function(m_host_context, instance, args, ctx);
 }
 
 std::unique_ptr<Instance> instantiate(std::unique_ptr<const Module> module,

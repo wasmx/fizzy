@@ -25,7 +25,7 @@ struct Instance;
 
 /// Function pointer to the execution function.
 using HostFunctionPtr = ExecutionResult (*)(
-    std::any& host_context, Instance&, const Value* args, int depth) noexcept;
+    std::any& host_context, Instance&, const Value* args, ExecutionContext& ctx) noexcept;
 
 /// Function representing either WebAssembly or host function execution.
 class ExecuteFunction
@@ -64,7 +64,8 @@ public:
     {}
 
     /// Function call operator.
-    ExecutionResult operator()(Instance& instance, const Value* args, int depth) noexcept;
+    ExecutionResult operator()(
+        Instance& instance, const Value* args, ExecutionContext& ctx) noexcept;
 
     /// Function pointer stored inside this object.
     HostFunctionPtr get_host_function() const noexcept { return m_host_function; }

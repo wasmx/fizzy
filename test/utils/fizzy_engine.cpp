@@ -28,8 +28,8 @@ public:
 
 namespace
 {
-fizzy::ExecutionResult env_adler32(
-    std::any&, fizzy::Instance& instance, const fizzy::Value* args, int) noexcept
+fizzy::ExecutionResult env_adler32(std::any&, fizzy::Instance& instance, const fizzy::Value* args,
+    fizzy::ExecutionContext&) noexcept
 {
     assert(instance.memory != nullptr);
     const auto ret = fizzy::test::adler32(
