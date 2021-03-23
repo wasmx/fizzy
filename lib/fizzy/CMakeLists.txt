@@ -10,6 +10,7 @@ target_include_directories(fizzy PUBLIC ${FIZZY_INCLUDE_DIR})
 target_sources(
     fizzy PRIVATE
     ${FIZZY_INCLUDE_DIR}/fizzy/fizzy.h
+    ${FIZZY_INCLUDE_DIR}/fizzy/fizzy_errors.h
     asserts.cpp
     asserts.hpp
     cxx20/bit.hpp

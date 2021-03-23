@@ -6,6 +6,7 @@
 
 namespace fizzy
 {
+exception::~exception() noexcept = default;
 parser_error::~parser_error() noexcept = default;
 validation_error::~validation_error() noexcept = default;
 instantiate_error::~instantiate_error() noexcept = default;
