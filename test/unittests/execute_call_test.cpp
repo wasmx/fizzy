@@ -570,7 +570,7 @@ TEST(execute_call, imported_function_from_another_module_via_host_function)
     constexpr auto sub = [](std::any& host_context, Instance&, const Value* args,
                              ExecutionContext& ctx) noexcept {
         auto [inst1, idx] = *std::any_cast<std::pair<Instance*, FuncIdx>>(&host_context);
-        return fizzy::execute(*inst1, idx, args, ctx.depth);
+        return fizzy::execute(*inst1, idx, args, ctx);
     };
 
     auto host_context = std::make_any<std::pair<Instance*, FuncIdx>>(instance1.get(), *func_idx);

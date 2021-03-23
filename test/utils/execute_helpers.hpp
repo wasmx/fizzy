@@ -31,7 +31,9 @@ inline TypedExecutionResult execute(Instance& instance, FuncIdx func_idx,
     std::transform(std::cbegin(typed_args), std::cend(typed_args), std::begin(args),
         [](const auto& typed_arg) { return typed_arg.value; });
 
-    const auto result = fizzy::execute(instance, func_idx, args.data(), depth);
+    ExecutionContext ctx;
+    ctx.depth = depth;
+    const auto result = fizzy::execute(instance, func_idx, args.data(), ctx);
     assert(func_type.outputs.size() <= 1);
     const auto result_type = func_type.outputs.empty() ? ValType{} : func_type.outputs[0];
     return {result, result_type};

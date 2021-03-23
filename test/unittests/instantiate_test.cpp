@@ -28,7 +28,7 @@ ExecutionResult host_fn_2(std::any&, Instance&, const Value*, ExecutionContext&)
 uint32_t call_table_func(Instance& instance, size_t idx)
 {
     const auto& elem = (*instance.table)[idx];
-    const auto res = execute(*elem.instance, elem.func_idx, {}, 0);
+    const auto res = execute(*elem.instance, elem.func_idx, {});
     EXPECT_TRUE(res.has_value);
     return res.value.i32;
 }

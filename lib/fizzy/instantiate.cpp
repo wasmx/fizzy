@@ -316,7 +316,7 @@ ExecutionResult ExecuteFunction::operator()(
     Instance& instance, const Value* args, ExecutionContext& ctx) noexcept
 {
     if (m_instance)
-        return execute(*m_instance, m_func_idx, args, ctx.depth);
+        return execute(*m_instance, m_func_idx, args, ctx);
     else
         return m_host_function(m_host_context, instance, args, ctx);
 }

@@ -77,16 +77,16 @@ public:
 /// @param  args        The pointer to the arguments. The number of items and their types must match
 ///                     the expected number of input parameters of the function, otherwise undefined
 ///                     behaviour (including crash) happens.
-/// @param  depth       The call depth (indexing starts at 0).
+/// @param  ctx         Execution context.
 /// @return             The result of the execution.
 ExecutionResult execute(
-    Instance& instance, FuncIdx func_idx, const Value* args, int depth) noexcept;
+    Instance& instance, FuncIdx func_idx, const Value* args, ExecutionContext& ctx) noexcept;
 
-/// Execute a function from an instance starting at default depth of 0.
+/// Execute a function from an instance with execution context starting with default depth of 0.
 /// Arguments and behavior is the same as in the other execute().
 inline ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args) noexcept
 {
-    constexpr int depth = 0;
-    return execute(instance, func_idx, args, depth);
+    ExecutionContext ctx;
+    return execute(instance, func_idx, args, ctx);
 }
 }  // namespace fizzy
