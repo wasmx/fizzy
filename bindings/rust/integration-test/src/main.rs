@@ -5,6 +5,6 @@
 extern crate fizzy;
 
 fn main() {
-    assert_eq!(fizzy::validate(&[]), false);
+    assert!(fizzy::validate(&[]).is_ok());
     println!("Fizzy works!");
 }
