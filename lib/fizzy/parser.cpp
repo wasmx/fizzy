@@ -456,7 +456,7 @@ inline parser_result<Data> parse(const uint8_t* pos, const uint8_t* end)
 std::unique_ptr<const Module> parse(bytes_view input)
 {
     if (input.substr(0, wasm_prefix.size()) != wasm_prefix)
-        throw parser_error{"invalid wasm module prefix"};
+        throw parser_error{FIZZY_ERROR_PARSER_INVALID_MODULE_PREFIX, "invalid wasm module prefix"};
 
     input.remove_prefix(wasm_prefix.size());
 

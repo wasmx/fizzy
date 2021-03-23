@@ -104,7 +104,8 @@ TEST(parser, module_empty)
 
 TEST(parser, module_with_wrong_prefix)
 {
-    EXPECT_THROW_MESSAGE(parse({}), parser_error, "invalid wasm module prefix");
+    EXPECT_THROW_CODE_MESSAGE(parse({}), parser_error, FIZZY_ERROR_PARSER_INVALID_MODULE_PREFIX,
+        "invalid wasm module prefix");
     EXPECT_THROW_MESSAGE(parse("006173d6"_bytes), parser_error, "invalid wasm module prefix");
     EXPECT_THROW_MESSAGE(
         parse("006173d600000000"_bytes), parser_error, "invalid wasm module prefix");
