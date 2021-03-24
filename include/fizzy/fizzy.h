@@ -6,6 +6,7 @@
 /// @file
 #pragma once
 
+#include "fizzy_errors.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -13,6 +14,12 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef struct FizzyError
+{
+    FizzyErrorCode code;
+    char message[256];
+} FizzyError;
 
 /// The opaque data type representing a module.
 typedef struct FizzyModule FizzyModule;
@@ -218,7 +225,7 @@ typedef struct FizzyImportedGlobal
 /// @param  wasm_binary         Pointer to module binary data.
 /// @param  wasm_binary_size    Size of the module binary data.
 /// @return                     true if module is valid, false otherwise.
-bool fizzy_validate(const uint8_t* wasm_binary, size_t wasm_binary_size);
+bool fizzy_validate(const uint8_t* wasm_binary, size_t wasm_binary_size, FizzyError* error);
 
 /// Parse binary module.
 ///

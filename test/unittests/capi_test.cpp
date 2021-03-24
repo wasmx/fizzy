@@ -15,9 +15,15 @@ static constexpr FizzyExternalFn NullFn = nullptr;
 TEST(capi, validate)
 {
     uint8_t wasm_prefix[]{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00};
-    EXPECT_TRUE(fizzy_validate(wasm_prefix, sizeof(wasm_prefix)));
+    FizzyError error;
+    EXPECT_TRUE(fizzy_validate(wasm_prefix, sizeof(wasm_prefix), &error));
+    EXPECT_EQ(error.code, FIZZY_SUCCESS);
+    EXPECT_STREQ(error.message, "");
+
     wasm_prefix[7] = 1;
-    EXPECT_FALSE(fizzy_validate(wasm_prefix, sizeof(wasm_prefix)));
+    EXPECT_FALSE(fizzy_validate(wasm_prefix, sizeof(wasm_prefix), &error));
+    EXPECT_EQ(error.code, FIZZY_ERROR_PARSER_INVALID_MODULE_PREFIX);
+    EXPECT_STREQ(error.message, "invalid wasm module prefix");
 }
 
 TEST(capi, parse)

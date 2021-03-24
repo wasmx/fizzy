@@ -11,6 +11,24 @@
 
 namespace
 {
+inline void set_success(FizzyError* error) noexcept
+{
+    if (error != nullptr)
+    {
+        error->code = FIZZY_SUCCESS;
+        error->message[0] = '\0';
+    }
+}
+
+inline void set_error(FizzyErrorCode code, const char* message, FizzyError* error) noexcept
+{
+    if (error != nullptr)
+    {
+        error->code = code;
+        snprintf(error->message, std::size(error->message), "%s", message);
+    }
+}
+
 inline const FizzyModule* wrap(const fizzy::Module* module) noexcept
 {
     return reinterpret_cast<const FizzyModule*>(module);
@@ -343,15 +361,22 @@ inline FizzyExportDescription wrap(const fizzy::Export& exp) noexcept
 }  // namespace
 
 extern "C" {
-bool fizzy_validate(const uint8_t* wasm_binary, size_t wasm_binary_size)
+bool fizzy_validate(const uint8_t* wasm_binary, size_t wasm_binary_size, FizzyError* error)
 {
     try
     {
         fizzy::parse({wasm_binary, wasm_binary_size});
+        set_success(error);
         return true;
     }
-    catch (...)
+    catch (const fizzy::exception& e)
     {
+        set_error(e.code, e.what(), error);
+        return false;
+    }
+    catch (const std::exception& e)
+    {
+        set_error(FIZZY_ERROR_OTHER, e.what(), error);
         return false;
     }
 }
