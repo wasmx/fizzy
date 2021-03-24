@@ -37,8 +37,52 @@
 
 mod sys;
 
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::ptr::NonNull;
+
+/// A safe container for handling the low-level FizzyError struct.
+struct FizzyErrorBox(Box<sys::FizzyError>);
+
+impl FizzyErrorBox {
+    /// Create a safe, boxed, and zero initialised container.
+    fn new() -> Self {
+        FizzyErrorBox {
+            0: Box::new(sys::FizzyError {
+                code: 0,
+                message: [0i8; 256],
+            }),
+        }
+    }
+
+    /// Return a pointer passable to low-level functions (validate, parse, instantiate).
+    ///
+    /// # Safety
+    /// The returned pointer is still onwed by this struct, and thus not valid after this struct goes out of scope.
+    unsafe fn as_mut_ptr(&mut self) -> *mut sys::FizzyError {
+        &mut *self.0
+    }
+
+    /// Return the underlying error code.
+    // TODO: represent the errors as proper Rust enums
+    fn code(&self) -> u32 {
+        self.0.code
+    }
+
+    /// Return an owned String copy of the underlying message.
+    fn message(&self) -> String {
+        unsafe {
+            CStr::from_ptr(self.0.message.as_ptr())
+                .to_string_lossy()
+                .into_owned()
+        }
+    }
+}
+
+impl std::fmt::Display for FizzyErrorBox {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{} [{}]", self.code(), self.message())
+    }
+}
 
 /// Parse and validate the input according to WebAssembly 1.0 rules. Returns true if the supplied input is valid.
 pub fn validate<T: AsRef<[u8]>>(input: T) -> bool {
@@ -452,6 +496,15 @@ impl Instance {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn error_box() {
+        let mut err = FizzyErrorBox::new();
+        assert_ne!(unsafe { err.as_mut_ptr() }, std::ptr::null_mut());
+        assert_eq!(err.code(), 0);
+        assert_eq!(err.message(), "");
+        assert_eq!(format!("{}", err), "0 []");
+    }
 
     #[test]
     fn value_conversions() {
