@@ -118,6 +118,29 @@ MATCHER_P(CResult, value, "")  // NOLINT(readability-redundant-string-init)
     }
 }
 
+#define EXPECT_THROW_CODE_MESSAGE(stmt, ex_type, ex_code, ex_message)                        \
+    try                                                                                      \
+    {                                                                                        \
+        stmt;                                                                                \
+        ADD_FAILURE() << "Exception of type " #ex_type " is expected, but none was thrown."; \
+    }                                                                                        \
+    catch (const ex_type& exception)                                                         \
+    {                                                                                        \
+        EXPECT_EQ(exception.code, ex_code);                                                  \
+        EXPECT_STREQ(exception.what(), ex_message);                                          \
+    }                                                                                        \
+    catch (const std::exception& exception)                                                  \
+    {                                                                                        \
+        ADD_FAILURE() << "Unexpected exception type thrown: " << exception.what() << ".";    \
+    }                                                                                        \
+    catch (...)                                                                              \
+    {                                                                                        \
+        ADD_FAILURE() << "Unexpected exception type thrown.";                                \
+    }                                                                                        \
+    (void)0
+
+
+// TODO remove
 #define EXPECT_THROW_MESSAGE(stmt, ex_type, expected)                                        \
     try                                                                                      \
     {                                                                                        \
