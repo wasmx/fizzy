@@ -7,6 +7,7 @@
 #include "instantiate.hpp"
 #include "parser.hpp"
 #include <fizzy/fizzy.h>
+#include <cstring>
 #include <memory>
 
 namespace
@@ -20,12 +21,30 @@ inline void set_success(FizzyError* error) noexcept
     }
 }
 
+template <size_t DestSize>
+inline size_t strlcpy_s(char* dest, const char* src) noexcept
+{
+    static_assert(DestSize >= 3);
+
+    const auto src_len = strlen(src);
+    size_t copy_len = std::min(src_len, DestSize - 1);
+    memcpy(dest, src, copy_len);
+    if (copy_len < src_len)
+    {
+        dest[copy_len - 3] = '.';
+        dest[copy_len - 2] = '.';
+        dest[copy_len - 1] = '.';
+    }
+    dest[copy_len] = '\0';
+    return copy_len;
+}
+
 inline void set_error(FizzyErrorCode code, const char* message, FizzyError* error) noexcept
 {
     if (error != nullptr)
     {
         error->code = code;
-        snprintf(error->message, std::size(error->message), "%s", message);
+        strlcpy_s<sizeof(error->message)>(error->message, message);
     }
 }
 

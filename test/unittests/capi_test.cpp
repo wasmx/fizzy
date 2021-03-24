@@ -26,6 +26,38 @@ TEST(capi, validate)
     EXPECT_STREQ(error.message, "invalid wasm module prefix");
 }
 
+TEST(capi, validate_long_duplicate_export_name)
+{
+    // clang-format off
+    /* wat2wasm --no-check
+      (func (export "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in"))
+      (func (export "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in"))
+    */
+    const auto wasm = from_hex(
+        "0061736d0100000001040160000003030200000789040280024c6f72656d20697073756d20646f6c6f72207369"
+        "7420616d65742c20636f6e73656374657475722061646970697363696e6720656c69742c2073656420646f2065"
+        "6975736d6f642074656d706f7220696e6369646964756e74207574206c61626f726520657420646f6c6f726520"
+        "6d61676e6120616c697175612e20557420656e696d206164206d696e696d2076656e69616d2c2071756973206e"
+        "6f737472756420657865726369746174696f6e20756c6c616d636f206c61626f726973206e6973692075742061"
+        "6c697175697020657820656120636f6d6d6f646f20636f6e7365717561742e2044756973206175746520697275"
+        "726520646f6c6f7220696e000080024c6f72656d20697073756d20646f6c6f722073697420616d65742c20636f"
+        "6e73656374657475722061646970697363696e6720656c69742c2073656420646f20656975736d6f642074656d"
+        "706f7220696e6369646964756e74207574206c61626f726520657420646f6c6f7265206d61676e6120616c6971"
+        "75612e20557420656e696d206164206d696e696d2076656e69616d2c2071756973206e6f737472756420657865"
+        "726369746174696f6e20756c6c616d636f206c61626f726973206e69736920757420616c697175697020657820"
+        "656120636f6d6d6f646f20636f6e7365717561742e2044756973206175746520697275726520646f6c6f722069"
+        "6e00010a070202000b02000b");
+    // clang-format on
+
+    FizzyError error;
+    EXPECT_FALSE(fizzy_validate(wasm.data(), wasm.size(), &error));
+    EXPECT_EQ(error.code, FIZZY_ERROR_OTHER);
+    EXPECT_STREQ(error.message,
+        "duplicate export name Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do "
+        "eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis "
+        "nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat...");
+}
+
 TEST(capi, parse)
 {
     uint8_t wasm_prefix[]{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00};
