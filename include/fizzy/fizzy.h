@@ -46,8 +46,11 @@ typedef struct FizzyExecutionResult
     FizzyValue value;
 } FizzyExecutionResult;
 
-/// The opaque data type representing an execution context.
-typedef struct FizzyExecutionContext FizzyExecutionContext;
+/// Execution context.
+typedef struct FizzyExecutionContext
+{
+    int depth;  ///< Current call depth.
+} FizzyExecutionContext;
 
 
 /// Pointer to external function.

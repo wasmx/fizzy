@@ -330,9 +330,8 @@ TEST(capi, find_exported_function)
     EXPECT_EQ(function.type.output, FizzyValueTypeI32);
     EXPECT_NE(function.context, nullptr);
     ASSERT_NE(function.function, nullptr);
-    fizzy::ExecutionContext ctx;
-    auto* const c_ctx = reinterpret_cast<FizzyExecutionContext*>(&ctx);
-    EXPECT_THAT(function.function(function.context, instance, nullptr, c_ctx), CResult(42_u32));
+    FizzyExecutionContext ctx{};
+    EXPECT_THAT(function.function(function.context, instance, nullptr, &ctx), CResult(42_u32));
 
     fizzy_free_exported_function(&function);
 

@@ -11,6 +11,7 @@
 #include "module.hpp"
 #include "types.hpp"
 #include "value.hpp"
+#include <fizzy/fizzy.h>
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -43,7 +44,7 @@ constexpr ExecutionResult Trap{false};
 
 /// The storage for information shared by calls in the same execution "thread".
 /// Users may decide how to allocate the execution context, but some good defaults are available.
-class ExecutionContext
+class ExecutionContext : public FizzyExecutionContext
 {
     /// Call depth increment guard.
     /// It will automatically decrement the call depth to the original value
@@ -58,7 +59,7 @@ class ExecutionContext
     };
 
 public:
-    int depth = 0;  ///< Current call depth.
+    ExecutionContext() noexcept : FizzyExecutionContext{0} {}
 
     /// Increments the call depth and returns the guard object which decrements
     /// the call depth back to the original value when going out of scope.
@@ -68,6 +69,8 @@ public:
         return Guard{*this};
     }
 };
+
+static_assert(sizeof(ExecutionContext) == sizeof(FizzyExecutionContext));
 
 /// Execute a function from an instance.
 ///

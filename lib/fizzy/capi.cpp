@@ -87,12 +87,12 @@ inline fizzy::Value* unwrap(FizzyValue* value) noexcept
 
 inline FizzyExecutionContext* wrap(fizzy::ExecutionContext& ctx) noexcept
 {
-    return reinterpret_cast<FizzyExecutionContext*>(&ctx);
+    return &ctx;
 }
 
 inline fizzy::ExecutionContext& unwrap(FizzyExecutionContext* ctx) noexcept
 {
-    return *reinterpret_cast<fizzy::ExecutionContext*>(ctx);
+    return *static_cast<fizzy::ExecutionContext*>(ctx);
 }
 
 inline FizzyInstance* wrap(fizzy::Instance* instance) noexcept
