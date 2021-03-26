@@ -55,7 +55,8 @@ typedef struct FizzyExecutionContext FizzyExecutionContext;
 /// @param  host_ctx    Opaque pointer to host context.
 /// @param  instance    Pointer to module instance.
 /// @param  args        Pointer to the argument array. Can be NULL iff function has no inputs.
-/// @param  ctx         Opaque pointer to execution context.
+/// @param  ctx         Opaque pointer to execution context. If NULL new execution context
+///                     will be allocated.
 /// @return             Result of execution.
 ///
 /// @note

@@ -137,9 +137,16 @@ inline FizzyExternalFunction wrap(fizzy::ExternalFunction external_func)
 {
     static constexpr FizzyExternalFn c_function =
         [](void* host_ctx, FizzyInstance* instance, const FizzyValue* args,
-            FizzyExecutionContext* ctx) -> FizzyExecutionResult {
+            FizzyExecutionContext* c_ctx) -> FizzyExecutionResult {
+        // If execution context not provided, allocate new one.
+        // It must be allocated on heap otherwise the stack will explode in recursive calls.
+        std::unique_ptr<fizzy::ExecutionContext> new_ctx;
+        if (c_ctx == nullptr)
+            new_ctx = std::make_unique<fizzy::ExecutionContext>();
+        auto& ctx = new_ctx ? *new_ctx : unwrap(c_ctx);
+
         auto* func = static_cast<fizzy::ExternalFunction*>(host_ctx);
-        return wrap((func->function)(*unwrap(instance), unwrap(args), unwrap(ctx)));
+        return wrap((func->function)(*unwrap(instance), unwrap(args), ctx));
     };
 
     auto host_ctx = std::make_unique<fizzy::ExternalFunction>(std::move(external_func));
