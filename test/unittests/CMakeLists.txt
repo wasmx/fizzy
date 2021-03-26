@@ -30,6 +30,7 @@ target_sources(
     instantiate_test.cpp
     leb128_test.cpp
     module_test.cpp
+    oom_test.cpp
     parser_expr_test.cpp
     parser_test.cpp
     stack_test.cpp
