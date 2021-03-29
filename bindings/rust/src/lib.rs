@@ -200,10 +200,10 @@ struct HostFunction {
 }
 
 unsafe extern "C" fn host_callback(
-    context: *mut std::os::raw::c_void,
+    host_context: *mut std::os::raw::c_void,
     instance: *mut sys::FizzyInstance,
     args: *const sys::FizzyValue,
-    depth: i32,
+    context: *mut sys::FizzyExecutionContext,
 ) -> sys::FizzyExecutionResult {
     println!("host fuction called!");
     unimplemented!()
@@ -1371,7 +1371,7 @@ mod tests {
         let mut instance = instance.unwrap();
 
         // Successful execution.
-        let result = instance.execute("foo", &[], 0);
+        let result = instance.execute("foo", &[]);
         assert!(result.is_ok());
         let result = result.unwrap();
         assert!(!result.trapped());
