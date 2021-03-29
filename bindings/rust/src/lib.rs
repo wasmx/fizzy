@@ -206,10 +206,17 @@ unsafe extern "C" fn host_callback(
     context: *mut sys::FizzyExecutionContext,
 ) -> sys::FizzyExecutionResult {
     println!("host fuction called!");
-    unimplemented!()
+    //unimplemented!()
+    sys::FizzyExecutionResult {
+        trapped: false,
+        has_value: false,
+        value: sys::FizzyValue { i32: 0 },
+    }
 }
 
-fn create_function_import_list(host_functions: &[&HostFunction]) -> Vec<sys::FizzyImportedFunction> {
+fn create_function_import_list(
+    host_functions: &[&HostFunction],
+) -> Vec<sys::FizzyImportedFunction> {
     assert!(host_functions.len() == 1);
     let host_function = &host_functions[0];
     let fn_type = sys::FizzyFunctionType {
@@ -222,11 +229,6 @@ fn create_function_import_list(host_functions: &[&HostFunction]) -> Vec<sys::Fiz
         function: Some(host_callback),
         context: std::ptr::null_mut(),
     };
-    println!(
-        "mod:{:?} name:{:?}",
-        host_function.module.as_bytes_with_nul(),
-        host_function.name.as_bytes_with_nul()
-    );
     vec![sys::FizzyImportedFunction {
         module: host_function.module.as_ptr(),
         name: host_function.name.as_ptr(),
@@ -248,9 +250,6 @@ impl Module {
         };
         let import_list = vec![&host_fn1];
         let import_list = create_function_import_list(&import_list);
-        println!("importlist: {:?} {}", import_list.as_ptr(), import_list.len());
-        println!("{:?}", host_fn1.module); //unsafe { std::ffi::CStr::from_ptr(import_list[0].module) });
-        println!("{:?}", unsafe { std::ffi::CStr::from_ptr(import_list[0].module) });
         let ptr = unsafe {
             sys::fizzy_resolve_instantiate(
                 self.0.as_ptr(),
