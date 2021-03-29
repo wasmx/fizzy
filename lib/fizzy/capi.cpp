@@ -205,7 +205,7 @@ inline FizzyExternalFunction wrap(fizzy::ExternalFunction external_func)
 {
     static constexpr FizzyExternalFn c_function =
         [](void* host_ctx, FizzyInstance* instance, const FizzyValue* args,
-            FizzyExecutionContext* c_ctx) -> FizzyExecutionResult {
+            FizzyExecutionContext* c_ctx) noexcept -> FizzyExecutionResult {
         // If execution context not provided, allocate new one.
         // It must be allocated on heap otherwise the stack will explode in recursive calls.
         std::unique_ptr<fizzy::ExecutionContext> new_ctx;
@@ -428,7 +428,8 @@ inline FizzyExportDescription wrap(const fizzy::Export& exp) noexcept
 }  // namespace
 
 extern "C" {
-bool fizzy_validate(const uint8_t* wasm_binary, size_t wasm_binary_size, FizzyError* error)
+
+bool fizzy_validate(const uint8_t* wasm_binary, size_t wasm_binary_size, FizzyError* error) noexcept
 {
     try
     {
@@ -444,7 +445,7 @@ bool fizzy_validate(const uint8_t* wasm_binary, size_t wasm_binary_size, FizzyEr
 }
 
 const FizzyModule* fizzy_parse(
-    const uint8_t* wasm_binary, size_t wasm_binary_size, FizzyError* error)
+    const uint8_t* wasm_binary, size_t wasm_binary_size, FizzyError* error) noexcept
 {
     try
     {
@@ -459,12 +460,12 @@ const FizzyModule* fizzy_parse(
     }
 }
 
-void fizzy_free_module(const FizzyModule* module)
+void fizzy_free_module(const FizzyModule* module) noexcept
 {
     delete unwrap(module);
 }
 
-const FizzyModule* fizzy_clone_module(const FizzyModule* module)
+const FizzyModule* fizzy_clone_module(const FizzyModule* module) noexcept
 {
     try
     {
@@ -477,65 +478,66 @@ const FizzyModule* fizzy_clone_module(const FizzyModule* module)
     }
 }
 
-uint32_t fizzy_get_type_count(const FizzyModule* module)
+uint32_t fizzy_get_type_count(const FizzyModule* module) noexcept
 {
     return static_cast<uint32_t>(unwrap(module)->typesec.size());
 }
 
-FizzyFunctionType fizzy_get_type(const FizzyModule* module, uint32_t type_idx)
+FizzyFunctionType fizzy_get_type(const FizzyModule* module, uint32_t type_idx) noexcept
 {
     return wrap(unwrap(module)->typesec[type_idx]);
 }
 
-uint32_t fizzy_get_import_count(const FizzyModule* module)
+uint32_t fizzy_get_import_count(const FizzyModule* module) noexcept
 {
     return static_cast<uint32_t>(unwrap(module)->importsec.size());
 }
 
 FizzyImportDescription fizzy_get_import_description(
-    const FizzyModule* c_module, uint32_t import_idx)
+    const FizzyModule* c_module, uint32_t import_idx) noexcept
 {
     const auto* module = unwrap(c_module);
     return wrap(module->importsec[import_idx], *module);
 }
 
-FizzyFunctionType fizzy_get_function_type(const FizzyModule* module, uint32_t func_idx)
+FizzyFunctionType fizzy_get_function_type(const FizzyModule* module, uint32_t func_idx) noexcept
 {
     return wrap(unwrap(module)->get_function_type(func_idx));
 }
 
-bool fizzy_module_has_table(const FizzyModule* module)
+bool fizzy_module_has_table(const FizzyModule* module) noexcept
 {
     return unwrap(module)->has_table();
 }
 
-bool fizzy_module_has_memory(const FizzyModule* module)
+bool fizzy_module_has_memory(const FizzyModule* module) noexcept
 {
     return unwrap(module)->has_memory();
 }
 
-uint32_t fizzy_get_global_count(const FizzyModule* module)
+uint32_t fizzy_get_global_count(const FizzyModule* module) noexcept
 {
     return static_cast<uint32_t>(unwrap(module)->get_global_count());
 }
 
-FizzyGlobalType fizzy_get_global_type(const FizzyModule* module, uint32_t global_idx)
+FizzyGlobalType fizzy_get_global_type(const FizzyModule* module, uint32_t global_idx) noexcept
 {
     return wrap(unwrap(module)->get_global_type(global_idx));
 }
 
-uint32_t fizzy_get_export_count(const FizzyModule* module)
+uint32_t fizzy_get_export_count(const FizzyModule* module) noexcept
 {
     return static_cast<uint32_t>(unwrap(module)->exportsec.size());
 }
 
-FizzyExportDescription fizzy_get_export_description(const FizzyModule* module, uint32_t export_idx)
+FizzyExportDescription fizzy_get_export_description(
+    const FizzyModule* module, uint32_t export_idx) noexcept
 {
     return wrap(unwrap(module)->exportsec[export_idx]);
 }
 
 bool fizzy_find_exported_function_index(
-    const FizzyModule* module, const char* name, uint32_t* out_func_idx)
+    const FizzyModule* module, const char* name, uint32_t* out_func_idx) noexcept
 {
     const auto optional_func_idx = fizzy::find_exported_function_index(*unwrap(module), name);
     if (!optional_func_idx)
@@ -546,23 +548,30 @@ bool fizzy_find_exported_function_index(
 }
 
 bool fizzy_find_exported_function(
-    FizzyInstance* instance, const char* name, FizzyExternalFunction* out_function)
+    FizzyInstance* instance, const char* name, FizzyExternalFunction* out_function) noexcept
 {
     auto optional_func = fizzy::find_exported_function(*unwrap(instance), name);
     if (!optional_func)
         return false;
 
-    *out_function = wrap(std::move(*optional_func));
-    return true;
+    try
+    {
+        *out_function = wrap(std::move(*optional_func));
+        return true;
+    }
+    catch (...)
+    {
+        return false;
+    }
 }
 
-void fizzy_free_exported_function(FizzyExternalFunction* external_function)
+void fizzy_free_exported_function(FizzyExternalFunction* external_function) noexcept
 {
     delete static_cast<fizzy::ExternalFunction*>(external_function->context);
 }
 
 bool fizzy_find_exported_table(
-    FizzyInstance* instance, const char* name, FizzyExternalTable* out_table)
+    FizzyInstance* instance, const char* name, FizzyExternalTable* out_table) noexcept
 {
     const auto optional_external_table = fizzy::find_exported_table(*unwrap(instance), name);
     if (!optional_external_table)
@@ -573,7 +582,7 @@ bool fizzy_find_exported_table(
 }
 
 bool fizzy_find_exported_memory(
-    FizzyInstance* instance, const char* name, FizzyExternalMemory* out_memory)
+    FizzyInstance* instance, const char* name, FizzyExternalMemory* out_memory) noexcept
 {
     const auto optional_external_memory = fizzy::find_exported_memory(*unwrap(instance), name);
     if (!optional_external_memory)
@@ -584,7 +593,7 @@ bool fizzy_find_exported_memory(
 }
 
 bool fizzy_find_exported_global(
-    FizzyInstance* instance, const char* name, FizzyExternalGlobal* out_global)
+    FizzyInstance* instance, const char* name, FizzyExternalGlobal* out_global) noexcept
 {
     const auto optional_external_global = fizzy::find_exported_global(*unwrap(instance), name);
     if (!optional_external_global)
@@ -594,7 +603,7 @@ bool fizzy_find_exported_global(
     return true;
 }
 
-bool fizzy_module_has_start_function(const FizzyModule* module)
+bool fizzy_module_has_start_function(const FizzyModule* module) noexcept
 {
     return unwrap(module)->startfunc.has_value();
 }
@@ -602,7 +611,8 @@ bool fizzy_module_has_start_function(const FizzyModule* module)
 FizzyInstance* fizzy_instantiate(const FizzyModule* module,
     const FizzyExternalFunction* imported_functions, size_t imported_functions_size,
     const FizzyExternalTable* imported_table, const FizzyExternalMemory* imported_memory,
-    const FizzyExternalGlobal* imported_globals, size_t imported_globals_size, FizzyError* error)
+    const FizzyExternalGlobal* imported_globals, size_t imported_globals_size,
+    FizzyError* error) noexcept
 {
     try
     {
@@ -627,7 +637,8 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 FizzyInstance* fizzy_resolve_instantiate(const FizzyModule* c_module,
     const FizzyImportedFunction* c_imported_functions, size_t imported_functions_size,
     const FizzyExternalTable* imported_table, const FizzyExternalMemory* imported_memory,
-    const FizzyImportedGlobal* c_imported_globals, size_t imported_globals_size, FizzyError* error)
+    const FizzyImportedGlobal* c_imported_globals, size_t imported_globals_size,
+    FizzyError* error) noexcept
 {
     try
     {
@@ -653,17 +664,17 @@ FizzyInstance* fizzy_resolve_instantiate(const FizzyModule* c_module,
     }
 }
 
-void fizzy_free_instance(FizzyInstance* instance)
+void fizzy_free_instance(FizzyInstance* instance) noexcept
 {
     delete unwrap(instance);
 }
 
-const FizzyModule* fizzy_get_instance_module(FizzyInstance* instance)
+const FizzyModule* fizzy_get_instance_module(FizzyInstance* instance) noexcept
 {
     return wrap(unwrap(instance)->module.get());
 }
 
-uint8_t* fizzy_get_instance_memory_data(FizzyInstance* instance)
+uint8_t* fizzy_get_instance_memory_data(FizzyInstance* instance) noexcept
 {
     auto& memory = unwrap(instance)->memory;
     if (!memory)
@@ -672,7 +683,7 @@ uint8_t* fizzy_get_instance_memory_data(FizzyInstance* instance)
     return memory->data();
 }
 
-size_t fizzy_get_instance_memory_size(FizzyInstance* instance)
+size_t fizzy_get_instance_memory_size(FizzyInstance* instance) noexcept
 {
     auto& memory = unwrap(instance)->memory;
     if (!memory)
@@ -682,9 +693,10 @@ size_t fizzy_get_instance_memory_size(FizzyInstance* instance)
 }
 
 FizzyExecutionResult fizzy_execute(
-    FizzyInstance* instance, uint32_t func_idx, const FizzyValue* args)
+    FizzyInstance* instance, uint32_t func_idx, const FizzyValue* args) noexcept
 {
     const auto result = fizzy::execute(*unwrap(instance), func_idx, unwrap(args));
     return wrap(result);
 }
-}
+
+}  // extern "C"

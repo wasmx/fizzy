@@ -29,7 +29,7 @@ public:
 namespace
 {
 FizzyExecutionResult env_adler32(
-    void*, FizzyInstance* instance, const FizzyValue* args, FizzyExecutionContext*)
+    void*, FizzyInstance* instance, const FizzyValue* args, FizzyExecutionContext*) noexcept
 {
     auto* memory = fizzy_get_instance_memory_data(instance);
     assert(memory != nullptr);
