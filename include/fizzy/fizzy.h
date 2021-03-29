@@ -46,20 +46,24 @@ typedef struct FizzyExecutionResult
     FizzyValue value;
 } FizzyExecutionResult;
 
+/// The opaque data type representing an execution context.
+typedef struct FizzyExecutionContext FizzyExecutionContext;
+
 
 /// Pointer to external function.
 ///
-/// @param  context     Opaque pointer to execution context.
+/// @param  host_ctx    Opaque pointer to host context.
 /// @param  instance    Pointer to module instance.
 /// @param  args        Pointer to the argument array. Can be NULL iff function has no inputs.
-/// @param  depth       Call stack depth.
+/// @param  ctx         Opaque pointer to execution context. If NULL new execution context
+///                     will be allocated.
 /// @return             Result of execution.
 ///
 /// @note
 /// External functions implemented in C++ must be non-throwing, i.e. the effect of any exception
 /// escaping the function is std::terminate being called.
 typedef FizzyExecutionResult (*FizzyExternalFn)(
-    void* context, FizzyInstance* instance, const FizzyValue* args, int depth);
+    void* host_ctx, FizzyInstance* instance, const FizzyValue* args, FizzyExecutionContext* ctx);
 
 /// Value type.
 typedef uint8_t FizzyValueType;

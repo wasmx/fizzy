@@ -28,7 +28,8 @@ public:
 
 namespace
 {
-FizzyExecutionResult env_adler32(void*, FizzyInstance* instance, const FizzyValue* args, int)
+FizzyExecutionResult env_adler32(
+    void*, FizzyInstance* instance, const FizzyValue* args, FizzyExecutionContext*)
 {
     auto* memory = fizzy_get_instance_memory_data(instance);
     assert(memory != nullptr);

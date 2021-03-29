@@ -41,6 +41,34 @@ constexpr ExecutionResult Void{true};
 /// Shortcut for execution that resulted in a trap.
 constexpr ExecutionResult Trap{false};
 
+/// The storage for information shared by calls in the same execution "thread".
+/// Users may decide how to allocate the execution context, but some good defaults are available.
+class ExecutionContext
+{
+    /// Call depth increment guard.
+    /// It will automatically decrement the call depth to the original value
+    /// when going out of scope.
+    class [[nodiscard]] Guard
+    {
+        ExecutionContext& m_execution_context;  ///< Reference to the guarded execution context.
+
+    public:
+        explicit Guard(ExecutionContext& ctx) noexcept : m_execution_context{ctx} {}
+        ~Guard() noexcept { --m_execution_context.depth; }
+    };
+
+public:
+    int depth = 0;  ///< Current call depth.
+
+    /// Increments the call depth and returns the guard object which decrements
+    /// the call depth back to the original value when going out of scope.
+    Guard increment_call_depth() noexcept
+    {
+        ++depth;
+        return Guard{*this};
+    }
+};
+
 /// Execute a function from an instance.
 ///
 /// @param  instance    The instance.
@@ -49,16 +77,16 @@ constexpr ExecutionResult Trap{false};
 /// @param  args        The pointer to the arguments. The number of items and their types must match
 ///                     the expected number of input parameters of the function, otherwise undefined
 ///                     behaviour (including crash) happens.
-/// @param  depth       The call depth (indexing starts at 0).
+/// @param  ctx         Execution context.
 /// @return             The result of the execution.
 ExecutionResult execute(
-    Instance& instance, FuncIdx func_idx, const Value* args, int depth) noexcept;
+    Instance& instance, FuncIdx func_idx, const Value* args, ExecutionContext& ctx) noexcept;
 
-/// Execute a function from an instance starting at default depth of 0.
+/// Execute a function from an instance with execution context starting with default depth of 0.
 /// Arguments and behavior is the same as in the other execute().
 inline ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args) noexcept
 {
-    constexpr int depth = 0;
-    return execute(instance, func_idx, args, depth);
+    ExecutionContext ctx;
+    return execute(instance, func_idx, args, ctx);
 }
 }  // namespace fizzy

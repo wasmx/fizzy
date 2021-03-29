@@ -85,6 +85,16 @@ inline fizzy::Value* unwrap(FizzyValue* value) noexcept
     return reinterpret_cast<fizzy::Value*>(value);
 }
 
+inline FizzyExecutionContext* wrap(fizzy::ExecutionContext& ctx) noexcept
+{
+    return reinterpret_cast<FizzyExecutionContext*>(&ctx);
+}
+
+inline fizzy::ExecutionContext& unwrap(FizzyExecutionContext* ctx) noexcept
+{
+    return *reinterpret_cast<fizzy::ExecutionContext*>(ctx);
+}
+
 inline FizzyInstance* wrap(fizzy::Instance* instance) noexcept
 {
     return reinterpret_cast<FizzyInstance*>(instance);
@@ -113,11 +123,11 @@ inline fizzy::ExecutionResult unwrap(const FizzyExecutionResult& result) noexcep
 inline fizzy::ExecuteFunction unwrap(FizzyExternalFn c_function, void* c_host_context)
 {
     static constexpr fizzy::HostFunctionPtr function =
-        [](std::any& host_context, fizzy::Instance& instance, const fizzy::Value* args,
-            int depth) noexcept {
+        [](std::any& host_ctx, fizzy::Instance& instance, const fizzy::Value* args,
+            fizzy::ExecutionContext& ctx) noexcept {
             const auto [c_func, c_host_ctx] =
-                *std::any_cast<std::pair<FizzyExternalFn, void*>>(&host_context);
-            return unwrap(c_func(c_host_ctx, wrap(&instance), wrap(args), depth));
+                *std::any_cast<std::pair<FizzyExternalFn, void*>>(&host_ctx);
+            return unwrap(c_func(c_host_ctx, wrap(&instance), wrap(args), wrap(ctx)));
         };
 
     return {function, std::make_any<std::pair<FizzyExternalFn, void*>>(c_function, c_host_context)};
@@ -125,17 +135,24 @@ inline fizzy::ExecuteFunction unwrap(FizzyExternalFn c_function, void* c_host_co
 
 inline FizzyExternalFunction wrap(fizzy::ExternalFunction external_func)
 {
-    static constexpr FizzyExternalFn c_function = [](void* context, FizzyInstance* instance,
-                                                      const FizzyValue* args,
-                                                      int depth) -> FizzyExecutionResult {
-        auto* func = static_cast<fizzy::ExternalFunction*>(context);
-        return wrap((func->function)(*unwrap(instance), unwrap(args), depth));
+    static constexpr FizzyExternalFn c_function =
+        [](void* host_ctx, FizzyInstance* instance, const FizzyValue* args,
+            FizzyExecutionContext* c_ctx) -> FizzyExecutionResult {
+        // If execution context not provided, allocate new one.
+        // It must be allocated on heap otherwise the stack will explode in recursive calls.
+        std::unique_ptr<fizzy::ExecutionContext> new_ctx;
+        if (c_ctx == nullptr)
+            new_ctx = std::make_unique<fizzy::ExecutionContext>();
+        auto& ctx = new_ctx ? *new_ctx : unwrap(c_ctx);
+
+        auto* func = static_cast<fizzy::ExternalFunction*>(host_ctx);
+        return wrap((func->function)(*unwrap(instance), unwrap(args), ctx));
     };
 
-    auto context = std::make_unique<fizzy::ExternalFunction>(std::move(external_func));
-    const auto c_type = wrap(context->input_types, context->output_types);
-    void* c_context = context.release();
-    return {c_type, c_function, c_context};
+    auto host_ctx = std::make_unique<fizzy::ExternalFunction>(std::move(external_func));
+    const auto c_type = wrap(host_ctx->input_types, host_ctx->output_types);
+    void* c_host_ctx = host_ctx.release();
+    return {c_type, c_function, c_host_ctx};
 }
 
 inline fizzy::ExternalFunction unwrap(const FizzyExternalFunction& external_func)

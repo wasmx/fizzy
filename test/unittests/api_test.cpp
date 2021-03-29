@@ -18,14 +18,15 @@ namespace
 ExecuteFunction function_returning_value(Value value)
 {
     static constexpr HostFunctionPtr func = [](std::any& host_context, Instance&, const Value*,
-                                                int) noexcept -> ExecutionResult {
+                                                ExecutionContext&) noexcept -> ExecutionResult {
         return *std::any_cast<Value>(&host_context);
     };
 
     return {func, std::make_any<Value>(value)};
 }
 
-ExecutionResult function_returning_void(std::any&, Instance&, const Value*, int) noexcept
+ExecutionResult function_returning_void(
+    std::any&, Instance&, const Value*, ExecutionContext&) noexcept
 {
     return Void;
 }
@@ -227,7 +228,8 @@ TEST(api, resolve_imported_function_duplicate_with_context)
         "0061736d01000000010401600000021902046d6f643104666f6f310000046d6f643104666f6f310000");
     const auto module = parse(wasm);
 
-    constexpr auto host_func = [](std::any& context, Instance&, const Value*, int) noexcept {
+    constexpr auto host_func = [](std::any& context, Instance&, const Value*,
+                                   ExecutionContext&) noexcept {
         auto* counter = *std::any_cast<int*>(&context);
         ++(*counter);
         return Void;
@@ -446,7 +448,8 @@ TEST(api, find_exported_function)
 
     auto opt_function = find_exported_function(*instance, "foo");
     ASSERT_TRUE(opt_function);
-    EXPECT_THAT(TypedExecutionResult(opt_function->function(*instance, {}, 0), ValType::i32),
+    ExecutionContext ctx;
+    EXPECT_THAT(TypedExecutionResult(opt_function->function(*instance, {}, ctx), ValType::i32),
         Result(42_u32));
     EXPECT_TRUE(opt_function->input_types.empty());
     ASSERT_EQ(opt_function->output_types.size(), 1);
@@ -466,9 +469,8 @@ TEST(api, find_exported_function)
         "0061736d010000000105016000017f021001087370656374657374036261720000040401700000050401010102"
         "0606017f0041000b07170403666f6f000001670300037461620100036d656d0200");
 
-    constexpr auto bar = [](std::any&, Instance&, const Value*, int) noexcept -> ExecutionResult {
-        return Value{42};
-    };
+    constexpr auto bar = [](std::any&, Instance&, const Value*,
+                             ExecutionContext&) noexcept -> ExecutionResult { return Value{42}; };
     const auto bar_type = FuncType{{}, {ValType::i32}};
 
     auto instance_reexported_function =
@@ -477,7 +479,7 @@ TEST(api, find_exported_function)
     auto opt_reexported_function = find_exported_function(*instance_reexported_function, "foo");
     ASSERT_TRUE(opt_reexported_function);
     EXPECT_THAT(
-        TypedExecutionResult(opt_reexported_function->function(*instance, {}, 0), ValType::i32),
+        TypedExecutionResult(opt_reexported_function->function(*instance, {}, ctx), ValType::i32),
         Result(42_u32));
     EXPECT_TRUE(opt_reexported_function->input_types.empty());
     ASSERT_EQ(opt_reexported_function->output_types.size(), 1);
