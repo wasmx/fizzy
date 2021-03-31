@@ -249,8 +249,11 @@ bool fizzy_validate(const uint8_t* wasm_binary, size_t wasm_binary_size, FizzyEr
 ///
 /// @param  wasm_binary         Pointer to module binary data.
 /// @param  wasm_binary_size    Size of the module binary data.
+/// @param  error               Pointer to store detailed error information at. Can be NULL if error
+///                             information is not required.
 /// @return                     non-NULL pointer to module in case of success, NULL otherwise.
-const FizzyModule* fizzy_parse(const uint8_t* wasm_binary, size_t wasm_binary_size);
+const FizzyModule* fizzy_parse(
+    const uint8_t* wasm_binary, size_t wasm_binary_size, FizzyError* error);
 
 /// Free resources associated with the module.
 ///

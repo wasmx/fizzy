@@ -443,15 +443,18 @@ bool fizzy_validate(const uint8_t* wasm_binary, size_t wasm_binary_size, FizzyEr
     }
 }
 
-const FizzyModule* fizzy_parse(const uint8_t* wasm_binary, size_t wasm_binary_size)
+const FizzyModule* fizzy_parse(
+    const uint8_t* wasm_binary, size_t wasm_binary_size, FizzyError* error)
 {
     try
     {
         auto module = fizzy::parse({wasm_binary, wasm_binary_size});
+        set_success(error);
         return wrap(module.release());
     }
     catch (...)
     {
+        set_error_from_current_exception(error);
         return nullptr;
     }
 }

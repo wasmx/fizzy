@@ -48,7 +48,7 @@ std::unique_ptr<WasmEngine> create_fizzy_c_engine()
 
 bool FizzyCEngine::parse(bytes_view input) const
 {
-    const auto module = fizzy_parse(input.data(), input.size());
+    const auto module = fizzy_parse(input.data(), input.size(), nullptr);
     if (!module)
         return false;
 
@@ -58,7 +58,7 @@ bool FizzyCEngine::parse(bytes_view input) const
 
 bool FizzyCEngine::instantiate(bytes_view wasm_binary)
 {
-    const auto module = fizzy_parse(wasm_binary.data(), wasm_binary.size());
+    const auto module = fizzy_parse(wasm_binary.data(), wasm_binary.size(), nullptr);
     if (!module)
         return false;
 

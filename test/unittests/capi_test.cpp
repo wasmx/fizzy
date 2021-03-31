@@ -139,11 +139,41 @@ TEST(capi, truncated_error_message)
 TEST(capi, parse)
 {
     uint8_t wasm_prefix[]{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00};
-    auto module = fizzy_parse(wasm_prefix, sizeof(wasm_prefix));
+    // Success omitting FizzyError argument.
+    auto module = fizzy_parse(wasm_prefix, sizeof(wasm_prefix), nullptr);
     EXPECT_NE(module, nullptr);
     fizzy_free_module(module);
+
+    // Success with FizzyError argument.
+    FizzyError success;
+    module = fizzy_parse(wasm_prefix, sizeof(wasm_prefix), &success);
+    EXPECT_NE(module, nullptr);
+    EXPECT_EQ(success.code, FIZZY_SUCCESS);
+    EXPECT_STREQ(success.message, "");
+    fizzy_free_module(module);
+
     wasm_prefix[7] = 1;
-    EXPECT_EQ(fizzy_parse(wasm_prefix, sizeof(wasm_prefix)), nullptr);
+    // Parsing error omitting FizzyError argument.
+    EXPECT_EQ(fizzy_parse(wasm_prefix, sizeof(wasm_prefix), nullptr), nullptr);
+
+    // Parsing error with FizzyError argument.
+    FizzyError parsing_error;
+    EXPECT_FALSE(fizzy_parse(wasm_prefix, sizeof(wasm_prefix), &parsing_error));
+    EXPECT_EQ(parsing_error.code, FIZZY_ERROR_MALFORMED_MODULE);
+    EXPECT_STREQ(parsing_error.message, "invalid wasm module prefix");
+
+    /* wat2wasm --no-check
+      (func (i32.const 0))
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a0601040041000b");
+    // Validation error omitting FizzyError argument.
+    EXPECT_FALSE(fizzy_parse(wasm.data(), wasm.size(), nullptr));
+
+    // Validation error with FizzyError argument.
+    FizzyError validation_error;
+    EXPECT_FALSE(fizzy_parse(wasm.data(), wasm.size(), &validation_error));
+    EXPECT_EQ(validation_error.code, FIZZY_ERROR_INVALID_MODULE);
+    EXPECT_STREQ(validation_error.message, "too many results");
 }
 
 TEST(capi, free_module_null)
@@ -157,7 +187,7 @@ TEST(capi, clone_module)
       (func (param i32 i32) (result i32) (i32.const 0))
     */
     const auto wasm = from_hex("0061736d0100000001070160027f7f017f030201000a0601040041000b");
-    const auto* module1 = fizzy_parse(wasm.data(), wasm.size());
+    const auto* module1 = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     EXPECT_NE(module1, nullptr);
 
     const auto* module2 = fizzy_clone_module(module1);
@@ -185,7 +215,7 @@ TEST(capi, get_function_type)
     const auto wasm = from_hex(
         "0061736d0100000001130460000060027f7f017f60017e0060017c017d030504000102030a140402000b040041"
         "000b02000b070043000000000b");
-    const auto module = fizzy_parse(wasm.data(), wasm.size());
+    const auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     const auto type0 = fizzy_get_function_type(module, 0);
@@ -217,7 +247,7 @@ TEST(capi, has_table)
       (module)
     */
     const auto wasm_no_table = from_hex("0061736d01000000");
-    const auto module_no_table = fizzy_parse(wasm_no_table.data(), wasm_no_table.size());
+    const auto module_no_table = fizzy_parse(wasm_no_table.data(), wasm_no_table.size(), nullptr);
     ASSERT_NE(module_no_table, nullptr);
 
     EXPECT_FALSE(fizzy_module_has_table(module_no_table));
@@ -228,7 +258,7 @@ TEST(capi, has_table)
       (table 0 anyfunc)
     */
     const auto wasm_table = from_hex("0061736d01000000040401700000");
-    const auto module_table = fizzy_parse(wasm_table.data(), wasm_table.size());
+    const auto module_table = fizzy_parse(wasm_table.data(), wasm_table.size(), nullptr);
     ASSERT_NE(module_table, nullptr);
 
     EXPECT_TRUE(fizzy_module_has_table(module_table));
@@ -240,7 +270,7 @@ TEST(capi, has_table)
     */
     const auto wasm_imported_table = from_hex("0061736d01000000020a01016d01740170010a1e");
     const auto module_imported_table =
-        fizzy_parse(wasm_imported_table.data(), wasm_imported_table.size());
+        fizzy_parse(wasm_imported_table.data(), wasm_imported_table.size(), nullptr);
     ASSERT_NE(module_imported_table, nullptr);
 
     EXPECT_TRUE(fizzy_module_has_table(module_imported_table));
@@ -254,7 +284,8 @@ TEST(capi, has_memory)
       (module)
     */
     const auto wasm_no_memory = from_hex("0061736d01000000");
-    const auto module_no_memory = fizzy_parse(wasm_no_memory.data(), wasm_no_memory.size());
+    const auto module_no_memory =
+        fizzy_parse(wasm_no_memory.data(), wasm_no_memory.size(), nullptr);
     ASSERT_NE(module_no_memory, nullptr);
 
     EXPECT_FALSE(fizzy_module_has_memory(module_no_memory));
@@ -266,7 +297,7 @@ TEST(capi, has_memory)
     */
     const auto wasm_memory_empty = from_hex("0061736d010000000503010000");
     const auto module_memory_empty =
-        fizzy_parse(wasm_memory_empty.data(), wasm_memory_empty.size());
+        fizzy_parse(wasm_memory_empty.data(), wasm_memory_empty.size(), nullptr);
     ASSERT_NE(module_memory_empty, nullptr);
 
     EXPECT_TRUE(fizzy_module_has_memory(module_memory_empty));
@@ -277,7 +308,7 @@ TEST(capi, has_memory)
       (memory 1)
     */
     const auto wasm_memory = from_hex("0061736d010000000503010001");
-    const auto module_memory = fizzy_parse(wasm_memory.data(), wasm_memory.size());
+    const auto module_memory = fizzy_parse(wasm_memory.data(), wasm_memory.size(), nullptr);
     ASSERT_NE(module_memory, nullptr);
 
     EXPECT_TRUE(fizzy_module_has_memory(module_memory));
@@ -289,7 +320,7 @@ TEST(capi, has_memory)
     */
     const auto wasm_imported_mem = from_hex("0061736d01000000020c01036d6f64036d656d020001");
     const auto module_imported_mem =
-        fizzy_parse(wasm_imported_mem.data(), wasm_imported_mem.size());
+        fizzy_parse(wasm_imported_mem.data(), wasm_imported_mem.size(), nullptr);
     ASSERT_NE(module_imported_mem, nullptr);
 
     EXPECT_TRUE(fizzy_module_has_memory(module_imported_mem));
@@ -304,7 +335,7 @@ TEST(capi, get_export_count)
     */
     const auto wasm_empty = from_hex("0061736d01000000");
 
-    const auto* module_empty = fizzy_parse(wasm_empty.data(), wasm_empty.size());
+    const auto* module_empty = fizzy_parse(wasm_empty.data(), wasm_empty.size(), nullptr);
     ASSERT_NE(module_empty, nullptr);
 
     EXPECT_EQ(fizzy_get_export_count(module_empty), 0);
@@ -320,7 +351,7 @@ TEST(capi, get_export_count)
         "0061736d010000000104016000000302010004040170000005030100010606017f0041000b0711040166000001"
         "67030001740100016d02000a040102000b");
 
-    const auto* module = fizzy_parse(wasm.data(), wasm.size());
+    const auto* module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     EXPECT_EQ(fizzy_get_export_count(module), 4);
@@ -342,7 +373,7 @@ TEST(capi, get_export_description)
         "0061736d01000000010401600000030302000004040170000a0504010101040610037f0041000b7f0041000b7f"
         "0041000b07190402666e0001037461620100036d656d020004676c6f6203020a070202000b02000b");
 
-    const auto* module = fizzy_parse(wasm.data(), wasm.size());
+    const auto* module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
     ASSERT_EQ(fizzy_get_export_count(module), 4);
 
@@ -376,7 +407,7 @@ TEST(capi, export_name_after_instantiate)
     */
     const auto wasm = from_hex("0061736d010000000104016000000302010007060102666e00000a040102000b");
 
-    const auto* module = fizzy_parse(wasm.data(), wasm.size());
+    const auto* module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
     ASSERT_EQ(fizzy_get_export_count(module), 1);
 
@@ -405,7 +436,7 @@ TEST(capi, find_exported_function_index)
         "0061736d010000000105016000017f030201000404017000000504010101020606017f0041000b07180403666f"
         "6f00000267310300037461620100036d656d02000a06010400412a0b");
 
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     uint32_t func_idx;
@@ -434,7 +465,7 @@ TEST(capi, find_exported_function)
         "0061736d010000000105016000017f0302010004050170010a1e0504010101020606017f00412a0b0718040366"
         "6f6f00000267310300037461620100036d656d02000a06010400412a0b");
 
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     auto instance = fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0);
@@ -473,7 +504,7 @@ TEST(capi, find_exported_table)
         "0061736d010000000105016000017f0302010004050170010a1e0504010101020606017f00412a0b0718040366"
         "6f6f00000267310300037461620100036d656d02000a06010400412a0b");
 
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     auto instance = fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0);
@@ -503,7 +534,7 @@ TEST(capi, find_exported_table_no_max)
     */
     const auto wasm = from_hex("0061736d01000000040401700001070701037461620100");
 
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     auto instance = fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0);
@@ -532,7 +563,7 @@ TEST(capi, find_exported_memory)
         "0061736d010000000105016000017f0302010004050170010a1e0504010101020606017f00412a0b0718040366"
         "6f6f00000267310300037461620100036d656d02000a06010400412a0b");
 
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     auto instance = fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0);
@@ -562,7 +593,7 @@ TEST(capi, find_exported_memory_no_max)
     */
     const auto wasm = from_hex("0061736d010000000503010001070701036d656d0200");
 
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     auto instance = fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0);
@@ -591,7 +622,7 @@ TEST(capi, find_exported_global)
         "0061736d010000000105016000017f030201000404017000000504010101020606017f00412a0b07180403666f"
         "6f00000267310300037461620100036d656d02000a06010400412a0b");
 
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     auto instance = fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0);
@@ -617,7 +648,7 @@ TEST(capi, has_start_function)
       (module)
     */
     const auto wasm_no_start = from_hex("0061736d01000000");
-    const auto module_no_start = fizzy_parse(wasm_no_start.data(), wasm_no_start.size());
+    const auto module_no_start = fizzy_parse(wasm_no_start.data(), wasm_no_start.size(), nullptr);
     ASSERT_NE(module_no_start, nullptr);
 
     EXPECT_FALSE(fizzy_module_has_start_function(module_no_start));
@@ -629,7 +660,7 @@ TEST(capi, has_start_function)
       (start 0)
     */
     const auto wasm_start = from_hex("0061736d01000000010401600000030201000801000a040102000b");
-    const auto module_start = fizzy_parse(wasm_start.data(), wasm_start.size());
+    const auto module_start = fizzy_parse(wasm_start.data(), wasm_start.size(), nullptr);
     ASSERT_NE(module_start, nullptr);
 
     EXPECT_TRUE(fizzy_module_has_start_function(module_start));
@@ -640,7 +671,7 @@ TEST(capi, has_start_function)
 TEST(capi, instantiate)
 {
     uint8_t wasm_prefix[]{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00};
-    auto module = fizzy_parse(wasm_prefix, sizeof(wasm_prefix));
+    auto module = fizzy_parse(wasm_prefix, sizeof(wasm_prefix), nullptr);
     ASSERT_NE(module, nullptr);
 
     auto instance = fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0);
@@ -655,12 +686,12 @@ TEST(capi, instantiate_imported_function)
       (func (import "mod1" "foo1") (result i32))
     */
     const auto wasm = from_hex("0061736d010000000105016000017f020d01046d6f643104666f6f310000");
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     EXPECT_EQ(fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0), nullptr);
 
-    module = fizzy_parse(wasm.data(), wasm.size());
+    module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     FizzyExternalFunction host_funcs[] = {{{FizzyValueTypeI32, nullptr, 0}, NullFn, nullptr}};
@@ -687,7 +718,7 @@ TEST(capi, instantiate_imported_globals)
         "0061736d010000000111046000017f6000017e6000017d6000017c022d04046d6f6431026731037f01046d6f64"
         "31026732037e00046d6f6431026733037d00046d6f6431026734037c01030504000102030a1504040023000b04"
         "0023010b040023020b040023030b");
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     FizzyValue g1{42};
@@ -711,17 +742,17 @@ TEST(capi, instantiate_imported_globals)
     fizzy_free_instance(instance);
 
     // No globals provided.
-    module = fizzy_parse(wasm.data(), wasm.size());
+    module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
     EXPECT_EQ(fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0), nullptr);
 
     // Not enough globals provided.
-    module = fizzy_parse(wasm.data(), wasm.size());
+    module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
     EXPECT_EQ(fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, globals, 3), nullptr);
 
     // Incorrect order or globals.
-    module = fizzy_parse(wasm.data(), wasm.size());
+    module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     FizzyExternalGlobal globals_incorrect_order[] = {{&g1, {FizzyValueTypeI32, true}},
@@ -732,7 +763,7 @@ TEST(capi, instantiate_imported_globals)
         nullptr);
 
     // Global type mismatch.
-    module = fizzy_parse(wasm.data(), wasm.size());
+    module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     FizzyExternalGlobal globals_type_mismatch[] = {{&g1, {FizzyValueTypeI64, true}},
@@ -746,7 +777,7 @@ TEST(capi, instantiate_imported_globals)
 TEST(capi, instantiate_twice)
 {
     uint8_t wasm_prefix[]{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00};
-    const auto* module1 = fizzy_parse(wasm_prefix, sizeof(wasm_prefix));
+    const auto* module1 = fizzy_parse(wasm_prefix, sizeof(wasm_prefix), nullptr);
     ASSERT_NE(module1, nullptr);
 
     auto* instance1 = fizzy_instantiate(module1, nullptr, 0, nullptr, nullptr, nullptr, 0);
@@ -769,7 +800,7 @@ TEST(capi, resolve_instantiate_no_imports)
       (module)
     */
     const auto wasm = from_hex("0061736d01000000");
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     auto instance = fizzy_resolve_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0);
@@ -777,7 +808,7 @@ TEST(capi, resolve_instantiate_no_imports)
 
     fizzy_free_instance(instance);
 
-    module = fizzy_parse(wasm.data(), wasm.size());
+    module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     FizzyImportedFunction host_funcs[] = {
@@ -802,7 +833,7 @@ TEST(capi, resolve_instantiate_functions)
         "0061736d0100000001150460017f017f60017f017e60017f017d60017f017c023c05046d6f643104666f6f3100"
         "00046d6f643104666f6f320001046d6f643204666f6f310002046d6f643204666f6f320003046d6f6431026731"
         "037f00");
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     FizzyValue mod1g1value{42};
@@ -810,7 +841,7 @@ TEST(capi, resolve_instantiate_functions)
 
     EXPECT_EQ(fizzy_resolve_instantiate(module, nullptr, 0, nullptr, nullptr, &mod1g1, 1), nullptr);
 
-    module = fizzy_parse(wasm.data(), wasm.size());
+    module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     FizzyExternalFn host_fn = [](void* context, FizzyInstance*, const FizzyValue*,
@@ -845,7 +876,7 @@ TEST(capi, resolve_instantiate_functions)
     fizzy_free_instance(instance);
 
     // reordered functions
-    module = fizzy_parse(wasm.data(), wasm.size());
+    module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
     FizzyImportedFunction host_funcs_reordered[] = {{"mod1", "foo2", mod1foo2},
         {"mod2", "foo1", mod2foo1}, {"mod2", "foo2", mod2foo2}, {"mod1", "foo1", mod1foo1}};
@@ -855,7 +886,7 @@ TEST(capi, resolve_instantiate_functions)
     fizzy_free_instance(instance);
 
     // extra functions
-    module = fizzy_parse(wasm.data(), wasm.size());
+    module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
     FizzyImportedFunction host_funcs_extra[] = {{"mod1", "foo1", mod1foo1},
         {"mod1", "foo2", mod1foo2}, {"mod2", "foo1", mod2foo1}, {"mod2", "foo2", mod2foo2},
@@ -865,7 +896,7 @@ TEST(capi, resolve_instantiate_functions)
     fizzy_free_instance(instance);
 
     // not enough functions
-    module = fizzy_parse(wasm.data(), wasm.size());
+    module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
     EXPECT_EQ(
         fizzy_resolve_instantiate(module, host_funcs, 3, nullptr, nullptr, &mod1g1, 1), nullptr);
@@ -879,7 +910,7 @@ TEST(capi, resolve_instantiate_function_duplicate)
     */
     const auto wasm = from_hex(
         "0061736d010000000105016000017f021902046d6f643104666f6f310000046d6f643104666f6f310000");
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     FizzyExternalFn host_fn = [](void*, FizzyInstance*, const FizzyValue*, FizzyExecutionContext*) {
@@ -915,12 +946,12 @@ TEST(capi, resolve_instantiate_globals)
         "0061736d01000000010c036000006000017f6000017e023905046d6f6431026731037f00046d6f643102673203"
         "7f01046d6f6432026731037e00046d6f6432026732037e01046d6f643104666f6f310000030504010102020a15"
         "04040023000b040023010b040023020b040023030b");
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     EXPECT_EQ(fizzy_resolve_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0), nullptr);
 
-    module = fizzy_parse(wasm.data(), wasm.size());
+    module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     FizzyExternalFn host_fn = [](void*, FizzyInstance*, const FizzyValue*, FizzyExecutionContext*) {
@@ -953,7 +984,7 @@ TEST(capi, resolve_instantiate_globals)
     fizzy_free_instance(instance);
 
     // reordered globals
-    module = fizzy_parse(wasm.data(), wasm.size());
+    module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
     FizzyImportedGlobal host_globals_reordered[] = {{"mod1", "g2", mod1g2}, {"mod2", "g1", mod2g1},
         {"mod2", "g2", mod2g2}, {"mod1", "g1", mod1g1}};
@@ -969,7 +1000,7 @@ TEST(capi, resolve_instantiate_globals)
     fizzy_free_instance(instance);
 
     // extra globals
-    module = fizzy_parse(wasm.data(), wasm.size());
+    module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
     FizzyImportedGlobal host_globals_extra[] = {{"mod1", "g1", mod1g1}, {"mod1", "g2", mod1g2},
         {"mod2", "g1", mod2g1}, {"mod2", "g2", mod2g2}, {"mod3", "g1", mod1g1}};
@@ -985,7 +1016,7 @@ TEST(capi, resolve_instantiate_globals)
     fizzy_free_instance(instance);
 
     // not enough globals
-    module = fizzy_parse(wasm.data(), wasm.size());
+    module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
     EXPECT_EQ(
         fizzy_resolve_instantiate(module, &mod1foo1, 1, nullptr, nullptr, host_globals_extra, 3),
@@ -1003,7 +1034,7 @@ TEST(capi, resolve_instantiate_global_duplicate)
     const auto wasm = from_hex(
         "0061736d010000000105016000017f021702046d6f6431026731037f00046d6f6431026731037f000303020000"
         "0a0b02040023000b040023010b");
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     FizzyValue mod1g1value{42};
@@ -1033,7 +1064,7 @@ TEST(capi, get_instance_module)
       (func (param i32 i32))
     */
     const auto wasm = from_hex("0061736d0100000001060160027f7f00030201000a040102000b");
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     auto instance = fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0);
@@ -1053,7 +1084,7 @@ TEST(capi, memory_access_no_memory)
       (module)
     */
     const auto wasm = from_hex("0061736d01000000");
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     auto instance = fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0);
@@ -1071,7 +1102,7 @@ TEST(capi, memory_access_empty_memory)
       (memory 0)
     */
     const auto wasm = from_hex("0061736d010000000503010000");
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     auto instance = fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0);
@@ -1096,7 +1127,7 @@ TEST(capi, memory_access)
     const auto wasm = from_hex(
         "0061736d010000000105016000017f0302010005030100010a0901070041002802000b0b08010041010b02112"
         "2");
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     auto instance = fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0);
@@ -1130,7 +1161,7 @@ TEST(capi, imported_memory_access)
     const auto wasm_memory = from_hex(
         "0061736d010000000105016000017f030201000503010001070701036d656d02000a0901070041002802000b0b"
         "08010041010b021122");
-    auto* module_memory = fizzy_parse(wasm_memory.data(), wasm_memory.size());
+    auto* module_memory = fizzy_parse(wasm_memory.data(), wasm_memory.size(), nullptr);
     ASSERT_NE(module_memory, nullptr);
     auto* instance_memory =
         fizzy_instantiate(module_memory, nullptr, 0, nullptr, nullptr, nullptr, 0);
@@ -1148,7 +1179,7 @@ TEST(capi, imported_memory_access)
     */
     const auto wasm = from_hex(
         "0061736d010000000105016000017f020c01036d6f64036d656d020001030201000a0901070041002802000b");
-    auto* module = fizzy_parse(wasm.data(), wasm.size());
+    auto* module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     auto* instance = fizzy_instantiate(module, nullptr, 0, nullptr, &memory, nullptr, 0);
@@ -1185,7 +1216,7 @@ TEST(capi, execute)
         "0061736d01000000010e036000006000017f60027f7f017f030504000102000a150402000b0400412a0b070020"
         "0020016e0b0300000b");
 
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     auto instance = fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0);
@@ -1209,7 +1240,7 @@ TEST(capi, execute_with_host_function)
     const auto wasm = from_hex(
         "0061736d01000000010b026000017f60027f7f017f021902046d6f643104666f6f310000046d6f643104666f6f"
         "320001");
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     const FizzyValueType inputs[] = {FizzyValueTypeI32, FizzyValueTypeI32};
@@ -1249,7 +1280,7 @@ TEST(capi, imported_function_traps)
     */
     const auto wasm =
         from_hex("0061736d010000000105016000017f020901016d03666f6f0000030201000a0601040010000b");
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     FizzyExternalFunction host_funcs[] = {{{FizzyValueTypeI32, nullptr, 0},
@@ -1276,7 +1307,7 @@ TEST(capi, imported_function_void)
     */
     const auto wasm =
         from_hex("0061736d01000000010401600000020901016d03666f6f0000030201000a0601040010000b");
-    auto module = fizzy_parse(wasm.data(), wasm.size());
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     bool called = false;
@@ -1309,7 +1340,7 @@ TEST(capi, imported_function_from_another_module)
     */
     const auto bin1 = from_hex(
         "0061736d0100000001070160027f7f017f030201000707010373756200000a09010700200020016b0b");
-    auto module1 = fizzy_parse(bin1.data(), bin1.size());
+    auto module1 = fizzy_parse(bin1.data(), bin1.size(), nullptr);
     ASSERT_NE(module1, nullptr);
     auto instance1 = fizzy_instantiate(module1, nullptr, 0, nullptr, nullptr, nullptr, 0);
     ASSERT_NE(instance1, nullptr);
@@ -1331,7 +1362,7 @@ TEST(capi, imported_function_from_another_module)
     const auto bin2 = from_hex(
         "0061736d0100000001070160027f7f017f020a01026d31037375620000030201000a0a0108002000200110000"
         "b");
-    auto module2 = fizzy_parse(bin2.data(), bin2.size());
+    auto module2 = fizzy_parse(bin2.data(), bin2.size(), nullptr);
     ASSERT_NE(module2, nullptr);
 
     auto instance2 = fizzy_instantiate(module2, &func, 1, nullptr, nullptr, nullptr, 0);
@@ -1355,7 +1386,7 @@ TEST(capi, imported_table_from_another_module)
     const auto bin1 = from_hex(
         "0061736d010000000105016000017f0302010004050170010a1e070501017401000907010041010b01000a0601"
         "0400412a0b");
-    auto module1 = fizzy_parse(bin1.data(), bin1.size());
+    auto module1 = fizzy_parse(bin1.data(), bin1.size(), nullptr);
     ASSERT_NE(module1, nullptr);
     auto instance1 = fizzy_instantiate(module1, nullptr, 0, nullptr, nullptr, nullptr, 0);
     ASSERT_NE(instance1, nullptr);
@@ -1369,7 +1400,7 @@ TEST(capi, imported_table_from_another_module)
     */
     const auto bin2 = from_hex(
         "0061736d010000000105016000017f020b01026d3101740170010a1e030201000a0901070041011100000b");
-    auto module2 = fizzy_parse(bin2.data(), bin2.size());
+    auto module2 = fizzy_parse(bin2.data(), bin2.size(), nullptr);
     ASSERT_NE(module2, nullptr);
 
     FizzyExternalTable table;
@@ -1391,7 +1422,7 @@ TEST(capi, imported_memory_from_another_module)
       (data (i32.const 10) "\aa\ff")
     */
     const auto bin1 = from_hex("0061736d010000000503010001070501016d02000b080100410a0b02aaff");
-    auto module1 = fizzy_parse(bin1.data(), bin1.size());
+    auto module1 = fizzy_parse(bin1.data(), bin1.size(), nullptr);
     ASSERT_NE(module1, nullptr);
     auto instance1 = fizzy_instantiate(module1, nullptr, 0, nullptr, nullptr, nullptr, 0);
     ASSERT_NE(instance1, nullptr);
@@ -1405,7 +1436,7 @@ TEST(capi, imported_memory_from_another_module)
     */
     const auto bin2 = from_hex(
         "0061736d010000000105016000017f020901026d31016d020001030201000a0901070041092802000b");
-    auto module2 = fizzy_parse(bin2.data(), bin2.size());
+    auto module2 = fizzy_parse(bin2.data(), bin2.size(), nullptr);
     ASSERT_NE(module2, nullptr);
 
     FizzyExternalMemory memory;
@@ -1426,7 +1457,7 @@ TEST(capi, imported_global_from_another_module)
       (global (export "g") i32 (i32.const 42))
     */
     const auto bin1 = from_hex("0061736d010000000606017f00412a0b07050101670300");
-    auto module1 = fizzy_parse(bin1.data(), bin1.size());
+    auto module1 = fizzy_parse(bin1.data(), bin1.size(), nullptr);
     ASSERT_NE(module1, nullptr);
     auto instance1 = fizzy_instantiate(module1, nullptr, 0, nullptr, nullptr, nullptr, 0);
     ASSERT_NE(instance1, nullptr);
@@ -1441,7 +1472,7 @@ TEST(capi, imported_global_from_another_module)
     */
     const auto bin2 =
         from_hex("0061736d010000000105016000017f020901026d310167037f00030201000a0601040023000b");
-    auto module2 = fizzy_parse(bin2.data(), bin2.size());
+    auto module2 = fizzy_parse(bin2.data(), bin2.size(), nullptr);
     ASSERT_NE(module2, nullptr);
 
     FizzyExternalGlobal global;
@@ -1463,7 +1494,7 @@ TEST(capi, get_type_count)
     */
     const auto wasm = from_hex("0061736d01000000");
 
-    const auto* module_empty = fizzy_parse(wasm.data(), wasm.size());
+    const auto* module_empty = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module_empty, nullptr);
 
     EXPECT_EQ(fizzy_get_type_count(module_empty), 0);
@@ -1474,7 +1505,7 @@ TEST(capi, get_type_count)
     */
     const auto wasm_one_func = from_hex("0061736d01000000010401600000030201000a040102000b");
 
-    const auto* module_one_func = fizzy_parse(wasm_one_func.data(), wasm_one_func.size());
+    const auto* module_one_func = fizzy_parse(wasm_one_func.data(), wasm_one_func.size(), nullptr);
     ASSERT_NE(module_one_func, nullptr);
 
     EXPECT_EQ(fizzy_get_type_count(module_one_func), 1);
@@ -1493,7 +1524,8 @@ TEST(capi, get_type_count)
         "0061736d01000000010e0360017f0060017f017f6000017f030504000101020a160402000b050041000f0b0500"
         "41000f0b050041000f0b");
 
-    const auto* module_three_types = fizzy_parse(wasm_three_types.data(), wasm_three_types.size());
+    const auto* module_three_types =
+        fizzy_parse(wasm_three_types.data(), wasm_three_types.size(), nullptr);
     ASSERT_NE(module_three_types, nullptr);
 
     EXPECT_EQ(fizzy_get_type_count(module_three_types), 3);
@@ -1507,7 +1539,7 @@ TEST(capi, get_type)
     */
     const auto wasm_one_func = from_hex("0061736d01000000010401600000030201000a040102000b");
 
-    const auto* module_one_func = fizzy_parse(wasm_one_func.data(), wasm_one_func.size());
+    const auto* module_one_func = fizzy_parse(wasm_one_func.data(), wasm_one_func.size(), nullptr);
     ASSERT_NE(module_one_func, nullptr);
     ASSERT_EQ(fizzy_get_type_count(module_one_func), 1);
 
@@ -1531,7 +1563,8 @@ TEST(capi, get_type)
         "0061736d0100000001110460000060017f0060017f017f6000017f03060500010202030a190502000b02000b05"
         "0041000f0b050041000f0b050041000f0b");
 
-    const auto* module_three_types = fizzy_parse(wasm_three_types.data(), wasm_three_types.size());
+    const auto* module_three_types =
+        fizzy_parse(wasm_three_types.data(), wasm_three_types.size(), nullptr);
     ASSERT_NE(module_three_types, nullptr);
     ASSERT_EQ(fizzy_get_type_count(module_three_types), 4);
 
@@ -1563,7 +1596,7 @@ TEST(capi, get_type)
         "0061736d01000000010a0260027e7e0060017f00020901036d6f6401660000030201010a040102000b");
 
     const auto* module_imported_func =
-        fizzy_parse(wasm_imported_func.data(), wasm_imported_func.size());
+        fizzy_parse(wasm_imported_func.data(), wasm_imported_func.size(), nullptr);
     ASSERT_NE(module_imported_func, nullptr);
     ASSERT_EQ(fizzy_get_type_count(module_imported_func), 2);
 
@@ -1588,7 +1621,7 @@ TEST(capi, get_import_count)
     */
     const auto wasm_empty = from_hex("0061736d01000000");
 
-    const auto* module_empty = fizzy_parse(wasm_empty.data(), wasm_empty.size());
+    const auto* module_empty = fizzy_parse(wasm_empty.data(), wasm_empty.size(), nullptr);
     ASSERT_NE(module_empty, nullptr);
 
     EXPECT_EQ(fizzy_get_import_count(module_empty), 0);
@@ -1604,7 +1637,7 @@ TEST(capi, get_import_count)
         "0061736d010000000105016000017f021d04016d01660000016d0167037f00016d017401700000016d016d0200"
         "01");
 
-    const auto* module = fizzy_parse(wasm.data(), wasm.size());
+    const auto* module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
     EXPECT_EQ(fizzy_get_import_count(module), 4);
@@ -1628,7 +1661,7 @@ TEST(capi, get_import_description)
         "016d0266330002016d0266340003016d026731037f00016d026732037c01016d01740170000a016d036d656d02"
         "010104");
 
-    const auto* module = fizzy_parse(wasm.data(), wasm.size());
+    const auto* module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
     ASSERT_EQ(fizzy_get_import_count(module), 8);
 
@@ -1702,7 +1735,7 @@ TEST(capi, import_name_after_instantiate)
     */
     const auto wasm = from_hex("0061736d010000000105016000017f020801016d0266310000");
 
-    const auto* module = fizzy_parse(wasm.data(), wasm.size());
+    const auto* module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
     ASSERT_EQ(fizzy_get_import_count(module), 1);
 
@@ -1728,7 +1761,7 @@ TEST(capi, get_global_count)
     */
     const auto wasm = from_hex("0061736d01000000");
 
-    const auto* module_empty = fizzy_parse(wasm.data(), wasm.size());
+    const auto* module_empty = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module_empty, nullptr);
 
     EXPECT_EQ(fizzy_get_global_count(module_empty), 0);
@@ -1739,7 +1772,8 @@ TEST(capi, get_global_count)
     */
     const auto wasm_one_global = from_hex("0061736d010000000606017f0041000b");
 
-    const auto* module_one_global = fizzy_parse(wasm_one_global.data(), wasm_one_global.size());
+    const auto* module_one_global =
+        fizzy_parse(wasm_one_global.data(), wasm_one_global.size(), nullptr);
     ASSERT_NE(module_one_global, nullptr);
 
     EXPECT_EQ(fizzy_get_global_count(module_one_global), 1);
@@ -1753,7 +1787,7 @@ TEST(capi, get_global_count)
         from_hex("0061736d01000000020a01036d6f640167037f000606017f0041000b");
 
     const auto* module_imported_global =
-        fizzy_parse(wasm_imported_global.data(), wasm_imported_global.size());
+        fizzy_parse(wasm_imported_global.data(), wasm_imported_global.size(), nullptr);
     ASSERT_NE(module_imported_global, nullptr);
 
     EXPECT_EQ(fizzy_get_global_count(module_imported_global), 2);
@@ -1771,7 +1805,7 @@ TEST(capi, get_global_type)
     const auto wasm = from_hex(
         "0061736d01000000061f047f0041000b7e0142000b7d0043000000000b7c014400000000000000000b");
 
-    const auto* module = fizzy_parse(wasm.data(), wasm.size());
+    const auto* module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
     ASSERT_EQ(fizzy_get_global_count(module), 4);
 
@@ -1796,7 +1830,7 @@ TEST(capi, get_global_type)
         "0061736d01000000022904036d6f64026731037f00036d6f64026732037e01036d6f64026733037d00036d6f64"
         "026734037c01");
 
-    const auto* module_imports = fizzy_parse(wasm_imports.data(), wasm_imports.size());
+    const auto* module_imports = fizzy_parse(wasm_imports.data(), wasm_imports.size(), nullptr);
     ASSERT_NE(module_imports, nullptr);
     ASSERT_EQ(fizzy_get_global_count(module_imports), 4);
 
