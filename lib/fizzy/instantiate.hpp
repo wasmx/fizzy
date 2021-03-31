@@ -59,7 +59,7 @@ public:
     /// Host function constructor with context.
     /// The function will be called with a reference to @a host_context.
     /// Copies of the function will have their own copy of @a host_context.
-    ExecuteFunction(HostFunctionPtr f, std::any host_context)
+    ExecuteFunction(HostFunctionPtr f, std::any host_context) noexcept
       : m_host_function{f}, m_host_context{std::move(host_context)}
     {}
 
@@ -80,11 +80,11 @@ struct ExternalFunction
     span<const ValType> output_types;
 
     ExternalFunction(ExecuteFunction _function, span<const ValType> _input_types,
-        span<const ValType> _output_types)
+        span<const ValType> _output_types) noexcept
       : function(std::move(_function)), input_types(_input_types), output_types(_output_types)
     {}
 
-    ExternalFunction(ExecuteFunction _function, const FuncType& type)
+    ExternalFunction(ExecuteFunction _function, const FuncType& type) noexcept
       : function(std::move(_function)), input_types(type.inputs), output_types(type.outputs)
     {}
 };
