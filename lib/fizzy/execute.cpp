@@ -565,6 +565,7 @@ ExecutionResult execute(
         return Trap;
 
     const auto& func_type = instance.module->get_function_type(func_idx);
+    const auto args_count = func_type.inputs.size();
 
     assert(instance.module->imported_function_types.size() == instance.imported_functions.size());
     if (func_idx < instance.imported_functions.size())
@@ -573,10 +574,13 @@ ExecutionResult execute(
     const auto& code = instance.module->get_code(func_idx);
     auto* const memory = instance.memory.get();
 
-    const auto local_ctx = ctx.create_local_context();
+    const auto required_stack_space =
+        args_count + code.local_count + static_cast<size_t>(code.max_stack_height);
 
-    OperandStack stack(args, func_type.inputs.size(), code.local_count,
-        static_cast<size_t>(code.max_stack_height));
+    const auto local_ctx = ctx.create_local_context(required_stack_space);
+
+    OperandStack stack(
+        args, args_count, code.local_count, static_cast<size_t>(code.max_stack_height));
 
     const uint8_t* pc = code.instructions.data();
 
