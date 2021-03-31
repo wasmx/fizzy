@@ -457,7 +457,7 @@ TEST(end_to_end, milestone2)
 
     const auto module = parse(wasm);
 
-    const auto func_idx = find_exported_function(*module, "mul256");
+    const auto func_idx = find_exported_function_index(*module, "mul256");
     ASSERT_TRUE(func_idx);
 
     auto instance = instantiate(*module);
@@ -609,7 +609,7 @@ TEST(end_to_end, nested_loops_in_c)
 
     const auto module = parse(wasm);
 
-    const auto func_idx = find_exported_function(*module, "test");
+    const auto func_idx = find_exported_function_index(*module, "test");
     ASSERT_TRUE(func_idx);
 
     auto instance = instantiate(*module);
@@ -651,7 +651,7 @@ TEST(end_to_end, memset)
 
     const auto module = parse(wasm);
 
-    const auto func_idx = find_exported_function(*module, "test");
+    const auto func_idx = find_exported_function_index(*module, "test");
     ASSERT_TRUE(func_idx);
 
     auto instance = instantiate(*module);

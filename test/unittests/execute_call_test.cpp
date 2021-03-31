@@ -524,7 +524,7 @@ TEST(execute_call, imported_function_from_another_module_via_func_idx)
         "0061736d0100000001070160027f7f017f020a01026d31037375620000030201000a0a0108002000200110000"
         "b");
 
-    const auto func_idx = fizzy::find_exported_function(*module1, "sub");
+    const auto func_idx = fizzy::find_exported_function_index(*module1, "sub");
     ASSERT_TRUE(func_idx.has_value());
 
     auto instance2 = instantiate(parse(bin2), {{{*instance1, *func_idx}, module1->typesec[0]}});
@@ -564,7 +564,7 @@ TEST(execute_call, imported_function_from_another_module_via_host_function)
         "0061736d0100000001070160027f7f017f020a01026d31037375620000030201000a0a0108002000200110000"
         "b");
 
-    const auto func_idx = fizzy::find_exported_function(*module1, "sub");
+    const auto func_idx = fizzy::find_exported_function_index(*module1, "sub");
     ASSERT_TRUE(func_idx.has_value());
 
     constexpr auto sub = [](std::any& host_context, Instance&, const Value* args,
@@ -886,7 +886,7 @@ TEST(execute_call, drop_call_result)
     ASSERT_EQ(module->codesec.size(), 2);
     EXPECT_EQ(module->codesec[0].max_stack_height, 1);
     EXPECT_EQ(module->codesec[1].max_stack_height, 1);
-    const auto func_idx = find_exported_function(*module, "drop_call_result");
+    const auto func_idx = find_exported_function_index(*module, "drop_call_result");
     auto instance = instantiate(*module);
     EXPECT_THAT(fizzy::execute(*instance, *func_idx, {}), Result());
 }

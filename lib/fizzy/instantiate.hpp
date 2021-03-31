@@ -236,7 +236,7 @@ std::vector<ExternalGlobal> resolve_imported_globals(
     const Module& module, const std::vector<ImportedGlobal>& imported_globals);
 
 /// Find exported function index by name.
-std::optional<FuncIdx> find_exported_function(const Module& module, std::string_view name);
+std::optional<FuncIdx> find_exported_function_index(const Module& module, std::string_view name);
 
 /// Find exported function by name.
 std::optional<ExternalFunction> find_exported_function(Instance& instance, std::string_view name);

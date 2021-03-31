@@ -462,7 +462,7 @@ private:
             return std::nullopt;
 
         const auto func_name = action.at("field").get<std::string>();
-        const auto func_idx = fizzy::find_exported_function(*instance->module, func_name);
+        const auto func_idx = fizzy::find_exported_function_index(*instance->module, func_name);
         if (!func_idx.has_value())
         {
             skip("Function '" + func_name + "' not found.");

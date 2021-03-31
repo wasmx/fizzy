@@ -488,7 +488,7 @@ std::vector<ExternalGlobal> resolve_imported_globals(
     return external_globals;
 }
 
-std::optional<FuncIdx> find_exported_function(const Module& module, std::string_view name)
+std::optional<FuncIdx> find_exported_function_index(const Module& module, std::string_view name)
 {
     return find_export(module, ExternalKind::Function, name);
 }

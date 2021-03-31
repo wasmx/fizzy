@@ -177,7 +177,7 @@ bool run(bytes_view wasm_binary, int argc, const char* argv[], std::ostream& err
         instantiate(std::move(module), std::move(imports), {}, {}, {}, MaxMemoryPagesLimit);
     assert(instance != nullptr);
 
-    const auto start_function = find_exported_function(*instance->module, "_start");
+    const auto start_function = find_exported_function_index(*instance->module, "_start");
     if (!start_function.has_value())
     {
         err << "File is not WASI compatible (_start not found)\n";
@@ -185,7 +185,7 @@ bool run(bytes_view wasm_binary, int argc, const char* argv[], std::ostream& err
     }
 
     // Manually validate type signature here
-    // TODO: do this in find_exported_function
+    // TODO: do this in find_exported_function_index
     if (instance->module->get_function_type(*start_function) != FuncType{})
     {
         err << "File is not WASI compatible (_start has invalid signature)\n";

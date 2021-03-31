@@ -408,26 +408,26 @@ TEST(api, find_exported_function_index)
     module.exportsec.emplace_back(Export{"glob", ExternalKind::Global, 0});
     module.exportsec.emplace_back(Export{"table", ExternalKind::Table, 0});
 
-    auto optionalIdx = find_exported_function(module, "foo1");
+    auto optionalIdx = find_exported_function_index(module, "foo1");
     ASSERT_TRUE(optionalIdx);
     EXPECT_EQ(*optionalIdx, 0);
 
-    optionalIdx = find_exported_function(module, "foo2");
+    optionalIdx = find_exported_function_index(module, "foo2");
     ASSERT_TRUE(optionalIdx);
     EXPECT_EQ(*optionalIdx, 1);
 
-    optionalIdx = find_exported_function(module, "foo3");
+    optionalIdx = find_exported_function_index(module, "foo3");
     ASSERT_TRUE(optionalIdx);
     EXPECT_EQ(*optionalIdx, 2);
 
-    optionalIdx = find_exported_function(module, "foo4");
+    optionalIdx = find_exported_function_index(module, "foo4");
     ASSERT_TRUE(optionalIdx);
     EXPECT_EQ(*optionalIdx, 42);
 
-    EXPECT_FALSE(find_exported_function(module, "foo5"));
-    EXPECT_FALSE(find_exported_function(module, "mem"));
-    EXPECT_FALSE(find_exported_function(module, "glob"));
-    EXPECT_FALSE(find_exported_function(module, "table"));
+    EXPECT_FALSE(find_exported_function_index(module, "foo5"));
+    EXPECT_FALSE(find_exported_function_index(module, "mem"));
+    EXPECT_FALSE(find_exported_function_index(module, "glob"));
+    EXPECT_FALSE(find_exported_function_index(module, "table"));
 }
 
 TEST(api, find_exported_function)
