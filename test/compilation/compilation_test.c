@@ -8,5 +8,5 @@ bool dummy(void);
 
 bool dummy()
 {
-    return fizzy_validate(NULL, 0);
+    return fizzy_validate(NULL, 0, NULL);
 }

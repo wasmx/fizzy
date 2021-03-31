@@ -7,10 +7,78 @@
 #include "instantiate.hpp"
 #include "parser.hpp"
 #include <fizzy/fizzy.h>
+#include <cstring>
 #include <memory>
 
 namespace
 {
+inline void set_success(FizzyError* error) noexcept
+{
+    if (error == nullptr)
+        return;
+
+    error->code = FIZZY_SUCCESS;
+    error->message[0] = '\0';
+}
+
+// Copying a string into a fixed-size static buffer, guaranteed to not overrun it and to always end
+// the destination string with a null terminator. Inspired by strlcpy.
+template <size_t N>
+inline size_t truncating_strlcpy(char (&dest)[N], const char* src) noexcept
+{
+    static_assert(N >= 4);
+
+    const auto src_len = strlen(src);
+    const auto copy_len = std::min(src_len, N - 1);
+    memcpy(dest, src, copy_len);
+    if (copy_len < src_len)
+    {
+        dest[copy_len - 3] = '.';
+        dest[copy_len - 2] = '.';
+        dest[copy_len - 1] = '.';
+    }
+    dest[copy_len] = '\0';
+    return copy_len;
+}
+
+inline void set_error_code_and_message(
+    FizzyErrorCode code, const char* message, FizzyError* error) noexcept
+{
+    error->code = code;
+    truncating_strlcpy(error->message, message);
+}
+
+inline void set_error_from_current_exception(FizzyError* error) noexcept
+{
+    if (error == nullptr)
+        return;
+
+    try
+    {
+        throw;
+    }
+    catch (const fizzy::parser_error& e)
+    {
+        set_error_code_and_message(FIZZY_ERROR_MALFORMED_MODULE, e.what(), error);
+    }
+    catch (const fizzy::validation_error& e)
+    {
+        set_error_code_and_message(FIZZY_ERROR_INVALID_MODULE, e.what(), error);
+    }
+    catch (const fizzy::instantiate_error& e)
+    {
+        set_error_code_and_message(FIZZY_ERROR_INSTANTIATION_FAILED, e.what(), error);
+    }
+    catch (const std::exception& e)
+    {
+        set_error_code_and_message(FIZZY_ERROR_OTHER, e.what(), error);
+    }
+    catch (...)
+    {
+        set_error_code_and_message(FIZZY_ERROR_OTHER, "unknown error", error);
+    }
+}
+
 inline const FizzyModule* wrap(const fizzy::Module* module) noexcept
 {
     return reinterpret_cast<const FizzyModule*>(module);
@@ -360,15 +428,17 @@ inline FizzyExportDescription wrap(const fizzy::Export& exp) noexcept
 }  // namespace
 
 extern "C" {
-bool fizzy_validate(const uint8_t* wasm_binary, size_t wasm_binary_size)
+bool fizzy_validate(const uint8_t* wasm_binary, size_t wasm_binary_size, FizzyError* error)
 {
     try
     {
         fizzy::parse({wasm_binary, wasm_binary_size});
+        set_success(error);
         return true;
     }
     catch (...)
     {
+        set_error_from_current_exception(error);
         return false;
     }
 }

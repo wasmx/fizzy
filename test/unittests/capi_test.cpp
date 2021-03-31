@@ -15,9 +15,102 @@ static constexpr FizzyExternalFn NullFn = nullptr;
 TEST(capi, validate)
 {
     uint8_t wasm_prefix[]{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00};
-    EXPECT_TRUE(fizzy_validate(wasm_prefix, sizeof(wasm_prefix)));
+
+    // Success omitting FizzyError argument.
+    EXPECT_TRUE(fizzy_validate(wasm_prefix, sizeof(wasm_prefix), nullptr));
+
+    // Success with FizzyError argument.
+    FizzyError success;
+    EXPECT_TRUE(fizzy_validate(wasm_prefix, sizeof(wasm_prefix), &success));
+    EXPECT_EQ(success.code, FIZZY_SUCCESS);
+    EXPECT_STREQ(success.message, "");
+
     wasm_prefix[7] = 1;
-    EXPECT_FALSE(fizzy_validate(wasm_prefix, sizeof(wasm_prefix)));
+    // Parsing error omitting FizzyError argument.
+    EXPECT_FALSE(fizzy_validate(wasm_prefix, sizeof(wasm_prefix), nullptr));
+
+    // Parsing error with FizzyError argument.
+    FizzyError parsing_error;
+    EXPECT_FALSE(fizzy_validate(wasm_prefix, sizeof(wasm_prefix), &parsing_error));
+    EXPECT_EQ(parsing_error.code, FIZZY_ERROR_MALFORMED_MODULE);
+    EXPECT_STREQ(parsing_error.message, "invalid wasm module prefix");
+
+    /* wat2wasm --no-check
+      (func (i32.const 0))
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a0601040041000b");
+    // Validation error omitting FizzyError argument.
+    EXPECT_FALSE(fizzy_validate(wasm.data(), wasm.size(), nullptr));
+
+    // Validation error with FizzyError argument.
+    FizzyError validation_error;
+    EXPECT_FALSE(fizzy_validate(wasm.data(), wasm.size(), &validation_error));
+    EXPECT_EQ(validation_error.code, FIZZY_ERROR_INVALID_MODULE);
+    EXPECT_STREQ(validation_error.message, "too many results");
+}
+
+TEST(capi, truncated_error_message)
+{
+    // "duplicate export name " error message prefix is 22 characters long
+
+    // Export name 233 characters long, will be not truncated.
+    // clang-format off
+    /* wat2wasm --no-check
+      (func (export "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. D"))
+      (func (export "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. D"))
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010401600000030302000007db0302e9014c6f72656d20697073756d20646f6c6f72207369"
+        "7420616d65742c20636f6e73656374657475722061646970697363696e6720656c69742c2073656420646f2065"
+        "6975736d6f642074656d706f7220696e6369646964756e74207574206c61626f726520657420646f6c6f726520"
+        "6d61676e6120616c697175612e20557420656e696d206164206d696e696d2076656e69616d2c2071756973206e"
+        "6f737472756420657865726369746174696f6e20756c6c616d636f206c61626f726973206e6973692075742061"
+        "6c697175697020657820656120636f6d6d6f646f20636f6e7365717561742e20440000e9014c6f72656d206970"
+        "73756d20646f6c6f722073697420616d65742c20636f6e73656374657475722061646970697363696e6720656c"
+        "69742c2073656420646f20656975736d6f642074656d706f7220696e6369646964756e74207574206c61626f72"
+        "6520657420646f6c6f7265206d61676e6120616c697175612e20557420656e696d206164206d696e696d207665"
+        "6e69616d2c2071756973206e6f737472756420657865726369746174696f6e20756c6c616d636f206c61626f72"
+        "6973206e69736920757420616c697175697020657820656120636f6d6d6f646f20636f6e7365717561742e2044"
+        "00010a070202000b02000b");
+    // clang-format on
+
+    FizzyError error;
+    EXPECT_FALSE(fizzy_validate(wasm.data(), wasm.size(), &error));
+    EXPECT_EQ(error.code, FIZZY_ERROR_INVALID_MODULE);
+    EXPECT_EQ(strlen(error.message), 255);
+    EXPECT_STREQ(error.message,
+        "duplicate export name Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do "
+        "eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis "
+        "nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. D");
+
+    // Export name 234 characters long, will be truncated.
+    // clang-format off
+    /* wat2wasm --no-check
+      (func (export "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Du"))
+      (func (export "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Du"))
+    */
+    const auto wasm_trunc = from_hex(
+        "0061736d01000000010401600000030302000007dd0302ea014c6f72656d20697073756d20646f6c6f72207369"
+        "7420616d65742c20636f6e73656374657475722061646970697363696e6720656c69742c2073656420646f2065"
+        "6975736d6f642074656d706f7220696e6369646964756e74207574206c61626f726520657420646f6c6f726520"
+        "6d61676e6120616c697175612e20557420656e696d206164206d696e696d2076656e69616d2c2071756973206e"
+        "6f737472756420657865726369746174696f6e20756c6c616d636f206c61626f726973206e6973692075742061"
+        "6c697175697020657820656120636f6d6d6f646f20636f6e7365717561742e2044750000ea014c6f72656d2069"
+        "7073756d20646f6c6f722073697420616d65742c20636f6e73656374657475722061646970697363696e672065"
+        "6c69742c2073656420646f20656975736d6f642074656d706f7220696e6369646964756e74207574206c61626f"
+        "726520657420646f6c6f7265206d61676e6120616c697175612e20557420656e696d206164206d696e696d2076"
+        "656e69616d2c2071756973206e6f737472756420657865726369746174696f6e20756c6c616d636f206c61626f"
+        "726973206e69736920757420616c697175697020657820656120636f6d6d6f646f20636f6e7365717561742e20"
+        "447500010a070202000b02000b");
+    // clang-format on
+
+    EXPECT_FALSE(fizzy_validate(wasm_trunc.data(), wasm_trunc.size(), &error));
+    EXPECT_EQ(error.code, FIZZY_ERROR_INVALID_MODULE);
+    EXPECT_EQ(strlen(error.message), 255);
+    EXPECT_STREQ(error.message,
+        "duplicate export name Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do "
+        "eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis "
+        "nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat...");
 }
 
 TEST(capi, parse)

@@ -6,5 +6,5 @@
 
 int main()
 {
-    return fizzy_validate(nullptr, 0) ? 0 : 1;
+    return fizzy_validate(nullptr, 0, nullptr) ? 0 : 1;
 }
