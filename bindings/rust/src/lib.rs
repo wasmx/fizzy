@@ -136,10 +136,11 @@ pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, String> {
     };
     if ptr.is_null() {
         debug_assert!(err.code() != 0);
-        return Err(err.message());
+        Err(err.message())
+    } else {
+        debug_assert!(err.code() == 0);
+        Ok(Module { 0: ptr })
     }
-    debug_assert!(err.code() == 0);
-    Ok(Module { 0: ptr })
 }
 
 /// An instance of a module.
@@ -173,12 +174,13 @@ impl Module {
         core::mem::forget(self);
         if ptr.is_null() {
             debug_assert!(err.code() != 0);
-            return Err(err.message());
+            Err(err.message())
+        } else {
+            debug_assert!(err.code() == 0);
+            Ok(Instance {
+                0: unsafe { NonNull::new_unchecked(ptr) },
+            })
         }
-        debug_assert!(err.code() == 0);
-        Ok(Instance {
-            0: unsafe { NonNull::new_unchecked(ptr) },
-        })
     }
 }
 
