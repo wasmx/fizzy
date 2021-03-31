@@ -59,9 +59,6 @@ public:
 /// from the stack itself.
 class OperandStack
 {
-    /// The size of the pre-allocated internal storage: 128 bytes.
-    static constexpr auto small_storage_size = 128 / sizeof(Value);
-
     /// The pointer to the top item of the operand stack,
     /// or below the stack bottom if stack is empty.
     ///
@@ -77,12 +74,6 @@ class OperandStack
     /// The pointer to the bottom of the operand stack.
     Value* m_bottom;
 
-    /// The pre-allocated internal storage.
-    Value m_small_storage[small_storage_size];
-
-    /// The unbounded storage for items.
-    std::unique_ptr<Value[]> m_large_storage;
-
 public:
     /// Default constructor.
     ///
@@ -97,26 +88,16 @@ public:
     ///                                space after the arguments.
     /// @param  max_stack_height       The maximum operand stack height in the function. This
     ///                                excludes @a args and @a num_local_variables.
-    OperandStack(
-        const Value* args, size_t num_args, size_t num_local_variables, size_t max_stack_height)
+    OperandStack(const Value* args, size_t num_args, size_t num_local_variables, Value* stack_space)
     {
         const auto num_locals = num_args + num_local_variables;
         // To avoid potential UB when there are no locals and the stack pointer is set to
         // m_bottom - 1 (i.e. before storage array), we allocate one additional unused stack item.
-        const auto num_locals_adjusted = num_locals + (num_locals == 0);  // Bump to 1 if 0.
-        const auto storage_size_required = num_locals_adjusted + max_stack_height;
+        // const auto num_locals_adjusted = num_locals + (num_locals == 0);  // Bump to 1 if 0.
+        // const auto storage_size_required = num_locals_adjusted + max_stack_height;
 
-        if (storage_size_required <= small_storage_size)
-        {
-            m_locals = &m_small_storage[0];
-        }
-        else
-        {
-            m_large_storage = std::make_unique<Value[]>(storage_size_required);
-            m_locals = &m_large_storage[0];
-        }
-
-        m_bottom = m_locals + num_locals_adjusted;
+        m_locals = stack_space;
+        m_bottom = m_locals + num_locals;
         m_top = m_bottom - 1;
 
         const auto local_variables = std::copy_n(args, num_args, m_locals);

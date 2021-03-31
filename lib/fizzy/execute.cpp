@@ -579,8 +579,7 @@ ExecutionResult execute(
 
     const auto local_ctx = ctx.create_local_context(required_stack_space);
 
-    OperandStack stack(
-        args, args_count, code.local_count, static_cast<size_t>(code.max_stack_height));
+    OperandStack stack(args, args_count, code.local_count, local_ctx.stack_space);
 
     const uint8_t* pc = code.instructions.data();
 
