@@ -49,6 +49,29 @@ TEST(capi, validate)
     EXPECT_STREQ(validation_error.message, "too many results");
 }
 
+TEST(capi, error_reuse)
+{
+    uint8_t wasm_prefix[]{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00};
+
+    FizzyError error;
+    EXPECT_TRUE(fizzy_validate(wasm_prefix, sizeof(wasm_prefix), &error));
+    EXPECT_EQ(error.code, FIZZY_SUCCESS);
+    EXPECT_STREQ(error.message, "");
+
+    wasm_prefix[7] = 1;
+    EXPECT_FALSE(fizzy_validate(wasm_prefix, sizeof(wasm_prefix), &error));
+    EXPECT_EQ(error.code, FIZZY_ERROR_MALFORMED_MODULE);
+    EXPECT_STREQ(error.message, "invalid wasm module prefix");
+
+    /* wat2wasm --no-check
+      (func (i32.const 0))
+    */
+    const auto wasm = from_hex("0061736d01000000010401600000030201000a0601040041000b");
+    EXPECT_FALSE(fizzy_validate(wasm.data(), wasm.size(), &error));
+    EXPECT_EQ(error.code, FIZZY_ERROR_INVALID_MODULE);
+    EXPECT_STREQ(error.message, "too many results");
+}
+
 TEST(capi, truncated_error_message)
 {
     // "duplicate export name " error message prefix is 22 characters long
