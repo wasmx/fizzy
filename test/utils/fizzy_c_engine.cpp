@@ -65,7 +65,8 @@ bool FizzyCEngine::instantiate(bytes_view wasm_binary)
     FizzyValueType inputs[] = {FizzyValueTypeI32, FizzyValueTypeI32};
     FizzyImportedFunction imports[] = {
         {"env", "adler32", {{FizzyValueTypeI32, inputs, 2}, env_adler32, nullptr}}};
-    m_instance.reset(fizzy_resolve_instantiate(module, imports, 1, nullptr, nullptr, nullptr, 0));
+    m_instance.reset(
+        fizzy_resolve_instantiate(module, imports, 1, nullptr, nullptr, nullptr, 0, nullptr));
 
     return (m_instance != nullptr);
 }
