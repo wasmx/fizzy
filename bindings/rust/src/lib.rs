@@ -156,6 +156,7 @@ impl Module {
     // TODO: support imported functions
     pub fn instantiate(self) -> Result<Instance, String> {
         debug_assert!(!self.0.is_null());
+        let mut err = FizzyErrorBox::new();
         let ptr = unsafe {
             sys::fizzy_instantiate(
                 self.0,
@@ -165,14 +166,16 @@ impl Module {
                 std::ptr::null(),
                 std::ptr::null(),
                 0,
-                std::ptr::null_mut(),
+                err.as_mut_ptr(),
             )
         };
         // Forget Module (and avoid calling drop) because it has been consumed by instantiate (even if it failed).
         core::mem::forget(self);
         if ptr.is_null() {
-            return Err("instantiation failure".to_string());
+            debug_assert!(err.code() != 0);
+            return Err(err.message());
         }
+        debug_assert!(err.code() == 0);
         Ok(Instance {
             0: unsafe { NonNull::new_unchecked(ptr) },
         })
@@ -733,7 +736,10 @@ mod tests {
         let module = parse(&input);
         assert!(module.is_ok());
         let instance = module.unwrap().instantiate();
-        assert_eq!(instance.err().unwrap(), "instantiation failure");
+        assert_eq!(
+            instance.err().unwrap(),
+            "module defines an imported memory but none was provided"
+        );
     }
 
     #[test]
