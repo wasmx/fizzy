@@ -602,7 +602,7 @@ bool fizzy_module_has_start_function(const FizzyModule* module)
 FizzyInstance* fizzy_instantiate(const FizzyModule* module,
     const FizzyExternalFunction* imported_functions, size_t imported_functions_size,
     const FizzyExternalTable* imported_table, const FizzyExternalMemory* imported_memory,
-    const FizzyExternalGlobal* imported_globals, size_t imported_globals_size)
+    const FizzyExternalGlobal* imported_globals, size_t imported_globals_size, FizzyError* error)
 {
     try
     {
@@ -614,10 +614,12 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
         auto instance = fizzy::instantiate(std::unique_ptr<const fizzy::Module>(unwrap(module)),
             std::move(functions), std::move(table), std::move(memory), std::move(globals));
 
+        set_success(error);
         return wrap(instance.release());
     }
     catch (...)
     {
+        set_error_from_current_exception(error);
         return nullptr;
     }
 }

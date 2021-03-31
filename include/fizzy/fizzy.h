@@ -398,6 +398,8 @@ bool fizzy_module_has_start_function(const FizzyModule* module);
 /// @param  imported_globals           Pointer to the imported globals array. Can be NULL iff
 ///                                    @p imported_globals_size equals 0.
 /// @param  imported_globals_size      Size of the imported global array. Can be zero.
+/// @param  error                      Pointer to store detailed error information at. Can be NULL
+///                                    if error information is not required.
 /// @return                            non-NULL pointer to instance in case of success,
 ///                                    NULL otherwise.
 ///
@@ -415,7 +417,7 @@ bool fizzy_module_has_start_function(const FizzyModule* module);
 FizzyInstance* fizzy_instantiate(const FizzyModule* module,
     const FizzyExternalFunction* imported_functions, size_t imported_functions_size,
     const FizzyExternalTable* imported_table, const FizzyExternalMemory* imported_memory,
-    const FizzyExternalGlobal* imported_globals, size_t imported_globals_size);
+    const FizzyExternalGlobal* imported_globals, size_t imported_globals_size, FizzyError* error);
 
 /// Instantiate a module resolving imported functions.
 ///

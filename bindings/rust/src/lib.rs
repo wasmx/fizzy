@@ -110,6 +110,7 @@ impl Module {
                 std::ptr::null(),
                 std::ptr::null(),
                 0,
+                std::ptr::null_mut(),
             )
         };
         // Forget Module (and avoid calling drop) because it has been consumed by instantiate (even if it failed).
