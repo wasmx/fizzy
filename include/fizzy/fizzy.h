@@ -14,6 +14,25 @@
 extern "C" {
 #endif
 
+/// Error codes.
+typedef enum FizzyErrorCode
+{
+    FIZZY_SUCCESS = 0,
+    FIZZY_ERROR_MALFORMED_MODULE,
+    FIZZY_ERROR_INVALID_MODULE,
+    FIZZY_ERROR_INSTANTIATION_FAILED,
+    FIZZY_ERROR_OTHER
+} FizzyErrorCode;
+
+/// Error information.
+typedef struct FizzyError
+{
+    /// Error code.
+    FizzyErrorCode code;
+    /// NULL-terminated error message.
+    char message[256];
+} FizzyError;
+
 /// The opaque data type representing a module.
 typedef struct FizzyModule FizzyModule;
 
@@ -221,15 +240,20 @@ typedef struct FizzyImportedGlobal
 ///
 /// @param  wasm_binary         Pointer to module binary data.
 /// @param  wasm_binary_size    Size of the module binary data.
+/// @param  error               Pointer to store detailed error information at. Can be NULL if error
+///                             information is not required.
 /// @return                     true if module is valid, false otherwise.
-bool fizzy_validate(const uint8_t* wasm_binary, size_t wasm_binary_size);
+bool fizzy_validate(const uint8_t* wasm_binary, size_t wasm_binary_size, FizzyError* error);
 
 /// Parse binary module.
 ///
 /// @param  wasm_binary         Pointer to module binary data.
 /// @param  wasm_binary_size    Size of the module binary data.
+/// @param  error               Pointer to store detailed error information at. Can be NULL if error
+///                             information is not required.
 /// @return                     non-NULL pointer to module in case of success, NULL otherwise.
-const FizzyModule* fizzy_parse(const uint8_t* wasm_binary, size_t wasm_binary_size);
+const FizzyModule* fizzy_parse(
+    const uint8_t* wasm_binary, size_t wasm_binary_size, FizzyError* error);
 
 /// Free resources associated with the module.
 ///
@@ -374,6 +398,8 @@ bool fizzy_module_has_start_function(const FizzyModule* module);
 /// @param  imported_globals           Pointer to the imported globals array. Can be NULL iff
 ///                                    @p imported_globals_size equals 0.
 /// @param  imported_globals_size      Size of the imported global array. Can be zero.
+/// @param  error                      Pointer to store detailed error information at. Can be NULL
+///                                    if error information is not required.
 /// @return                            non-NULL pointer to instance in case of success,
 ///                                    NULL otherwise.
 ///
@@ -391,7 +417,7 @@ bool fizzy_module_has_start_function(const FizzyModule* module);
 FizzyInstance* fizzy_instantiate(const FizzyModule* module,
     const FizzyExternalFunction* imported_functions, size_t imported_functions_size,
     const FizzyExternalTable* imported_table, const FizzyExternalMemory* imported_memory,
-    const FizzyExternalGlobal* imported_globals, size_t imported_globals_size);
+    const FizzyExternalGlobal* imported_globals, size_t imported_globals_size, FizzyError* error);
 
 /// Instantiate a module resolving imported functions.
 ///
@@ -415,6 +441,8 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 /// @param  imported_globals           Pointer to the imported globals array. Can be NULL iff
 ///                                    @p imported_globals_size equals 0.
 /// @param  imported_globals_size      Size of the imported global array. Can be zero.
+/// @param  error                      Pointer to store detailed error information at. Can be NULL
+///                                    if error information is not required.
 /// @return                            non-NULL pointer to instance in case of success,
 ///                                    NULL otherwise.
 ///
@@ -436,7 +464,7 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 FizzyInstance* fizzy_resolve_instantiate(const FizzyModule* module,
     const FizzyImportedFunction* imported_functions, size_t imported_functions_size,
     const FizzyExternalTable* imported_table, const FizzyExternalMemory* imported_memory,
-    const FizzyImportedGlobal* imported_globals, size_t imported_globals_size);
+    const FizzyImportedGlobal* imported_globals, size_t imported_globals_size, FizzyError* error);
 
 /// Free resources associated with the instance.
 ///

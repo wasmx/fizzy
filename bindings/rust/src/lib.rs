@@ -42,7 +42,13 @@ use std::ptr::NonNull;
 
 /// Parse and validate the input according to WebAssembly 1.0 rules. Returns true if the supplied input is valid.
 pub fn validate<T: AsRef<[u8]>>(input: T) -> bool {
-    unsafe { sys::fizzy_validate(input.as_ref().as_ptr(), input.as_ref().len()) }
+    unsafe {
+        sys::fizzy_validate(
+            input.as_ref().as_ptr(),
+            input.as_ref().len(),
+            std::ptr::null_mut(),
+        )
+    }
 }
 
 /// A parsed and validated WebAssembly 1.0 module.
@@ -68,7 +74,13 @@ impl Clone for Module {
 
 /// Parse and validate the input according to WebAssembly 1.0 rules.
 pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, String> {
-    let ptr = unsafe { sys::fizzy_parse(input.as_ref().as_ptr(), input.as_ref().len()) };
+    let ptr = unsafe {
+        sys::fizzy_parse(
+            input.as_ref().as_ptr(),
+            input.as_ref().len(),
+            std::ptr::null_mut(),
+        )
+    };
     if ptr.is_null() {
         return Err("parsing failure".to_string());
     }
@@ -98,6 +110,7 @@ impl Module {
                 std::ptr::null(),
                 std::ptr::null(),
                 0,
+                std::ptr::null_mut(),
             )
         };
         // Forget Module (and avoid calling drop) because it has been consumed by instantiate (even if it failed).

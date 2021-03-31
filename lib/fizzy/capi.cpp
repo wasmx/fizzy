@@ -7,10 +7,78 @@
 #include "instantiate.hpp"
 #include "parser.hpp"
 #include <fizzy/fizzy.h>
+#include <cstring>
 #include <memory>
 
 namespace
 {
+inline void set_success(FizzyError* error) noexcept
+{
+    if (error == nullptr)
+        return;
+
+    error->code = FIZZY_SUCCESS;
+    error->message[0] = '\0';
+}
+
+// Copying a string into a fixed-size static buffer, guaranteed to not overrun it and to always end
+// the destination string with a null terminator. Inspired by strlcpy.
+template <size_t N>
+inline size_t truncating_strlcpy(char (&dest)[N], const char* src) noexcept
+{
+    static_assert(N >= 4);
+
+    const auto src_len = strlen(src);
+    const auto copy_len = std::min(src_len, N - 1);
+    memcpy(dest, src, copy_len);
+    if (copy_len < src_len)
+    {
+        dest[copy_len - 3] = '.';
+        dest[copy_len - 2] = '.';
+        dest[copy_len - 1] = '.';
+    }
+    dest[copy_len] = '\0';
+    return copy_len;
+}
+
+inline void set_error_code_and_message(
+    FizzyErrorCode code, const char* message, FizzyError* error) noexcept
+{
+    error->code = code;
+    truncating_strlcpy(error->message, message);
+}
+
+inline void set_error_from_current_exception(FizzyError* error) noexcept
+{
+    if (error == nullptr)
+        return;
+
+    try
+    {
+        throw;
+    }
+    catch (const fizzy::parser_error& e)
+    {
+        set_error_code_and_message(FIZZY_ERROR_MALFORMED_MODULE, e.what(), error);
+    }
+    catch (const fizzy::validation_error& e)
+    {
+        set_error_code_and_message(FIZZY_ERROR_INVALID_MODULE, e.what(), error);
+    }
+    catch (const fizzy::instantiate_error& e)
+    {
+        set_error_code_and_message(FIZZY_ERROR_INSTANTIATION_FAILED, e.what(), error);
+    }
+    catch (const std::exception& e)
+    {
+        set_error_code_and_message(FIZZY_ERROR_OTHER, e.what(), error);
+    }
+    catch (...)
+    {
+        set_error_code_and_message(FIZZY_ERROR_OTHER, "unknown error", error);
+    }
+}
+
 inline const FizzyModule* wrap(const fizzy::Module* module) noexcept
 {
     return reinterpret_cast<const FizzyModule*>(module);
@@ -360,28 +428,33 @@ inline FizzyExportDescription wrap(const fizzy::Export& exp) noexcept
 }  // namespace
 
 extern "C" {
-bool fizzy_validate(const uint8_t* wasm_binary, size_t wasm_binary_size)
+bool fizzy_validate(const uint8_t* wasm_binary, size_t wasm_binary_size, FizzyError* error)
 {
     try
     {
         fizzy::parse({wasm_binary, wasm_binary_size});
+        set_success(error);
         return true;
     }
     catch (...)
     {
+        set_error_from_current_exception(error);
         return false;
     }
 }
 
-const FizzyModule* fizzy_parse(const uint8_t* wasm_binary, size_t wasm_binary_size)
+const FizzyModule* fizzy_parse(
+    const uint8_t* wasm_binary, size_t wasm_binary_size, FizzyError* error)
 {
     try
     {
         auto module = fizzy::parse({wasm_binary, wasm_binary_size});
+        set_success(error);
         return wrap(module.release());
     }
     catch (...)
     {
+        set_error_from_current_exception(error);
         return nullptr;
     }
 }
@@ -529,7 +602,7 @@ bool fizzy_module_has_start_function(const FizzyModule* module)
 FizzyInstance* fizzy_instantiate(const FizzyModule* module,
     const FizzyExternalFunction* imported_functions, size_t imported_functions_size,
     const FizzyExternalTable* imported_table, const FizzyExternalMemory* imported_memory,
-    const FizzyExternalGlobal* imported_globals, size_t imported_globals_size)
+    const FizzyExternalGlobal* imported_globals, size_t imported_globals_size, FizzyError* error)
 {
     try
     {
@@ -541,10 +614,12 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
         auto instance = fizzy::instantiate(std::unique_ptr<const fizzy::Module>(unwrap(module)),
             std::move(functions), std::move(table), std::move(memory), std::move(globals));
 
+        set_success(error);
         return wrap(instance.release());
     }
     catch (...)
     {
+        set_error_from_current_exception(error);
         return nullptr;
     }
 }
@@ -552,7 +627,7 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 FizzyInstance* fizzy_resolve_instantiate(const FizzyModule* c_module,
     const FizzyImportedFunction* c_imported_functions, size_t imported_functions_size,
     const FizzyExternalTable* imported_table, const FizzyExternalMemory* imported_memory,
-    const FizzyImportedGlobal* c_imported_globals, size_t imported_globals_size)
+    const FizzyImportedGlobal* c_imported_globals, size_t imported_globals_size, FizzyError* error)
 {
     try
     {
@@ -568,10 +643,12 @@ FizzyInstance* fizzy_resolve_instantiate(const FizzyModule* c_module,
         auto instance = fizzy::instantiate(std::move(module), std::move(resolved_imports),
             std::move(table), std::move(memory), std::move(resolved_globals));
 
+        set_success(error);
         return wrap(instance.release());
     }
     catch (...)
     {
+        set_error_from_current_exception(error);
         return nullptr;
     }
 }
