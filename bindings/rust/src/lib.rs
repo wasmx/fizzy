@@ -126,16 +126,19 @@ impl Clone for Module {
 
 /// Parse and validate the input according to WebAssembly 1.0 rules.
 pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, String> {
+    let mut err = FizzyErrorBox::new();
     let ptr = unsafe {
         sys::fizzy_parse(
             input.as_ref().as_ptr(),
             input.as_ref().len(),
-            std::ptr::null_mut(),
+            err.as_mut_ptr(),
         )
     };
     if ptr.is_null() {
-        return Err("parsing failure".to_string());
+        debug_assert!(err.code() != 0);
+        return Err(err.message());
     }
+    debug_assert!(err.code() == 0);
     Ok(Module { 0: ptr })
 }
 
@@ -707,7 +710,7 @@ mod tests {
             parse(&[0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x01])
                 .err()
                 .unwrap(),
-            "parsing failure"
+            "invalid wasm module prefix"
         );
     }
 
