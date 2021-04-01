@@ -573,7 +573,7 @@ ExecutionResult execute(
     const auto& code = instance.module->get_code(func_idx);
     auto* const memory = instance.memory.get();
 
-    const auto local_ctx = ctx.increment_call_depth();
+    const auto local_ctx = ctx.create_local_context();
 
     OperandStack stack(args, func_type.inputs.size(), code.local_count,
         static_cast<size_t>(code.max_stack_height));

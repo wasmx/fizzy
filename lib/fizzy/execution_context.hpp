@@ -36,6 +36,6 @@ public:
 
     /// Increments the call depth and returns the local call context which
     /// decrements the call depth back to the original value when going out of scope.
-    LocalContext increment_call_depth() noexcept { return LocalContext{*this}; }
+    LocalContext create_local_context() noexcept { return LocalContext{*this}; }
 };
 }  // namespace fizzy
