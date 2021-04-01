@@ -18,7 +18,11 @@ class ExecutionContext
         ExecutionContext& m_execution_context;  ///< Reference to the guarded execution context.
 
     public:
-        explicit Guard(ExecutionContext& ctx) noexcept : m_execution_context{ctx} {}
+        explicit Guard(ExecutionContext& ctx) noexcept : m_execution_context{ctx}
+        {
+            ++m_execution_context.depth;
+        }
+
         ~Guard() noexcept { --m_execution_context.depth; }
     };
 
@@ -27,10 +31,6 @@ public:
 
     /// Increments the call depth and returns the guard object which decrements
     /// the call depth back to the original value when going out of scope.
-    Guard increment_call_depth() noexcept
-    {
-        ++depth;
-        return Guard{*this};
-    }
+    Guard increment_call_depth() noexcept { return Guard{*this}; }
 };
 }  // namespace fizzy
