@@ -18,6 +18,11 @@ class ExecutionContext
         ExecutionContext& m_execution_context;  ///< Reference to the guarded execution context.
 
     public:
+        Guard(const Guard&) = delete;
+        Guard(Guard&&) = delete;
+        Guard& operator=(const Guard&) = delete;
+        Guard& operator=(Guard&&) = delete;
+
         explicit Guard(ExecutionContext& ctx) noexcept : m_execution_context{ctx}
         {
             ++m_execution_context.depth;
