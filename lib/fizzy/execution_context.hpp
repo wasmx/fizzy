@@ -10,32 +10,32 @@ namespace fizzy
 /// Users may decide how to allocate the execution context, but some good defaults are available.
 class ExecutionContext
 {
-    /// Call depth increment guard.
+    /// Call local execution context.
     /// It will automatically decrement the call depth to the original value
     /// when going out of scope.
-    class [[nodiscard]] Guard
+    class [[nodiscard]] LocalContext
     {
-        ExecutionContext& m_execution_context;  ///< Reference to the guarded execution context.
+        ExecutionContext& m_shared_ctx;  ///< Reference to the shared execution context.
 
     public:
-        Guard(const Guard&) = delete;
-        Guard(Guard&&) = delete;
-        Guard& operator=(const Guard&) = delete;
-        Guard& operator=(Guard&&) = delete;
+        LocalContext(const LocalContext&) = delete;
+        LocalContext(LocalContext&&) = delete;
+        LocalContext& operator=(const LocalContext&) = delete;
+        LocalContext& operator=(LocalContext&&) = delete;
 
-        explicit Guard(ExecutionContext& ctx) noexcept : m_execution_context{ctx}
+        explicit LocalContext(ExecutionContext& ctx) noexcept : m_shared_ctx{ctx}
         {
-            ++m_execution_context.depth;
+            ++m_shared_ctx.depth;
         }
 
-        ~Guard() noexcept { --m_execution_context.depth; }
+        ~LocalContext() noexcept { --m_shared_ctx.depth; }
     };
 
 public:
     int depth = 0;  ///< Current call depth.
 
-    /// Increments the call depth and returns the guard object which decrements
-    /// the call depth back to the original value when going out of scope.
-    Guard increment_call_depth() noexcept { return Guard{*this}; }
+    /// Increments the call depth and returns the local call context which
+    /// decrements the call depth back to the original value when going out of scope.
+    LocalContext increment_call_depth() noexcept { return LocalContext{*this}; }
 };
 }  // namespace fizzy
