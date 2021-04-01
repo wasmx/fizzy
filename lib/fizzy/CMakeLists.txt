@@ -21,6 +21,7 @@ target_sources(
     exceptions.hpp
     execute.cpp
     execute.hpp
+    execution_context.hpp
     instantiate.cpp
     instantiate.hpp
     instructions.cpp
