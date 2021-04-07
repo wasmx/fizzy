@@ -168,7 +168,7 @@ impl Clone for Module {
 }
 
 /// Parse and validate the input according to WebAssembly 1.0 rules.
-pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, String> {
+pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, Error> {
     let mut err = FizzyErrorBox::new();
     let ptr = unsafe {
         sys::fizzy_parse(
@@ -179,7 +179,7 @@ pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, String> {
     };
     if ptr.is_null() {
         debug_assert!(err.code() != 0);
-        Err(err.message())
+        Err(err.error().unwrap())
     } else {
         debug_assert!(err.code() == 0);
         Ok(Module(unsafe { ConstNonNull::new_unchecked(ptr) }))
@@ -757,7 +757,7 @@ mod tests {
             parse(&[0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x01])
                 .err()
                 .unwrap(),
-            "invalid wasm module prefix"
+            Error::MalformedModule("invalid wasm module prefix".to_string())
         );
     }
 
