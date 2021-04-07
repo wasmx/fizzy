@@ -51,6 +51,9 @@ pub enum Error {
     InstantiationFailed(String),
     MemoryAllocationFailed(String),
     Other(String),
+    FunctionNotFound,
+    ArgumentCountMismatch,
+    ArgumentTypeMismatch,
 }
 
 impl From<String> for Error {
@@ -513,16 +516,16 @@ impl Instance {
         &mut self,
         name: &str,
         args: &[TypedValue],
-    ) -> Result<TypedExecutionResult, String> {
+    ) -> Result<TypedExecutionResult, Error> {
         let func_idx = self.find_exported_function_index(name);
         if func_idx.is_none() {
-            return Err("function not found".to_string());
+            return Err(Error::FunctionNotFound);
         }
         let func_idx = func_idx.unwrap();
 
         let func_type = unsafe { self.get_function_type(func_idx) };
         if func_type.inputs_size != args.len() {
-            return Err("argument count mismatch".to_string());
+            return Err(Error::ArgumentCountMismatch);
         }
 
         // Validate input types.
@@ -530,7 +533,7 @@ impl Instance {
         let expected_types =
             unsafe { std::slice::from_raw_parts(func_type.inputs, func_type.inputs_size) };
         if expected_types != supplied_types {
-            return Err("argument type mismatch".to_string());
+            return Err(Error::ArgumentTypeMismatch);
         }
 
         // Translate to untyped raw values.
@@ -927,23 +930,23 @@ mod tests {
 
         // Non-function export.
         let result = instance.execute("g1", &[]);
-        assert_eq!(result.err().unwrap(), "function not found");
+        assert_eq!(result.err().unwrap(), Error::FunctionNotFound);
 
         // Export not found.
         let result = instance.execute("baz", &[]);
-        assert_eq!(result.err().unwrap(), "function not found");
+        assert_eq!(result.err().unwrap(), Error::FunctionNotFound);
 
         // Passing more arguments than required.
         let result = instance.execute("foo", &[TypedValue::U32(42)]);
-        assert_eq!(result.err().unwrap(), "argument count mismatch");
+        assert_eq!(result.err().unwrap(), Error::ArgumentCountMismatch);
 
         // Passing less arguments than required.
         let result = instance.execute("bar", &[]);
-        assert_eq!(result.err().unwrap(), "argument count mismatch");
+        assert_eq!(result.err().unwrap(), Error::ArgumentCountMismatch);
 
         // Passing mismatched types.
         let result = instance.execute("bar", &[TypedValue::F32(1.0), TypedValue::F64(2.0)]);
-        assert_eq!(result.err().unwrap(), "argument type mismatch");
+        assert_eq!(result.err().unwrap(), Error::ArgumentTypeMismatch);
     }
 
     #[test]
