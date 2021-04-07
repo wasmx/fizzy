@@ -128,7 +128,7 @@ impl std::fmt::Display for FizzyErrorBox {
 }
 
 /// Parse and validate the input according to WebAssembly 1.0 rules. Returns true if the supplied input is valid.
-pub fn validate<T: AsRef<[u8]>>(input: T) -> Result<(), String> {
+pub fn validate<T: AsRef<[u8]>>(input: T) -> Result<(), Error> {
     let mut err = FizzyErrorBox::new();
     let ret = unsafe {
         sys::fizzy_validate(
@@ -142,7 +142,7 @@ pub fn validate<T: AsRef<[u8]>>(input: T) -> Result<(), String> {
         Ok(())
     } else {
         debug_assert!(err.code() != 0);
-        Err(err.message())
+        Err(err.error().unwrap())
     }
 }
 
@@ -727,11 +727,14 @@ mod tests {
     #[test]
     fn validate_wasm() {
         // Empty
-        assert_eq!(validate(&[]).err().unwrap(), "invalid wasm module prefix");
+        assert_eq!(
+            validate(&[]).err().unwrap(),
+            Error::MalformedModule("invalid wasm module prefix".to_string())
+        );
         // Too short
         assert_eq!(
             validate(&[0x00]).err().unwrap(),
-            "invalid wasm module prefix"
+            Error::MalformedModule("invalid wasm module prefix".to_string())
         );
         // Valid
         assert!(validate(&[0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]).is_ok());
@@ -740,7 +743,7 @@ mod tests {
             validate(&[0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x01])
                 .err()
                 .unwrap(),
-            "invalid wasm module prefix"
+            Error::MalformedModule("invalid wasm module prefix".to_string())
         );
     }
 
