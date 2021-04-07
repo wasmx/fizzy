@@ -86,7 +86,6 @@ impl FizzyErrorBox {
     }
 
     /// Return the underlying error code.
-    // TODO: represent the errors as proper Rust enums
     fn code(&self) -> u32 {
         self.0.code
     }
@@ -97,6 +96,27 @@ impl FizzyErrorBox {
             CStr::from_ptr(self.0.message.as_ptr())
                 .to_string_lossy()
                 .into_owned()
+        }
+    }
+
+    /// Return a translated error object.
+    fn error(&self) -> Option<Error> {
+        match self.code() {
+            sys::FizzyErrorCode_FizzySuccess => None,
+            sys::FizzyErrorCode_FizzyErrorMalformedModule => {
+                Some(Error::MalformedModule(self.message()))
+            }
+            sys::FizzyErrorCode_FizzyErrorInvalidModule => {
+                Some(Error::InvalidModule(self.message()))
+            }
+            sys::FizzyErrorCode_FizzyErrorInstantiationFailed => {
+                Some(Error::InstantiationFailed(self.message()))
+            }
+            sys::FizzyErrorCode_FizzyErrorMemoryAllocationFailed => {
+                Some(Error::MemoryAllocationFailed(self.message()))
+            }
+            sys::FizzyErrorCode_FizzyErrorOther => Some(Error::Other(self.message())),
+            _ => panic!(),
         }
     }
 }
@@ -534,6 +554,7 @@ mod tests {
         assert_ne!(unsafe { err.as_mut_ptr() }, std::ptr::null_mut());
         assert_eq!(err.code(), 0);
         assert_eq!(err.message(), "");
+        assert!(err.error().is_none());
         assert_eq!(format!("{}", err), "0 []");
     }
 
