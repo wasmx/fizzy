@@ -31,10 +31,17 @@ namespace
 fizzy::ExecutionResult env_adler32(std::any&, fizzy::Instance& instance, const fizzy::Value* args,
     fizzy::ExecutionContext&) noexcept
 {
-    assert(instance.memory != nullptr);
-    const auto ret = fizzy::test::adler32(
-        bytes_view{*instance.memory}.substr(args[0].as<uint32_t>(), args[1].as<uint32_t>()));
-    return Value{ret};
+    try
+    {
+        assert(instance.memory != nullptr);
+        const auto ret = fizzy::test::adler32(
+            bytes_view{*instance.memory}.substr(args[0].as<uint32_t>(), args[1].as<uint32_t>()));
+        return Value{ret};
+    }
+    catch (...)
+    {
+        return Trap;
+    }
 }
 }  // namespace
 
