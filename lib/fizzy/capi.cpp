@@ -537,7 +537,7 @@ FizzyExportDescription fizzy_get_export_description(const FizzyModule* module, u
 bool fizzy_find_exported_function_index(
     const FizzyModule* module, const char* name, uint32_t* out_func_idx)
 {
-    const auto optional_func_idx = fizzy::find_exported_function(*unwrap(module), name);
+    const auto optional_func_idx = fizzy::find_exported_function_index(*unwrap(module), name);
     if (!optional_func_idx)
         return false;
 

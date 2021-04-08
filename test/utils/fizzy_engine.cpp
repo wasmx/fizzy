@@ -96,7 +96,7 @@ bytes_view FizzyEngine::get_memory() const
 std::optional<WasmEngine::FuncRef> FizzyEngine::find_function(
     std::string_view name, std::string_view signature) const
 {
-    const auto func_idx = fizzy::find_exported_function(*m_instance->module, name);
+    const auto func_idx = fizzy::find_exported_function_index(*m_instance->module, name);
     if (func_idx.has_value())
     {
         const auto func_type = m_instance->module->get_function_type(*func_idx);

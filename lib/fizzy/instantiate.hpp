@@ -59,7 +59,7 @@ public:
     /// Host function constructor with context.
     /// The function will be called with a reference to @a host_context.
     /// Copies of the function will have their own copy of @a host_context.
-    ExecuteFunction(HostFunctionPtr f, std::any host_context)
+    ExecuteFunction(HostFunctionPtr f, std::any host_context) noexcept
       : m_host_function{f}, m_host_context{std::move(host_context)}
     {}
 
@@ -80,11 +80,11 @@ struct ExternalFunction
     span<const ValType> output_types;
 
     ExternalFunction(ExecuteFunction _function, span<const ValType> _input_types,
-        span<const ValType> _output_types)
+        span<const ValType> _output_types) noexcept
       : function(std::move(_function)), input_types(_input_types), output_types(_output_types)
     {}
 
-    ExternalFunction(ExecuteFunction _function, const FuncType& type)
+    ExternalFunction(ExecuteFunction _function, const FuncType& type) noexcept
       : function(std::move(_function)), input_types(type.inputs), output_types(type.outputs)
     {}
 };
@@ -236,18 +236,23 @@ std::vector<ExternalGlobal> resolve_imported_globals(
     const Module& module, const std::vector<ImportedGlobal>& imported_globals);
 
 /// Find exported function index by name.
-std::optional<FuncIdx> find_exported_function(const Module& module, std::string_view name);
+std::optional<FuncIdx> find_exported_function_index(
+    const Module& module, std::string_view name) noexcept;
 
 /// Find exported function by name.
-std::optional<ExternalFunction> find_exported_function(Instance& instance, std::string_view name);
+std::optional<ExternalFunction> find_exported_function(
+    Instance& instance, std::string_view name) noexcept;
 
 /// Find exported global by name.
-std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::string_view name);
+std::optional<ExternalGlobal> find_exported_global(
+    Instance& instance, std::string_view name) noexcept;
 
 /// Find exported table by name.
-std::optional<ExternalTable> find_exported_table(Instance& instance, std::string_view name);
+std::optional<ExternalTable> find_exported_table(
+    Instance& instance, std::string_view name) noexcept;
 
 /// Find exported memory by name.
-std::optional<ExternalMemory> find_exported_memory(Instance& instance, std::string_view name);
+std::optional<ExternalMemory> find_exported_memory(
+    Instance& instance, std::string_view name) noexcept;
 
 }  // namespace fizzy

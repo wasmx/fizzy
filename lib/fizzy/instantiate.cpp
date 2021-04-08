@@ -305,10 +305,12 @@ ExternalGlobal find_imported_global(const std::string& module, const std::string
     return {it->value, module_global_type};
 }
 
-std::optional<uint32_t> find_export(const Module& module, ExternalKind kind, std::string_view name)
+std::optional<uint32_t> find_export(
+    const Module& module, ExternalKind kind, std::string_view name) noexcept
 {
     const auto it = std::find_if(module.exportsec.begin(), module.exportsec.end(),
-        [kind, name](const auto& export_) { return export_.kind == kind && export_.name == name; });
+        [kind, name](
+            const auto& export_) noexcept { return export_.kind == kind && export_.name == name; });
 
     return (it != module.exportsec.end() ? std::make_optional(it->index) : std::nullopt);
 }
@@ -488,12 +490,14 @@ std::vector<ExternalGlobal> resolve_imported_globals(
     return external_globals;
 }
 
-std::optional<FuncIdx> find_exported_function(const Module& module, std::string_view name)
+std::optional<FuncIdx> find_exported_function_index(
+    const Module& module, std::string_view name) noexcept
 {
     return find_export(module, ExternalKind::Function, name);
 }
 
-std::optional<ExternalFunction> find_exported_function(Instance& instance, std::string_view name)
+std::optional<ExternalFunction> find_exported_function(
+    Instance& instance, std::string_view name) noexcept
 {
     const auto opt_index = find_export(*instance.module, ExternalKind::Function, name);
     if (!opt_index.has_value())
@@ -504,7 +508,8 @@ std::optional<ExternalFunction> find_exported_function(Instance& instance, std::
         ExecuteFunction(instance, idx), instance.module->get_function_type(idx)};
 }
 
-std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::string_view name)
+std::optional<ExternalGlobal> find_exported_global(
+    Instance& instance, std::string_view name) noexcept
 {
     const auto opt_index = find_export(*instance.module, ExternalKind::Global, name);
     if (!opt_index.has_value())
@@ -526,7 +531,7 @@ std::optional<ExternalGlobal> find_exported_global(Instance& instance, std::stri
     }
 }
 
-std::optional<ExternalTable> find_exported_table(Instance& instance, std::string_view name)
+std::optional<ExternalTable> find_exported_table(Instance& instance, std::string_view name) noexcept
 {
     // Index returned from find_export is discarded, because there's no more than 1 table
     if (!find_export(*instance.module, ExternalKind::Table, name))
@@ -535,7 +540,8 @@ std::optional<ExternalTable> find_exported_table(Instance& instance, std::string
     return ExternalTable{instance.table.get(), instance.table_limits};
 }
 
-std::optional<ExternalMemory> find_exported_memory(Instance& instance, std::string_view name)
+std::optional<ExternalMemory> find_exported_memory(
+    Instance& instance, std::string_view name) noexcept
 {
     // Index returned from find_export is discarded, because there's no more than 1 memory
     if (!find_export(*instance.module, ExternalKind::Memory, name))
