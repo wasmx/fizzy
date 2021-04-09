@@ -37,17 +37,69 @@
 
 mod sys;
 
-use std::ffi::CString;
+use std::ffi::{CStr, CString};
 use std::ptr::NonNull;
 
+/// A safe container for handling the low-level FizzyError struct.
+struct FizzyErrorBox(Box<sys::FizzyError>);
+
+impl FizzyErrorBox {
+    /// Create a safe, boxed, and zero initialised container.
+    fn new() -> Self {
+        FizzyErrorBox {
+            0: Box::new(sys::FizzyError {
+                code: 0,
+                message: [0i8; 256],
+            }),
+        }
+    }
+
+    /// Return a pointer passable to low-level functions (validate, parse, instantiate).
+    ///
+    /// # Safety
+    /// The returned pointer is still onwed by this struct, and thus not valid after this struct goes out of scope.
+    unsafe fn as_mut_ptr(&mut self) -> *mut sys::FizzyError {
+        &mut *self.0
+    }
+
+    /// Return the underlying error code.
+    // TODO: represent the errors as proper Rust enums
+    fn code(&self) -> u32 {
+        self.0.code
+    }
+
+    /// Return an owned String copy of the underlying message.
+    fn message(&self) -> String {
+        unsafe {
+            CStr::from_ptr(self.0.message.as_ptr())
+                .to_string_lossy()
+                .into_owned()
+        }
+    }
+}
+
+impl std::fmt::Display for FizzyErrorBox {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{} [{}]", self.code(), self.message())
+    }
+}
+
 /// Parse and validate the input according to WebAssembly 1.0 rules. Returns true if the supplied input is valid.
-pub fn validate<T: AsRef<[u8]>>(input: T) -> bool {
-    unsafe {
+pub fn validate<T: AsRef<[u8]>>(input: T) -> Result<(), String> {
+    let mut err = FizzyErrorBox::new();
+    let ret = unsafe {
         sys::fizzy_validate(
             input.as_ref().as_ptr(),
             input.as_ref().len(),
-            std::ptr::null_mut(),
+            err.as_mut_ptr(),
         )
+    };
+    if ret {
+        debug_assert!(err.code() == 0);
+        Ok(())
+    } else {
+        debug_assert!(err.code() != 0);
+        Err(err.message())
     }
 }
 
@@ -74,17 +126,21 @@ impl Clone for Module {
 
 /// Parse and validate the input according to WebAssembly 1.0 rules.
 pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, String> {
+    let mut err = FizzyErrorBox::new();
     let ptr = unsafe {
         sys::fizzy_parse(
             input.as_ref().as_ptr(),
             input.as_ref().len(),
-            std::ptr::null_mut(),
+            err.as_mut_ptr(),
         )
     };
     if ptr.is_null() {
-        return Err("parsing failure".to_string());
+        debug_assert!(err.code() != 0);
+        Err(err.message())
+    } else {
+        debug_assert!(err.code() == 0);
+        Ok(Module { 0: ptr })
     }
-    Ok(Module { 0: ptr })
 }
 
 /// An instance of a module.
@@ -101,6 +157,7 @@ impl Module {
     // TODO: support imported functions
     pub fn instantiate(self) -> Result<Instance, String> {
         debug_assert!(!self.0.is_null());
+        let mut err = FizzyErrorBox::new();
         let ptr = unsafe {
             sys::fizzy_instantiate(
                 self.0,
@@ -110,17 +167,20 @@ impl Module {
                 std::ptr::null(),
                 std::ptr::null(),
                 0,
-                std::ptr::null_mut(),
+                err.as_mut_ptr(),
             )
         };
         // Forget Module (and avoid calling drop) because it has been consumed by instantiate (even if it failed).
         core::mem::forget(self);
         if ptr.is_null() {
-            return Err("instantiation failure".to_string());
+            debug_assert!(err.code() != 0);
+            Err(err.message())
+        } else {
+            debug_assert!(err.code() == 0);
+            Ok(Instance {
+                0: unsafe { NonNull::new_unchecked(ptr) },
+            })
         }
-        Ok(Instance {
-            0: unsafe { NonNull::new_unchecked(ptr) },
-        })
     }
 }
 
@@ -454,6 +514,15 @@ mod tests {
     use super::*;
 
     #[test]
+    fn error_box() {
+        let mut err = FizzyErrorBox::new();
+        assert_ne!(unsafe { err.as_mut_ptr() }, std::ptr::null_mut());
+        assert_eq!(err.code(), 0);
+        assert_eq!(err.message(), "");
+        assert_eq!(format!("{}", err), "0 []");
+    }
+
+    #[test]
     fn value_conversions() {
         // NOTE: since the underlying type is a union, a conversion or access to other members is undefined
 
@@ -622,18 +691,20 @@ mod tests {
     #[test]
     fn validate_wasm() {
         // Empty
-        assert_eq!(validate(&[]), false);
+        assert_eq!(validate(&[]).err().unwrap(), "invalid wasm module prefix");
         // Too short
-        assert_eq!(validate(&[0x00]), false);
-        // Valid
         assert_eq!(
-            validate(&[0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]),
-            true
+            validate(&[0x00]).err().unwrap(),
+            "invalid wasm module prefix"
         );
+        // Valid
+        assert!(validate(&[0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]).is_ok());
         // Invalid version
         assert_eq!(
-            validate(&[0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x01]),
-            false
+            validate(&[0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x01])
+                .err()
+                .unwrap(),
+            "invalid wasm module prefix"
         );
     }
 
@@ -644,7 +715,7 @@ mod tests {
             parse(&[0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x01])
                 .err()
                 .unwrap(),
-            "parsing failure"
+            "invalid wasm module prefix"
         );
     }
 
@@ -667,7 +738,10 @@ mod tests {
         let module = parse(&input);
         assert!(module.is_ok());
         let instance = module.unwrap().instantiate();
-        assert_eq!(instance.err().unwrap(), "instantiation failure");
+        assert_eq!(
+            instance.err().unwrap(),
+            "module defines an imported memory but none was provided"
+        );
     }
 
     #[test]
