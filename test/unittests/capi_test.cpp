@@ -909,7 +909,7 @@ TEST(capi, resolve_instantiate_functions)
     ASSERT_NE(module, nullptr);
 
     FizzyExternalFn host_fn = [](void* context, FizzyInstance*, const FizzyValue*,
-                                  FizzyExecutionContext*) {
+                                  FizzyExecutionContext*) noexcept {
         return FizzyExecutionResult{false, true, *static_cast<FizzyValue*>(context)};
     };
 
@@ -982,7 +982,8 @@ TEST(capi, resolve_instantiate_function_duplicate)
     auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
-    FizzyExternalFn host_fn = [](void*, FizzyInstance*, const FizzyValue*, FizzyExecutionContext*) {
+    FizzyExternalFn host_fn = [](void*, FizzyInstance*, const FizzyValue*,
+                                  FizzyExecutionContext*) noexcept {
         return FizzyExecutionResult{false, true, FizzyValue{42}};
     };
 
@@ -1028,7 +1029,8 @@ TEST(capi, resolve_instantiate_globals)
     module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
-    FizzyExternalFn host_fn = [](void*, FizzyInstance*, const FizzyValue*, FizzyExecutionContext*) {
+    FizzyExternalFn host_fn = [](void*, FizzyInstance*, const FizzyValue*,
+                                  FizzyExecutionContext*) noexcept {
         return FizzyExecutionResult{true, false, {0}};
     };
     FizzyImportedFunction mod1foo1 = {
@@ -1323,12 +1325,12 @@ TEST(capi, execute_with_host_function)
 
     FizzyExternalFunction host_funcs[] = {
         {{FizzyValueTypeI32, nullptr, 0},
-            [](void*, FizzyInstance*, const FizzyValue*, FizzyExecutionContext*) {
+            [](void*, FizzyInstance*, const FizzyValue*, FizzyExecutionContext*) noexcept {
                 return FizzyExecutionResult{false, true, {42}};
             },
             nullptr},
         {{FizzyValueTypeI32, &inputs[0], 2},
-            [](void*, FizzyInstance*, const FizzyValue* args, FizzyExecutionContext*) {
+            [](void*, FizzyInstance*, const FizzyValue* args, FizzyExecutionContext*) noexcept {
                 FizzyValue v;
                 v.i32 = args[0].i32 / args[1].i32;
                 return FizzyExecutionResult{false, true, {v}};
@@ -1360,7 +1362,7 @@ TEST(capi, imported_function_traps)
     ASSERT_NE(module, nullptr);
 
     FizzyExternalFunction host_funcs[] = {{{FizzyValueTypeI32, nullptr, 0},
-        [](void*, FizzyInstance*, const FizzyValue*, FizzyExecutionContext*) {
+        [](void*, FizzyInstance*, const FizzyValue*, FizzyExecutionContext*) noexcept {
             return FizzyExecutionResult{true, false, {}};
         },
         nullptr}};
@@ -1388,7 +1390,7 @@ TEST(capi, imported_function_void)
 
     bool called = false;
     FizzyExternalFunction host_funcs[] = {{{},
-        [](void* context, FizzyInstance*, const FizzyValue*, FizzyExecutionContext*) {
+        [](void* context, FizzyInstance*, const FizzyValue*, FizzyExecutionContext*) noexcept {
             *static_cast<bool*>(context) = true;
             return FizzyExecutionResult{false, false, {}};
         },

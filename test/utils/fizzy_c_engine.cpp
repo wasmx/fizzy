@@ -29,15 +29,22 @@ public:
 namespace
 {
 FizzyExecutionResult env_adler32(
-    void*, FizzyInstance* instance, const FizzyValue* args, FizzyExecutionContext*)
+    void*, FizzyInstance* instance, const FizzyValue* args, FizzyExecutionContext*) noexcept
 {
-    auto* memory = fizzy_get_instance_memory_data(instance);
-    assert(memory != nullptr);
-    const auto size = fizzy_get_instance_memory_size(instance);
-    const auto ret = fizzy::test::adler32(
-        bytes_view(memory, size)
-            .substr(static_cast<uint32_t>(args[0].i64), static_cast<uint32_t>(args[1].i64)));
-    return {false, true, {ret}};
+    try
+    {
+        auto* memory = fizzy_get_instance_memory_data(instance);
+        assert(memory != nullptr);
+        const auto size = fizzy_get_instance_memory_size(instance);
+        const auto ret = fizzy::test::adler32(
+            bytes_view(memory, size)
+                .substr(static_cast<uint32_t>(args[0].i64), static_cast<uint32_t>(args[1].i64)));
+        return {false, true, {ret}};
+    }
+    catch (...)
+    {
+        return {true, false, {}};
+    }
 }
 }  // namespace
 
