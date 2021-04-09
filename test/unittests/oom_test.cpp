@@ -80,6 +80,21 @@ bool restore_memory_limit() noexcept
 using namespace fizzy;
 using namespace fizzy::test;
 
+TEST(oom, instantiate_allocate_memory)
+{
+    /* wat2wasm
+    (memory 32)
+    */
+    const auto wasm = from_hex("0061736d010000000503010020");
+
+    const auto is_limited = try_set_memory_limit(OSMemoryLimitBytes);
+    if (is_limited)
+        EXPECT_THROW(instantiate(parse(wasm), {}, {}, {}, {}, MaxMemoryPagesLimit), std::bad_alloc);
+    else
+        EXPECT_NO_THROW(instantiate(parse(wasm), {}, {}, {}, {}, MaxMemoryPagesLimit));
+    ASSERT_TRUE(restore_memory_limit());
+}
+
 TEST(oom, execute_memory_grow)
 {
     /* wat2wasm
