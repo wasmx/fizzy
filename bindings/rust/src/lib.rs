@@ -124,12 +124,6 @@ impl FizzyErrorBox {
     }
 }
 
-impl std::fmt::Display for FizzyErrorBox {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{} [{}]", self.code(), self.message())
-    }
-}
-
 /// Parse and validate the input according to WebAssembly 1.0 rules. Returns true if the supplied input is valid.
 pub fn validate<T: AsRef<[u8]>>(input: T) -> Result<(), Error> {
     let mut err = FizzyErrorBox::new();
@@ -558,7 +552,6 @@ mod tests {
         assert_eq!(err.code(), 0);
         assert_eq!(err.message(), "");
         assert!(err.error().is_none());
-        assert_eq!(format!("{}", err), "0 []");
     }
 
     #[test]
