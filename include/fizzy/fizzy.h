@@ -24,11 +24,11 @@ extern "C" {
 /// Error codes.
 typedef enum FizzyErrorCode
 {
-    FIZZY_SUCCESS = 0,
-    FIZZY_ERROR_MALFORMED_MODULE,
-    FIZZY_ERROR_INVALID_MODULE,
-    FIZZY_ERROR_INSTANTIATION_FAILED,
-    FIZZY_ERROR_OTHER
+    FizzySuccess = 0,
+    FizzyErrorMalformedModule,
+    FizzyErrorInvalidModule,
+    FizzyErrorInstantiationFailed,
+    FizzyErrorOther
 } FizzyErrorCode;
 
 /// Error information.
