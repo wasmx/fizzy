@@ -213,7 +213,7 @@ TEST(execute_call_depth, call_host_function_calling_wasm_function_inclusive)
     constexpr auto host_f = [](std::any&, Instance& instance, const Value*,
                                 ExecutionContext& ctx) noexcept {
         recorded_depth = ctx.depth;
-        const auto ctx_guard = ctx.increment_call_depth();
+        const auto local_ctx = ctx.create_local_context();
         return fizzy::execute(instance, 2 /* $leaf */, {}, ctx);
     };
 
@@ -304,7 +304,7 @@ TEST(execute_call_depth, call_host_function_calling_another_wasm_module)
                                 ExecutionContext& ctx) noexcept {
         recorded_depth = ctx.depth;
         auto instance = *std::any_cast<Instance*>(&host_context);
-        const auto ctx_guard = ctx.increment_call_depth();
+        const auto local_ctx = ctx.create_local_context();
         return fizzy::execute(*instance, 0, {}, ctx);
     };
 
@@ -466,7 +466,7 @@ TEST(execute_call_depth, execute_host_function_within_wasm_recursion_limit)
     constexpr auto host_f = [](std::any&, Instance& instance, const Value*,
                                 ExecutionContext& ctx) noexcept {
         max_recorded_wasm_recursion_depth = std::max(max_recorded_wasm_recursion_depth, ctx.depth);
-        const auto ctx_guard = ctx.increment_call_depth();
+        const auto local_ctx = ctx.create_local_context();
         return fizzy::execute(instance, 0, {}, ctx);
     };
 
@@ -537,7 +537,7 @@ TEST(execute_call, call_host_function_calling_wasm_interleaved_infinite_recursio
                                 ExecutionContext& ctx) noexcept {
         EXPECT_LT(ctx.depth, DepthLimit);
         ++counter;
-        const auto ctx_guard = ctx.increment_call_depth();
+        const auto local_ctx = ctx.create_local_context();
         return fizzy::execute(instance, 1, {}, ctx);
     };
 

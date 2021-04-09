@@ -537,7 +537,6 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
     assert(stack.size() >= num_args);
     const auto call_args = stack.rend() - num_args;
 
-    const auto ctx_guard = ctx.increment_call_depth();
     const auto ret = execute(instance, func_idx, call_args, ctx);
     // Bubble up traps
     if (ret.trapped)
@@ -573,6 +572,8 @@ ExecutionResult execute(
 
     const auto& code = instance.module->get_code(func_idx);
     auto* const memory = instance.memory.get();
+
+    const auto local_ctx = ctx.create_local_context();
 
     OperandStack stack(args, func_type.inputs.size(), code.local_count,
         static_cast<size_t>(code.max_stack_height));
