@@ -10,6 +10,13 @@
 #include <limits>
 #include <type_traits>
 
+#ifdef __i386__
+// Signaling NaNs are not fully supported on x87.
+#define SNAN_SUPPORTED 0
+#else
+#define SNAN_SUPPORTED 1
+#endif
+
 namespace fizzy::test
 {
 /// A wrapper for floating-point types with inspection/construction/comparison utilities.
