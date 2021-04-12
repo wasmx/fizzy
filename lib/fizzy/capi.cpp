@@ -612,7 +612,7 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
     const FizzyExternalFunction* imported_functions, size_t imported_functions_size,
     const FizzyExternalTable* imported_table, const FizzyExternalMemory* imported_memory,
     const FizzyExternalGlobal* imported_globals, size_t imported_globals_size,
-    FizzyError* error) noexcept
+    uint32_t memory_pages_limit, FizzyError* error) noexcept
 {
     try
     {
@@ -622,7 +622,8 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
         auto globals = unwrap(imported_globals, imported_globals_size);
 
         auto instance = fizzy::instantiate(std::unique_ptr<const fizzy::Module>(unwrap(module)),
-            std::move(functions), std::move(table), std::move(memory), std::move(globals));
+            std::move(functions), std::move(table), std::move(memory), std::move(globals),
+            memory_pages_limit);
 
         set_success(error);
         return wrap(instance.release());
