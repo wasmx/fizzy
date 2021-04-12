@@ -897,8 +897,8 @@ TEST(capi, resolve_instantiate_no_imports)
     ASSERT_NE(module, nullptr);
 
     // Success omitting FizzyError argument.
-    auto instance =
-        fizzy_resolve_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0, nullptr);
+    auto instance = fizzy_resolve_instantiate(
+        module, nullptr, 0, nullptr, nullptr, nullptr, 0, FizzyMemoryPagesLimitDefault, nullptr);
     EXPECT_NE(instance, nullptr);
 
     fizzy_free_instance(instance);
@@ -908,8 +908,8 @@ TEST(capi, resolve_instantiate_no_imports)
 
     // Success with FizzyError argument.
     FizzyError success;
-    instance =
-        fizzy_resolve_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0, &success);
+    instance = fizzy_resolve_instantiate(
+        module, nullptr, 0, nullptr, nullptr, nullptr, 0, FizzyMemoryPagesLimitDefault, &success);
     EXPECT_NE(instance, nullptr);
     EXPECT_EQ(success.code, FizzySuccess);
     EXPECT_STREQ(success.message, "");
@@ -923,8 +923,8 @@ TEST(capi, resolve_instantiate_no_imports)
     FizzyImportedFunction host_funcs[] = {
         {"mod", "foo", {{FizzyValueTypeVoid, nullptr, 0}, NullFn, nullptr}}};
 
-    instance =
-        fizzy_resolve_instantiate(module, host_funcs, 1, nullptr, nullptr, nullptr, 0, nullptr);
+    instance = fizzy_resolve_instantiate(
+        module, host_funcs, 1, nullptr, nullptr, nullptr, 0, FizzyMemoryPagesLimitDefault, nullptr);
     EXPECT_NE(instance, nullptr);
 
     fizzy_free_instance(instance);
@@ -951,7 +951,8 @@ TEST(capi, resolve_instantiate_functions)
 
     // no functions provided
     // Error omitting FizzyError argument.
-    EXPECT_EQ(fizzy_resolve_instantiate(module, nullptr, 0, nullptr, nullptr, &mod1g1, 1, nullptr),
+    EXPECT_EQ(fizzy_resolve_instantiate(module, nullptr, 0, nullptr, nullptr, &mod1g1, 1,
+                  FizzyMemoryPagesLimitDefault, nullptr),
         nullptr);
 
     module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
@@ -959,7 +960,8 @@ TEST(capi, resolve_instantiate_functions)
 
     // Error with FizzyError argument.
     FizzyError error;
-    EXPECT_EQ(fizzy_resolve_instantiate(module, nullptr, 0, nullptr, nullptr, &mod1g1, 1, &error),
+    EXPECT_EQ(fizzy_resolve_instantiate(module, nullptr, 0, nullptr, nullptr, &mod1g1, 1,
+                  FizzyMemoryPagesLimitDefault, &error),
         nullptr);
     EXPECT_EQ(error.code, FizzyErrorInstantiationFailed);
     EXPECT_STREQ(error.message, "imported function mod1.foo1 is required");
@@ -987,8 +989,8 @@ TEST(capi, resolve_instantiate_functions)
     FizzyImportedFunction host_funcs[] = {{"mod1", "foo1", mod1foo1}, {"mod1", "foo2", mod1foo2},
         {"mod2", "foo1", mod2foo1}, {"mod2", "foo2", mod2foo2}};
 
-    auto instance =
-        fizzy_resolve_instantiate(module, host_funcs, 4, nullptr, nullptr, &mod1g1, 1, nullptr);
+    auto instance = fizzy_resolve_instantiate(
+        module, host_funcs, 4, nullptr, nullptr, &mod1g1, 1, FizzyMemoryPagesLimitDefault, nullptr);
     ASSERT_NE(instance, nullptr);
 
     FizzyValue arg;
@@ -1004,8 +1006,8 @@ TEST(capi, resolve_instantiate_functions)
     ASSERT_NE(module, nullptr);
     FizzyImportedFunction host_funcs_reordered[] = {{"mod1", "foo2", mod1foo2},
         {"mod2", "foo1", mod2foo1}, {"mod2", "foo2", mod2foo2}, {"mod1", "foo1", mod1foo1}};
-    instance = fizzy_resolve_instantiate(
-        module, host_funcs_reordered, 4, nullptr, nullptr, &mod1g1, 1, nullptr);
+    instance = fizzy_resolve_instantiate(module, host_funcs_reordered, 4, nullptr, nullptr, &mod1g1,
+        1, FizzyMemoryPagesLimitDefault, nullptr);
     EXPECT_NE(instance, nullptr);
     fizzy_free_instance(instance);
 
@@ -1015,16 +1017,16 @@ TEST(capi, resolve_instantiate_functions)
     FizzyImportedFunction host_funcs_extra[] = {{"mod1", "foo1", mod1foo1},
         {"mod1", "foo2", mod1foo2}, {"mod2", "foo1", mod2foo1}, {"mod2", "foo2", mod2foo2},
         {"mod3", "foo1", mod1foo1}};
-    instance = fizzy_resolve_instantiate(
-        module, host_funcs_extra, 4, nullptr, nullptr, &mod1g1, 1, nullptr);
+    instance = fizzy_resolve_instantiate(module, host_funcs_extra, 4, nullptr, nullptr, &mod1g1, 1,
+        FizzyMemoryPagesLimitDefault, nullptr);
     EXPECT_NE(instance, nullptr);
     fizzy_free_instance(instance);
 
     // not enough functions
     module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
-    EXPECT_EQ(
-        fizzy_resolve_instantiate(module, host_funcs, 3, nullptr, nullptr, &mod1g1, 1, &error),
+    EXPECT_EQ(fizzy_resolve_instantiate(module, host_funcs, 3, nullptr, nullptr, &mod1g1, 1,
+                  FizzyMemoryPagesLimitDefault, &error),
         nullptr);
     EXPECT_EQ(error.code, FizzyErrorInstantiationFailed);
     EXPECT_STREQ(error.message, "imported function mod2.foo2 is required");
@@ -1049,8 +1051,8 @@ TEST(capi, resolve_instantiate_function_duplicate)
     FizzyExternalFunction mod1foo1 = {{FizzyValueTypeI32, nullptr, 0}, host_fn, nullptr};
     FizzyImportedFunction host_funcs[] = {{"mod1", "foo1", mod1foo1}};
 
-    auto instance =
-        fizzy_resolve_instantiate(module, host_funcs, 1, nullptr, nullptr, nullptr, 0, nullptr);
+    auto instance = fizzy_resolve_instantiate(
+        module, host_funcs, 1, nullptr, nullptr, nullptr, 0, FizzyMemoryPagesLimitDefault, nullptr);
     ASSERT_NE(instance, nullptr);
 
     EXPECT_THAT(fizzy_execute(instance, 0, nullptr), CResult(42_u32));
@@ -1080,7 +1082,8 @@ TEST(capi, resolve_instantiate_globals)
     ASSERT_NE(module, nullptr);
 
     FizzyError error;
-    EXPECT_EQ(fizzy_resolve_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0, &error),
+    EXPECT_EQ(fizzy_resolve_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0,
+                  FizzyMemoryPagesLimitDefault, &error),
         nullptr);
     EXPECT_EQ(error.code, FizzyErrorInstantiationFailed);
     EXPECT_STREQ(error.message, "imported function mod1.foo1 is required");
@@ -1107,8 +1110,8 @@ TEST(capi, resolve_instantiate_globals)
     FizzyImportedGlobal host_globals[] = {{"mod1", "g1", mod1g1}, {"mod1", "g2", mod1g2},
         {"mod2", "g1", mod2g1}, {"mod2", "g2", mod2g2}};
 
-    auto instance =
-        fizzy_resolve_instantiate(module, &mod1foo1, 1, nullptr, nullptr, host_globals, 4, nullptr);
+    auto instance = fizzy_resolve_instantiate(module, &mod1foo1, 1, nullptr, nullptr, host_globals,
+        4, FizzyMemoryPagesLimitDefault, nullptr);
     ASSERT_NE(instance, nullptr);
 
     EXPECT_THAT(fizzy_execute(instance, 1, nullptr), CResult(42_u32));
@@ -1123,8 +1126,8 @@ TEST(capi, resolve_instantiate_globals)
     ASSERT_NE(module, nullptr);
     FizzyImportedGlobal host_globals_reordered[] = {{"mod1", "g2", mod1g2}, {"mod2", "g1", mod2g1},
         {"mod2", "g2", mod2g2}, {"mod1", "g1", mod1g1}};
-    instance = fizzy_resolve_instantiate(
-        module, &mod1foo1, 1, nullptr, nullptr, host_globals_reordered, 4, nullptr);
+    instance = fizzy_resolve_instantiate(module, &mod1foo1, 1, nullptr, nullptr,
+        host_globals_reordered, 4, FizzyMemoryPagesLimitDefault, nullptr);
     EXPECT_NE(instance, nullptr);
 
     EXPECT_THAT(fizzy_execute(instance, 1, nullptr), CResult(42_u32));
@@ -1139,8 +1142,8 @@ TEST(capi, resolve_instantiate_globals)
     ASSERT_NE(module, nullptr);
     FizzyImportedGlobal host_globals_extra[] = {{"mod1", "g1", mod1g1}, {"mod1", "g2", mod1g2},
         {"mod2", "g1", mod2g1}, {"mod2", "g2", mod2g2}, {"mod3", "g1", mod1g1}};
-    instance = fizzy_resolve_instantiate(
-        module, &mod1foo1, 1, nullptr, nullptr, host_globals_extra, 4, nullptr);
+    instance = fizzy_resolve_instantiate(module, &mod1foo1, 1, nullptr, nullptr, host_globals_extra,
+        4, FizzyMemoryPagesLimitDefault, nullptr);
     EXPECT_NE(instance, nullptr);
 
     EXPECT_THAT(fizzy_execute(instance, 1, nullptr), CResult(42_u32));
@@ -1153,8 +1156,8 @@ TEST(capi, resolve_instantiate_globals)
     // not enough globals
     module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
-    EXPECT_EQ(fizzy_resolve_instantiate(
-                  module, &mod1foo1, 1, nullptr, nullptr, host_globals_extra, 3, &error),
+    EXPECT_EQ(fizzy_resolve_instantiate(module, &mod1foo1, 1, nullptr, nullptr, host_globals_extra,
+                  3, FizzyMemoryPagesLimitDefault, &error),
         nullptr);
     EXPECT_EQ(error.code, FizzyErrorInstantiationFailed);
     EXPECT_STREQ(error.message, "imported global mod2.g2 is required");
@@ -1179,8 +1182,8 @@ TEST(capi, resolve_instantiate_global_duplicate)
 
     FizzyImportedGlobal host_globals[] = {{"mod1", "g1", mod1g1}};
 
-    auto instance =
-        fizzy_resolve_instantiate(module, nullptr, 0, nullptr, nullptr, host_globals, 1, nullptr);
+    auto instance = fizzy_resolve_instantiate(module, nullptr, 0, nullptr, nullptr, host_globals, 1,
+        FizzyMemoryPagesLimitDefault, nullptr);
     ASSERT_NE(instance, nullptr);
 
     EXPECT_THAT(fizzy_execute(instance, 0, nullptr), CResult(42_u32));
@@ -1189,6 +1192,42 @@ TEST(capi, resolve_instantiate_global_duplicate)
     fizzy_free_instance(instance);
 }
 
+TEST(capi, resolve_instantiate_custom_hard_memory_limit)
+{
+    /* wat2wasm
+      (memory 2)
+    */
+    const auto wasm = from_hex("0061736d010000000503010002");
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
+    ASSERT_NE(module, nullptr);
+
+    uint32_t memory_pages_limit = 2;
+    auto instance = fizzy_resolve_instantiate(
+        module, nullptr, 0, nullptr, nullptr, nullptr, 0, memory_pages_limit, nullptr);
+    EXPECT_NE(instance, nullptr);
+    fizzy_free_instance(instance);
+
+    module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
+    ASSERT_NE(module, nullptr);
+
+    memory_pages_limit = 1;
+    FizzyError error;
+    EXPECT_EQ(fizzy_resolve_instantiate(
+                  module, nullptr, 0, nullptr, nullptr, nullptr, 0, memory_pages_limit, &error),
+        nullptr);
+    EXPECT_EQ(error.code, FizzyErrorInstantiationFailed);
+    EXPECT_STREQ(error.message, "cannot exceed hard memory limit of 65536 bytes");
+
+    module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
+    ASSERT_NE(module, nullptr);
+
+    memory_pages_limit = std::numeric_limits<uint32_t>::max();
+    EXPECT_EQ(fizzy_resolve_instantiate(
+                  module, nullptr, 0, nullptr, nullptr, nullptr, 0, memory_pages_limit, &error),
+        nullptr);
+    EXPECT_EQ(error.code, FizzyErrorInstantiationFailed);
+    EXPECT_STREQ(error.message, "hard memory limit cannot exceed 4294967296 bytes");
+}
 
 TEST(capi, free_instance_null)
 {
