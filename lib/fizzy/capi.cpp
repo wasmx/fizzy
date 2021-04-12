@@ -17,7 +17,7 @@ inline void set_success(FizzyError* error) noexcept
     if (error == nullptr)
         return;
 
-    error->code = FIZZY_SUCCESS;
+    error->code = FizzySuccess;
     error->message[0] = '\0';
 }
 
@@ -59,23 +59,23 @@ inline void set_error_from_current_exception(FizzyError* error) noexcept
     }
     catch (const fizzy::parser_error& e)
     {
-        set_error_code_and_message(FIZZY_ERROR_MALFORMED_MODULE, e.what(), error);
+        set_error_code_and_message(FizzyErrorMalformedModule, e.what(), error);
     }
     catch (const fizzy::validation_error& e)
     {
-        set_error_code_and_message(FIZZY_ERROR_INVALID_MODULE, e.what(), error);
+        set_error_code_and_message(FizzyErrorInvalidModule, e.what(), error);
     }
     catch (const fizzy::instantiate_error& e)
     {
-        set_error_code_and_message(FIZZY_ERROR_INSTANTIATION_FAILED, e.what(), error);
+        set_error_code_and_message(FizzyErrorInstantiationFailed, e.what(), error);
     }
     catch (const std::exception& e)
     {
-        set_error_code_and_message(FIZZY_ERROR_OTHER, e.what(), error);
+        set_error_code_and_message(FizzyErrorOther, e.what(), error);
     }
     catch (...)
     {
-        set_error_code_and_message(FIZZY_ERROR_OTHER, "unknown error", error);
+        set_error_code_and_message(FizzyErrorOther, "unknown error", error);
     }
 }
 

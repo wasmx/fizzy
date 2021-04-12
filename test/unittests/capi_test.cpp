@@ -22,7 +22,7 @@ TEST(capi, validate)
     // Success with FizzyError argument.
     FizzyError success;
     EXPECT_TRUE(fizzy_validate(wasm_prefix, sizeof(wasm_prefix), &success));
-    EXPECT_EQ(success.code, FIZZY_SUCCESS);
+    EXPECT_EQ(success.code, FizzySuccess);
     EXPECT_STREQ(success.message, "");
 
     wasm_prefix[7] = 1;
@@ -32,7 +32,7 @@ TEST(capi, validate)
     // Parsing error with FizzyError argument.
     FizzyError parsing_error;
     EXPECT_FALSE(fizzy_validate(wasm_prefix, sizeof(wasm_prefix), &parsing_error));
-    EXPECT_EQ(parsing_error.code, FIZZY_ERROR_MALFORMED_MODULE);
+    EXPECT_EQ(parsing_error.code, FizzyErrorMalformedModule);
     EXPECT_STREQ(parsing_error.message, "invalid wasm module prefix");
 
     /* wat2wasm --no-check
@@ -45,7 +45,7 @@ TEST(capi, validate)
     // Validation error with FizzyError argument.
     FizzyError validation_error;
     EXPECT_FALSE(fizzy_validate(wasm.data(), wasm.size(), &validation_error));
-    EXPECT_EQ(validation_error.code, FIZZY_ERROR_INVALID_MODULE);
+    EXPECT_EQ(validation_error.code, FizzyErrorInvalidModule);
     EXPECT_STREQ(validation_error.message, "too many results");
 }
 
@@ -55,12 +55,12 @@ TEST(capi, error_reuse)
 
     FizzyError error;
     EXPECT_TRUE(fizzy_validate(wasm_prefix, sizeof(wasm_prefix), &error));
-    EXPECT_EQ(error.code, FIZZY_SUCCESS);
+    EXPECT_EQ(error.code, FizzySuccess);
     EXPECT_STREQ(error.message, "");
 
     wasm_prefix[7] = 1;
     EXPECT_FALSE(fizzy_validate(wasm_prefix, sizeof(wasm_prefix), &error));
-    EXPECT_EQ(error.code, FIZZY_ERROR_MALFORMED_MODULE);
+    EXPECT_EQ(error.code, FizzyErrorMalformedModule);
     EXPECT_STREQ(error.message, "invalid wasm module prefix");
 
     /* wat2wasm --no-check
@@ -68,7 +68,7 @@ TEST(capi, error_reuse)
     */
     const auto wasm = from_hex("0061736d01000000010401600000030201000a0601040041000b");
     EXPECT_FALSE(fizzy_validate(wasm.data(), wasm.size(), &error));
-    EXPECT_EQ(error.code, FIZZY_ERROR_INVALID_MODULE);
+    EXPECT_EQ(error.code, FizzyErrorInvalidModule);
     EXPECT_STREQ(error.message, "too many results");
 }
 
@@ -99,7 +99,7 @@ TEST(capi, truncated_error_message)
 
     FizzyError error;
     EXPECT_FALSE(fizzy_validate(wasm.data(), wasm.size(), &error));
-    EXPECT_EQ(error.code, FIZZY_ERROR_INVALID_MODULE);
+    EXPECT_EQ(error.code, FizzyErrorInvalidModule);
     EXPECT_EQ(strlen(error.message), 255);
     EXPECT_STREQ(error.message,
         "duplicate export name Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do "
@@ -128,7 +128,7 @@ TEST(capi, truncated_error_message)
     // clang-format on
 
     EXPECT_FALSE(fizzy_validate(wasm_trunc.data(), wasm_trunc.size(), &error));
-    EXPECT_EQ(error.code, FIZZY_ERROR_INVALID_MODULE);
+    EXPECT_EQ(error.code, FizzyErrorInvalidModule);
     EXPECT_EQ(strlen(error.message), 255);
     EXPECT_STREQ(error.message,
         "duplicate export name Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do "
@@ -148,7 +148,7 @@ TEST(capi, parse)
     FizzyError success;
     module = fizzy_parse(wasm_prefix, sizeof(wasm_prefix), &success);
     EXPECT_NE(module, nullptr);
-    EXPECT_EQ(success.code, FIZZY_SUCCESS);
+    EXPECT_EQ(success.code, FizzySuccess);
     EXPECT_STREQ(success.message, "");
     fizzy_free_module(module);
 
@@ -159,7 +159,7 @@ TEST(capi, parse)
     // Parsing error with FizzyError argument.
     FizzyError parsing_error;
     EXPECT_FALSE(fizzy_parse(wasm_prefix, sizeof(wasm_prefix), &parsing_error));
-    EXPECT_EQ(parsing_error.code, FIZZY_ERROR_MALFORMED_MODULE);
+    EXPECT_EQ(parsing_error.code, FizzyErrorMalformedModule);
     EXPECT_STREQ(parsing_error.message, "invalid wasm module prefix");
 
     /* wat2wasm --no-check
@@ -172,7 +172,7 @@ TEST(capi, parse)
     // Validation error with FizzyError argument.
     FizzyError validation_error;
     EXPECT_FALSE(fizzy_parse(wasm.data(), wasm.size(), &validation_error));
-    EXPECT_EQ(validation_error.code, FIZZY_ERROR_INVALID_MODULE);
+    EXPECT_EQ(validation_error.code, FizzyErrorInvalidModule);
     EXPECT_STREQ(validation_error.message, "too many results");
 }
 
@@ -687,7 +687,7 @@ TEST(capi, instantiate)
     FizzyError success;
     instance = fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0, &success);
     EXPECT_NE(instance, nullptr);
-    EXPECT_EQ(success.code, FIZZY_SUCCESS);
+    EXPECT_EQ(success.code, FizzySuccess);
     EXPECT_STREQ(success.message, "");
     fizzy_free_instance(instance);
 }
@@ -711,7 +711,7 @@ TEST(capi, instantiate_imported_function)
     // Error with FizzyError argument.
     FizzyError error;
     EXPECT_EQ(fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0, &error), nullptr);
-    EXPECT_EQ(error.code, FIZZY_ERROR_INSTANTIATION_FAILED);
+    EXPECT_EQ(error.code, FizzyErrorInstantiationFailed);
     EXPECT_STREQ(error.message, "module requires 1 imported functions, 0 provided");
 
     module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
@@ -769,14 +769,14 @@ TEST(capi, instantiate_imported_globals)
     ASSERT_NE(module, nullptr);
     FizzyError error;
     EXPECT_EQ(fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0, &error), nullptr);
-    EXPECT_EQ(error.code, FIZZY_ERROR_INSTANTIATION_FAILED);
+    EXPECT_EQ(error.code, FizzyErrorInstantiationFailed);
     EXPECT_STREQ(error.message, "module requires 4 imported globals, 0 provided");
 
     // Not enough globals provided.
     module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
     EXPECT_EQ(fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, globals, 3, &error), nullptr);
-    EXPECT_EQ(error.code, FIZZY_ERROR_INSTANTIATION_FAILED);
+    EXPECT_EQ(error.code, FizzyErrorInstantiationFailed);
     EXPECT_STREQ(error.message, "module requires 4 imported globals, 3 provided");
 
     // Incorrect order or globals.
@@ -790,7 +790,7 @@ TEST(capi, instantiate_imported_globals)
     EXPECT_EQ(
         fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, globals_incorrect_order, 4, &error),
         nullptr);
-    EXPECT_EQ(error.code, FIZZY_ERROR_INSTANTIATION_FAILED);
+    EXPECT_EQ(error.code, FizzyErrorInstantiationFailed);
     EXPECT_STREQ(error.message, "global 2 value type doesn't match module's global type");
 
     // Global type mismatch.
@@ -804,7 +804,7 @@ TEST(capi, instantiate_imported_globals)
     EXPECT_EQ(
         fizzy_instantiate(module, nullptr, 0, nullptr, nullptr, globals_type_mismatch, 4, &error),
         nullptr);
-    EXPECT_EQ(error.code, FIZZY_ERROR_INSTANTIATION_FAILED);
+    EXPECT_EQ(error.code, FizzyErrorInstantiationFailed);
     EXPECT_STREQ(error.message, "global 0 value type doesn't match module's global type");
 }
 
@@ -852,7 +852,7 @@ TEST(capi, resolve_instantiate_no_imports)
     instance =
         fizzy_resolve_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0, &success);
     EXPECT_NE(instance, nullptr);
-    EXPECT_EQ(success.code, FIZZY_SUCCESS);
+    EXPECT_EQ(success.code, FizzySuccess);
     EXPECT_STREQ(success.message, "");
 
     fizzy_free_instance(instance);
@@ -902,7 +902,7 @@ TEST(capi, resolve_instantiate_functions)
     FizzyError error;
     EXPECT_EQ(fizzy_resolve_instantiate(module, nullptr, 0, nullptr, nullptr, &mod1g1, 1, &error),
         nullptr);
-    EXPECT_EQ(error.code, FIZZY_ERROR_INSTANTIATION_FAILED);
+    EXPECT_EQ(error.code, FizzyErrorInstantiationFailed);
     EXPECT_STREQ(error.message, "imported function mod1.foo1 is required");
 
     module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
@@ -967,7 +967,7 @@ TEST(capi, resolve_instantiate_functions)
     EXPECT_EQ(
         fizzy_resolve_instantiate(module, host_funcs, 3, nullptr, nullptr, &mod1g1, 1, &error),
         nullptr);
-    EXPECT_EQ(error.code, FIZZY_ERROR_INSTANTIATION_FAILED);
+    EXPECT_EQ(error.code, FizzyErrorInstantiationFailed);
     EXPECT_STREQ(error.message, "imported function mod2.foo2 is required");
 }
 
@@ -1023,7 +1023,7 @@ TEST(capi, resolve_instantiate_globals)
     FizzyError error;
     EXPECT_EQ(fizzy_resolve_instantiate(module, nullptr, 0, nullptr, nullptr, nullptr, 0, &error),
         nullptr);
-    EXPECT_EQ(error.code, FIZZY_ERROR_INSTANTIATION_FAILED);
+    EXPECT_EQ(error.code, FizzyErrorInstantiationFailed);
     EXPECT_STREQ(error.message, "imported function mod1.foo1 is required");
 
     module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
@@ -1097,7 +1097,7 @@ TEST(capi, resolve_instantiate_globals)
     EXPECT_EQ(fizzy_resolve_instantiate(
                   module, &mod1foo1, 1, nullptr, nullptr, host_globals_extra, 3, &error),
         nullptr);
-    EXPECT_EQ(error.code, FIZZY_ERROR_INSTANTIATION_FAILED);
+    EXPECT_EQ(error.code, FizzyErrorInstantiationFailed);
     EXPECT_STREQ(error.message, "imported global mod2.g2 is required");
 }
 
