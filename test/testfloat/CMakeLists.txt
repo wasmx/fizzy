@@ -30,6 +30,16 @@ if(TESTFLOAT_GEN)
         list(APPEND IGNORE_LIST ui64_to_f64/min)
     endif()
 
+    if(CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64 AND CMAKE_SIZEOF_VOID_P EQUAL 4)
+        # TODO: On i386 (32-bit) there are bugs in the arithmetic instructions
+        #       with default rounding.
+        list(APPEND IGNORE_LIST
+            f64_add/near_even
+            f64_sub/near_even
+            f64_mul/near_even
+            f64_div/near_even)
+    endif()
+
     set(ROUNDING_MODES near_even minMag min max)
 
     # Arithmetic functions: sensitive to rounding and NaNs.
@@ -167,5 +177,9 @@ add_testfloat_selftest(result_failure_2 "i64_to_f64" "0000000000000000 800000000
 add_testfloat_selftest(result_failure_3 "f32_add" "00000000 00000000 00000001 00" "FAILURE: 00000000 <- 00000000 00000000\n         00000001 \\(expected\\)")
 add_testfloat_selftest(unexpected_trap "f32_trunc_to_i32" "7F7FFFFF 00000000 00" "FAILURE: 1 <- 7F7FFFFF\n         0 \\(expected\\)")
 add_testfloat_selftest(missing_trap "f32_trunc_to_i32" "00000000 00000000 10" "FAILURE: 0 <- 00000000\n         1 \\(expected\\)")
-add_testfloat_selftest(unexpected_signaling_nan_f32 "-ignore_nan_payloads f32_add" "7FA00000 7FA00000 7FA00000 00" "ERROR: invalid input: unexpected signaling NaN")
-add_testfloat_selftest(unexpected_signaling_nan_f64 "-ignore_nan_payloads f64_add" "7FF4000000000000 7FF4000000000000 7FF4000000000000 00" "ERROR: invalid input: unexpected signaling NaN")
+
+if(NOT CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64 OR CMAKE_SIZEOF_VOID_P EQUAL 8)
+    # TODO: i386 (32-bit) does not support signaling NaNs.
+    add_testfloat_selftest(unexpected_signaling_nan_f32 "-ignore_nan_payloads f32_add" "7FA00000 7FA00000 7FA00000 00" "ERROR: invalid input: unexpected signaling NaN")
+    add_testfloat_selftest(unexpected_signaling_nan_f64 "-ignore_nan_payloads f64_add" "7FF4000000000000 7FF4000000000000 7FF4000000000000 00" "ERROR: invalid input: unexpected signaling NaN")
+endif()

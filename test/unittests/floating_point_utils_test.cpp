@@ -31,13 +31,15 @@ TEST(floating_point_utils, binary_representation_implementation_defined)
 {
     EXPECT_EQ(FP(FP64::Limits::quiet_NaN()).as_uint(), 0x7FF'8000000000000);
     EXPECT_EQ(FP(FP64::Limits::quiet_NaN()).nan_payload(), 0x8000000000000);
-    EXPECT_EQ(FP(FP64::Limits::signaling_NaN()).as_uint(), 0x7FF'4000000000000);
-    EXPECT_EQ(FP(FP64::Limits::signaling_NaN()).nan_payload(), 0x4000000000000);
-
     EXPECT_EQ(FP(FP32::Limits::quiet_NaN()).as_uint(), 0x7FC00000);
     EXPECT_EQ(FP(FP32::Limits::quiet_NaN()).nan_payload(), 0x400000);
+
+#if SNAN_SUPPORTED
+    EXPECT_EQ(FP(FP64::Limits::signaling_NaN()).as_uint(), 0x7FF'4000000000000);
+    EXPECT_EQ(FP(FP64::Limits::signaling_NaN()).nan_payload(), 0x4000000000000);
     EXPECT_EQ(FP(FP32::Limits::signaling_NaN()).as_uint(), 0x7FA00000);
     EXPECT_EQ(FP(FP32::Limits::signaling_NaN()).nan_payload(), 0x200000);
+#endif
 }
 
 TEST(floating_point_utils, float_as_uint)
@@ -86,12 +88,15 @@ TEST(floating_point_utils, double_nan_payload)
     const auto qnan = FP64::nan(FP64::canon);
 
     EXPECT_EQ(FP(0.0).nan_payload(), 0);
-    EXPECT_EQ(FP(FP64::nan(1)).nan_payload(), 1);
     EXPECT_EQ(FP(FP64::nan(FP64::canon + 1)).nan_payload(), FP64::canon + 1);
     EXPECT_EQ(FP(qnan).nan_payload(), FP64::canon);
     EXPECT_EQ(FP(qnan + 1.0).nan_payload(), FP64::canon);
     EXPECT_EQ(FP(inf - inf).nan_payload(), FP64::canon);
     EXPECT_EQ(FP(inf * 0.0).nan_payload(), FP64::canon);
+
+#if SNAN_SUPPORTED
+    EXPECT_EQ(FP(FP64::nan(1)).nan_payload(), 1);
+#endif
 }
 
 TEST(floating_point_utils, float_nan_payload)
@@ -100,18 +105,20 @@ TEST(floating_point_utils, float_nan_payload)
     const auto qnan = FP32::nan(FP32::canon);
 
     EXPECT_EQ(FP(0.0f).nan_payload(), 0);
-    EXPECT_EQ(FP(FP32::nan(1)).nan_payload(), 1);
     EXPECT_EQ(FP(FP32::nan(FP32::canon + 1)).nan_payload(), FP32::canon + 1);
     EXPECT_EQ(FP(qnan).nan_payload(), FP32::canon);
     EXPECT_EQ(FP(qnan + 1.0f).nan_payload(), FP32::canon);
     EXPECT_EQ(FP(inf - inf).nan_payload(), FP32::canon);
     EXPECT_EQ(FP(inf * 0.0f).nan_payload(), FP32::canon);
+
+#if SNAN_SUPPORTED
+    EXPECT_EQ(FP(FP32::nan(1)).nan_payload(), 1);
+#endif
 }
 
 TEST(floating_point_utils, double_nan)
 {
     EXPECT_TRUE(std::isnan(FP64::nan(FP64::canon)));
-    EXPECT_TRUE(std::isnan(FP64::nan(1)));
     EXPECT_TRUE(std::isnan(FP64::nan(0xDEADBEEF)));
     EXPECT_TRUE(std::isnan(FP64::nan(0xDEADBEEFBEEEF)));
     EXPECT_FALSE(std::isnan(FP64::nan(0)));
@@ -119,8 +126,12 @@ TEST(floating_point_utils, double_nan)
     EXPECT_EQ(FP{FP64::nan(FP64::canon)}.nan_payload(), FP64::canon);
 
     EXPECT_EQ(FP{FP64::nan(FP64::canon)}.as_uint(), 0x7FF'8000000000000);
-    EXPECT_EQ(FP{FP64::nan(0xDEADBEEF)}.as_uint(), 0x7FF'00000DEADBEEF);
     EXPECT_EQ(FP{FP64::nan(0xDEADBEEFBEEEF)}.as_uint(), 0x7FF'DEADBEEFBEEEF);
+
+#if SNAN_SUPPORTED
+    EXPECT_TRUE(std::isnan(FP64::nan(1)));
+    EXPECT_EQ(FP{FP64::nan(0xDEADBEEF)}.as_uint(), 0x7FF'00000DEADBEEF);
+#endif
 }
 
 TEST(floating_point_utils, float_nan)
@@ -251,6 +262,7 @@ TEST(floating_point_utils, double_is_arithmetic_nan)
     EXPECT_TRUE(FP64{FP64::nan(FP64::mantissa_mask)}.is_arithmetic_nan());
     EXPECT_TRUE(FP64{-FP64::nan(FP64::mantissa_mask)}.is_arithmetic_nan());
 
+#if SNAN_SUPPORTED
     // non-arithmetic
     EXPECT_FALSE(FP64{FP64::nan(1)}.is_arithmetic_nan());
     EXPECT_FALSE(FP64{-FP64::nan(1)}.is_arithmetic_nan());
@@ -258,6 +270,7 @@ TEST(floating_point_utils, double_is_arithmetic_nan)
     EXPECT_FALSE(FP64{-FP64::nan(0xDEADBEEF)}.is_arithmetic_nan());
     EXPECT_FALSE(FP64{FP64::nan(0x0DEADBEEFBEEF)}.is_arithmetic_nan());
     EXPECT_FALSE(FP64{-FP64::nan(0x0DEADBEEFBEEF)}.is_arithmetic_nan());
+#endif
 
     // not NaN
     EXPECT_FALSE(FP64{0.0}.is_arithmetic_nan());
@@ -311,11 +324,13 @@ TEST(floating_point_utils, float_is_arithmetic_nan)
     EXPECT_TRUE(FP32{FP32::nan(FP32::mantissa_mask)}.is_arithmetic_nan());
     EXPECT_TRUE(FP32{-FP32::nan(FP32::mantissa_mask)}.is_arithmetic_nan());
 
+#if SNAN_SUPPORTED
     // non-arithmetic
     EXPECT_FALSE(FP32{FP32::nan(1)}.is_arithmetic_nan());
     EXPECT_FALSE(FP32{-FP32::nan(1)}.is_arithmetic_nan());
     EXPECT_FALSE(FP32{FP32::nan(0xDEADBEEF)}.is_arithmetic_nan());
     EXPECT_FALSE(FP32{-FP32::nan(0xDEADBEEF)}.is_arithmetic_nan());
+#endif
 
     // not NaN
     EXPECT_FALSE(FP32{0.0f}.is_arithmetic_nan());
