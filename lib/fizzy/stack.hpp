@@ -86,8 +86,7 @@ public:
     /// @param  num_local_variables    The number of the function local variables (excluding
     ///                                arguments). This number of values is zeroed in the storage
     ///                                space after the arguments.
-    /// @param  max_stack_height       The maximum operand stack height in the function. This
-    ///                                excludes @a args and @a num_local_variables.
+    /// @param  stack_space            Reserved stack space of the required size.
     OperandStack(
         const Value* args, size_t num_args, size_t num_local_variables, Value* stack_space) noexcept
     {
