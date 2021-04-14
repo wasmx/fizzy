@@ -88,7 +88,8 @@ public:
     ///                                space after the arguments.
     /// @param  max_stack_height       The maximum operand stack height in the function. This
     ///                                excludes @a args and @a num_local_variables.
-    OperandStack(const Value* args, size_t num_args, size_t num_local_variables, Value* stack_space)
+    OperandStack(
+        const Value* args, size_t num_args, size_t num_local_variables, Value* stack_space) noexcept
     {
         const auto num_locals = num_args + num_local_variables;
         // To avoid potential UB when there are no locals and the stack pointer is set to
