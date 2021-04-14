@@ -42,10 +42,8 @@ class ExecutionContext
             if (required_stack_space <= m_shared_ctx.free_stack_space)
             {
                 // Must be a segment of default size or required_stack_space is 0.
-                const auto offset =
-                    DefaultStackSpaceSegmentSize - m_shared_ctx.free_stack_space;
+                const auto offset = DefaultStackSpaceSegmentSize - m_shared_ctx.free_stack_space;
                 stack_space = m_shared_ctx.stack_space_segment + offset;
-                prev_free_stack_space = m_shared_ctx.free_stack_space;
                 m_shared_ctx.free_stack_space -= required_stack_space;
             }
             else
@@ -66,7 +64,8 @@ class ExecutionContext
             m_shared_ctx.free_stack_space = prev_free_stack_space;
             if (prev_stack_space_segment != nullptr)
             {
-                assert(m_shared_ctx.stack_space_segment == stack_space);
+                assert(stack_space == m_shared_ctx.stack_space_segment);
+                assert(stack_space != m_shared_ctx.first_stack_space_segment);
                 delete[] stack_space;
                 m_shared_ctx.stack_space_segment = prev_stack_space_segment;
             }
