@@ -169,6 +169,28 @@ In the GNU C Library the rounding mode can be controlled via the [`fesetround` a
 
 If strict compliance is sought with WebAssembly, then the user of Fizzy must ensure to keep the default rounding mode.
 
+### x87 FPU
+
+On the 32-bit Intel i386 architecture an [x87](https://en.wikipedia.org/wiki/X87)-compatible FPU is used by default to perform floating-point operations.
+The FPU is claimed to be IEEE-754 compliant, but there is one gotcha. The operations are executed with so-called *internal precision* and the results are rounded to the target precision at the end [[1]](#1).
+By default, the precision is set to [80-bit extended precision](https://en.wikipedia.org/wiki/Extended_precision) (except for VC++ runtime [[2]](#2)).
+Unfortunately, this causes problems for 64-bit double precision operations (`f64.add`, `f64.sub`, `f64.mul`, `f64.div`) as the results may be different from when computed with double precision directly.
+
+The FPU precision can be dynamically modified by using compiler intrinsics [[1]](#1), but this has similar issues to controlling the rounding mode and there exists no C/C++ standard way of doing so.
+
+We decided against fighting the x87 FPU quirks, because floating-point operations were not the top priorities.
+Instead of creating manual workarounds, a reasonable solution is to opt-in for using SSE2 instructions to implement WebAssembly floating-point instructions,
+not only for 64-bit (where it is the default), but 32-bit builds as well. This means for strict WebAssembly compliance the SSE2 instruction set is required.
+
+This is controlled by the [`-msse2 -mfpmath=sse`][x86-options] compiler options, and one can always override to experiment with the x87 FPU.
+Worth mentioning that the [`-mpc64`][x86-options] GCC compiler option is supposed to set the FPU to 64-bit double precision mode, but for an unknown reason this is not working.
+
+See also:
+1. <a id=1></a>[Deterministic cross-platform floating point arithmetics](http://christian-seiler.de/projekte/fpmath/)
+2. <a id=2></a>[Intermediate Floating-Point Precision](https://randomascii.wordpress.com/2012/03/21/intermediate-floating-point-precision/)
+3. [Verified Compilation of Floating-Point Computations](https://hal.inria.fr/hal-00862689v3)
+
+[x86-options]: https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html
 
 ## Development
 

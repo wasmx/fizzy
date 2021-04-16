@@ -71,6 +71,14 @@ if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
     endif()
 endif()
 
+# This currently is for checking 32-bit mode on x86_64.
+# TODO: potentially include x86, i386, i686 here
+if(CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64 AND CMAKE_SIZEOF_VOID_P EQUAL 4)
+    # On 32-bit opt-in for floating-point implementation with SSE2.
+    # See the "x87 FPU" section in the README for explanation.
+    add_compile_options(-msse2 -mfpmath=sse)
+endif()
+
 # An option to enable assertions in non-Debug build types.
 # Disabling assertions in Debug build type has no effect (assertions are still enabled).
 option(ENABLE_ASSERTIONS "Enable NDEBUG based assertions" OFF)
