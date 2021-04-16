@@ -13,7 +13,7 @@
 namespace fizzy::test
 {
 inline TypedExecutionResult execute(Instance& instance, FuncIdx func_idx,
-    std::initializer_list<TypedValue> typed_args, int depth = 0)
+    std::initializer_list<TypedValue> typed_args, ExecutionContext& ctx)
 {
     const auto& func_type = instance.module->get_function_type(func_idx);
     const auto [typed_arg_it, type_it] = std::mismatch(std::cbegin(typed_args),
@@ -31,12 +31,18 @@ inline TypedExecutionResult execute(Instance& instance, FuncIdx func_idx,
     std::transform(std::cbegin(typed_args), std::cend(typed_args), std::begin(args),
         [](const auto& typed_arg) { return typed_arg.value; });
 
-    ExecutionContext ctx;
-    ctx.depth = depth;
     const auto result = fizzy::execute(instance, func_idx, args.data(), ctx);
     assert(func_type.outputs.size() <= 1);
     const auto result_type = func_type.outputs.empty() ? ValType{} : func_type.outputs[0];
     return {result, result_type};
+}
+
+inline TypedExecutionResult execute(Instance& instance, FuncIdx func_idx,
+    std::initializer_list<TypedValue> typed_args, int depth = 0)
+{
+    ExecutionContext ctx;
+    ctx.depth = depth;
+    return execute(instance, func_idx, typed_args, ctx);
 }
 
 inline auto execute(const std::unique_ptr<const Module>& module, FuncIdx func_idx,

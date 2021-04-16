@@ -974,9 +974,9 @@ TEST(execute_control, br_table_arity)
     const auto wasm = from_hex(
         "0061736d0100000001060160017f017f030201000a15011300027f027f410120000e0101000b1a41020b0b");
 
-    auto instance = parse(wasm);
-    EXPECT_THAT(execute(instance, 0, {0}), Result(1));
-    EXPECT_THAT(execute(instance, 0, {1}), Result(2));
+    auto module = parse(wasm);
+    EXPECT_THAT(execute(module, 0, {0}), Result(1));
+    EXPECT_THAT(execute(module, 0, {1}), Result(2));
 
     /* wat2wasm
     (func  (param $x i32) (result i32)
