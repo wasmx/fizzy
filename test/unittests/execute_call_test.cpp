@@ -888,5 +888,5 @@ TEST(execute_call, drop_call_result)
     EXPECT_EQ(module->codesec[1].max_stack_height, 1);
     const auto func_idx = find_exported_function_index(*module, "drop_call_result");
     auto instance = instantiate(*module);
-    EXPECT_THAT(fizzy::execute(*instance, *func_idx, {}), Result());
+    EXPECT_THAT(execute(*instance, *func_idx, {}), Result());
 }
