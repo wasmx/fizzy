@@ -167,6 +167,7 @@ impl Module {
                 std::ptr::null(),
                 std::ptr::null(),
                 0,
+                sys::FizzyMemoryPagesLimitDefault,
                 err.as_mut_ptr(),
             )
         };

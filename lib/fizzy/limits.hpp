@@ -18,6 +18,7 @@ static_assert(MaxMemoryPagesLimit == 65536);
 
 /// The default hard limit of the memory size (256MB) as number of pages.
 constexpr uint32_t DefaultMemoryPagesLimit = (256 * 1024 * 1024ULL) / PageSize;
+static_assert(DefaultMemoryPagesLimit == 4096);
 
 /// The limit of the size of the call stack, i.e. how many calls are allowed to be stacked up
 /// in a single execution thread. Allowed values for call depth levels are [0, CallStackLimit-1].
