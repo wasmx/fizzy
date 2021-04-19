@@ -116,3 +116,35 @@ TEST(oom, execute_memory_grow)
     EXPECT_THAT(execute(*instance, 0, {memory_grow_page_count}), Result(expected_result));
     ASSERT_TRUE(restore_memory_limit());
 }
+
+TEST(oom, capi_instantiate)
+{
+    /* wat2wasm
+    (memory 32)
+    */
+    const auto wasm = from_hex("0061736d010000000503010020");
+
+    const auto* module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
+    ASSERT_NE(module, nullptr);
+
+    const auto is_limited = try_set_memory_limit(OSMemoryLimitBytes);
+
+    FizzyError error;
+    auto instance = fizzy_instantiate(
+        module, nullptr, 0, nullptr, nullptr, nullptr, 0, FizzyMemoryPagesLimitDefault, &error);
+
+    if (is_limited)
+    {
+        EXPECT_EQ(instance, nullptr);
+        EXPECT_EQ(error.code, FizzyErrorOther);
+        EXPECT_STREQ(error.message, "std::bad_alloc");
+    }
+    else
+    {
+        EXPECT_NE(instance, nullptr);
+        EXPECT_EQ(error.code, FizzySuccess);
+        EXPECT_STREQ(error.message, "");
+        fizzy_free_instance(instance);
+    }
+    ASSERT_TRUE(restore_memory_limit());
+}
