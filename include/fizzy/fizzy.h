@@ -24,10 +24,15 @@ extern "C" {
 /// Error codes.
 typedef enum FizzyErrorCode
 {
+    /// Success.
     FizzySuccess = 0,
+    /// Malformed module.
     FizzyErrorMalformedModule,
+    /// Invalid module.
     FizzyErrorInvalidModule,
+    /// Instantiation failed.
     FizzyErrorInstantiationFailed,
+    /// Other error.
     FizzyErrorOther
 } FizzyErrorCode;
 
@@ -257,6 +262,9 @@ typedef struct FizzyImportedGlobal
 /// @param  error               Pointer to store detailed error information at. Can be NULL if error
 ///                             information is not required.
 /// @return                     true if module is valid, false otherwise.
+///
+/// @note   FizzyError::code will be ::FizzySuccess if function returns `true` and will not be
+///         ::FizzySuccess otherwise.
 bool fizzy_validate(
     const uint8_t* wasm_binary, size_t wasm_binary_size, FizzyError* error) FIZZY_NOEXCEPT;
 
@@ -267,6 +275,9 @@ bool fizzy_validate(
 /// @param  error               Pointer to store detailed error information at. Can be NULL if error
 ///                             information is not required.
 /// @return                     non-NULL pointer to module in case of success, NULL otherwise.
+///
+/// @note   FizzyError::code will be ::FizzySuccess if function returns non-NULL
+///         will and will not be ::FizzySuccess otherwise.
 const FizzyModule* fizzy_parse(
     const uint8_t* wasm_binary, size_t wasm_binary_size, FizzyError* error) FIZZY_NOEXCEPT;
 
@@ -434,6 +445,10 @@ bool fizzy_module_has_start_function(const FizzyModule* module) FIZZY_NOEXCEPT;
 /// No validation is done on the number of globals passed in, nor on their order.
 /// When number of passed globals or their order is different from the one defined by the
 /// module, behaviour is undefined.
+///
+/// @note
+/// FizzyError::code will be ::FizzySuccess if function returns non-NULL pointer and will not be
+/// ::FizzySuccess otherwise.
 FizzyInstance* fizzy_instantiate(const FizzyModule* module,
     const FizzyExternalFunction* imported_functions, size_t imported_functions_size,
     const FizzyExternalTable* imported_table, const FizzyExternalMemory* imported_memory,
@@ -483,6 +498,10 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 /// FizzyImportedFunction::module, FizzyImportedFunction::name, FizzyImportedGlobal::module,
 /// FizzyImportedGlobal::name strings need to be valid only until fizzy_resolve_instantiate()
 /// returns.
+///
+/// @note
+/// FizzyError::code will be ::FizzySuccess if function returns non-NULL pointer and will not be
+/// ::FizzySuccess otherwise.
 FizzyInstance* fizzy_resolve_instantiate(const FizzyModule* module,
     const FizzyImportedFunction* imported_functions, size_t imported_functions_size,
     const FizzyExternalTable* imported_table, const FizzyExternalMemory* imported_memory,
