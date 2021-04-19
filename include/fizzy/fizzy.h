@@ -32,6 +32,8 @@ typedef enum FizzyErrorCode
     FizzyErrorInvalidModule,
     /// Instantiation failed.
     FizzyErrorInstantiationFailed,
+    /// Memory allocation failed.
+    FizzyErrorMemoryAllocationFailed,
     /// Other error.
     FizzyErrorOther
 } FizzyErrorCode;

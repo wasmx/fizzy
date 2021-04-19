@@ -136,8 +136,8 @@ TEST(oom, capi_instantiate)
     if (is_limited)
     {
         EXPECT_EQ(instance, nullptr);
-        EXPECT_EQ(error.code, FizzyErrorOther);
-        EXPECT_STREQ(error.message, "std::bad_alloc");
+        EXPECT_EQ(error.code, FizzyErrorMemoryAllocationFailed);
+        EXPECT_STREQ(error.message, "memory allocation failed");
     }
     else
     {
