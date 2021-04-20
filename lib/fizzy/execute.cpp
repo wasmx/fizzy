@@ -581,6 +581,7 @@ ExecutionResult execute(
 
     const uint8_t* pc = code.instructions.data();
 
+    const auto metering_enabled = ctx.metering_enabled;
     const auto cost_table = get_instruction_cost_table();
 
     while (true)
@@ -588,8 +589,11 @@ ExecutionResult execute(
         const auto opcode = *pc++;
         const auto instruction = static_cast<Instr>(opcode);
 
-        if ((ctx.ticks -= cost_table[opcode]) < 0)
-            goto trap;
+        if (metering_enabled)
+        {
+            if ((ctx.ticks -= cost_table[opcode]) < 0)
+                goto trap;
+        }
 
         switch (instruction)
         {

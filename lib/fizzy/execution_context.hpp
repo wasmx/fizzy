@@ -35,6 +35,9 @@ class ExecutionContext
 
 public:
     int depth = 0;  ///< Current call depth.
+
+    bool metering_enabled = false;
+
     /// Current ticks left for execution. Execution traps when running out of ticks.
     int64_t ticks = std::numeric_limits<int64_t>::max();
 
