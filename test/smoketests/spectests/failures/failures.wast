@@ -32,9 +32,9 @@
 (assert_unlinkable (module (func (drop))) "error")
 
 ;; uninstantiable expected, unlinkable given
-(assert_trap (module (memory 0) (data (i32.const 0) "a")) "error")
 (assert_trap (module (import "Mod-unknown" "foo" (func))) "error")
 ;; unlinkable expected, uninstantiable given
+(assert_unlinkable (module (memory 0) (data (i32.const 0) "a")) "error")
 (assert_unlinkable (module (func $main (unreachable)) (start $main)) "error")
 
 ;; invalid result

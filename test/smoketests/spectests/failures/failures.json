@@ -15,7 +15,7 @@
   {"type": "assert_unlinkable", "line": 29, "filename": "failures.9.wasm", "text": "error", "module_type": "binary"}, 
   {"type": "assert_unlinkable", "line": 32, "filename": "failures.10.wasm", "text": "error", "module_type": "binary"}, 
   {"type": "assert_uninstantiable", "line": 35, "filename": "failures.11.wasm", "text": "error", "module_type": "binary"}, 
-  {"type": "assert_uninstantiable", "line": 36, "filename": "failures.12.wasm", "text": "error", "module_type": "binary"}, 
+  {"type": "assert_unlinkable", "line": 37, "filename": "failures.12.wasm", "text": "error", "module_type": "binary"}, 
   {"type": "assert_unlinkable", "line": 38, "filename": "failures.13.wasm", "text": "error", "module_type": "binary"}, 
   {"type": "module", "line": 41, "filename": "failures.14.wasm"}, 
   {"type": "assert_return", "line": 48, "action": {"type": "invoke", "field": "foo.i32", "args": []}, "expected": [{"type": "i32", "value": "2"}]}, 

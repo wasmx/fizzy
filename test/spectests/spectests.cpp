@@ -359,7 +359,10 @@ public:
                 }
                 catch (const fizzy::instantiate_error& ex)
                 {
-                    if (ex.what() == std::string{"start function failed to execute"})
+                    const std::string what = ex.what();
+                    if (what == "start function failed to execute" ||
+                        what == "data segment is out of memory bounds" ||
+                        what == "element segment is out of table bounds")
                     {
                         if (type == "assert_uninstantiable")
                             pass(ex.what());
