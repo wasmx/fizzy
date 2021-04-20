@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <limits>
+
 namespace fizzy
 {
 /// The storage for information shared by calls in the same execution "thread".
@@ -33,6 +35,8 @@ class ExecutionContext
 
 public:
     int depth = 0;  ///< Current call depth.
+    /// Current ticks left for execution. Execution traps when running out of ticks.
+    int64_t ticks = std::numeric_limits<int64_t>::max();
 
     /// Increments the call depth and returns the local call context which
     /// decrements the call depth back to the original value when going out of scope.
