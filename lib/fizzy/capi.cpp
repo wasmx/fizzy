@@ -69,6 +69,11 @@ inline void set_error_from_current_exception(FizzyError* error) noexcept
     {
         set_error_code_and_message(FizzyErrorInstantiationFailed, e.what(), error);
     }
+    catch (const std::bad_alloc&)
+    {
+        set_error_code_and_message(
+            FizzyErrorMemoryAllocationFailed, "memory allocation failed", error);
+    }
     catch (const std::exception& e)
     {
         set_error_code_and_message(FizzyErrorOther, e.what(), error);
