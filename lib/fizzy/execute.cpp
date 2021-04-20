@@ -589,7 +589,7 @@ ExecutionResult execute(
         const auto opcode = *pc++;
         const auto instruction = static_cast<Instr>(opcode);
 
-        if (metering_enabled)
+        if (__builtin_expect(metering_enabled, false))
         {
             if ((ctx.ticks -= cost_table[opcode]) < 0)
                 goto trap;
