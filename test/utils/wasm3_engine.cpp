@@ -85,7 +85,7 @@ bool Wasm3Engine::instantiate(bytes_view wasm_binary)
     // Transfers ownership to runtime.
     if (m3_LoadModule(m_runtime, module) != m3Err_none)
     {
-        // NOTE: apparently m3_FreeModule isn't needed in neither the failure nor the success case
+        m3_FreeModule(module);
         return false;
     }
 
