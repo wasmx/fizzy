@@ -2,6 +2,8 @@
 // Copyright 2021 The Fizzy Authors.
 // SPDX-License-Identifier: Apache-2.0
 
+#pragma once
+
 #include "wasi.hpp"
 #include <memory>
 
