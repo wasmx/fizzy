@@ -1282,3 +1282,108 @@ TEST(execute_floating_point, f64_store_overflow)
     // Offset is 0x7fffffff + 0x80000001 => 0x100000000
     EXPECT_THAT(execute(*instance, 0, {0x80000001}), Traps());
 }
+
+TEST(execute_floating_point, f64_add_round_to_even)
+{
+    // This test presents how IEEE-754 "round to nearest, ties to even" works.
+    // This rounding mode is required by WebAssembly.
+
+    struct TestCase
+    {
+        double a;
+        double b;
+        double expected_sum;
+    };
+
+    constexpr TestCase test_cases[]{
+        // = - no rounding, ^ - round up, v - round down.
+        {0x1p0, 0x1.0000000000000p0, /* 0x2.0000000000000p0 = */ 0x1.0000000000000p1},
+        {0x1p0, 0x1.0000000000001p0, /* 0x2.0000000000001p0 v */ 0x1.0000000000000p1},
+        {0x1p0, 0x1.0000000000002p0, /* 0x2.0000000000002p0 = */ 0x1.0000000000001p1},
+        {0x1p0, 0x1.0000000000003p0, /* 0x2.0000000000003p0 ^ */ 0x1.0000000000002p1},
+        {0x1p0, 0x1.0000000000004p0, /* 0x2.0000000000004p0 = */ 0x1.0000000000002p1},
+        {0x1p0, 0x1.0000000000005p0, /* 0x2.0000000000005p0 v */ 0x1.0000000000002p1},
+        {0x1p0, 0x1.0000000000006p0, /* 0x2.0000000000006p0 = */ 0x1.0000000000003p1},
+        {0x1p0, 0x1.0000000000007p0, /* 0x2.0000000000007p0 ^ */ 0x1.0000000000004p1},
+        {0x1p0, 0x1.0000000000008p0, /* 0x2.0000000000008p0 = */ 0x1.0000000000004p1},
+        {0x1p0, 0x1.0000000000009p0, /* 0x2.0000000000009p0 v */ 0x1.0000000000004p1},
+    };
+
+    /* wat2wasm
+    (func (param f64 f64) (result f64)
+      (f64.add (local.get 0) (local.get 1))
+    )
+    */
+    const auto wasm = from_hex("0061736d0100000001070160027c7c017c030201000a0901070020002001a00b");
+
+    auto instance = instantiate(parse(wasm));
+
+    for (const auto t : test_cases)
+    {
+        const auto sum = t.a + t.b;
+        ASSERT_EQ(sum, t.expected_sum) << std::hexfloat << t.a << " + " << t.b << " = " << sum
+                                       << " (expected: " << t.expected_sum << ")";
+
+        EXPECT_THAT(execute(*instance, 0, {t.a, t.b}), Result(t.expected_sum));
+    }
+}
+
+TEST(execute_floating_point, f64_add_off_by_one)
+{
+    // The i386 x87 FPU performs all arithmetic with 80-bit extended precision by default
+    // and in the end rounds it to the required type. This causes issues for f64 types
+    // because results may be different than when doing computation with 64-bit precision.
+    // f32 is not affected.
+    // This test presents examples of results which are different in such case.
+    // The testfloat tool can easily produce more such cases.
+
+    /* wat2wasm
+    (func (param f64 f64) (result f64)
+      (f64.add (local.get 0) (local.get 1))
+    )
+    */
+    const auto wasm = from_hex("0061736d0100000001070160027c7c017c030201000a0901070020002001a00b");
+
+    auto instance = instantiate(parse(wasm));
+
+    constexpr auto a = 0x1.0008000008000p60;
+    constexpr auto b = 0x1.0000000081fffp07;
+    constexpr auto expected = 0x1.0008000008001p60;
+
+    // The precision on the x87 FPU can be changed to 64-bit.
+    // See http://christian-seiler.de/projekte/fpmath/.
+    /*
+    fpu_control_t old_fpu_cw;
+    _FPU_GETCW(old_fpu_cw);
+    const auto fpu_cw =
+        static_cast<fpu_control_t>((old_fpu_cw & ~_FPU_EXTENDED & ~_FPU_SINGLE) | _FPU_DOUBLE);
+    _FPU_SETCW(fpu_cw);
+    */
+
+    EXPECT_EQ(a + b, expected);  // Check host CPU.
+    EXPECT_THAT(execute(*instance, 0, {a, b}), Result(expected));
+
+    /*
+    _FPU_SETCW(old_fpu_cw);
+    */
+}
+
+TEST(execute_floating_point, f64_sub_off_by_one)
+{
+    // Same as f64_add_off_by_one, but for f64.sub.
+
+    /* wat2wasm
+    (func (param f64 f64) (result f64)
+      (f64.sub (local.get 0) (local.get 1))
+    )
+    */
+    const auto wasm = from_hex("0061736d0100000001070160027c7c017c030201000a0901070020002001a10b");
+
+    auto instance = instantiate(parse(wasm));
+
+    constexpr auto a = -0x1.ffc3fffffffffp-50;
+    constexpr auto b = -0x1.00000000047ffp+04;
+    constexpr auto expected = 0x1.00000000047ffp+04;
+    EXPECT_EQ(a - b, expected);  // Check host CPU.
+    EXPECT_THAT(execute(*instance, 0, {a, b}), Result(expected));
+}
