@@ -136,7 +136,7 @@ std::optional<bytes> load_file(std::string_view file, std::ostream& err) noexcep
     }
 }
 
-bool run(bytes_view wasm_binary, int argc, const char* argv[], std::ostream& err)
+std::unique_ptr<Instance> instantiate(bytes_view wasm_binary)
 {
     constexpr auto ns = "wasi_snapshot_preview1";
     const std::vector<ImportedFunction> wasi_functions = {
@@ -152,6 +152,13 @@ bool run(bytes_view wasm_binary, int argc, const char* argv[], std::ostream& err
         {ns, "environ_get", {ValType::i32, ValType::i32}, ValType::i32, return_enosys},
     };
 
+    auto module = parse(wasm_binary);
+    auto imports = resolve_imported_functions(*module, wasi_functions);
+    return instantiate(std::move(module), std::move(imports), {}, {}, {}, MaxMemoryPagesLimit);
+}
+
+bool run(Instance& instance, int argc, const char* argv[], std::ostream& err)
+{
     // Initialisation settings.
     // TODO: Make const after https://github.com/nodejs/uvwasi/pull/155 is merged.
     uvwasi_options_t options = {
@@ -171,13 +178,7 @@ bool run(bytes_view wasm_binary, int argc, const char* argv[], std::ostream& err
         return false;
     }
 
-    auto module = parse(wasm_binary);
-    auto imports = resolve_imported_functions(*module, wasi_functions);
-    auto instance =
-        instantiate(std::move(module), std::move(imports), {}, {}, {}, MaxMemoryPagesLimit);
-    assert(instance != nullptr);
-
-    const auto start_function = find_exported_function_index(*instance->module, "_start");
+    const auto start_function = find_exported_function_index(*instance.module, "_start");
     if (!start_function.has_value())
     {
         err << "File is not WASI compatible (_start not found)\n";
@@ -186,19 +187,19 @@ bool run(bytes_view wasm_binary, int argc, const char* argv[], std::ostream& err
 
     // Manually validate type signature here
     // TODO: do this in find_exported_function_index
-    if (instance->module->get_function_type(*start_function) != FuncType{})
+    if (instance.module->get_function_type(*start_function) != FuncType{})
     {
         err << "File is not WASI compatible (_start has invalid signature)\n";
         return false;
     }
 
-    if (!find_exported_memory(*instance, "memory").has_value())
+    if (!find_exported_memory(instance, "memory").has_value())
     {
         err << "File is not WASI compatible (no memory exported)\n";
         return false;
     }
 
-    const auto result = execute(*instance, *start_function, {});
+    const auto result = execute(instance, *start_function, {});
     if (result.trapped)
     {
         err << "Execution aborted with WebAssembly trap\n";
@@ -207,6 +208,14 @@ bool run(bytes_view wasm_binary, int argc, const char* argv[], std::ostream& err
     assert(!result.has_value);
 
     return true;
+}
+
+bool run(bytes_view wasm_binary, int argc, const char* argv[], std::ostream& err)
+{
+    auto instance = instantiate(wasm_binary);
+    assert(instance != nullptr);
+
+    return run(*instance, argc, argv, err);
 }
 
 bool load_and_run(int argc, const char** argv, std::ostream& err)
