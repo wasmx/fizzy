@@ -64,22 +64,22 @@ TEST(floating_point_utils, float_as_uint)
 
 TEST(floating_point_utils, double_from_uint)
 {
-    EXPECT_EQ(FP(uint64_t{0x0000000000000000}).value, 0.0);
-    EXPECT_EQ(FP(uint64_t{0x8000000000000000}).value, -0.0);
-    EXPECT_EQ(FP(uint64_t{0x3FF'000000000DEAD}).value, 0x1.000000000DEADp0);
-    EXPECT_EQ(FP(uint64_t{0xBFF'000000000DEAD}).value, -0x1.000000000DEADp0);
-    EXPECT_EQ(FP(uint64_t{0x7FF'0000000000000}).value, FP64::Limits::infinity());
-    EXPECT_EQ(FP(uint64_t{0xFFF'0000000000000}).value, -FP64::Limits::infinity());
+    EXPECT_EQ(FP(uint64_t{0x0000000000000000}).as_float(), 0.0);
+    EXPECT_EQ(FP(uint64_t{0x8000000000000000}).as_float(), -0.0);
+    EXPECT_EQ(FP(uint64_t{0x3FF'000000000DEAD}).as_float(), 0x1.000000000DEADp0);
+    EXPECT_EQ(FP(uint64_t{0xBFF'000000000DEAD}).as_float(), -0x1.000000000DEADp0);
+    EXPECT_EQ(FP(uint64_t{0x7FF'0000000000000}).as_float(), FP64::Limits::infinity());
+    EXPECT_EQ(FP(uint64_t{0xFFF'0000000000000}).as_float(), -FP64::Limits::infinity());
 }
 
 TEST(floating_point_utils, float_from_uint)
 {
-    EXPECT_EQ(FP(uint32_t{0x00000000}).value, 0.0f);
-    EXPECT_EQ(FP(uint32_t{0x80000000}).value, -0.0f);
-    EXPECT_EQ(FP(uint32_t{0x3FEF5680}).value, 0x1.DEADp0f);
-    EXPECT_EQ(FP(uint32_t{0xBFEF5680}).value, -0x1.DEADp0f);
-    EXPECT_EQ(FP(uint32_t{0x7F800000}).value, FP32::Limits::infinity());
-    EXPECT_EQ(FP(uint32_t{0xFF800000}).value, -FP32::Limits::infinity());
+    EXPECT_EQ(FP(uint32_t{0x00000000}).as_float(), 0.0f);
+    EXPECT_EQ(FP(uint32_t{0x80000000}).as_float(), -0.0f);
+    EXPECT_EQ(FP(uint32_t{0x3FEF5680}).as_float(), 0x1.DEADp0f);
+    EXPECT_EQ(FP(uint32_t{0xBFEF5680}).as_float(), -0x1.DEADp0f);
+    EXPECT_EQ(FP(uint32_t{0x7F800000}).as_float(), FP32::Limits::infinity());
+    EXPECT_EQ(FP(uint32_t{0xFF800000}).as_float(), -FP32::Limits::infinity());
 }
 
 TEST(floating_point_utils, double_nan_payload)

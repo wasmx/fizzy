@@ -23,15 +23,18 @@ namespace fizzy::test
 template <typename T>
 struct FP
 {
-    static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>);
+    /// The wrapped floating-point type.
+    using FloatType = T;
+
+    static_assert(std::is_same_v<FloatType, float> || std::is_same_v<FloatType, double>);
 
     /// Shortcut to numeric_limits.
-    using Limits = std::numeric_limits<T>;
+    using Limits = std::numeric_limits<FloatType>;
     static_assert(Limits::is_iec559);
 
     /// The unsigned integer type matching the size of this floating-point type.
-    using UintType = std::conditional_t<std::is_same_v<T, float>, uint32_t, uint64_t>;
-    static_assert(sizeof(T) == sizeof(UintType));
+    using UintType = std::conditional_t<std::is_same_v<FloatType, float>, uint32_t, uint64_t>;
+    static_assert(sizeof(FloatType) == sizeof(UintType));
 
     /// The number of mantissa bits in the binary representation.
     static constexpr auto num_mantissa_bits = Limits::digits - 1;
@@ -40,7 +43,7 @@ struct FP
     static constexpr auto mantissa_mask = (UintType{1} << num_mantissa_bits) - 1;
 
     /// The number of exponent bits in the binary representation.
-    static constexpr auto num_exponent_bits = int{sizeof(T) * 8} - num_mantissa_bits - 1;
+    static constexpr auto num_exponent_bits = int{sizeof(FloatType) * 8} - num_mantissa_bits - 1;
 
     /// The exponent value (all exponent bits set) for NaNs.
     static constexpr auto nan_exponent = (UintType{1} << num_exponent_bits) - 1;
@@ -49,14 +52,19 @@ struct FP
     /// See: https://webassembly.github.io/spec/core/syntax/values.html#canonical-nan.
     static constexpr auto canon = UintType{1} << (num_mantissa_bits - 1);
 
-    T value{};
+private:
+    UintType m_storage{};  ///< Bits storage.
 
-    explicit FP(T v) noexcept : value{v} {}
+public:
+    explicit FP(FloatType v) noexcept : m_storage{bit_cast<UintType>(v)} {}
 
-    explicit FP(UintType u) noexcept : value{bit_cast<T>(u)} {}
+    explicit FP(UintType u) noexcept : m_storage{u} {}
 
     /// Return unsigned integer with the binary representation of the value.
-    UintType as_uint() const noexcept { return bit_cast<UintType>(value); }
+    UintType as_uint() const noexcept { return m_storage; }
+
+    /// Return the floating-point value.
+    FloatType as_float() const noexcept { return bit_cast<FloatType>(m_storage); }
 
     /// Returns true if the value is a NaN.
     ///
@@ -66,9 +74,8 @@ struct FP
     /// conversions on some architectures (e.g. i368).
     bool is_nan() const noexcept
     {
-        const auto u = as_uint();
-        const auto exponent = (u >> num_mantissa_bits) & nan_exponent;
-        const auto mantissa = u & mantissa_mask;
+        const auto exponent = (m_storage >> num_mantissa_bits) & nan_exponent;
+        const auto mantissa = m_storage & mantissa_mask;
         return exponent == nan_exponent && mantissa != 0;
     }
 
@@ -86,18 +93,18 @@ struct FP
     /// The IEEE 754 defines quiet NaN as having the top bit of the mantissa set to 1. Wasm calls
     /// this NaN _arithmetic_. The arithmetic NaN with the lowest mantissa (the top bit set, all
     /// other zeros) is the _canonical_ NaN.
-    static T nan(UintType payload) noexcept
+    static FloatType nan(UintType payload) noexcept
     {
-        return FP{(nan_exponent << num_mantissa_bits) | (payload & mantissa_mask)}.value;
+        return FP{(nan_exponent << num_mantissa_bits) | (payload & mantissa_mask)}.as_float();
     }
 
     friend bool operator==(FP a, FP b) noexcept { return a.as_uint() == b.as_uint(); }
-    friend bool operator==(FP a, T b) noexcept { return a == FP{b}; }
-    friend bool operator==(T a, FP b) noexcept { return FP{a} == b; }
+    friend bool operator==(FP a, FloatType b) noexcept { return a == FP{b}; }
+    friend bool operator==(FloatType a, FP b) noexcept { return FP{a} == b; }
 
     friend bool operator!=(FP a, FP b) noexcept { return !(a == b); }
-    friend bool operator!=(FP a, T b) noexcept { return a != FP{b}; }
-    friend bool operator!=(T a, FP b) noexcept { return FP{a} != b; }
+    friend bool operator!=(FP a, FloatType b) noexcept { return a != FP{b}; }
+    friend bool operator!=(FloatType a, FP b) noexcept { return FP{a} != b; }
 };
 
 FP(uint32_t)->FP<float>;
