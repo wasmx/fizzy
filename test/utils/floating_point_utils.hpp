@@ -58,11 +58,22 @@ struct FP
     /// Return unsigned integer with the binary representation of the value.
     UintType as_uint() const noexcept { return bit_cast<UintType>(value); }
 
-    /// Returns NaN payload if the value is a NaN, otherwise 0 (NaN payload is never 0).
-    UintType nan_payload() const noexcept
+    /// Returns true if the value is a NaN.
+    ///
+    /// The implementation only inspects the bit patterns in the storage.
+    /// Using floating-point functions like std::isnan() is explicitly avoided because
+    /// passing/returning float value to/from functions causes signaling-NaN to quiet-NaN
+    /// conversions on some architectures (e.g. i368).
+    bool is_nan() const noexcept
     {
-        return std::isnan(value) ? (as_uint() & mantissa_mask) : 0;
+        const auto u = as_uint();
+        const auto exponent = (u >> num_mantissa_bits) & nan_exponent;
+        const auto mantissa = u & mantissa_mask;
+        return exponent == nan_exponent && mantissa != 0;
     }
+
+    /// Returns NaN payload if the value is a NaN, otherwise 0 (NaN payload is never 0).
+    UintType nan_payload() const noexcept { return is_nan() ? (as_uint() & mantissa_mask) : 0; }
 
     bool is_canonical_nan() const noexcept { return nan_payload() == canon; }
 
