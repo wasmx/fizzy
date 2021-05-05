@@ -555,6 +555,10 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
     return true;
 }
 
+template <bool MeteringEnabled>
+ExecutionResult loop(
+    Instance& instance, FuncIdx func_idx, const Value* args, ExecutionContext& ctx) noexcept;
+
 }  // namespace
 
 ExecutionResult execute(
@@ -564,11 +568,23 @@ ExecutionResult execute(
     if (ctx.depth >= CallStackLimit)
         return Trap;
 
-    const auto& func_type = instance.module->get_function_type(func_idx);
-
     assert(instance.module->imported_function_types.size() == instance.imported_functions.size());
     if (func_idx < instance.imported_functions.size())
         return instance.imported_functions[func_idx].function(instance, args, ctx);
+
+    // if (ctx.metering_enabled)
+    //     return loop<true>(instance, func_idx, args, ctx);
+    // else
+    return loop<false>(instance, func_idx, args, ctx);
+}
+
+namespace
+{
+template<bool MeteringEnabled>
+ExecutionResult loop(
+    Instance& instance, FuncIdx func_idx, const Value* args, ExecutionContext& ctx) noexcept
+{
+    const auto& func_type = instance.module->get_function_type(func_idx);
 
     const auto& code = instance.module->get_code(func_idx);
     auto* const memory = instance.memory.get();
@@ -1591,4 +1607,5 @@ end:
 trap:
     return Trap;
 }
+}  // namespace
 }  // namespace fizzy
