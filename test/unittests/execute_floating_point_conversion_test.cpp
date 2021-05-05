@@ -173,8 +173,8 @@ TEST(execute_floating_point_conversion, f32_demote_f64)
         {0x1.fffffcp0, 0x1.fffffcp0f},                       // exact (even)
 
         // The canonical NaN must result in canonical NaN (only the top bit of payload set).
-        {FP32::nan(FP32::canon), FP64::nan(FP64::canon)},
-        {-FP32::nan(FP32::canon), -FP64::nan(FP64::canon)},
+        {FP64::nan(FP64::canon), FP32::nan(FP32::canon)},
+        {-FP64::nan(FP64::canon), -FP32::nan(FP32::canon)},
     };
 
     for (const auto& [arg, expected] : test_cases)
