@@ -488,8 +488,6 @@ TEST(capi, find_exported_function)
     // EXPECT_THAT(function.function(function.context, instance, nullptr, nullptr),
     // CResult(42_u32));
 
-    fizzy_free_exported_function(&function);
-
     EXPECT_FALSE(fizzy_find_exported_function(instance, "foo2", &function));
     EXPECT_FALSE(fizzy_find_exported_function(instance, "g1", &function));
     EXPECT_FALSE(fizzy_find_exported_function(instance, "tab", &function));
@@ -1568,7 +1566,6 @@ TEST(capi, imported_function_from_another_module)
     FizzyValue args[] = {{44}, {2}};
     EXPECT_THAT(fizzy_execute(instance2, 1, args), CResult(42_u32));
 
-    fizzy_free_exported_function(&func);
     fizzy_free_instance(instance2);
     fizzy_free_instance(instance1);
 }

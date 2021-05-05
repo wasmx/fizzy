@@ -542,11 +542,6 @@ bool fizzy_find_exported_function(
     }
 }
 
-void fizzy_free_exported_function(FizzyExternalFunction* /*external_function*/) noexcept
-{
-    // delete static_cast<fizzy::ExternalFunction*>(external_function->context);
-}
-
 bool fizzy_find_exported_table(
     FizzyInstance* instance, const char* name, FizzyExternalTable* out_table) noexcept
 {
