@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <ostream>
 #include <type_traits>
 
 #ifdef __i386__
@@ -105,6 +106,19 @@ public:
     friend bool operator!=(FP a, FP b) noexcept { return !(a == b); }
     friend bool operator!=(FP a, FloatType b) noexcept { return a != FP{b}; }
     friend bool operator!=(FloatType a, FP b) noexcept { return FP{a} != b; }
+
+    friend std::ostream& operator<<(std::ostream& os, FP x)
+    {
+        const auto format_flags = os.flags();
+        os << x.as_float() << " [";
+        if (x.is_nan())
+            os << std::hex << x.nan_payload();
+        else
+            os << std::hexfloat << x.as_float();
+        os << "]";
+        os.flags(format_flags);
+        return os;
+    }
 };
 
 FP(uint32_t)->FP<float>;

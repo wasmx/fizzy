@@ -340,3 +340,29 @@ TEST(floating_point_utils, float_is_arithmetic_nan)
     EXPECT_FALSE(FP32{FP32::Limits::infinity()}.is_arithmetic_nan());
     EXPECT_FALSE(FP32{-FP32::Limits::infinity()}.is_arithmetic_nan());
 }
+
+TEST(floating_point_utils, fp32_ostream)
+{
+    std::ostringstream os;
+
+    os << FP32{-0.0f};
+    EXPECT_EQ(os.str(), "-0 [-0x0p+0]");
+    os.str({});
+
+    os << FP32{FP32::nan(FP32::canon)};
+    EXPECT_EQ(os.str(), "nan [400000]");
+    os.str({});
+}
+
+TEST(floating_point_utils, fp64_ostream)
+{
+    std::ostringstream os;
+
+    os << FP64{-8.125};
+    EXPECT_EQ(os.str(), "-8.125 [-0x1.04p+3]");
+    os.str({});
+
+    os << FP64{FP64::nan(FP64::canon + 1)};
+    EXPECT_EQ(os.str(), "nan [8000000000001]");
+    os.str({});
+}
