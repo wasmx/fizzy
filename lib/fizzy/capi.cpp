@@ -133,19 +133,9 @@ inline FizzyValue wrap(fizzy::Value value) noexcept
     return fizzy::bit_cast<FizzyValue>(value);
 }
 
-inline fizzy::Value unwrap(FizzyValue value) noexcept
-{
-    return fizzy::bit_cast<fizzy::Value>(value);
-}
-
 inline FizzyValue* wrap(fizzy::Value* values) noexcept
 {
     return reinterpret_cast<FizzyValue*>(values);
-}
-
-inline const FizzyValue* wrap(const fizzy::Value* values) noexcept
-{
-    return reinterpret_cast<const FizzyValue*>(values);
 }
 
 inline const fizzy::Value* unwrap(const FizzyValue* values) noexcept
@@ -156,16 +146,6 @@ inline const fizzy::Value* unwrap(const FizzyValue* values) noexcept
 inline fizzy::Value* unwrap(FizzyValue* value) noexcept
 {
     return reinterpret_cast<fizzy::Value*>(value);
-}
-
-inline FizzyExecutionContext* wrap(fizzy::ExecutionContext& ctx) noexcept
-{
-    return reinterpret_cast<FizzyExecutionContext*>(&ctx);
-}
-
-inline fizzy::ExecutionContext& unwrap(FizzyExecutionContext* ctx) noexcept
-{
-    return *reinterpret_cast<fizzy::ExecutionContext*>(ctx);
 }
 
 inline FizzyInstance* wrap(fizzy::Instance* instance) noexcept
@@ -183,49 +163,20 @@ inline FizzyExecutionResult wrap(const fizzy::ExecutionResult& result) noexcept
     return {result.trapped, result.has_value, wrap(result.value)};
 }
 
-inline fizzy::ExecutionResult unwrap(const FizzyExecutionResult& result) noexcept
-{
-    if (result.trapped)
-        return fizzy::Trap;
-    else if (!result.has_value)
-        return fizzy::Void;
-    else
-        return unwrap(result.value);
-}
-
-inline fizzy::ExecuteFunction unwrap(FizzyExternalFn c_function, void* c_host_context)
-{
-    static constexpr fizzy::HostFunctionPtr function =
-        [](std::any& host_ctx, fizzy::Instance& instance, const fizzy::Value* args,
-            fizzy::ExecutionContext& ctx) noexcept {
-            const auto [c_func, c_host_ctx] =
-                *std::any_cast<std::pair<FizzyExternalFn, void*>>(&host_ctx);
-            return unwrap(c_func(c_host_ctx, wrap(&instance), wrap(args), wrap(ctx)));
-        };
-
-    return {function, std::make_any<std::pair<FizzyExternalFn, void*>>(c_function, c_host_context)};
-}
-
 inline FizzyExternalFunction wrap(fizzy::ExternalFunction external_func)
 {
-    static constexpr FizzyExternalFn c_function =
-        [](void* host_ctx, FizzyInstance* instance, const FizzyValue* args,
-            FizzyExecutionContext* c_ctx) noexcept -> FizzyExecutionResult {
-        // If execution context not provided, allocate new one.
-        // It must be allocated on heap otherwise the stack will explode in recursive calls.
-        std::unique_ptr<fizzy::ExecutionContext> new_ctx;
-        if (c_ctx == nullptr)
-            new_ctx = std::make_unique<fizzy::ExecutionContext>();
-        auto& ctx = new_ctx ? *new_ctx : unwrap(c_ctx);
+    const auto c_type = wrap(external_func.input_types, external_func.output_types);
 
-        auto* func = static_cast<fizzy::ExternalFunction*>(host_ctx);
-        return wrap((func->function)(*unwrap(instance), unwrap(args), ctx));
-    };
-
-    auto host_ctx = std::make_unique<fizzy::ExternalFunction>(std::move(external_func));
-    const auto c_type = wrap(host_ctx->input_types, host_ctx->output_types);
-    void* c_host_ctx = host_ctx.release();
-    return {c_type, c_function, c_host_ctx};
+    if (external_func.function.get_c_host_function())
+    {
+        return {c_type, nullptr, 0, external_func.function.get_c_host_function(),
+            std::any_cast<void*&>(external_func.function.get_host_context())};
+    }
+    else
+    {
+        return {c_type, wrap(external_func.function.get_instance()),
+            external_func.function.get_function_index(), nullptr, nullptr};
+    }
 }
 
 inline fizzy::ExternalFunction unwrap(const FizzyExternalFunction& external_func)
@@ -237,8 +188,16 @@ inline fizzy::ExternalFunction unwrap(const FizzyExternalFunction& external_func
                 fizzy::span<const fizzy::ValType>{} :
                 fizzy::span<const fizzy::ValType>{unwrap(&external_func.type.output), 1});
 
-    return fizzy::ExternalFunction{
-        unwrap(external_func.function, external_func.context), input_types, output_types};
+    if (external_func.instance != nullptr)
+    {
+        fizzy::ExecuteFunction func(*unwrap(external_func.instance), external_func.function_index);
+        return {std::move(func), input_types, output_types};
+    }
+    else
+    {
+        fizzy::ExecuteFunction func(external_func.function, external_func.context);
+        return {std::move(func), input_types, output_types};
+    }
 }
 
 inline std::vector<fizzy::ExternalFunction> unwrap(
@@ -265,11 +224,20 @@ inline fizzy::ImportedFunction unwrap(const FizzyImportedFunction& c_imported_fu
                                                    std::nullopt :
                                                    std::make_optional(unwrap(c_type.output)));
 
-    auto function = unwrap(
-        c_imported_func.external_function.function, c_imported_func.external_function.context);
-
-    return {c_imported_func.module, c_imported_func.name, std::move(inputs), output,
-        std::move(function)};
+    if (c_imported_func.external_function.instance != nullptr)
+    {
+        fizzy::ExecuteFunction func(*unwrap(c_imported_func.external_function.instance),
+            c_imported_func.external_function.function_index);
+        return {c_imported_func.module, c_imported_func.name, std::move(inputs), output,
+            std::move(func)};
+    }
+    else
+    {
+        fizzy::ExecuteFunction func(
+            c_imported_func.external_function.function, c_imported_func.external_function.context);
+        return {c_imported_func.module, c_imported_func.name, std::move(inputs), output,
+            std::move(func)};
+    }
 }
 
 inline std::vector<fizzy::ImportedFunction> unwrap(
@@ -559,6 +527,10 @@ bool fizzy_find_exported_function(
     if (!optional_func)
         return false;
 
+    // C++ host functions not supported
+    if (optional_func->function.get_host_function() != nullptr)
+        return false;
+
     try
     {
         *out_function = wrap(std::move(*optional_func));
@@ -570,9 +542,9 @@ bool fizzy_find_exported_function(
     }
 }
 
-void fizzy_free_exported_function(FizzyExternalFunction* external_function) noexcept
+void fizzy_free_exported_function(FizzyExternalFunction* /*external_function*/) noexcept
 {
-    delete static_cast<fizzy::ExternalFunction*>(external_function->context);
+    // delete static_cast<fizzy::ExternalFunction*>(external_function->context);
 }
 
 bool fizzy_find_exported_table(

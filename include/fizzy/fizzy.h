@@ -130,6 +130,8 @@ typedef struct FizzyExternalFunction
 {
     /// Function type.
     FizzyFunctionType type;
+    FizzyInstance* instance;
+    uint32_t function_index;
     /// Pointer to function.
     FizzyExternalFn function;
     /// Opaque pointer to execution context, that will be passed to function.
