@@ -57,7 +57,7 @@ private:
     UintType m_storage{};  ///< Bits storage.
 
 public:
-    explicit FP(FloatType v) noexcept : m_storage{bit_cast<UintType>(v)} {}
+    FP(FloatType v) noexcept : m_storage{bit_cast<UintType>(v)} {}
 
     explicit FP(UintType u) noexcept : m_storage{u} {}
 
