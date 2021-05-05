@@ -26,7 +26,7 @@ TEST(execute_floating_point_conversion, f64_promote_f32)
     const auto wasm = from_hex("0061736d0100000001060160017d017c030201000a070105002000bb0b");
     auto instance = instantiate(parse(wasm));
 
-    const std::pair<float, double> test_cases[] = {
+    const std::pair<FP32, FP64> test_cases[] = {
         {0.0f, 0.0},
         {-0.0f, -0.0},
         {1.0f, 1.0},
@@ -51,7 +51,7 @@ TEST(execute_floating_point_conversion, f64_promote_f32)
 
         for (const auto& [arg, expected] : test_cases)
         {
-            EXPECT_THAT(execute(*instance, 0, {arg}), Result(expected))
+            EXPECT_THAT(execute(*instance, 0, {arg.as_float()}), Result(expected))
                 << arg << " -> " << expected;
         }
 
@@ -114,7 +114,7 @@ TEST(execute_floating_point_conversion, f32_demote_f64)
     constexpr double lowest_to_inf = (f32_max + f32_limit) / 2;
     ASSERT_EQ(lowest_to_inf, 0x1.ffffffp127);
 
-    const std::pair<double, float> test_cases[] = {
+    const std::pair<FP64, FP32> test_cases[] = {
         // demote(+-0) = +-0
         {0.0, 0.0f},
         {-0.0, -0.0f},
@@ -179,7 +179,8 @@ TEST(execute_floating_point_conversion, f32_demote_f64)
 
     for (const auto& [arg, expected] : test_cases)
     {
-        EXPECT_THAT(execute(*instance, 0, {arg}), Result(expected)) << arg << " -> " << expected;
+        EXPECT_THAT(execute(*instance, 0, {arg.as_float()}), Result(expected))
+            << arg << " -> " << expected;
     }
 
     // Any input NaN other than canonical must result in an arithmetic NaN.
