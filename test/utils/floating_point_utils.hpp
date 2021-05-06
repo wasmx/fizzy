@@ -5,6 +5,7 @@
 #pragma once
 
 #include "cxx20/bit.hpp"
+#include "typed_value.hpp"
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -60,6 +61,14 @@ public:
     FP(FloatType v) noexcept : m_storage{bit_cast<UintType>(v)} {}
 
     explicit FP(UintType u) noexcept : m_storage{u} {}
+
+    operator TypedValue() const noexcept
+    {
+        if constexpr (std::is_same_v<FloatType, float>)
+            return {ValType::f32, Value{m_storage}};
+        else
+            return {ValType::f64, Value{m_storage}};
+    }
 
     /// Return unsigned integer with the binary representation of the value.
     UintType as_uint() const noexcept { return m_storage; }

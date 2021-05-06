@@ -51,7 +51,7 @@ TEST(execute_floating_point_conversion, f64_promote_f32)
 
         for (const auto& [arg, expected] : test_cases)
         {
-            EXPECT_THAT(execute(*instance, 0, {arg.as_float()}), Result(expected))
+            EXPECT_THAT(execute(*instance, 0, {arg}), Result(expected))
                 << arg << " -> " << expected;
         }
 
@@ -179,8 +179,7 @@ TEST(execute_floating_point_conversion, f32_demote_f64)
 
     for (const auto& [arg, expected] : test_cases)
     {
-        EXPECT_THAT(execute(*instance, 0, {arg.as_float()}), Result(expected))
-            << arg << " -> " << expected;
+        EXPECT_THAT(execute(*instance, 0, {arg}), Result(expected)) << arg << " -> " << expected;
     }
 
     // Any input NaN other than canonical must result in an arithmetic NaN.
