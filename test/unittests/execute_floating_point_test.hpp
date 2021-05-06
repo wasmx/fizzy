@@ -44,7 +44,7 @@ class TestValues
 {
     using Limits = typename FP<T>::Limits;
 
-    inline static const std::array m_values{
+    inline static const T m_values[]{
         T{0.0},
 
         Limits::denorm_min(),
@@ -75,10 +75,10 @@ class TestValues
     };
 
 public:
-    using Iterator = typename decltype(m_values)::const_iterator;
+    using Iterator = const T*;
 
     static constexpr auto num_nans = 7;
-    static constexpr auto num_positive = m_values.size() - num_nans;
+    static constexpr auto num_positive = std::size(m_values) - num_nans;
 
     static constexpr Iterator first_non_zero = &m_values[1];
     static constexpr Iterator canonical_nan = &m_values[num_positive];
@@ -116,16 +116,19 @@ public:
     }
 
     // The list of positive NaN values.
-    static constexpr Range positive_nans() noexcept { return {canonical_nan, m_values.end()}; }
+    static constexpr Range positive_nans() noexcept { return {canonical_nan, std::end(m_values)}; }
 
     // The list of positive non-canonical NaN values (including signaling NaNs).
     static constexpr Range positive_noncanonical_nans() noexcept
     {
-        return {first_noncanonical_nan, m_values.end()};
+        return {first_noncanonical_nan, std::end(m_values)};
     }
 
     // The list of positive floating-point values with zero, infinity and NaNs.
-    static constexpr Range positive_all() noexcept { return {m_values.begin(), m_values.end()}; }
+    static constexpr Range positive_all() noexcept
+    {
+        return {std::begin(m_values), std::end(m_values)};
+    }
 
     // The list of floating-point values, including infinities.
     // They are strictly ordered (ordered_values[i] < ordered_values[j] for i<j).
