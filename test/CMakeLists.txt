@@ -31,6 +31,7 @@ add_subdirectory(smoketests)
 add_subdirectory(spectests)
 add_subdirectory(testfloat)
 add_subdirectory(unittests)
+add_subdirectory(unittests_wasi)
 
 if(FIZZY_FUZZING)
     add_subdirectory(fuzzer)
