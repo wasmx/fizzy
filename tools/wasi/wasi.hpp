@@ -13,6 +13,8 @@ struct Instance;
 
 namespace wasi
 {
+class UVWASI;
+
 /// Loads a binary file at the given path.
 ///
 /// @param  file    Path to the file.
@@ -32,16 +34,20 @@ std::optional<bytes> load_file(std::string_view file, std::ostream& err) noexcep
 bool load_and_run(int argc, const char** argv, std::ostream& err);
 
 /// Instantiates a module that imports WASI functions.
-std::unique_ptr<Instance> instantiate(bytes_view wasm_binary);
+///
+/// @param  uvwasi         UVWASI interface to be used in execution.
+/// @param  wasm_binary    Wasm binary.
+std::unique_ptr<Instance> instantiate(UVWASI& uvwasi, bytes_view wasm_binary);
 
 /// Executes WASI main function from the instantiated module with given CLI arguments.
 ///
+/// @param  uvwasi      UVWASI interface to be used in execution.
 /// @param  instance    Instance of the module.
 /// @param  argc        Number of CLI arguments.
 /// @param  argv        Array of CLI arguments. The first argument should be wasm file path.
 /// @param  err         Error output stream.
 /// @return             False in case of error.
-bool run(Instance& instance, int argc, const char* argv[], std::ostream& err);
+bool run(UVWASI& uvwasi, Instance& instance, int argc, const char* argv[], std::ostream& err);
 
 /// Executes WASI main function from the wasm binary with given CLI arguments.
 ///
