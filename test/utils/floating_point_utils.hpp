@@ -38,6 +38,12 @@ struct FP
     using UintType = std::conditional_t<std::is_same_v<FloatType, float>, uint32_t, uint64_t>;
     static_assert(sizeof(FloatType) == sizeof(UintType));
 
+    /// The position of the sign bit counting from the lowest bits.
+    static constexpr auto sign_bit_pos = (sizeof(UintType) * 8 - 1);
+
+    /// The mask extracting the sign bit.
+    static constexpr auto sign_mask = UintType{1} << sign_bit_pos;
+
     /// The number of mantissa bits in the binary representation.
     static constexpr auto num_mantissa_bits = Limits::digits - 1;
 
@@ -58,6 +64,8 @@ private:
     UintType m_storage{};  ///< Bits storage.
 
 public:
+    FP() = default;
+
     FP(FloatType v) noexcept : m_storage{bit_cast<UintType>(v)} {}
 
     explicit FP(UintType u) noexcept : m_storage{u} {}
@@ -107,6 +115,12 @@ public:
     {
         return FP{(nan_exponent << num_mantissa_bits) | (payload & mantissa_mask)}.as_float();
     }
+
+    /// Returns the value of the sign bit.
+    UintType sign_bit() const noexcept { return m_storage >> sign_bit_pos; }
+
+    /// Negates the value (works also for NaNs).
+    FP operator-() const noexcept { return FP{m_storage ^ sign_mask}; }
 
     friend bool operator==(FP a, FP b) noexcept { return a.as_uint() == b.as_uint(); }
     friend bool operator==(FP a, FloatType b) noexcept { return a == FP{b}; }
