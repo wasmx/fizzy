@@ -214,7 +214,11 @@ TYPED_TEST(execute_floating_point_types, reinterpret)
         const auto& ordered_values = TestValues<TypeParam>::ordered_and_nans();
         for (const auto float_value : ordered_values)
         {
-            const auto uint_value = FP<TypeParam>{float_value}.as_uint();
+#if !SNAN_SUPPORTED
+            if (!float_value.is_arithmetic_nan())
+                continue;
+#endif
+            const auto uint_value = float_value.as_uint();
             EXPECT_THAT(execute(*instance, func_float_to_int, {float_value}), Result(uint_value));
             EXPECT_THAT(execute(*instance, func_int_to_float, {uint_value}), Result(float_value));
         }

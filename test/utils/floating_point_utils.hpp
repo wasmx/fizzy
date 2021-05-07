@@ -111,9 +111,9 @@ public:
     /// The IEEE 754 defines quiet NaN as having the top bit of the mantissa set to 1. Wasm calls
     /// this NaN _arithmetic_. The arithmetic NaN with the lowest mantissa (the top bit set, all
     /// other zeros) is the _canonical_ NaN.
-    static FloatType nan(UintType payload) noexcept
+    static FP nan(UintType payload) noexcept
     {
-        return FP{(nan_exponent << num_mantissa_bits) | (payload & mantissa_mask)}.as_float();
+        return FP{(nan_exponent << num_mantissa_bits) | (payload & mantissa_mask)};
     }
 
     /// Returns the value of the sign bit.

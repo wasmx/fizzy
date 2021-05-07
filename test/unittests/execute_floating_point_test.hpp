@@ -44,7 +44,7 @@ class TestValues
 {
     using Limits = typename FP<T>::Limits;
 
-    inline static const T m_values[]{
+    inline static const FP<T> m_values[]{
         T{0.0},
 
         Limits::denorm_min(),
@@ -75,7 +75,7 @@ class TestValues
     };
 
 public:
-    using Iterator = const T*;
+    using Iterator = const FP<T>*;
 
     static constexpr auto num_nans = 7;
     static constexpr auto num_positive = std::size(m_values) - num_nans;
@@ -138,12 +138,12 @@ public:
     {
         static const auto ordered_values = [] {
             constexpr auto ps = positive_nonzero_infinite();
-            std::array<T, ps.size() * 2 + 1> a;
+            std::array<FP<T>, ps.size() * 2 + 1> a;
 
             auto it = std::begin(a);
             it = std::transform(std::make_reverse_iterator(std::end(ps)),
-                std::make_reverse_iterator(std::begin(ps)), it, std::negate<T>{});
-            *it++ = T{0.0};
+                std::make_reverse_iterator(std::begin(ps)), it, std::negate<FP<T>>{});
+            *it++ = FP{T{0.0}};
             std::copy(std::begin(ps), std::end(ps), it);
             return a;
         }();
@@ -160,12 +160,12 @@ public:
         static const auto ordered_values = [] {
             const auto& without_nans = ordered();
             const auto nans = positive_nans();
-            std::array<T, positive_all().size() * 2 - 1> a;
+            std::array<FP<T>, positive_all().size() * 2 - 1> a;
 
             auto it = std::begin(a);
             it = std::copy(std::begin(without_nans), std::end(without_nans), it);
             it = std::copy(std::begin(nans), std::end(nans), it);
-            std::transform(std::begin(nans), std::end(nans), it, std::negate<T>{});
+            std::transform(std::begin(nans), std::end(nans), it, std::negate<FP<T>>{});
             return a;
         }();
 
