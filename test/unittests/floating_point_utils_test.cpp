@@ -26,8 +26,8 @@ TEST(floating_point_utils, fp_sign_bit)
     EXPECT_EQ(FP(-FP32::Limits::infinity()).sign_bit(), 1);
     EXPECT_EQ(FP(FP32::Limits::max()).sign_bit(), 0);
     EXPECT_EQ(FP(FP32::Limits::lowest()).sign_bit(), 1);
-    EXPECT_EQ(FP(FP32::nan(FP32::canon)).sign_bit(), 0);
-    EXPECT_EQ((-FP(FP32::nan(FP32::canon))).sign_bit(), 1);
+    EXPECT_EQ(FP32::nan(FP32::canon).sign_bit(), 0);
+    EXPECT_EQ((-FP32::nan(FP32::canon)).sign_bit(), 1);
 
     EXPECT_EQ(FP{0.0}.sign_bit(), 0);
     EXPECT_EQ(FP{-0.0}.sign_bit(), 1);
@@ -35,8 +35,8 @@ TEST(floating_point_utils, fp_sign_bit)
     EXPECT_EQ(FP(-FP64::Limits::infinity()).sign_bit(), 1);
     EXPECT_EQ(FP(FP64::Limits::max()).sign_bit(), 0);
     EXPECT_EQ(FP(FP64::Limits::lowest()).sign_bit(), 1);
-    EXPECT_EQ(FP(FP64::nan(FP64::canon)).sign_bit(), 0);
-    EXPECT_EQ((-FP(FP64::nan(FP64::canon))).sign_bit(), 1);
+    EXPECT_EQ(FP64::nan(FP64::canon).sign_bit(), 0);
+    EXPECT_EQ((-FP64::nan(FP64::canon)).sign_bit(), 1);
 }
 
 TEST(floating_point_utils, fp_negate)
@@ -129,7 +129,7 @@ TEST(floating_point_utils, double_nan_payload)
     EXPECT_EQ(FP(FP64::nan(1)).nan_payload(), 1);
     EXPECT_EQ(FP(FP64::nan(FP64::canon + 1)).nan_payload(), FP64::canon + 1);
     EXPECT_EQ(FP(qnan).nan_payload(), FP64::canon);
-    EXPECT_EQ(FP(qnan + 1.0).nan_payload(), FP64::canon);
+    EXPECT_EQ(FP(qnan.as_float() + 1.0).nan_payload(), FP64::canon);
     EXPECT_EQ(FP(inf - inf).nan_payload(), FP64::canon);
     EXPECT_EQ(FP(inf * 0.0).nan_payload(), FP64::canon);
 }
@@ -143,18 +143,23 @@ TEST(floating_point_utils, float_nan_payload)
     EXPECT_EQ(FP(FP32::nan(1)).nan_payload(), 1);
     EXPECT_EQ(FP(FP32::nan(FP32::canon + 1)).nan_payload(), FP32::canon + 1);
     EXPECT_EQ(FP(qnan).nan_payload(), FP32::canon);
-    EXPECT_EQ(FP(qnan + 1.0f).nan_payload(), FP32::canon);
+    EXPECT_EQ(FP(qnan.as_float() + 1.0f).nan_payload(), FP32::canon);
     EXPECT_EQ(FP(inf - inf).nan_payload(), FP32::canon);
     EXPECT_EQ(FP(inf * 0.0f).nan_payload(), FP32::canon);
 }
 
 TEST(floating_point_utils, double_nan)
 {
-    EXPECT_TRUE(std::isnan(FP64::nan(FP64::canon)));
-    EXPECT_TRUE(std::isnan(FP64::nan(1)));
-    EXPECT_TRUE(std::isnan(FP64::nan(0xDEADBEEF)));
-    EXPECT_TRUE(std::isnan(FP64::nan(0xDEADBEEFBEEEF)));
-    EXPECT_FALSE(std::isnan(FP64::nan(0)));
+    EXPECT_TRUE(FP64::nan(FP64::canon).is_nan());
+    EXPECT_TRUE(std::isnan(FP64::nan(FP64::canon).as_float()));
+    EXPECT_TRUE(FP64::nan(1).is_nan());
+    EXPECT_TRUE(std::isnan(FP64::nan(1).as_float()));
+    EXPECT_TRUE(FP64::nan(0xDEADBEEF).is_nan());
+    EXPECT_TRUE(std::isnan(FP64::nan(0xDEADBEEF).as_float()));
+    EXPECT_TRUE(FP64::nan(0xDEADBEEFBEEEF).is_nan());
+    EXPECT_TRUE(std::isnan(FP64::nan(0xDEADBEEFBEEEF).as_float()));
+    EXPECT_FALSE(FP64::nan(0).is_nan());
+    EXPECT_FALSE(std::isnan(FP64::nan(0).as_float()));
 
     EXPECT_EQ(FP{FP64::nan(FP64::canon)}.nan_payload(), FP64::canon);
 
@@ -165,11 +170,16 @@ TEST(floating_point_utils, double_nan)
 
 TEST(floating_point_utils, float_nan)
 {
-    EXPECT_TRUE(std::isnan(FP32::nan(FP32::canon)));
-    EXPECT_TRUE(std::isnan(FP32::nan(1)));
-    EXPECT_TRUE(std::isnan(FP32::nan(0x7fffff)));
-    EXPECT_TRUE(std::isnan(FP32::nan(0x400001)));
-    EXPECT_FALSE(std::isnan(FP32::nan(0)));
+    EXPECT_TRUE(FP32::nan(FP32::canon).is_nan());
+    EXPECT_TRUE(std::isnan(FP32::nan(FP32::canon).as_float()));
+    EXPECT_TRUE(FP32::nan(1).is_nan());
+    EXPECT_TRUE(std::isnan(FP32::nan(1).as_float()));
+    EXPECT_TRUE(FP32::nan(0x7fffff).is_nan());
+    EXPECT_TRUE(std::isnan(FP32::nan(0x7fffff).as_float()));
+    EXPECT_TRUE(FP32::nan(0x400001).is_nan());
+    EXPECT_TRUE(std::isnan(FP32::nan(0x400001).as_float()));
+    EXPECT_FALSE(FP32::nan(0).is_nan());
+    EXPECT_FALSE(std::isnan(FP32::nan(0).as_float()));
 
     EXPECT_EQ(FP{FP32::nan(FP32::canon)}.nan_payload(), FP32::canon);
 
@@ -374,7 +384,7 @@ TEST(floating_point_utils, fp32_ostream)
     EXPECT_EQ(os.str(), "-0 [-0x0p+0]");
     os.str({});
 
-    os << FP32{FP32::nan(FP32::canon)};
+    os << FP32::nan(FP32::canon);
     EXPECT_EQ(os.str(), "nan [400000]");
     os.str({});
 }
@@ -387,7 +397,7 @@ TEST(floating_point_utils, fp64_ostream)
     EXPECT_EQ(os.str(), "-8.125 [-0x1.04p+3]");
     os.str({});
 
-    os << FP64{FP64::nan(FP64::canon + 1)};
+    os << FP64::nan(FP64::canon + 1);
     EXPECT_EQ(os.str(), "nan [8000000000001]");
     os.str({});
 }
