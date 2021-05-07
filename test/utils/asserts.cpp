@@ -59,10 +59,10 @@ std::ostream& operator<<(std::ostream& os, const TypedExecutionResult& result)
                << "] (i64)";
             break;
         case ValType::f32:
-            os << result.value.f32 << " (f32)";
+            os << FP{result.value.f32} << " (f32)";
             break;
         case ValType::f64:
-            os << result.value.f64 << " (f64)";
+            os << FP{result.value.f64} << " (f64)";
             break;
         }
         os << ")";
