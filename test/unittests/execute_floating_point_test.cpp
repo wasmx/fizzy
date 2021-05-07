@@ -1148,7 +1148,7 @@ TEST(execute_floating_point, f32_store)
         "0b06cccccccccccc");
     const auto module = parse(wasm);
 
-    const std::tuple<float, bytes> test_cases[]
+    const std::tuple<FP32, bytes> test_cases[]
     {
         // clang-format off
         {0.0f, "cc00000000cc"_bytes},
@@ -1229,7 +1229,7 @@ TEST(execute_floating_point, f64_store)
         "0b0ccccccccccccccccccccccccc");
     const auto module = parse(wasm);
 
-    const std::tuple<double, bytes> test_cases[]
+    const std::tuple<FP64, bytes> test_cases[]
     {
         // clang-format off
         {0.0, "cc0000000000000000cc"_bytes},
