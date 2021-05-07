@@ -7,6 +7,46 @@
 
 using namespace fizzy::test;
 
+TEST(floating_point_utils, fp_default)
+{
+    EXPECT_EQ(FP32{}.as_uint(), 0);
+    EXPECT_EQ(FP32{}.as_float(), 0.0f);
+    EXPECT_EQ(FP32{}.sign_bit(), 0);
+
+    EXPECT_EQ(FP64{}.as_uint(), 0);
+    EXPECT_EQ(FP64{}.as_float(), 0.0);
+    EXPECT_EQ(FP64{}.sign_bit(), 0);
+}
+
+TEST(floating_point_utils, fp_sign_bit)
+{
+    EXPECT_EQ(FP{0.0f}.sign_bit(), 0);
+    EXPECT_EQ(FP{-0.0f}.sign_bit(), 1);
+    EXPECT_EQ(FP(FP32::Limits::infinity()).sign_bit(), 0);
+    EXPECT_EQ(FP(-FP32::Limits::infinity()).sign_bit(), 1);
+    EXPECT_EQ(FP(FP32::Limits::max()).sign_bit(), 0);
+    EXPECT_EQ(FP(FP32::Limits::lowest()).sign_bit(), 1);
+    EXPECT_EQ(FP(FP32::nan(FP32::canon)).sign_bit(), 0);
+    EXPECT_EQ((-FP(FP32::nan(FP32::canon))).sign_bit(), 1);
+
+    EXPECT_EQ(FP{0.0}.sign_bit(), 0);
+    EXPECT_EQ(FP{-0.0}.sign_bit(), 1);
+    EXPECT_EQ(FP(FP64::Limits::infinity()).sign_bit(), 0);
+    EXPECT_EQ(FP(-FP64::Limits::infinity()).sign_bit(), 1);
+    EXPECT_EQ(FP(FP64::Limits::max()).sign_bit(), 0);
+    EXPECT_EQ(FP(FP64::Limits::lowest()).sign_bit(), 1);
+    EXPECT_EQ(FP(FP64::nan(FP64::canon)).sign_bit(), 0);
+    EXPECT_EQ((-FP(FP64::nan(FP64::canon))).sign_bit(), 1);
+}
+
+TEST(floating_point_utils, fp_negate)
+{
+    EXPECT_EQ((-FP{1.0f}).as_float(), -1.0f);
+    EXPECT_EQ((-FP{1.0}).as_float(), -1.0);
+    EXPECT_EQ((-FP{-1.0f}).as_float(), 1.0f);
+    EXPECT_EQ((-FP{-1.0}).as_float(), 1.0);
+}
+
 TEST(floating_point_utils, double_as_uint)
 {
     EXPECT_EQ(FP(0.0).as_uint(), 0x0000000000000000);
