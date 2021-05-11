@@ -25,6 +25,7 @@ public:
     std::vector<bytes> write_data;
     std::optional<uvwasi_fd_t> read_fd;
     const bytes read_data = from_hex("3243f6a8885a308d313198a2e03707");
+    std::optional<uvwasi_fd_t> prestat_get_fd;
 
     uvwasi_errno_t init(uvwasi_size_t /*argc*/, const char** /*argv*/) noexcept final
     {
@@ -77,8 +78,13 @@ public:
         return UVWASI_ESUCCESS;
     }
 
-    uvwasi_errno_t fd_prestat_get(uvwasi_fd_t /*fd*/, uvwasi_prestat_t* /*buf*/) noexcept final
+    uvwasi_errno_t fd_prestat_get(uvwasi_fd_t fd, uvwasi_prestat_t* buf) noexcept final
     {
+        prestat_get_fd = fd;
+
+        buf->pr_type = UVWASI_O_DIRECTORY;
+        buf->u.dir.pr_name_len = 0x10;
+
         return UVWASI_ESUCCESS;
     }
 
@@ -392,5 +398,42 @@ TEST_F(wasi_mocked_test, fd_read_invalid_input)
 
     EXPECT_TRUE(mock_uvwasi->init_called);
     EXPECT_NE(instance->globals[0].i32, 0);
+}
+
+TEST_F(wasi_mocked_test, fd_prestat_get)
+{
+    /* wat2wasm
+      (func (import "wasi_snapshot_preview1" "fd_prestat_get") (param i32 i32) (result i32))
+      (memory (export "memory") 1)
+      (data (i32.const 0x0c) "\de\ad\be\ef\de\ad\be\ef") ;; output buffer
+      (func (export "_start")
+        (call 0
+          (i32.const 42) ;; fd
+          (i32.const 0x0c)) ;; prestat_ptr
+        (if (i32.popcnt) (then unreachable)))
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010a0260027f7f017f60000002290116776173695f736e617073686f745f70726576696577"
+        "310e66645f707265737461745f6765740000030201010503010001071302066d656d6f72790200065f73746172"
+        "7400010a0f010d00412a410c1000690440000b0b0b0e0100410c0b08deadbeefdeadbeef");
+
+    auto instance = wasi::instantiate(*mock_uvwasi, wasm);
+
+    EXPECT_FALSE(mock_uvwasi->init_called);
+    EXPECT_FALSE(mock_uvwasi->prestat_get_fd.has_value());
+
+    std::ostringstream err;
+    EXPECT_TRUE(wasi::run(*mock_uvwasi, *instance, 0, nullptr, err)) << err.str();
+
+    EXPECT_TRUE(mock_uvwasi->init_called);
+    ASSERT_TRUE(mock_uvwasi->prestat_get_fd.has_value());
+    EXPECT_EQ(*mock_uvwasi->prestat_get_fd, 42);
+
+    // pr_type
+    EXPECT_EQ(instance->memory->data()[0x0c], UVWASI_O_DIRECTORY);
+    // padding not changed by uvwasi_serdes
+    EXPECT_EQ(instance->memory->substr(0x0d, 3), from_hex("adbeef"));
+    // pr_name_len
+    EXPECT_EQ(instance->memory->substr(0x10, 4), from_hex("10000000"));
 }
 
