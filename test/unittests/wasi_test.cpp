@@ -177,3 +177,82 @@ TEST_F(wasi_mocked_test, fd_write)
     // nwritten
     EXPECT_EQ(instance->memory->substr(0x0c, 4), from_hex("04000000"));
 }
+
+TEST_F(wasi_mocked_test, fd_write_gather)
+{
+    /* wat2wasm
+      (func (import "wasi_snapshot_preview1" "fd_write") (param i32 i32 i32 i32) (result i32))
+      (memory (export "memory") 1)
+      (data (i32.const 0)    "\10\00\00\00")    ;; buf1 ptr
+      (data (i32.const 0x04) "\04\00\00\00")    ;; buf1 len
+      (data (i32.const 0x08) "\14\00\00\00")    ;; buf2 ptr
+      (data (i32.const 0x0c) "\08\00\00\00")    ;; buf2 len
+      (data (i32.const 0x10) "\12\34\56\78")    ;; buf1 data
+      (data (i32.const 0x14) "\11\22\33\44\55\66\77\88") ;; buf2 data
+      (data (i32.const 0x1c) "\de\ad\be\ef")    ;; will be overwritten with nwritten
+      (func (export "_start")
+        (call 0
+          (i32.const 1) ;; fd
+          (i32.const 0) ;; iov_ptr
+          (i32.const 2) ;; iov_cnt
+          (i32.const 0x1c)) ;; nwritten_ptr
+        (if (i32.popcnt) (then unreachable)))
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010c0260047f7f7f7f017f60000002230116776173695f736e617073686f745f7072657669"
+        "6577310866645f77726974650000030201010503010001071302066d656d6f72790200065f737461727400010a"
+        "13011100410141004102411c1000690440000b0b0b44070041000b04100000000041040b04040000000041080b"
+        "041400000000410c0b04080000000041100b04123456780041140b08112233445566778800411c0b04deadbee"
+        "f");
+
+    auto instance = wasi::instantiate(*mock_uvwasi, wasm);
+
+    EXPECT_FALSE(mock_uvwasi->init_called);
+    EXPECT_FALSE(mock_uvwasi->write_fd.has_value());
+    EXPECT_TRUE(mock_uvwasi->write_data.empty());
+
+    std::ostringstream err;
+    EXPECT_TRUE(wasi::run(*mock_uvwasi, *instance, 0, nullptr, err)) << err.str();
+
+    EXPECT_TRUE(mock_uvwasi->init_called);
+    ASSERT_TRUE(mock_uvwasi->write_fd.has_value());
+    EXPECT_EQ(*mock_uvwasi->write_fd, 1);
+    EXPECT_THAT(
+        mock_uvwasi->write_data, ElementsAre(from_hex("12345678"), from_hex("1122334455667788")));
+
+    // nwritten
+    EXPECT_EQ(instance->memory->substr(0x1c, 4), from_hex("0c000000"));
+}
+
+TEST_F(wasi_mocked_test, fd_write_invalid_input)
+{
+    /* wat2wasm
+      (func (import "wasi_snapshot_preview1" "fd_write") (param i32 i32 i32 i32) (result i32))
+      (memory (export "memory") 1)
+      (data (i32.const 0)    "\00\00\01\00")    ;; buf ptr - out of memory bounds
+      (data (i32.const 0x04) "\04\00\00\00")    ;; buf len
+      (global (mut i32) (i32.const 0))
+      (func (export "_start")
+        (call 0
+          (i32.const 1) ;; fd
+          (i32.const 0) ;; iov_ptr
+          (i32.const 1) ;; iov_cnt
+          (i32.const 0x0c)) ;; nwritten_ptr
+        (global.set 0))
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010c0260047f7f7f7f017f60000002230116776173695f736e617073686f745f7072657669"
+        "6577310866645f777269746500000302010105030100010606017f0141000b071302066d656d6f72790200065f"
+        "737461727400010a10010e00410141004101410c100024000b0b13020041000b04000001000041040b04040000"
+        "00");
+
+    auto instance = wasi::instantiate(*mock_uvwasi, wasm);
+
+    EXPECT_FALSE(mock_uvwasi->init_called);
+
+    std::ostringstream err;
+    EXPECT_TRUE(wasi::run(*mock_uvwasi, *instance, 0, nullptr, err)) << err.str();
+
+    EXPECT_TRUE(mock_uvwasi->init_called);
+    EXPECT_NE(instance->globals[0].i32, 0);
+}
