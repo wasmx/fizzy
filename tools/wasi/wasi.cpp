@@ -6,6 +6,7 @@
 #include "execute.hpp"
 #include "limits.hpp"
 #include "parser.hpp"
+#include "uvwasi.hpp"
 #include <uvwasi.h>
 #include <cassert>
 #include <filesystem>
@@ -16,26 +17,26 @@ namespace fizzy::wasi
 {
 namespace
 {
-// Global state.
-// NOTE: we do not care about uvwasi_destroy(), because it only clears file descriptors (currently)
-// and we are a single-run tool. This may change in the future and should reevaluate.
-uvwasi_t state;
-
 ExecutionResult return_enosys(std::any&, Instance&, const Value*, ExecutionContext&) noexcept
 {
     return Value{uint32_t{UVWASI_ENOSYS}};
 }
 
-ExecutionResult proc_exit(std::any&, Instance&, const Value* args, ExecutionContext&) noexcept
+ExecutionResult proc_exit(
+    std::any& host_context, Instance&, const Value* args, ExecutionContext&) noexcept
 {
-    uvwasi_proc_exit(&state, static_cast<uvwasi_exitcode_t>(args[0].as<uint32_t>()));
+    auto* uvwasi = *std::any_cast<UVWASI*>(&host_context);
+
+    uvwasi->proc_exit(static_cast<uvwasi_exitcode_t>(args[0].as<uint32_t>()));
     // Should not reach this.
     return Trap;
 }
 
 ExecutionResult fd_write(
-    std::any&, Instance& instance, const Value* args, ExecutionContext&) noexcept
+    std::any& host_context, Instance& instance, const Value* args, ExecutionContext&) noexcept
 {
+    auto* uvwasi = *std::any_cast<UVWASI*>(&host_context);
+
     const auto fd = args[0].as<uint32_t>();
     const auto iov_ptr = args[1].as<uint32_t>();
     const auto iov_cnt = args[2].as<uint32_t>();
@@ -49,15 +50,17 @@ ExecutionResult fd_write(
         return Value{uint32_t{ret}};
 
     uvwasi_size_t nwritten;
-    ret = uvwasi_fd_write(&state, static_cast<uvwasi_fd_t>(fd), iovs.data(), iov_cnt, &nwritten);
+    ret = uvwasi->fd_write(static_cast<uvwasi_fd_t>(fd), iovs.data(), iov_cnt, &nwritten);
     uvwasi_serdes_write_uint32_t(instance.memory->data(), nwritten_ptr, nwritten);
 
     return Value{uint32_t{ret}};
 }
 
 ExecutionResult fd_read(
-    std::any&, Instance& instance, const Value* args, ExecutionContext&) noexcept
+    std::any& host_context, Instance& instance, const Value* args, ExecutionContext&) noexcept
 {
+    auto* uvwasi = *std::any_cast<UVWASI*>(&host_context);
+
     const auto fd = args[0].as<uint32_t>();
     const auto iov_ptr = args[1].as<uint32_t>();
     const auto iov_cnt = args[2].as<uint32_t>();
@@ -71,20 +74,22 @@ ExecutionResult fd_read(
         return Value{uint32_t{ret}};
 
     uvwasi_size_t nread;
-    ret = uvwasi_fd_read(&state, static_cast<uvwasi_fd_t>(fd), iovs.data(), iov_cnt, &nread);
+    ret = uvwasi->fd_read(static_cast<uvwasi_fd_t>(fd), iovs.data(), iov_cnt, &nread);
     uvwasi_serdes_write_uint32_t(instance.memory->data(), nread_ptr, nread);
 
     return Value{uint32_t{ret}};
 }
 
 ExecutionResult fd_prestat_get(
-    std::any&, Instance& instance, const Value* args, ExecutionContext&) noexcept
+    std::any& host_context, Instance& instance, const Value* args, ExecutionContext&) noexcept
 {
+    auto* uvwasi = *std::any_cast<UVWASI*>(&host_context);
+
     const auto fd = args[0].as<uint32_t>();
     const auto prestat_ptr = args[1].as<uint32_t>();
 
     uvwasi_prestat_t buf;
-    uvwasi_errno_t ret = uvwasi_fd_prestat_get(&state, fd, &buf);
+    uvwasi_errno_t ret = uvwasi->fd_prestat_get(fd, &buf);
 
     uvwasi_serdes_write_prestat_t(instance.memory->data(), prestat_ptr, &buf);
 
@@ -136,34 +141,35 @@ std::optional<bytes> load_file(std::string_view file, std::ostream& err) noexcep
     }
 }
 
-bool run(bytes_view wasm_binary, int argc, const char* argv[], std::ostream& err)
+std::unique_ptr<Instance> instantiate(UVWASI& uvwasi, bytes_view wasm_binary)
 {
+    auto host_context = std::make_any<UVWASI*>(&uvwasi);
+
     constexpr auto ns = "wasi_snapshot_preview1";
     const std::vector<ImportedFunction> wasi_functions = {
-        {ns, "proc_exit", {ValType::i32}, std::nullopt, proc_exit},
+        {ns, "proc_exit", {ValType::i32}, std::nullopt, {proc_exit, host_context}},
         {ns, "fd_read", {ValType::i32, ValType::i32, ValType::i32, ValType::i32}, ValType::i32,
-            fd_read},
+            {fd_read, host_context}},
         {ns, "fd_write", {ValType::i32, ValType::i32, ValType::i32, ValType::i32}, ValType::i32,
-            fd_write},
-        {ns, "fd_prestat_get", {ValType::i32, ValType::i32}, ValType::i32, fd_prestat_get},
+            {fd_write, host_context}},
+        {ns, "fd_prestat_get", {ValType::i32, ValType::i32}, ValType::i32,
+            {fd_prestat_get, host_context}},
         {ns, "fd_prestat_dir_name", {ValType::i32, ValType::i32, ValType::i32}, ValType::i32,
-            return_enosys},
-        {ns, "environ_sizes_get", {ValType::i32, ValType::i32}, ValType::i32, environ_sizes_get},
-        {ns, "environ_get", {ValType::i32, ValType::i32}, ValType::i32, return_enosys},
+            {return_enosys, host_context}},
+        {ns, "environ_sizes_get", {ValType::i32, ValType::i32}, ValType::i32,
+            {environ_sizes_get, host_context}},
+        {ns, "environ_get", {ValType::i32, ValType::i32}, ValType::i32,
+            {return_enosys, host_context}},
     };
 
-    // Initialisation settings.
-    // TODO: Make const after https://github.com/nodejs/uvwasi/pull/155 is merged.
-    uvwasi_options_t options = {
-        3,           // sizeof fd_table
-        0, nullptr,  // NOTE: no remappings
-        static_cast<uvwasi_size_t>(argc), argv,
-        nullptr,  // TODO: support env
-        0, 1, 2,
-        nullptr,  // NOTE: no special allocator
-    };
+    auto module = parse(wasm_binary);
+    auto imports = resolve_imported_functions(*module, wasi_functions);
+    return instantiate(std::move(module), std::move(imports), {}, {}, {}, MaxMemoryPagesLimit);
+}
 
-    const uvwasi_errno_t uvwasi_err = uvwasi_init(&state, &options);
+bool run(UVWASI& uvwasi, Instance& instance, int argc, const char* argv[], std::ostream& err)
+{
+    const uvwasi_errno_t uvwasi_err = uvwasi.init(static_cast<uvwasi_size_t>(argc), argv);
     if (uvwasi_err != UVWASI_ESUCCESS)
     {
         err << "Failed to initialise UVWASI: " << uvwasi_embedder_err_code_to_string(uvwasi_err)
@@ -171,13 +177,7 @@ bool run(bytes_view wasm_binary, int argc, const char* argv[], std::ostream& err
         return false;
     }
 
-    auto module = parse(wasm_binary);
-    auto imports = resolve_imported_functions(*module, wasi_functions);
-    auto instance =
-        instantiate(std::move(module), std::move(imports), {}, {}, {}, MaxMemoryPagesLimit);
-    assert(instance != nullptr);
-
-    const auto start_function = find_exported_function_index(*instance->module, "_start");
+    const auto start_function = find_exported_function_index(*instance.module, "_start");
     if (!start_function.has_value())
     {
         err << "File is not WASI compatible (_start not found)\n";
@@ -186,19 +186,19 @@ bool run(bytes_view wasm_binary, int argc, const char* argv[], std::ostream& err
 
     // Manually validate type signature here
     // TODO: do this in find_exported_function_index
-    if (instance->module->get_function_type(*start_function) != FuncType{})
+    if (instance.module->get_function_type(*start_function) != FuncType{})
     {
         err << "File is not WASI compatible (_start has invalid signature)\n";
         return false;
     }
 
-    if (!find_exported_memory(*instance, "memory").has_value())
+    if (!find_exported_memory(instance, "memory").has_value())
     {
         err << "File is not WASI compatible (no memory exported)\n";
         return false;
     }
 
-    const auto result = execute(*instance, *start_function, {});
+    const auto result = execute(instance, *start_function, {});
     if (result.trapped)
     {
         err << "Execution aborted with WebAssembly trap\n";
@@ -207,6 +207,15 @@ bool run(bytes_view wasm_binary, int argc, const char* argv[], std::ostream& err
     assert(!result.has_value);
 
     return true;
+}
+
+bool run(bytes_view wasm_binary, int argc, const char* argv[], std::ostream& err)
+{
+    auto uvwasi = create_uvwasi();
+    auto instance = instantiate(*uvwasi, wasm_binary);
+    assert(instance != nullptr);
+
+    return run(*uvwasi, *instance, argc, argv, err);
 }
 
 bool load_and_run(int argc, const char** argv, std::ostream& err)
