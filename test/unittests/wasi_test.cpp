@@ -461,3 +461,35 @@ TEST_F(wasi_mocked_test, fd_prestat_dir_name)
     EXPECT_FALSE(wasi::run(*mock_uvwasi, *instance, 0, nullptr, err));
     EXPECT_EQ(err.str(), "Execution aborted with WebAssembly trap\n");
 }
+
+TEST_F(wasi_mocked_test, environ_sizes_get)
+{
+    /* wat2wasm
+      (func (import "wasi_snapshot_preview1" "environ_sizes_get") (param i32 i32) (result i32))
+      (memory (export "memory") 1)
+      (data (i32.const 0) "\de\ad\be\ef\de\ad\be\ef") ;; output buffer
+      (func (export "_start")
+        (call 0
+          (i32.const 0x0) ;; environc
+          (i32.const 0x04)) ;; environ_buf_size
+        (if (i32.popcnt) (then unreachable)))
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010a0260027f7f017f600000022c0116776173695f736e617073686f745f70726576696577"
+        "3111656e7669726f6e5f73697a65735f6765740000030201010503010001071302066d656d6f72790200065f73"
+        "7461727400010a0f010d00410041041000690440000b0b0b0e010041000b08deadbeefdeadbeef");
+
+    auto instance = wasi::instantiate(*mock_uvwasi, wasm);
+
+    EXPECT_FALSE(mock_uvwasi->init_called);
+
+    std::ostringstream err;
+    EXPECT_TRUE(wasi::run(*mock_uvwasi, *instance, 0, nullptr, err)) << err.str();
+
+    EXPECT_TRUE(mock_uvwasi->init_called);
+
+    // environc
+    EXPECT_EQ(instance->memory->substr(0, 4), from_hex("00000000"));
+    // environ_buf_size
+    EXPECT_EQ(instance->memory->substr(4, 4), from_hex("00000000"));
+}
