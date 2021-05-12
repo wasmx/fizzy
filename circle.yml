@@ -25,7 +25,10 @@ commands:
     steps:
       - run:
           name: "Install system dependencies"
-          command: HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 brew install cmake ninja
+          command: |
+            # Update homebrew to hopefully >=3.2 so that reliance on bintray is removed
+            HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 brew update
+            HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 brew install cmake ninja
 
   install_wabt:
     description: "Install WABT tools"
