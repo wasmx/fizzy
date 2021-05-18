@@ -41,7 +41,6 @@ add_compile_options(
     -Wcast-qual
     -Wcast-align
     -Wmissing-declarations
-    $<$<COMPILE_LANGUAGE:CXX>:-Wextra-semi>
     $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast>
 )
 cable_add_cxx_compiler_flag_if_supported(-Wfinal-dtor-non-final-class)
@@ -52,6 +51,9 @@ cable_add_cxx_compiler_flag_if_supported(-Wduplicated-cond)
 cable_add_cxx_compiler_flag_if_supported(-Wduplicate-enum)
 cable_add_cxx_compiler_flag_if_supported(-Wlogical-op)
 cable_add_cxx_compiler_flag_if_supported(-Wno-unknown-attributes)
+if(COMPILE_LANGUAGE MATCHES CXX)
+    cable_add_cxx_compiler_flag_if_supported(-Wextra-semi)
+endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
     option(WEVERYTHING "Enable almost all compiler warnings" OFF)

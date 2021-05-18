@@ -446,7 +446,7 @@ T fnearest(T value) noexcept
 }
 
 template <typename T>
-__attribute__((no_sanitize("float-divide-by-zero"))) inline constexpr T fdiv(T a, T b) noexcept
+[[gnu::no_sanitize("float-divide-by-zero")]] inline constexpr T fdiv(T a, T b) noexcept
 {
     static_assert(std::is_floating_point_v<T>);
     static_assert(std::numeric_limits<T>::is_iec559);
@@ -500,8 +500,7 @@ inline double fcopysign(double a, double b) noexcept
     return bit_cast<double>((a_u & F64AbsMask) | (b_u & F64SignMask));
 }
 
-__attribute__((no_sanitize("float-cast-overflow"))) inline constexpr float demote(
-    double value) noexcept
+[[gnu::no_sanitize("float-cast-overflow")]] inline constexpr float demote(double value) noexcept
 {
     // The float-cast-overflow UBSan check disabled for this conversion. In older clang versions
     // (up to 8.0) it reports a failure when non-infinity f64 value is converted to f32 infinity.
