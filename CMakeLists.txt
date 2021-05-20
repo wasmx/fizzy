@@ -9,6 +9,7 @@ set(CMAKE_FIND_PACKAGE_PREFER_CONFIG TRUE)
 
 include(cmake/cable.cmake)
 include(CableBuildType)
+include(CableCompileOptions)
 include(CableCompilerSettings)
 include(CMakeDependentOption)
 
@@ -37,21 +38,22 @@ if(is_big_endian)
 endif()
 
 cable_configure_compiler()
-add_compile_options(
+cable_add_compile_options(
     -Wcast-qual
     -Wcast-align
     -Wmissing-declarations
-    $<$<COMPILE_LANGUAGE:CXX>:-Wextra-semi>
-    $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast>
+    IF_SUPPORTED
+    -Wextra-semi
+    -Wold-style-cast
+    -Wfinal-dtor-non-final-class
+    -Wnewline-eof
+    -Wsuggest-destructor-override
+    -Wunreachable-code-break
+    -Wduplicated-cond
+    -Wduplicate-enum
+    -Wlogical-op
+    -Wno-unknown-attributes
 )
-cable_add_cxx_compiler_flag_if_supported(-Wfinal-dtor-non-final-class)
-cable_add_cxx_compiler_flag_if_supported(-Wnewline-eof)
-cable_add_cxx_compiler_flag_if_supported(-Wsuggest-destructor-override)
-cable_add_cxx_compiler_flag_if_supported(-Wunreachable-code-break)
-cable_add_cxx_compiler_flag_if_supported(-Wduplicated-cond)
-cable_add_cxx_compiler_flag_if_supported(-Wduplicate-enum)
-cable_add_cxx_compiler_flag_if_supported(-Wlogical-op)
-cable_add_cxx_compiler_flag_if_supported(-Wno-unknown-attributes)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
     option(WEVERYTHING "Enable almost all compiler warnings" OFF)
