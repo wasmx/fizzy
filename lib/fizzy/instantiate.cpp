@@ -120,9 +120,8 @@ void match_imported_memories(const std::vector<Memory>& module_imported_memories
             throw instantiate_error{"provided imported memory size must be multiple of page size"};
 
         const auto min = imported_memories[0].limits.min;
-        const auto& max = imported_memories[0].limits.max;
-        if (size < min * PageSize || (max.has_value() && size > *max * PageSize))
-            throw instantiate_error{"provided imported memory doesn't fit provided limits"};
+        if (size != min * PageSize)
+            throw instantiate_error{"provided imported memory size must be equal to its min limit"};
     }
 }
 
@@ -547,7 +546,10 @@ std::optional<ExternalMemory> find_exported_memory(
     if (!find_export(*instance.module, ExternalKind::Memory, name))
         return std::nullopt;
 
-    return ExternalMemory{instance.memory.get(), instance.memory_limits};
+    // Memory lower limit should be updated in case it was grown.
+    const Limits limits{
+        static_cast<uint32_t>(instance.memory->size() / PageSize), instance.memory_limits.max};
+    return ExternalMemory{instance.memory.get(), limits};
 }
 
 }  // namespace fizzy
