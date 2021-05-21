@@ -496,7 +496,7 @@ impl Instance {
         let expected_types =
             unsafe { std::slice::from_raw_parts(func_type.inputs, func_type.inputs_size) };
         if expected_types != supplied_types {
-            return Err("argument type mismatch".to_string());
+            return Err("argument type mistmatch".to_string());
         }
 
         // Translate to untyped raw values.
