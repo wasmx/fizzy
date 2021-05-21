@@ -329,6 +329,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
         }
 
         case Instr::nop:
+            continue;
+
         case Instr::i32_eqz:
         case Instr::i32_eq:
         case Instr::i32_ne:
@@ -462,7 +464,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             // Push label with immediates offset after arity.
             control_stack.emplace(Instr::block, block_type, static_cast<int>(operand_stack.size()),
                 code.instructions.size());
-            break;
+            continue;
         }
 
         case Instr::loop:
@@ -472,7 +474,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
             control_stack.emplace(Instr::loop, loop_type, static_cast<int>(operand_stack.size()),
                 code.instructions.size());
-            break;
+            continue;
         }
 
         case Instr::if_:
@@ -529,12 +531,10 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
 
             if (frame.instruction != Instr::loop)  // If end of block/if/else instruction.
             {
-                // In case it's an outermost implicit function block,
-                // we want br to jump to the final end of the function.
-                // Otherwise jump to the next instruction after block's end.
-                const auto target_pc = control_stack.size() == 1 ?
-                                           static_cast<uint32_t>(code.instructions.size()) :
-                                           static_cast<uint32_t>(code.instructions.size() + 1);
+                // The position of the "end":
+                // for the outermost implicit function block this is the function's end instruction,
+                // otherwise this is the next instruction after the block's end.
+                const auto target_pc = static_cast<uint32_t>(code.instructions.size());
 
                 if (frame.instruction == Instr::if_ || frame.instruction == Instr::else_)
                 {
@@ -558,10 +558,14 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, FuncIdx f
             control_stack.pop();  // Pop the current frame.
 
             if (control_stack.empty())
+            {
                 continue_parsing = false;
-            else if (frame_type.has_value())
+                break;
+            }
+
+            if (frame_type.has_value())
                 push_operand(operand_stack, *frame_type);
-            break;
+            continue;
         }
 
         case Instr::br:
