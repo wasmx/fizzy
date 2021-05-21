@@ -544,12 +544,9 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
 
     stack.drop(num_args);
 
-    const auto num_outputs = func_type.outputs.size();
-    // NOTE: we can assume these two from validation
-    assert(num_outputs <= 1);
-    assert(ret.has_value == (num_outputs == 1));
     // Push back the result
-    if (num_outputs != 0)
+    assert(func_type.outputs.size() == (ret.has_value ? 1 : 0));
+    if (ret.has_value)
         stack.push(ret.value);
 
     return true;
