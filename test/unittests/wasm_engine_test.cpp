@@ -79,8 +79,8 @@ TEST(wasm_engine, find_function)
     const auto wasm =
         from_hex("0061736d0100000001080160037f7e7f017f03020100070801047465737400000a05010300000b");
 
-    // NOTE: only fizzy checks the signature
-    for (auto engine_create_fn : {create_fizzy_engine})
+    // NOTE: fizzy_c and wabt do not yet check signature
+    for (auto engine_create_fn : {create_fizzy_engine, create_wasm3_engine})
     {
         auto engine = engine_create_fn();
         EXPECT_TRUE(engine->instantiate(wasm));
@@ -389,8 +389,7 @@ TEST(wasm_engine, start_with_host_function)
         "0205030100010606017f0141000b071102066d656d6f72790200047465737400020801010a1c021500410041aa"
         "aba9ad0536020041004120100024000b040023000b");
 
-    // wasm3 fails on this
-    for (auto engine_create_fn : {create_fizzy_engine, create_fizzy_c_engine, create_wabt_engine})
+    for (auto engine_create_fn : all_engines)
     {
         auto engine = engine_create_fn();
         ASSERT_TRUE(engine->parse(wasm));
