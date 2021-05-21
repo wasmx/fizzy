@@ -353,6 +353,19 @@ constexpr uint64_t popcnt64(uint64_t value) noexcept
 }
 
 template <typename T>
+T signbit(T value) noexcept = delete;
+
+inline bool signbit(float value) noexcept
+{
+    return (bit_cast<uint32_t>(value) & F32SignMask) != 0;
+}
+
+inline bool signbit(double value) noexcept
+{
+    return (bit_cast<uint64_t>(value) & F64SignMask) != 0;
+}
+
+template <typename T>
 T fabs(T value) noexcept = delete;
 
 template <>
@@ -383,6 +396,25 @@ inline double fneg(double value) noexcept
 }
 
 template <typename T>
+T fcopysign(T a, T b) noexcept = delete;
+
+template <>
+inline float fcopysign(float a, float b) noexcept
+{
+    const auto a_u = bit_cast<uint32_t>(a);
+    const auto b_u = bit_cast<uint32_t>(b);
+    return bit_cast<float>((a_u & F32AbsMask) | (b_u & F32SignMask));
+}
+
+template <>
+inline double fcopysign(double a, double b) noexcept
+{
+    const auto a_u = bit_cast<uint64_t>(a);
+    const auto b_u = bit_cast<uint64_t>(b);
+    return bit_cast<double>((a_u & F64AbsMask) | (b_u & F64SignMask));
+}
+
+template <typename T>
 inline T fceil(T value) noexcept
 {
     static_assert(std::is_floating_point_v<T>);
@@ -409,7 +441,7 @@ inline T ffloor(T value) noexcept
     // the __builtin_floor() outputs -0 where it should +0.
     // The following workarounds the issue by using the fact that the sign of
     // the output must always match the sign of the input value.
-    return std::copysign(result, value);
+    return fcopysign(result, value);
 }
 
 template <typename T>
@@ -439,8 +471,8 @@ T fnearest(T value) noexcept
 
     // This implementation is based on adjusting the result produced by trunc() by +-1 when needed.
     const auto t = std::trunc(value);
-    if (const auto diff = std::abs(value - t); diff > T{0.5} || (diff == T{0.5} && !is_even(t)))
-        return t + std::copysign(T{1}, value);
+    if (const auto diff = fabs(value - t); diff > T{0.5} || (diff == T{0.5} && !is_even(t)))
+        return t + fcopysign(T{1}, value);
     else
         return t;
 }
@@ -461,7 +493,7 @@ inline T fmin(T a, T b) noexcept
     if (std::isnan(a) || std::isnan(b))
         return std::numeric_limits<T>::quiet_NaN();  // Positive canonical NaN.
 
-    if (a == 0 && b == 0 && (std::signbit(a) == 1 || std::signbit(b) == 1))
+    if (a == 0 && b == 0 && (signbit(a) || signbit(b)))
         return -T{0};
 
     return b < a ? b : a;
@@ -475,30 +507,12 @@ inline T fmax(T a, T b) noexcept
     if (std::isnan(a) || std::isnan(b))
         return std::numeric_limits<T>::quiet_NaN();  // Positive canonical NaN.
 
-    if (a == 0 && b == 0 && (std::signbit(a) == 0 || std::signbit(b) == 0))
+    if (a == 0 && b == 0 && (!signbit(a) || !signbit(b)))
         return T{0};
 
     return a < b ? b : a;
 }
 
-template <typename T>
-T fcopysign(T a, T b) noexcept = delete;
-
-template <>
-inline float fcopysign(float a, float b) noexcept
-{
-    const auto a_u = bit_cast<uint32_t>(a);
-    const auto b_u = bit_cast<uint32_t>(b);
-    return bit_cast<float>((a_u & F32AbsMask) | (b_u & F32SignMask));
-}
-
-template <>
-inline double fcopysign(double a, double b) noexcept
-{
-    const auto a_u = bit_cast<uint64_t>(a);
-    const auto b_u = bit_cast<uint64_t>(b);
-    return bit_cast<double>((a_u & F64AbsMask) | (b_u & F64SignMask));
-}
 
 __attribute__((no_sanitize("float-cast-overflow"))) inline constexpr float demote(
     double value) noexcept
