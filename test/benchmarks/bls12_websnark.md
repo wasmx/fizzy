@@ -1,0 +1,1 @@
+This is from [cdetrio's bls12 test](https://github.com/ewasm/scout.ts/blob/f6m_mul_loop-standalone/assembly/bls12-pairing/out/main_with_websnark.wasm), based on [websnark](https://github.com/iden3/websnark), which is licensed under GPL-3.0.
