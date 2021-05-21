@@ -72,6 +72,12 @@ if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
     endif()
 endif()
 
+if(CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64 AND CMAKE_SIZEOF_VOID_P EQUAL 4)
+    # On i386 opt-in for floating-point implementation with SSE2.
+    # See README "x87 FPU" for explanation.
+    add_compile_options(-msse2 -mfpmath=sse)
+endif()
+
 # An option to enable assertions in non-Debug build types.
 # Disabling assertions in Debug build type has no effect (assertions are still enabled).
 option(ENABLE_ASSERTIONS "Enable NDEBUG based assertions" OFF)

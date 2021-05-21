@@ -163,6 +163,31 @@ In the GNU C Library the rounding mode can be controlled via the [`fesetround` a
 
 If strict compliance is sought with WebAssembly, then the user of Fizzy must ensure to keep the default rounding mode.
 
+### x87 FPU
+
+On Intel i386 architecture (32-bit) the [x87](https://en.wikipedia.org/wiki/X87) FPU is used by default to perform floating-point operations.
+The FPU is claimed to be IEEE-754 compliant, but there is one gotcha. The operations are executed with so-called _internal precision_ and the results are rounded to the target precision in the end [[1]](#1).
+By default the precision is set to [80-bit extended precision](https://en.wikipedia.org/wiki/Extended_precision) (except for VC++ runtime [[2]](#2)).
+Unfortunately, this causes problems for 64-bit double precision operations (`f64.add`, `f64.sub`, `f64.mul`, `f64.div`) — the results may be different than when computed with double precision directly.
+
+The FPU precision can be dynamically modified by using compiler intrinsics [[1]](#1) but this has similar issues to controlling the rounding mode and there exist no C/C++ standard way of doing so.
+
+In the Fizzy implementation we decided it is not worth to fight with the x87 FPU quirks.
+Floating-point operations were never our top priorities.
+We decided to opt-in for using SSE2 instructions to implement WebAssembly floating-pointing instructions
+also in x86 32-bit builds (this is default for 64-builds). I.e. SSE2 instructions set is required.
+This option is controlled by [`-msse2 -mfpmath=sse`][x86-Options] compiler options and one can always override
+this decision if wants to experiment with x87 FPU.
+
+For the record, we also tried to use [`-mpc64`][x86-Options] GCC compiler option which is suppose to set the FPU to 64-bit double precision.
+This attempt was unsuccessful for unknown reason.
+
+See also:
+1. <a id=1></a>[Deterministic cross-platform floating point arithmetics](http://christian-seiler.de/projekte/fpmath/)
+2. <a id=2></a>[Intermediate Floating-Point Precision](https://randomascii.wordpress.com/2012/03/21/intermediate-floating-point-precision/)
+3. [Verified Compilation of Floating-Point Computations](https://hal.inria.fr/hal-00862689v3)
+
+[x86-Options]: https://gcc.gnu.org/onlinedocs/gcc/x86-Options.html
 
 ## Development
 
