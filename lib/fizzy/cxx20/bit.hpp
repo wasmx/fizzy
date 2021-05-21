@@ -5,6 +5,19 @@
 #pragma once
 
 #include <cstdint>
+
+#ifdef __cpp_lib_bit_cast
+
+#include <bit>
+
+namespace fizzy
+{
+template <typename To, class From>
+using bit_cast = std::bit_cast<To, From>;
+}
+
+#else
+
 #include <type_traits>
 
 #if __has_include(<version>)
@@ -29,6 +42,8 @@ template <class To, class From>
     return dst;
 }
 }  // namespace fizzy
+
+#endif /* __cpp_lib_bit_cast */
 
 #ifdef __cpp_lib_bitops
 
