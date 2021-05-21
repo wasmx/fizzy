@@ -270,22 +270,22 @@ TEST(execute_numeric, i64_ge_u)
 TEST(execute_numeric, i32_clz)
 {
     const auto i32_clz = create_unary_operation_executor(Instr::i32_clz);
-    EXPECT_THAT(i32_clz(0), Result(32));
-    EXPECT_THAT(i32_clz(0x7f), Result(32 - 7));
+    for (const auto& [input, popcount, countl_zero, countr_zero] : bitcount32_test_cases)
+        EXPECT_THAT(i32_clz(input), Result(countl_zero)) << input;
 }
 
 TEST(execute_numeric, i32_ctz)
 {
     const auto i32_ctz = create_unary_operation_executor(Instr::i32_ctz);
-    EXPECT_THAT(i32_ctz(0), Result(32));
-    EXPECT_THAT(i32_ctz(0x80), Result(7));
+    for (const auto& [input, popcount, countl_zero, countr_zero] : bitcount32_test_cases)
+        EXPECT_THAT(i32_ctz(input), Result(countr_zero)) << input;
 }
 
 TEST(execute_numeric, i32_popcnt)
 {
     const auto i32_popcnt = create_unary_operation_executor(Instr::i32_popcnt);
-    for (const auto& [input, expected] : popcount32_test_cases)
-        EXPECT_THAT(i32_popcnt(input), Result(expected)) << input;
+    for (const auto& [input, popcount, countl_zero, countr_zero] : bitcount32_test_cases)
+        EXPECT_THAT(i32_popcnt(input), Result(popcount)) << input;
 }
 
 TEST(execute_numeric, i32_add)
@@ -551,22 +551,22 @@ TEST(execute_numeric, i64_extend_i32_u_3)
 TEST(execute_numeric, i64_clz)
 {
     const auto i64_clz = create_unary_operation_executor(Instr::i64_clz);
-    EXPECT_THAT(i64_clz(0_u64), Result(64));
-    EXPECT_THAT(i64_clz(0x7f_u64), Result(64 - 7));
+    for (const auto& [input, popcount, countl_zero, countr_zero] : bitcount64_test_cases)
+        EXPECT_THAT(i64_clz(input), Result(countl_zero)) << input;
 }
 
 TEST(execute_numeric, i64_ctz)
 {
     const auto i64_ctz = create_unary_operation_executor(Instr::i64_ctz);
-    EXPECT_THAT(i64_ctz(0_u64), Result(64));
-    EXPECT_THAT(i64_ctz(0x80_u64), Result(7));
+    for (const auto& [input, popcount, countl_zero, countr_zero] : bitcount64_test_cases)
+        EXPECT_THAT(i64_ctz(input), Result(countr_zero)) << input;
 }
 
 TEST(execute_numeric, i64_popcnt)
 {
     const auto i64_popcnt = create_unary_operation_executor(Instr::i64_popcnt);
-    for (const auto& [input, expected] : popcount64_test_cases)
-        EXPECT_THAT(i64_popcnt(input), Result(expected)) << input;
+    for (const auto& [input, popcount, countl_zero, countr_zero] : bitcount64_test_cases)
+        EXPECT_THAT(i64_popcnt(input), Result(popcount)) << input;
 }
 
 TEST(execute_numeric, i64_add)
