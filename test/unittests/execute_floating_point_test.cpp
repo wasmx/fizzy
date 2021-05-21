@@ -117,8 +117,11 @@ TYPED_TEST(execute_floating_point_types, nan_matchers)
     EXPECT_THAT(ExecutionResult{Value{-FP::nan(FP::canon)}}, ArithmeticNaN(TypeParam{}));
     EXPECT_THAT(ExecutionResult{Value{FP::nan(FP::canon + 1)}}, ArithmeticNaN(TypeParam{}));
     EXPECT_THAT(ExecutionResult{Value{-FP::nan(FP::canon + 1)}}, ArithmeticNaN(TypeParam{}));
+
+#if SNAN_SUPPORTED
     EXPECT_THAT(ExecutionResult{Value{FP::nan(1)}}, Not(ArithmeticNaN(TypeParam{})));
     EXPECT_THAT(ExecutionResult{Value{-FP::nan(1)}}, Not(ArithmeticNaN(TypeParam{})));
+#endif
 }
 
 TYPED_TEST(execute_floating_point_types, unop_nan_propagation)
@@ -1145,29 +1148,26 @@ TEST(execute_floating_point, f32_store)
         "0b06cccccccccccc");
     const auto module = parse(wasm);
 
-    const std::tuple<float, bytes> test_cases[]{
-        {0.0f, "cc00000000cc"_bytes},
-        {-0.0f, "cc00000080cc"_bytes},
-        {1.234f, "ccb6f39d3fcc"_bytes},
-        {-1.234f, "ccb6f39dbfcc"_bytes},
-        {FP32::Limits::infinity(), "cc0000807fcc"_bytes},
-        {-FP32::Limits::infinity(), "cc000080ffcc"_bytes},
-        {FP32::Limits::max(), "ccffff7f7fcc"_bytes},
-        {-FP32::Limits::max(), "ccffff7fffcc"_bytes},
-        {FP32::Limits::min(), "cc00008000cc"_bytes},
-        {-FP32::Limits::min(), "cc00008080cc"_bytes},
-        {FP32::Limits::denorm_min(), "cc01000000cc"_bytes},
-        {-FP32::Limits::denorm_min(), "cc01000080cc"_bytes},
-        {1.0f, "cc0000803fcc"_bytes},
-        {-1.0f, "cc000080bfcc"_bytes},
-        {std::nextafter(1.0f, 0.0f), "ccffff7f3fcc"_bytes},
-        {std::nextafter(-1.0f, 0.0f), "ccffff7fbfcc"_bytes},
-        {FP32::nan(FP32::canon), "cc0000c07fcc"_bytes},
-        {-FP32::nan(FP32::canon), "cc0000c0ffcc"_bytes},
-        {FP32::nan(FP32::canon + 1), "cc0100c07fcc"_bytes},
-        {-FP32::nan(FP32::canon + 1), "cc0100c0ffcc"_bytes},
-        {FP32::nan(1), "cc0100807fcc"_bytes},
-        {-FP32::nan(1), "cc010080ffcc"_bytes},
+    const std::tuple<float, bytes> test_cases[]
+    {
+        {0.0f, "cc00000000cc"_bytes}, {-0.0f, "cc00000080cc"_bytes}, {1.234f, "ccb6f39d3fcc"_bytes},
+            {-1.234f, "ccb6f39dbfcc"_bytes}, {FP32::Limits::infinity(), "cc0000807fcc"_bytes},
+            {-FP32::Limits::infinity(), "cc000080ffcc"_bytes},
+            {FP32::Limits::max(), "ccffff7f7fcc"_bytes},
+            {-FP32::Limits::max(), "ccffff7fffcc"_bytes},
+            {FP32::Limits::min(), "cc00008000cc"_bytes},
+            {-FP32::Limits::min(), "cc00008080cc"_bytes},
+            {FP32::Limits::denorm_min(), "cc01000000cc"_bytes},
+            {-FP32::Limits::denorm_min(), "cc01000080cc"_bytes}, {1.0f, "cc0000803fcc"_bytes},
+            {-1.0f, "cc000080bfcc"_bytes}, {std::nextafter(1.0f, 0.0f), "ccffff7f3fcc"_bytes},
+            {std::nextafter(-1.0f, 0.0f), "ccffff7fbfcc"_bytes},
+            {FP32::nan(FP32::canon), "cc0000c07fcc"_bytes},
+            {-FP32::nan(FP32::canon), "cc0000c0ffcc"_bytes},
+            {FP32::nan(FP32::canon + 1), "cc0100c07fcc"_bytes},
+            {-FP32::nan(FP32::canon + 1), "cc0100c0ffcc"_bytes},
+#if SNAN_SUPPORTED
+            {FP32::nan(1), "cc0100807fcc"_bytes}, {-FP32::nan(1), "cc010080ffcc"_bytes},
+#endif
     };
 
     for (const auto& [arg, expected] : test_cases)
@@ -1222,29 +1222,29 @@ TEST(execute_floating_point, f64_store)
         "0b0ccccccccccccccccccccccccc");
     const auto module = parse(wasm);
 
-    const std::tuple<double, bytes> test_cases[]{
-        {0.0, "cc0000000000000000cc"_bytes},
-        {-0.0, "cc0000000000000080cc"_bytes},
-        {1.234, "cc5839b4c876bef33fcc"_bytes},
-        {-1.234, "cc5839b4c876bef3bfcc"_bytes},
-        {FP64::Limits::infinity(), "cc000000000000f07fcc"_bytes},
-        {-FP64::Limits::infinity(), "cc000000000000f0ffcc"_bytes},
-        {FP64::Limits::max(), "ccffffffffffffef7fcc"_bytes},
-        {-FP64::Limits::max(), "ccffffffffffffefffcc"_bytes},
-        {FP64::Limits::min(), "cc0000000000001000cc"_bytes},
-        {-FP64::Limits::min(), "cc0000000000001080cc"_bytes},
-        {FP64::Limits::denorm_min(), "cc0100000000000000cc"_bytes},
-        {-FP64::Limits::denorm_min(), "cc0100000000000080cc"_bytes},
-        {1.0, "cc000000000000f03fcc"_bytes},
-        {-1.0, "cc000000000000f0bfcc"_bytes},
-        {std::nextafter(1.0, 0.0), "ccffffffffffffef3fcc"_bytes},
-        {std::nextafter(-1.0, 0.0), "ccffffffffffffefbfcc"_bytes},
-        {FP64::nan(FP64::canon), "cc000000000000f87fcc"_bytes},
-        {-FP64::nan(FP64::canon), "cc000000000000f8ffcc"_bytes},
-        {FP64::nan(FP64::canon + 1), "cc010000000000f87fcc"_bytes},
-        {-FP64::nan(FP64::canon + 1), "cc010000000000f8ffcc"_bytes},
-        {FP64::nan(1), "cc010000000000f07fcc"_bytes},
-        {-FP64::nan(1), "cc010000000000f0ffcc"_bytes},
+    const std::tuple<double, bytes> test_cases[]
+    {
+        {0.0, "cc0000000000000000cc"_bytes}, {-0.0, "cc0000000000000080cc"_bytes},
+            {1.234, "cc5839b4c876bef33fcc"_bytes}, {-1.234, "cc5839b4c876bef3bfcc"_bytes},
+            {FP64::Limits::infinity(), "cc000000000000f07fcc"_bytes},
+            {-FP64::Limits::infinity(), "cc000000000000f0ffcc"_bytes},
+            {FP64::Limits::max(), "ccffffffffffffef7fcc"_bytes},
+            {-FP64::Limits::max(), "ccffffffffffffefffcc"_bytes},
+            {FP64::Limits::min(), "cc0000000000001000cc"_bytes},
+            {-FP64::Limits::min(), "cc0000000000001080cc"_bytes},
+            {FP64::Limits::denorm_min(), "cc0100000000000000cc"_bytes},
+            {-FP64::Limits::denorm_min(), "cc0100000000000080cc"_bytes},
+            {1.0, "cc000000000000f03fcc"_bytes}, {-1.0, "cc000000000000f0bfcc"_bytes},
+            {std::nextafter(1.0, 0.0), "ccffffffffffffef3fcc"_bytes},
+            {std::nextafter(-1.0, 0.0), "ccffffffffffffefbfcc"_bytes},
+            {FP64::nan(FP64::canon), "cc000000000000f87fcc"_bytes},
+            {-FP64::nan(FP64::canon), "cc000000000000f8ffcc"_bytes},
+            {FP64::nan(FP64::canon + 1), "cc010000000000f87fcc"_bytes},
+            {-FP64::nan(FP64::canon + 1), "cc010000000000f8ffcc"_bytes},
+#if SNAN_SUPPORTED
+            {FP64::nan(1), "cc010000000000f07fcc"_bytes},
+            {-FP64::nan(1), "cc010000000000f0ffcc"_bytes},
+#endif
     };
 
     for (const auto& [arg, expected] : test_cases)
