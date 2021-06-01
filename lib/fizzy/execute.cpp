@@ -5,6 +5,7 @@
 #include "execute.hpp"
 #include "asserts.hpp"
 #include "cxx20/bit.hpp"
+#include "instructions.hpp"
 #include "stack.hpp"
 #include "trunc_boundaries.hpp"
 #include "types.hpp"
@@ -574,9 +575,16 @@ ExecutionResult execute(
 
     const uint8_t* pc = code.instructions.data();
 
+    const auto* cost_table = get_instruction_cost_table();
+
     while (true)
     {
-        const auto instruction = static_cast<Instr>(*pc++);
+        const auto opcode = *pc++;
+        const auto instruction = static_cast<Instr>(opcode);
+
+        if ((ctx.ticks -= cost_table[opcode]) < 0)
+            goto trap;
+
         switch (instruction)
         {
         case Instr::unreachable:
