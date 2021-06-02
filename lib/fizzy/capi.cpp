@@ -727,6 +727,16 @@ void fizzy_free_execution_context(FizzyExecutionContext* c_ctx) noexcept
     delete unwrap(c_ctx);
 }
 
+int* fizzy_get_execution_context_depth(FizzyExecutionContext* c_ctx) noexcept
+{
+    return &unwrap(c_ctx)->depth;
+}
+
+int64_t* fizzy_get_execution_context_ticks(FizzyExecutionContext* c_ctx) noexcept
+{
+    return &unwrap(c_ctx)->ticks;
+}
+
 FizzyExecutionResult fizzy_execute(FizzyInstance* c_instance, uint32_t func_idx,
     const FizzyValue* c_args, FizzyExecutionContext* c_ctx) noexcept
 {

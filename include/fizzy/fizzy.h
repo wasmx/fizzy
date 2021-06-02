@@ -603,6 +603,9 @@ FizzyExecutionContext* fizzy_create_metered_execution_context(
 
 void fizzy_free_execution_context(FizzyExecutionContext* ctx) FIZZY_NOEXCEPT;
 
+int* fizzy_get_execution_context_depth(FizzyExecutionContext* ctx) FIZZY_NOEXCEPT;
+
+int64_t* fizzy_get_execution_context_ticks(FizzyExecutionContext* ctx) FIZZY_NOEXCEPT;
 
 /// Execute module function.
 ///
