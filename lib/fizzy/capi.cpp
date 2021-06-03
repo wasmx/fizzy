@@ -706,6 +706,27 @@ size_t fizzy_get_instance_memory_size(FizzyInstance* instance) noexcept
     return memory->size();
 }
 
+FizzyExecutionContext* fizzy_create_execution_context(int depth) noexcept
+{
+    auto ctx = std::make_unique<fizzy::ExecutionContext>();
+    ctx->depth = depth;
+    return wrap(ctx.release());
+}
+
+FizzyExecutionContext* fizzy_create_metered_execution_context(int depth, int64_t ticks) noexcept
+{
+    auto ctx = std::make_unique<fizzy::ExecutionContext>();
+    ctx->depth = depth;
+    ctx->metering_enabled = true;
+    ctx->ticks = ticks;
+    return wrap(ctx.release());
+}
+
+void fizzy_free_execution_context(FizzyExecutionContext* c_ctx) noexcept
+{
+    delete unwrap(c_ctx);
+}
+
 FizzyExecutionResult fizzy_execute(FizzyInstance* c_instance, uint32_t func_idx,
     const FizzyValue* c_args, FizzyExecutionContext* c_ctx) noexcept
 {

@@ -596,6 +596,14 @@ bool fizzy_find_exported_memory(
 bool fizzy_find_exported_global(
     FizzyInstance* instance, const char* name, FizzyExternalGlobal* out_global) FIZZY_NOEXCEPT;
 
+FizzyExecutionContext* fizzy_create_execution_context(int depth) FIZZY_NOEXCEPT;
+
+FizzyExecutionContext* fizzy_create_metered_execution_context(
+    int depth, int64_t ticks) FIZZY_NOEXCEPT;
+
+void fizzy_free_execution_context(FizzyExecutionContext* ctx) FIZZY_NOEXCEPT;
+
+
 /// Execute module function.
 ///
 /// @param  instance    Pointer to module instance. Cannot be NULL.
