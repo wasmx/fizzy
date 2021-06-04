@@ -11,6 +11,10 @@ target_sources(
     fizzy-unittests PRIVATE
     api_test.cpp
     asserts_test.cpp
+    capi_execute_test.cpp
+    capi_exports_test.cpp
+    capi_instantiate_test.cpp
+    capi_module_test.cpp
     capi_test.cpp
     constexpr_vector_test.cpp
     cxx20_bit_test.cpp
