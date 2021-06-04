@@ -206,7 +206,7 @@ TEST(capi, clone_module)
     fizzy_free_module(module1);
 }
 
-TEST(capi, get_function_type)
+TEST(capi_module, get_function_type)
 {
     /* wat2wasm
       (func)
@@ -243,7 +243,7 @@ TEST(capi, get_function_type)
     fizzy_free_module(module);
 }
 
-TEST(capi, has_table)
+TEST(capi_module, has_table)
 {
     /* wat2wasm
       (module)
@@ -280,7 +280,7 @@ TEST(capi, has_table)
     fizzy_free_module(module_imported_table);
 }
 
-TEST(capi, has_memory)
+TEST(capi_module, has_memory)
 {
     /* wat2wasm
       (module)
@@ -330,7 +330,7 @@ TEST(capi, has_memory)
     fizzy_free_module(module_imported_mem);
 }
 
-TEST(capi, get_export_count)
+TEST(capi_exports, get_export_count)
 {
     /* wat2wasm
       (module)
@@ -360,7 +360,7 @@ TEST(capi, get_export_count)
     fizzy_free_module(module);
 }
 
-TEST(capi, get_export_description)
+TEST(capi_exports, get_export_description)
 {
     /* wat2wasm
       (func) ;; to make export have non-zero index
@@ -402,7 +402,7 @@ TEST(capi, get_export_description)
     fizzy_free_module(module);
 }
 
-TEST(capi, export_name_after_instantiate)
+TEST(capi_exports, export_name_after_instantiate)
 {
     /* wat2wasm
       (func (export "fn"))
@@ -425,7 +425,7 @@ TEST(capi, export_name_after_instantiate)
     fizzy_free_instance(instance);
 }
 
-TEST(capi, find_exported_function_index)
+TEST(capi_exports, find_exported_function_index)
 {
     /* wat2wasm
     (module
@@ -454,7 +454,7 @@ TEST(capi, find_exported_function_index)
     fizzy_free_module(module);
 }
 
-TEST(capi, find_exported_function)
+TEST(capi_exports, find_exported_function)
 {
     /* wat2wasm
     (module
@@ -494,7 +494,7 @@ TEST(capi, find_exported_function)
     fizzy_free_instance(instance);
 }
 
-TEST(capi, find_exported_table)
+TEST(capi_exports, find_exported_table)
 {
     /* wat2wasm
     (module
@@ -530,7 +530,7 @@ TEST(capi, find_exported_table)
     fizzy_free_instance(instance);
 }
 
-TEST(capi, find_exported_table_no_max)
+TEST(capi_exports, find_exported_table_no_max)
 {
     /* wat2wasm
     (module
@@ -555,7 +555,7 @@ TEST(capi, find_exported_table_no_max)
     fizzy_free_instance(instance);
 }
 
-TEST(capi, find_exported_memory)
+TEST(capi_exports, find_exported_memory)
 {
     /* wat2wasm
     (module
@@ -591,7 +591,7 @@ TEST(capi, find_exported_memory)
     fizzy_free_instance(instance);
 }
 
-TEST(capi, find_exported_memory_no_max)
+TEST(capi_exports, find_exported_memory_no_max)
 {
     /* wat2wasm
     (module
@@ -616,7 +616,7 @@ TEST(capi, find_exported_memory_no_max)
     fizzy_free_instance(instance);
 }
 
-TEST(capi, find_exported_global)
+TEST(capi_exports, find_exported_global)
 {
     /* wat2wasm
     (module
@@ -651,7 +651,7 @@ TEST(capi, find_exported_global)
     fizzy_free_instance(instance);
 }
 
-TEST(capi, has_start_function)
+TEST(capi_module, has_start_function)
 {
     /* wat2wasm
       (module)
@@ -677,7 +677,7 @@ TEST(capi, has_start_function)
     fizzy_free_module(module_start);
 }
 
-TEST(capi, instantiate)
+TEST(capi_instantiate, instantiate)
 {
     uint8_t wasm_prefix[]{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00};
     const auto* module = fizzy_parse(wasm_prefix, sizeof(wasm_prefix), nullptr);
@@ -703,7 +703,7 @@ TEST(capi, instantiate)
     fizzy_free_instance(instance);
 }
 
-TEST(capi, instantiate_imported_function)
+TEST(capi_instantiate, instantiate_imported_function)
 {
     /* wat2wasm
       (func (import "mod1" "foo1") (result i32))
@@ -740,7 +740,7 @@ TEST(capi, instantiate_imported_function)
     fizzy_free_instance(instance);
 }
 
-TEST(capi, instantiate_imported_globals)
+TEST(capi_instantiate, instantiate_imported_globals)
 {
     /* wat2wasm
       (global (import "mod1" "g1") (mut i32))
@@ -828,7 +828,7 @@ TEST(capi, instantiate_imported_globals)
     EXPECT_STREQ(error.message, "global 0 value type doesn't match module's global type");
 }
 
-TEST(capi, instantiate_twice)
+TEST(capi_instantiate, instantiate_twice)
 {
     uint8_t wasm_prefix[]{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00};
     const auto* module1 = fizzy_parse(wasm_prefix, sizeof(wasm_prefix), nullptr);
@@ -850,7 +850,7 @@ TEST(capi, instantiate_twice)
     fizzy_free_instance(instance1);
 }
 
-TEST(capi, instantiate_custom_hard_memory_limit)
+TEST(capi_instantiate, instantiate_custom_hard_memory_limit)
 {
     /* wat2wasm
       (memory 2)
@@ -887,7 +887,7 @@ TEST(capi, instantiate_custom_hard_memory_limit)
     EXPECT_STREQ(error.message, "hard memory limit cannot exceed 4294967296 bytes");
 }
 
-TEST(capi, resolve_instantiate_no_imports)
+TEST(capi_instantiate, resolve_instantiate_no_imports)
 {
     /* wat2wasm
       (module)
@@ -930,7 +930,7 @@ TEST(capi, resolve_instantiate_no_imports)
     fizzy_free_instance(instance);
 }
 
-TEST(capi, resolve_instantiate_functions)
+TEST(capi_instantiate, resolve_instantiate_functions)
 {
     /* wat2wasm
       (func (import "mod1" "foo1") (param i32) (result i32))
@@ -1032,7 +1032,7 @@ TEST(capi, resolve_instantiate_functions)
     EXPECT_STREQ(error.message, "imported function mod2.foo2 is required");
 }
 
-TEST(capi, resolve_instantiate_function_duplicate)
+TEST(capi_instantiate, resolve_instantiate_function_duplicate)
 {
     /* wat2wasm
       (func (import "mod1" "foo1") (result i32))
@@ -1061,7 +1061,7 @@ TEST(capi, resolve_instantiate_function_duplicate)
     fizzy_free_instance(instance);
 }
 
-TEST(capi, resolve_instantiate_globals)
+TEST(capi_instantiate, resolve_instantiate_globals)
 {
     /* wat2wasm
       (global (import "mod1" "g1") i32)
@@ -1163,7 +1163,7 @@ TEST(capi, resolve_instantiate_globals)
     EXPECT_STREQ(error.message, "imported global mod2.g2 is required");
 }
 
-TEST(capi, resolve_instantiate_global_duplicate)
+TEST(capi_instantiate, resolve_instantiate_global_duplicate)
 {
     /* wat2wasm
       (global (import "mod1" "g1") i32)
@@ -1192,7 +1192,7 @@ TEST(capi, resolve_instantiate_global_duplicate)
     fizzy_free_instance(instance);
 }
 
-TEST(capi, resolve_instantiate_custom_hard_memory_limit)
+TEST(capi_instantiate, resolve_instantiate_custom_hard_memory_limit)
 {
     /* wat2wasm
       (memory 2)
@@ -1229,12 +1229,12 @@ TEST(capi, resolve_instantiate_custom_hard_memory_limit)
     EXPECT_STREQ(error.message, "hard memory limit cannot exceed 4294967296 bytes");
 }
 
-TEST(capi, free_instance_null)
+TEST(capi_instantiate, free_instance_null)
 {
     fizzy_free_instance(nullptr);
 }
 
-TEST(capi, get_instance_module)
+TEST(capi_instantiate, get_instance_module)
 {
     /* wat2wasm
       (func (param i32 i32))
@@ -1383,7 +1383,7 @@ TEST(capi, imported_memory_access)
     fizzy_free_instance(instance_memory);
 }
 
-TEST(capi, execute)
+TEST(capi_execute, execute)
 {
     /* wat2wasm
       (func)
@@ -1413,7 +1413,7 @@ TEST(capi, execute)
     fizzy_free_instance(instance);
 }
 
-TEST(capi, execute_with_host_function)
+TEST(capi_execute, execute_with_host_function)
 {
     /* wat2wasm
       (func (import "mod1" "foo1") (result i32))
@@ -1453,7 +1453,7 @@ TEST(capi, execute_with_host_function)
     fizzy_free_instance(instance);
 }
 
-TEST(capi, imported_function_traps)
+TEST(capi_execute, imported_function_traps)
 {
     /* wat2wasm
       (func (import "m" "foo") (result i32))
@@ -1481,7 +1481,7 @@ TEST(capi, imported_function_traps)
     fizzy_free_instance(instance);
 }
 
-TEST(capi, imported_function_void)
+TEST(capi_execute, imported_function_void)
 {
     /* wat2wasm
       (func (import "m" "foo"))
@@ -1512,7 +1512,7 @@ TEST(capi, imported_function_void)
     fizzy_free_instance(instance);
 }
 
-TEST(capi, imported_function_from_another_module)
+TEST(capi_execute, imported_function_from_another_module)
 {
     /* wat2wasm
     (module
@@ -1563,7 +1563,7 @@ TEST(capi, imported_function_from_another_module)
     fizzy_free_instance(instance1);
 }
 
-TEST(capi, imported_table_from_another_module)
+TEST(capi_execute, imported_table_from_another_module)
 {
     /* wat2wasm
       (table (export "t") 10 30 funcref)
@@ -1604,7 +1604,7 @@ TEST(capi, imported_table_from_another_module)
     fizzy_free_instance(instance1);
 }
 
-TEST(capi, imported_memory_from_another_module)
+TEST(capi_execute, imported_memory_from_another_module)
 {
     /* wat2wasm
       (memory (export "m") 1)
@@ -1642,7 +1642,7 @@ TEST(capi, imported_memory_from_another_module)
     fizzy_free_instance(instance1);
 }
 
-TEST(capi, imported_global_from_another_module)
+TEST(capi_execute, imported_global_from_another_module)
 {
     /* wat2wasm
       (global (export "g") i32 (i32.const 42))
@@ -1680,7 +1680,7 @@ TEST(capi, imported_global_from_another_module)
     fizzy_free_instance(instance1);
 }
 
-TEST(capi, get_type_count)
+TEST(capi_module, get_type_count)
 {
     /* wat2wasm
       (module)
@@ -1725,7 +1725,7 @@ TEST(capi, get_type_count)
     fizzy_free_module(module_three_types);
 }
 
-TEST(capi, get_type)
+TEST(capi_module, get_type)
 {
     /* wat2wasm
       (func)
@@ -1807,7 +1807,7 @@ TEST(capi, get_type)
     fizzy_free_module(module_imported_func);
 }
 
-TEST(capi, get_import_count)
+TEST(capi_module, get_import_count)
 {
     /* wat2wasm
       (module)
@@ -1837,7 +1837,7 @@ TEST(capi, get_import_count)
     fizzy_free_module(module);
 }
 
-TEST(capi, get_import_description)
+TEST(capi_module, get_import_description)
 {
     /* wat2wasm
       (func (import "m" "f1"))
@@ -1921,7 +1921,7 @@ TEST(capi, get_import_description)
     fizzy_free_module(module);
 }
 
-TEST(capi, import_name_after_instantiate)
+TEST(capi_module, import_name_after_instantiate)
 {
     /* wat2wasm
       (func (import "m" "f1") (result i32))
@@ -1948,7 +1948,7 @@ TEST(capi, import_name_after_instantiate)
     fizzy_free_instance(instance);
 }
 
-TEST(capi, get_global_count)
+TEST(capi_module, get_global_count)
 {
     /* wat2wasm
       (module)
@@ -1988,7 +1988,7 @@ TEST(capi, get_global_count)
     fizzy_free_module(module_imported_global);
 }
 
-TEST(capi, get_global_type)
+TEST(capi_module, get_global_type)
 {
     /* wat2wasm
       (global i32 (i32.const 0))
