@@ -431,12 +431,12 @@ private:
         {
             assert(static_cast<uint32_t>(raw_value) == raw_value && "overflow in f32 test value");
             assert(!is_canonical_nan(v) && !is_arithmetic_nan(v));
-            return fizzy::test::FP{static_cast<uint32_t>(raw_value)}.value;
+            return fizzy::test::FP{static_cast<uint32_t>(raw_value)}.as_float();
         }
         else if (type == "f64")
         {
             assert(!is_canonical_nan(v) && !is_arithmetic_nan(v));
-            return fizzy::test::FP{raw_value}.value;
+            return fizzy::test::FP{raw_value}.as_float();
         }
         else
         {

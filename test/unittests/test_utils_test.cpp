@@ -106,17 +106,17 @@ TEST(test_utils, print_typed_execution_result)
 
     std::stringstream str_value_f32;
     str_value_f32 << TypedExecutionResult{ExecutionResult{Value{1.125f}}, ValType::f32};
-    EXPECT_EQ(str_value_f32.str(), "result(1.125 (f32))");
+    EXPECT_EQ(str_value_f32.str(), "result(1.125 [0x1.2p+0] (f32))");
     str_value_f32.str({});
     str_value_f32 << TypedExecutionResult{ExecutionResult{Value{-1.125f}}, ValType::f32};
-    EXPECT_EQ(str_value_f32.str(), "result(-1.125 (f32))");
+    EXPECT_EQ(str_value_f32.str(), "result(-1.125 [-0x1.2p+0] (f32))");
 
     std::stringstream str_value_f64;
     str_value_f64 << TypedExecutionResult{ExecutionResult{Value{1.125}}, ValType::f64};
-    EXPECT_EQ(str_value_f64.str(), "result(1.125 (f64))");
+    EXPECT_EQ(str_value_f64.str(), "result(1.125 [0x1.2p+0] (f64))");
     str_value_f64.str({});
     str_value_f64 << TypedExecutionResult{ExecutionResult{Value{-1.125}}, ValType::f64};
-    EXPECT_EQ(str_value_f64.str(), "result(-1.125 (f64))");
+    EXPECT_EQ(str_value_f64.str(), "result(-1.125 [-0x1.2p+0] (f64))");
 }
 
 TEST(test_utils, result_value_matcher)
