@@ -12,6 +12,7 @@
 
 using namespace fizzy;
 using namespace fizzy::test;
+using testing::ThrowsMessage;
 
 TEST(execute_call, call)
 {
@@ -770,8 +771,8 @@ TEST(execute_call, imported_table_modified_by_uninstantiable_module)
     const auto table = fizzy::find_exported_table(*instance1, "tab");
     ASSERT_TRUE(table.has_value());
 
-    EXPECT_THROW_MESSAGE(instantiate(parse(bin2), {}, {*table}), instantiate_error,
-        "start function failed to execute");
+    EXPECT_THAT([&] { instantiate(parse(bin2), {}, {*table}); },
+        ThrowsMessage<instantiate_error>("start function failed to execute"));
 
     EXPECT_THAT(execute(*instance1, 0, {44, 2}), Result(42));
 }
