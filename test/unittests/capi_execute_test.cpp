@@ -360,3 +360,44 @@ TEST(capi_execute, imported_global_from_another_module)
     fizzy_free_instance(instance2);
     fizzy_free_instance(instance1);
 }
+
+TEST(capi_execute, execute_with_execution_conext)
+{
+    /* wat2wasm
+      (func (result i32) i32.const 42)
+      (func (result i32) call 0)
+    */
+    const auto wasm =
+        from_hex("0061736d010000000105016000017f03030200000a0b020400412a0b040010000b");
+
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
+    ASSERT_NE(module, nullptr);
+
+    auto instance = fizzy_instantiate(
+        module, nullptr, 0, nullptr, nullptr, nullptr, 0, FizzyMemoryPagesLimitDefault, nullptr);
+    ASSERT_NE(instance, nullptr);
+
+    auto* ctx = fizzy_create_execution_context(0);
+    auto* depth = fizzy_get_execution_context_depth(ctx);
+
+    EXPECT_EQ(*depth, 0);
+    EXPECT_THAT(fizzy_execute(instance, 0, nullptr, ctx), CResult(42_u32));
+    EXPECT_EQ(*depth, 0);
+    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, ctx), CResult(42_u32));
+    EXPECT_EQ(*depth, 0);
+
+    *depth = 2047;
+    EXPECT_THAT(fizzy_execute(instance, 0, nullptr, ctx), CResult(42_u32));
+    EXPECT_EQ(*depth, 2047);
+    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, ctx), CTraps());
+    EXPECT_EQ(*depth, 2047);
+
+    *depth = 2048;
+    EXPECT_THAT(fizzy_execute(instance, 0, nullptr, ctx), CTraps());
+    EXPECT_EQ(*depth, 2048);
+    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, ctx), CTraps());
+    EXPECT_EQ(*depth, 2048);
+
+    fizzy_free_execution_context(ctx);
+    fizzy_free_instance(instance);
+}
