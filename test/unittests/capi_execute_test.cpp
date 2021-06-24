@@ -401,3 +401,56 @@ TEST(capi_execute, execute_with_execution_conext)
     fizzy_free_execution_context(ctx);
     fizzy_free_instance(instance);
 }
+
+TEST(capi_execute, execute_with_metered_execution_conext)
+{
+    /* wat2wasm
+      (func (result i32) i32.const 42)
+      (func (result i32) call 0)
+    */
+    const auto wasm =
+        from_hex("0061736d010000000105016000017f03030200000a0b020400412a0b040010000b");
+
+    auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
+    ASSERT_NE(module, nullptr);
+
+    auto instance = fizzy_instantiate(
+        module, nullptr, 0, nullptr, nullptr, nullptr, 0, FizzyMemoryPagesLimitDefault, nullptr);
+    ASSERT_NE(instance, nullptr);
+
+    auto* ctx = fizzy_create_metered_execution_context(0, 100);
+    auto* ticks = fizzy_get_execution_context_ticks(ctx);
+    EXPECT_EQ(*ticks, 100);
+
+    EXPECT_THAT(fizzy_execute(instance, 0, nullptr, ctx), CResult(42_u32));
+    EXPECT_EQ(*ticks, 98);
+    *ticks = 100;
+    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, ctx), CResult(42_u32));
+    EXPECT_EQ(*ticks, 96);
+
+    *ticks = 4;
+    EXPECT_THAT(fizzy_execute(instance, 0, nullptr, ctx), CResult(42_u32));
+    EXPECT_EQ(*ticks, 2);
+    *ticks = 4;
+    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, ctx), CResult(42_u32));
+    EXPECT_EQ(*ticks, 0);
+
+    *ticks = 2;
+    EXPECT_THAT(fizzy_execute(instance, 0, nullptr, ctx), CResult(42_u32));
+    EXPECT_EQ(*ticks, 0);
+    *ticks = 2;
+    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, ctx), CTraps());
+
+    *ticks = 1;
+    EXPECT_THAT(fizzy_execute(instance, 0, nullptr, ctx), CTraps());
+    *ticks = 1;
+    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, ctx), CTraps());
+
+    *ticks = 0;
+    EXPECT_THAT(fizzy_execute(instance, 0, nullptr, ctx), CTraps());
+    *ticks = 0;
+    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, ctx), CTraps());
+
+    fizzy_free_execution_context(ctx);
+    fizzy_free_instance(instance);
+}
