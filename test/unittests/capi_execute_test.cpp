@@ -189,6 +189,61 @@ TEST(capi_execute, imported_function_from_another_module)
     fizzy_free_instance(instance1);
 }
 
+TEST(capi_execute, imported_function_from_another_module_via_host_function)
+{
+    /* wat2wasm
+    (module
+      (func $sub (param $lhs i32) (param $rhs i32) (result i32)
+        local.get $lhs
+        local.get $rhs
+        i32.sub)
+    )
+    */
+    const auto bin1 = from_hex("0061736d0100000001070160027f7f017f030201000a09010700200020016b0b");
+    auto module1 = fizzy_parse(bin1.data(), bin1.size(), nullptr);
+    ASSERT_NE(module1, nullptr);
+    auto instance1 = fizzy_instantiate(
+        module1, nullptr, 0, nullptr, nullptr, nullptr, 0, FizzyMemoryPagesLimitDefault, nullptr);
+    ASSERT_NE(instance1, nullptr);
+
+    /* wat2wasm
+    (module
+      (func $sub (import "m1" "sub") (param $lhs i32) (param $rhs i32) (result i32))
+
+      (func $main (param i32) (param i32) (result i32)
+        local.get 0
+        local.get 1
+        call $sub
+      )
+    )
+    */
+    const auto bin2 = from_hex(
+        "0061736d0100000001070160027f7f017f020a01026d31037375620000030201000a0a0108002000200110000"
+        "b");
+    auto module2 = fizzy_parse(bin2.data(), bin2.size(), nullptr);
+    ASSERT_NE(module2, nullptr);
+
+    auto sub = [](void* host_context, FizzyInstance*, const FizzyValue* args,
+                   FizzyExecutionContext* ctx) noexcept -> FizzyExecutionResult {
+        auto* instance = static_cast<FizzyInstance*>(host_context);
+        return fizzy_execute(instance, 0, args, ctx);
+    };
+
+    const FizzyValueType inputs[] = {FizzyValueTypeI32, FizzyValueTypeI32};
+
+    FizzyExternalFunction host_funcs[] = {{{FizzyValueTypeI32, &inputs[0], 2}, sub, instance1}};
+
+    auto instance2 = fizzy_instantiate(module2, host_funcs, 1, nullptr, nullptr, nullptr, 0,
+        FizzyMemoryPagesLimitDefault, nullptr);
+    ASSERT_NE(instance2, nullptr);
+
+    FizzyValue args[] = {{44}, {2}};
+    EXPECT_THAT(fizzy_execute(instance2, 1, args, nullptr), CResult(42_u32));
+
+    fizzy_free_instance(instance2);
+    fizzy_free_instance(instance1);
+}
+
 TEST(capi_execute, imported_table_from_another_module)
 {
     /* wat2wasm
