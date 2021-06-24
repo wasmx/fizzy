@@ -124,7 +124,7 @@ WasmEngine::Result FizzyCEngine::execute(
     assert(func_type.output != FizzyValueTypeF32 && func_type.output != FizzyValueTypeF64 &&
            "floating point result types are not supported");
     const auto first_arg = reinterpret_cast<const FizzyValue*>(args.data());
-    const auto status = fizzy_execute(m_instance.get(), func_idx, first_arg);
+    const auto status = fizzy_execute(m_instance.get(), func_idx, first_arg, nullptr);
     if (status.trapped)
         return {true, std::nullopt};
     else if (status.has_value)

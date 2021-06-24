@@ -596,18 +596,31 @@ bool fizzy_find_exported_memory(
 bool fizzy_find_exported_global(
     FizzyInstance* instance, const char* name, FizzyExternalGlobal* out_global) FIZZY_NOEXCEPT;
 
+FizzyExecutionContext* fizzy_create_execution_context(int depth) FIZZY_NOEXCEPT;
+
+FizzyExecutionContext* fizzy_create_metered_execution_context(
+    int depth, int64_t ticks) FIZZY_NOEXCEPT;
+
+void fizzy_free_execution_context(FizzyExecutionContext* ctx) FIZZY_NOEXCEPT;
+
+int* fizzy_get_execution_context_depth(FizzyExecutionContext* ctx) FIZZY_NOEXCEPT;
+
+int64_t* fizzy_get_execution_context_ticks(FizzyExecutionContext* ctx) FIZZY_NOEXCEPT;
+
 /// Execute module function.
 ///
 /// @param  instance    Pointer to module instance. Cannot be NULL.
 /// @param  args        Pointer to the argument array. Can be NULL if function has 0 inputs.
+/// @param  ctx         Opaque pointer to execution context. If NULL new execution context
+///                     will be allocated.
 /// @return             Result of execution.
 ///
 /// @note
 /// No validation is done on the number of arguments passed in @p args, nor on their types.
 /// When number of passed arguments or their types are different from the ones defined by the
 /// function type, behaviour is undefined.
-FizzyExecutionResult fizzy_execute(
-    FizzyInstance* instance, uint32_t func_idx, const FizzyValue* args) FIZZY_NOEXCEPT;
+FizzyExecutionResult fizzy_execute(FizzyInstance* instance, uint32_t func_idx,
+    const FizzyValue* args, FizzyExecutionContext* ctx) FIZZY_NOEXCEPT;
 
 #ifdef __cplusplus
 }
