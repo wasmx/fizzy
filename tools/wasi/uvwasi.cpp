@@ -28,8 +28,7 @@ public:
             uvwasi_destroy(&m_state);
 
         // Initialisation settings.
-        // TODO: Make const after https://github.com/nodejs/uvwasi/pull/155 is merged.
-        uvwasi_options_t options = {
+        const uvwasi_options_t options = {
             3,           // sizeof fd_table
             0, nullptr,  // NOTE: no remappings
             argc, argv,

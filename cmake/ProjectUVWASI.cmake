@@ -23,21 +23,24 @@ endif()
 ExternalProject_Add(uvwasi
     EXCLUDE_FROM_ALL 1
     PREFIX ${prefix}
-    DOWNLOAD_NAME uvwasi-0.0.11.tar.gz
+    DOWNLOAD_NAME uvwasi-0.0.12.tar.gz
     DOWNLOAD_DIR ${prefix}/downloads
     SOURCE_DIR ${source_dir}
     BINARY_DIR ${binary_dir}
-    URL https://github.com/nodejs/uvwasi/archive/v0.0.11.tar.gz
-    URL_HASH SHA256=c170e2e92280dcb2b54e5b65a429b03a61710245747c3ca01ec23239a3d61e76
+    URL https://github.com/nodejs/uvwasi/archive/v0.0.12.tar.gz
+    URL_HASH SHA256=f310a628d2657b9ed523a19284f58e4a407466f2e17efb2250d2e58524d02c53
     CMAKE_ARGS
     ${toolchain_file}
     -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
     -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    -DBUILD_SHARED_LIBS=OFF
     -DUVWASI_DEBUG_LOG=OFF
     -DCODE_COVERAGE=OFF
     -DASAN=OFF
     -DUVWASI_BUILD_TESTS=OFF
+    # packaged libuv version depends on this
+    -DCMAKE_POSITION_INDEPENDENT_CODE=TRUE
     BUILD_BYPRODUCTS ${uvwasi_library} ${uv_library}
 )
 
