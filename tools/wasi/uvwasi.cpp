@@ -13,19 +13,13 @@ class UVWASIImpl final : public UVWASI
 {
     /// UVWASI state.
     uvwasi_t m_state{};
-    bool m_inited = false;
 
 public:
-    ~UVWASIImpl() final
-    {
-        if (m_inited)
-            uvwasi_destroy(&m_state);
-    }
+    ~UVWASIImpl() final { uvwasi_destroy(&m_state); }
 
     uvwasi_errno_t init(uvwasi_size_t argc, const char** argv) noexcept final
     {
-        if (m_inited)
-            uvwasi_destroy(&m_state);
+        uvwasi_destroy(&m_state);
 
         // Initialisation settings.
         const uvwasi_options_t options = {
@@ -36,9 +30,7 @@ public:
             0, 1, 2,
             nullptr,  // NOTE: no special allocator
         };
-        const auto ret = uvwasi_init(&m_state, &options);
-        m_inited = (ret == UVWASI_ESUCCESS);
-        return ret;
+        return uvwasi_init(&m_state, &options);
     }
 
     uvwasi_errno_t proc_exit(uvwasi_exitcode_t exit_code) noexcept final
