@@ -5,7 +5,9 @@
 #include "asserts.hpp"
 
 #ifdef GCOV
-extern "C" void __gcov_flush();
+/// Explicitly dump coverage counters.
+/// https://gcc.gnu.org/onlinedocs/gcc/Gcov-and-Optimization.html
+extern "C" void __gcov_dump();
 #endif
 
 namespace fizzy
@@ -13,7 +15,7 @@ namespace fizzy
 bool unreachable() noexcept
 {
 #ifdef GCOV
-    __gcov_flush();
+    __gcov_dump();
 #endif
     return false;  // LCOV_EXCL_LINE
 }
