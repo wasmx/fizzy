@@ -720,16 +720,10 @@ workflows:
     unless: <<pipeline.parameters.benchmark>>
     jobs:
       - lint
-      - release-linux:
-          requires:
-            - release-native-linux
+      - release-linux
       - release-native-linux
-      - release-macos:
-          requires:
-            - release-native-macos
-      - release-native-macos:
-          requires:
-            - sanitizers-macos
+      - release-macos
+      - release-native-macos
       - coverage-gcc
       - coverage-clang
       - sanitizers-clang
@@ -739,16 +733,10 @@ workflows:
       - spectest:
           requires:
             - coverage-clang
-      - arm64-linux:
-          requires:
-            - coverage-gcc
+      - arm64-linux
       - bindings-rust
-      - bindings-rust-asan:
-          requires:
-            - bindings-rust
-      - bindings-rust-coverage:
-          requires:
-            - bindings-rust
+      - bindings-rust-asan
+      - bindings-rust-coverage
 
   benchmarking:
     when: <<pipeline.parameters.benchmark>>
