@@ -734,7 +734,7 @@ TEST(validation_stack, br_table)
     EXPECT_THAT(module->codesec[0].max_stack_height, 2);
 }
 
-TEST(validation_stack, return_)
+TEST(validation_stack, return_1)
 {
     /* wat2wasm
     (func

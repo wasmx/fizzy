@@ -124,7 +124,7 @@ WasmEngine::Result Wasm3Engine::execute(
 {
     unsigned ret_valid;
     uint64_t ret_value;
-    IM3Function function = reinterpret_cast<IM3Function>(func_ref);
+    auto function = reinterpret_cast<IM3Function>(func_ref);  // NOLINT(performance-no-int-to-ptr)
     auto const result = m3_CallProper(
         function, static_cast<uint32_t>(args.size()), args.data(), &ret_valid, &ret_value);
     if (result == m3Err_none)
