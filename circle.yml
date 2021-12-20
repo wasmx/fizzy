@@ -17,7 +17,7 @@ executors:
       xcode: 11.6.0
   rust:
     docker:
-      - image: cimg/rust:1.49
+      - image: cimg/rust:1.57
 
 commands:
   install_macos_deps:
