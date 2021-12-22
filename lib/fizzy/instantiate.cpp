@@ -203,7 +203,7 @@ std::tuple<bytes_ptr, Limits> allocate_memory(const std::vector<Memory>& module_
         }
 
         // NOTE: fill it with zeroes
-        bytes_ptr memory{new bytes(memory_min * PageSize, 0), bytes_delete};
+        bytes_ptr memory{new bytes(uint64_t{memory_min} * PageSize, 0), bytes_delete};
         return {std::move(memory), module_memories[0].limits};
     }
     else if (imported_memories.size() == 1)
