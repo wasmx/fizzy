@@ -66,7 +66,6 @@ if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
             -Wno-double-promotion
             -Wno-float-equal
             -Wno-padded
-            -Wno-return-std-move-in-c++11
             -Wno-switch-enum
         )
     endif()

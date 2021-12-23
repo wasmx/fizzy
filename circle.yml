@@ -8,16 +8,16 @@ parameters:
 executors:
   linux-gcc-latest:
     docker:
-      - image: ethereum/cpp-build-env:16-gcc-10
+      - image: ethereum/cpp-build-env:17-gcc-11
   linux-clang-latest:
     docker:
-      - image: ethereum/cpp-build-env:16-clang-11
+      - image: ethereum/cpp-build-env:17-clang-13
   macos:
     macos:
       xcode: 11.6.0
   rust:
     docker:
-      - image: cimg/rust:1.49
+      - image: cimg/rust:1.57
 
 commands:
   install_macos_deps:
@@ -720,16 +720,10 @@ workflows:
     unless: <<pipeline.parameters.benchmark>>
     jobs:
       - lint
-      - release-linux:
-          requires:
-            - release-native-linux
+      - release-linux
       - release-native-linux
-      - release-macos:
-          requires:
-            - release-native-macos
-      - release-native-macos:
-          requires:
-            - sanitizers-macos
+      - release-macos
+      - release-native-macos
       - coverage-gcc
       - coverage-clang
       - sanitizers-clang
@@ -739,16 +733,10 @@ workflows:
       - spectest:
           requires:
             - coverage-clang
-      - arm64-linux:
-          requires:
-            - coverage-gcc
+      - arm64-linux
       - bindings-rust
-      - bindings-rust-asan:
-          requires:
-            - bindings-rust
-      - bindings-rust-coverage:
-          requires:
-            - bindings-rust
+      - bindings-rust-asan
+      - bindings-rust-coverage
 
   benchmarking:
     when: <<pipeline.parameters.benchmark>>

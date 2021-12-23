@@ -1,5 +1,11 @@
+# TODO: The bugprone-implicit-widening-of-multiplication-result is nice,
+#       but current implementation is over-pedantic.
+#       See https://github.com/llvm/llvm-project/issues/52806.
+
 Checks: >
   bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-implicit-widening-of-multiplication-result,
   cert-*,
   -cert-err58-cpp,
   clang-analyzer-*,
@@ -15,6 +21,7 @@ Checks: >
   readability-*,
   -readability-braces-around-statements,
   -readability-else-after-return,
+  -readability-function-cognitive-complexity,
   -readability-implicit-bool-conversion,
   -readability-magic-numbers,
   -readability-named-parameter,

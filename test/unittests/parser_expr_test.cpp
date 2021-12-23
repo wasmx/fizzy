@@ -347,7 +347,7 @@ TEST(parser_expr, instr_br_table_as_return)
     */
 
     const auto code_bin = i32_const(0) + "0e00000b"_bytes;
-    const auto [code, _] = parse_expr(code_bin);
+    const auto [code, end] = parse_expr(code_bin);
     EXPECT_THAT(code.instructions,
         ElementsAre(Instr::i32_const, 0, 0, 0, 0, Instr::br_table, /*label_count:*/ 0, 0, 0, 0,
             /*arity:*/ 0, 0, 0, 0, /*code_offset:*/ 22, 0, 0, 0, /*stack_drop:*/ 0, 0, 0, 0,
