@@ -1348,6 +1348,9 @@ TEST(execute_floating_point, f64_add_off_by_one)
     // f32 is not affected.
     // This test presents examples of results which are different in such case.
     // The testfloat tool can easily produce more such cases.
+#if defined(__i386__) && !defined(__SSE_MATH__)
+    GTEST_SKIP();
+#endif
 
     /* wat2wasm
     (func (param f64 f64) (result f64)
@@ -1383,6 +1386,9 @@ TEST(execute_floating_point, f64_add_off_by_one)
 TEST(execute_floating_point, f64_sub_off_by_one)
 {
     // Same as f64_add_off_by_one, but for f64.sub.
+#if defined(__i386__) && !defined(__SSE_MATH__)
+    GTEST_SKIP();
+#endif
 
     /* wat2wasm
     (func (param f64 f64) (result f64)
@@ -1396,6 +1402,7 @@ TEST(execute_floating_point, f64_sub_off_by_one)
     constexpr auto a = -0x1.ffc3fffffffffp-50;
     constexpr auto b = -0x1.00000000047ffp+04;
     constexpr auto expected = 0x1.00000000047ffp+04;
+
     EXPECT_EQ(a - b, expected);  // Check host CPU.
     EXPECT_THAT(execute(*instance, 0, {a, b}), Result(expected));
 }
