@@ -200,7 +200,8 @@ std::tuple<bytes_ptr, Limits> allocate_memory(const std::vector<Memory>& module_
             (memory_max.has_value() && *memory_max > memory_pages_limit))
         {
             throw instantiate_error{"cannot exceed hard memory limit of " +
-                                    std::to_string(memory_pages_limit * PageSize) + " bytes"};
+                                    std::to_string(uint64_t{memory_pages_limit} * PageSize) +
+                                    " bytes"};
         }
 
         // NOTE: fill it with zeroes
@@ -217,7 +218,8 @@ std::tuple<bytes_ptr, Limits> allocate_memory(const std::vector<Memory>& module_
             (memory_max.has_value() && *memory_max > memory_pages_limit))
         {
             throw instantiate_error{"imported memory limits cannot exceed hard memory limit of " +
-                                    std::to_string(memory_pages_limit * PageSize) + " bytes"};
+                                    std::to_string(uint64_t{memory_pages_limit} * PageSize) +
+                                    " bytes"};
         }
 
         bytes_ptr memory{imported_memories[0].data, null_delete};
