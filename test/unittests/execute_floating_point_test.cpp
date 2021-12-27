@@ -117,8 +117,11 @@ TYPED_TEST(execute_floating_point_types, nan_matchers)
     EXPECT_THAT(ExecutionResult{Value{-FP::nan(FP::canon)}}, ArithmeticNaN(TypeParam{}));
     EXPECT_THAT(ExecutionResult{Value{FP::nan(FP::canon + 1)}}, ArithmeticNaN(TypeParam{}));
     EXPECT_THAT(ExecutionResult{Value{-FP::nan(FP::canon + 1)}}, ArithmeticNaN(TypeParam{}));
+
+#if SNAN_SUPPORTED
     EXPECT_THAT(ExecutionResult{Value{FP::nan(1)}}, Not(ArithmeticNaN(TypeParam{})));
     EXPECT_THAT(ExecutionResult{Value{-FP::nan(1)}}, Not(ArithmeticNaN(TypeParam{})));
+#endif
 }
 
 TYPED_TEST(execute_floating_point_types, unop_nan_propagation)
@@ -1145,7 +1148,9 @@ TEST(execute_floating_point, f32_store)
         "0b06cccccccccccc");
     const auto module = parse(wasm);
 
-    const std::tuple<float, bytes> test_cases[]{
+    const std::tuple<float, bytes> test_cases[]
+    {
+        // clang-format off
         {0.0f, "cc00000000cc"_bytes},
         {-0.0f, "cc00000080cc"_bytes},
         {1.234f, "ccb6f39d3fcc"_bytes},
@@ -1166,8 +1171,10 @@ TEST(execute_floating_point, f32_store)
         {-FP32::nan(FP32::canon), "cc0000c0ffcc"_bytes},
         {FP32::nan(FP32::canon + 1), "cc0100c07fcc"_bytes},
         {-FP32::nan(FP32::canon + 1), "cc0100c0ffcc"_bytes},
-        {FP32::nan(1), "cc0100807fcc"_bytes},
-        {-FP32::nan(1), "cc010080ffcc"_bytes},
+#if SNAN_SUPPORTED
+        {FP32::nan(1), "cc0100807fcc"_bytes}, {-FP32::nan(1), "cc010080ffcc"_bytes},
+#endif
+        //clang-format on
     };
 
     for (const auto& [arg, expected] : test_cases)
@@ -1222,7 +1229,9 @@ TEST(execute_floating_point, f64_store)
         "0b0ccccccccccccccccccccccccc");
     const auto module = parse(wasm);
 
-    const std::tuple<double, bytes> test_cases[]{
+    const std::tuple<double, bytes> test_cases[]
+    {
+        // clang-format off
         {0.0, "cc0000000000000000cc"_bytes},
         {-0.0, "cc0000000000000080cc"_bytes},
         {1.234, "cc5839b4c876bef33fcc"_bytes},
@@ -1243,8 +1252,11 @@ TEST(execute_floating_point, f64_store)
         {-FP64::nan(FP64::canon), "cc000000000000f8ffcc"_bytes},
         {FP64::nan(FP64::canon + 1), "cc010000000000f87fcc"_bytes},
         {-FP64::nan(FP64::canon + 1), "cc010000000000f8ffcc"_bytes},
+#if SNAN_SUPPORTED
         {FP64::nan(1), "cc010000000000f07fcc"_bytes},
         {-FP64::nan(1), "cc010000000000f0ffcc"_bytes},
+#endif
+        // clang-format on
     };
 
     for (const auto& [arg, expected] : test_cases)
@@ -1336,6 +1348,9 @@ TEST(execute_floating_point, f64_add_off_by_one)
     // f32 is not affected.
     // This test presents examples of results which are different in such case.
     // The testfloat tool can easily produce more such cases.
+#if defined(__i386__) && !defined(__SSE_MATH__)
+    GTEST_SKIP();
+#endif
 
     /* wat2wasm
     (func (param f64 f64) (result f64)
@@ -1371,6 +1386,9 @@ TEST(execute_floating_point, f64_add_off_by_one)
 TEST(execute_floating_point, f64_sub_off_by_one)
 {
     // Same as f64_add_off_by_one, but for f64.sub.
+#if defined(__i386__) && !defined(__SSE_MATH__)
+    GTEST_SKIP();
+#endif
 
     /* wat2wasm
     (func (param f64 f64) (result f64)
@@ -1384,6 +1402,7 @@ TEST(execute_floating_point, f64_sub_off_by_one)
     constexpr auto a = -0x1.ffc3fffffffffp-50;
     constexpr auto b = -0x1.00000000047ffp+04;
     constexpr auto expected = 0x1.00000000047ffp+04;
+
     EXPECT_EQ(a - b, expected);  // Check host CPU.
     EXPECT_THAT(execute(*instance, 0, {a, b}), Result(expected));
 }

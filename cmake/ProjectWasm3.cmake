@@ -11,6 +11,10 @@ set(binary_dir ${prefix}/src/wasm3-build)
 set(include_dir ${source_dir})
 set(wasm3_library ${binary_dir}/source/${CMAKE_STATIC_LIBRARY_PREFIX}m3${CMAKE_STATIC_LIBRARY_SUFFIX})
 
+if(CMAKE_TOOLCHAIN_FILE)
+    set(toolchain_file -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE})
+endif()
+
 ExternalProject_Add(wasm3
     EXCLUDE_FROM_ALL 1
     PREFIX ${prefix}
@@ -22,6 +26,7 @@ ExternalProject_Add(wasm3
     URL_HASH SHA256=11e863a643f605d62a5276e342abb01a65d33d138d01ea0070622a3f78fa1bd5
     PATCH_COMMAND ${CMAKE_CURRENT_LIST_DIR}/apply_patches.sh
     CMAKE_ARGS
+    ${toolchain_file}
     -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
     -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}

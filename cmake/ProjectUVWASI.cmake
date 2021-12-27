@@ -16,6 +16,10 @@ if(UNIX AND NOT APPLE)
     set(system_libs "pthread;dl;rt")
 endif()
 
+if(CMAKE_TOOLCHAIN_FILE)
+    set(toolchain_file -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE})
+endif()
+
 ExternalProject_Add(uvwasi
     EXCLUDE_FROM_ALL 1
     PREFIX ${prefix}
@@ -26,6 +30,7 @@ ExternalProject_Add(uvwasi
     URL https://github.com/nodejs/uvwasi/archive/v0.0.10.tar.gz
     URL_HASH SHA256=39135f4dd4a44013399ceed7166391ffc5c09655e4bfbf851da2be039e6985df
     CMAKE_ARGS
+    ${toolchain_file}
     -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
     -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
