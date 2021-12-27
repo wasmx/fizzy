@@ -48,12 +48,42 @@ TEST(cxx20_bit, bit_cast_uint32_to_array)
 
 TEST(cxx20_bit, popcount32)
 {
-    for (const auto& [input, expected] : popcount32_test_cases)
-        EXPECT_EQ(popcount(input), expected) << input;
+    for (const auto& [input, expected_popcount, expected_countl_zero, expected_countr_zero] :
+        bitcount32_test_cases)
+        EXPECT_EQ(popcount(input), expected_popcount) << input;
 }
 
 TEST(cxx20_bit, popcount64)
 {
-    for (const auto& [input, expected] : popcount64_test_cases)
-        EXPECT_EQ(popcount(input), expected) << input;
+    for (const auto& [input, expected_popcount, expected_countl_zero, expected_countr_zero] :
+        bitcount64_test_cases)
+        EXPECT_EQ(popcount(input), expected_popcount) << input;
+}
+
+TEST(cxx20_bit, countl_zero32)
+{
+    for (const auto& [input, expected_popcount, expected_countl_zero, expected_countr_zero] :
+        bitcount32_test_cases)
+        EXPECT_EQ(countl_zero(input), expected_countl_zero) << input;
+}
+
+TEST(cxx20_bit, countl_zero64)
+{
+    for (const auto& [input, expected_popcount, expected_countl_zero, expected_countr_zero] :
+        bitcount64_test_cases)
+        EXPECT_EQ(countl_zero(input), expected_countl_zero) << input;
+}
+
+TEST(cxx20_bit, countr_zero32)
+{
+    for (const auto& [input, expected_popcount, expected_countl_zero, expected_countr_zero] :
+        bitcount32_test_cases)
+        EXPECT_EQ(countr_zero(input), expected_countr_zero) << input;
+}
+
+TEST(cxx20_bit, countr_zero64)
+{
+    for (const auto& [input, expected_popcount, expected_countl_zero, expected_countr_zero] :
+        bitcount64_test_cases)
+        EXPECT_EQ(countr_zero(input), expected_countr_zero) << input;
 }

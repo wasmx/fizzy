@@ -36,31 +36,61 @@ template <class To, class From>
 
 namespace fizzy
 {
-constexpr int popcount(uint32_t x) noexcept
-{
-    return std::popcount(x);
-}
-
-constexpr int popcount(uint64_t x) noexcept
-{
-    return std::popcount(x);
-}
+using std::countl_zero;
+using std::countr_zero;
+using std::popcount;
 }  // namespace fizzy
 
 #else
 
 namespace fizzy
 {
-constexpr int popcount(uint32_t x) noexcept
+inline constexpr int popcount(uint32_t x) noexcept
 {
     static_assert(sizeof(x) == sizeof(unsigned int));
     return __builtin_popcount(x);
 }
 
-constexpr int popcount(uint64_t x) noexcept
+inline constexpr int popcount(uint64_t x) noexcept
 {
     static_assert(sizeof(x) == sizeof(unsigned long long));
     return __builtin_popcountll(x);
+}
+
+inline constexpr int countl_zero(uint32_t x) noexcept
+{
+    static_assert(sizeof(x) == sizeof(unsigned int));
+    // NOTE: C++20 specifies this case, but the intrinsic leaves it as undefined.
+    if (x == 0)
+        return 32;
+    return __builtin_clz(x);
+}
+
+inline constexpr int countl_zero(uint64_t x) noexcept
+{
+    static_assert(sizeof(x) == sizeof(unsigned long long));
+    // NOTE: C++20 specifies this case, but the intrinsic leaves it as undefined.
+    if (x == 0)
+        return 64;
+    return __builtin_clzll(x);
+}
+
+inline constexpr int countr_zero(uint32_t x) noexcept
+{
+    static_assert(sizeof(x) == sizeof(unsigned int));
+    // NOTE: C++20 specifies this case, but the intrinsic leaves it as undefined.
+    if (x == 0)
+        return 32;
+    return __builtin_ctz(x);
+}
+
+inline constexpr int countr_zero(uint64_t x) noexcept
+{
+    static_assert(sizeof(x) == sizeof(unsigned long long));
+    // NOTE: C++20 specifies this case, but the intrinsic leaves it as undefined.
+    if (x == 0)
+        return 64;
+    return __builtin_ctzll(x);
 }
 }  // namespace fizzy
 
