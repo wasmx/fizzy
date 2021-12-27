@@ -121,7 +121,8 @@ void match_imported_memories(const std::vector<Memory>& module_imported_memories
 
         const auto min = imported_memories[0].limits.min;
         const auto& max = imported_memories[0].limits.max;
-        if (size < min * PageSize || (max.has_value() && size > *max * PageSize))
+        if (size < uint64_t{min} * PageSize ||
+            (max.has_value() && size > uint64_t{*max} * PageSize))
             throw instantiate_error{"provided imported memory doesn't fit provided limits"};
     }
 }
