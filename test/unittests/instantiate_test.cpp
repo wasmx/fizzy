@@ -568,6 +568,9 @@ TEST(instantiate, imported_memory_custom_hard_limit)
     EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{&memory, {3, 4}}}, {}, 3),
         instantiate_error,
         "imported memory limits cannot exceed hard memory limit of 196608 bytes");
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{&memory, {3, 65537}}}, {}, 65536),
+        instantiate_error,
+        "imported memory limits cannot exceed hard memory limit of 4294967296 bytes");
 
     EXPECT_NO_THROW(instantiate(*module, {}, {}, {{&memory, {3, std::nullopt}}}, {}, 3));
     EXPECT_NO_THROW(instantiate(*module, {}, {}, {{&memory, {3, std::nullopt}}}, {}, 4));
