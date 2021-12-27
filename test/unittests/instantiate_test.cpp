@@ -594,6 +594,34 @@ TEST(instantiate, imported_memory_custom_hard_limit)
     EXPECT_NO_THROW(instantiate(*module_max_limit, {}, {}, {{&memory, {3, 6}}}, {}, 8));
 }
 
+TEST(instantiate, memory_import_max_size)
+{
+    /* wat2wasm
+      (memory (import "mod" "mem") 65536)
+      (func (result i32) (memory.size))
+    */
+    const auto bin = from_hex(
+        "0061736d010000000105016000017f020e01036d6f64036d656d0200808004030201000a060104003f000b");
+    const auto module = parse(bin);
+
+    bytes empty_memory;
+    EXPECT_THROW_MESSAGE(
+        instantiate(*module, {}, {}, {{&empty_memory, {0, std::nullopt}}}, {}, 65536),
+        instantiate_error, "provided import's min is below import's min defined in module");
+
+    EXPECT_THROW_MESSAGE(
+        instantiate(*module, {}, {}, {{&empty_memory, {65536, std::nullopt}}}, {}, 65536),
+        instantiate_error, "provided imported memory doesn't fit provided limits");
+
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{&empty_memory, {65536, 65536}}}, {}, 65536),
+        instantiate_error, "provided imported memory doesn't fit provided limits");
+
+    bytes memory(4 * 1024 * 1024 * 1024ULL, 0);
+    auto instance = instantiate(*module, {}, {}, {{&memory, {65536, 65536}}}, {}, 65536);
+    EXPECT_EQ(instance->memory->size(), 4 * 1024 * 1024 * 1024ULL);
+    EXPECT_THAT(execute(*instance, 0, {}), Result(65536));
+}
+
 TEST(instantiate, element_section)
 {
     /* wat2wasm
