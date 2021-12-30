@@ -579,6 +579,15 @@ TEST(instantiate, imported_memory_custom_hard_limit)
     EXPECT_NO_THROW(instantiate(*module_max_limit, {}, {}, {{&memory, {3, 6}}}, {}, 8));
 }
 
+TEST(instantiate, memory_pages_to_bytes)
+{
+    EXPECT_EQ(memory_pages_to_bytes(0), 0);
+    EXPECT_EQ(memory_pages_to_bytes(1), 65536);
+    EXPECT_EQ(memory_pages_to_bytes(2), 2 * 65536);
+    EXPECT_EQ(memory_pages_to_bytes(65536), uint64_t{65536} * 65536);
+    EXPECT_EQ(memory_pages_to_bytes(MaxMemoryPagesLimit), 4 * 1024 * 1024 * 1024ULL);
+}
+
 TEST(instantiate, element_section)
 {
     /* wat2wasm
