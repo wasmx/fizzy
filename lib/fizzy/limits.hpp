@@ -15,7 +15,7 @@ constexpr uint32_t PageSize = 65536;
 /// Convert memory size in pages to size in bytes.
 inline constexpr uint64_t memory_pages_to_bytes(uint32_t pages) noexcept
 {
-    return pages * PageSize;
+    return uint64_t{pages} * PageSize;
 }
 
 /// The maximum memory page limit as defined by the specification.
