@@ -22,7 +22,7 @@ namespace
 {
 constexpr auto JsonExtension = ".json";
 constexpr auto UnnamedModule = "_unnamed";
-constexpr unsigned TestMemoryPagesLimit = (4 * 1024 * 1024 * 1024ULL) / fizzy::PageSize;  // 4 Gb
+constexpr auto TestMemoryPagesLimit = fizzy::MaxMemoryPagesLimit;
 
 // spectest module definition:
 // https://github.com/WebAssembly/spec/blob/99564b7eaa3452c2633b623c92fc286db2823f39/interpreter/README.md#spectest-host-module
