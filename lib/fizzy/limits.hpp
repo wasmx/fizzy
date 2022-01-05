@@ -4,12 +4,19 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 namespace fizzy
 {
 /// The page size as defined by the WebAssembly 1.0 specification.
 constexpr uint32_t PageSize = 65536;
+
+/// Convert memory size in pages to size in bytes.
+inline constexpr uint64_t memory_pages_to_bytes(uint32_t pages) noexcept
+{
+    return pages * PageSize;
+}
 
 /// The maximum memory page limit as defined by the specification.
 /// It is only possible to address 4 GB (32-bit) of memory.

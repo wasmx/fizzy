@@ -121,7 +121,8 @@ void match_imported_memories(const std::vector<Memory>& module_imported_memories
 
         const auto min = imported_memories[0].limits.min;
         const auto& max = imported_memories[0].limits.max;
-        if (size < min * PageSize || (max.has_value() && size > *max * PageSize))
+        if (size < memory_pages_to_bytes(min) ||
+            (max.has_value() && size > memory_pages_to_bytes(*max)))
             throw instantiate_error{"provided imported memory doesn't fit provided limits"};
     }
 }
@@ -183,7 +184,7 @@ std::tuple<bytes_ptr, Limits> allocate_memory(const std::vector<Memory>& module_
     if (memory_pages_limit > MaxMemoryPagesLimit)
     {
         throw instantiate_error{"hard memory limit cannot exceed " +
-                                std::to_string(uint64_t{MaxMemoryPagesLimit} * PageSize) +
+                                std::to_string(memory_pages_to_bytes(MaxMemoryPagesLimit)) +
                                 " bytes"};
     }
 
@@ -199,11 +200,13 @@ std::tuple<bytes_ptr, Limits> allocate_memory(const std::vector<Memory>& module_
             (memory_max.has_value() && *memory_max > memory_pages_limit))
         {
             throw instantiate_error{"cannot exceed hard memory limit of " +
-                                    std::to_string(memory_pages_limit * PageSize) + " bytes"};
+                                    std::to_string(memory_pages_to_bytes(memory_pages_limit)) +
+                                    " bytes"};
         }
 
         // NOTE: fill it with zeroes
-        bytes_ptr memory{new bytes(memory_min * PageSize, 0), bytes_delete};
+        bytes_ptr memory{
+            new bytes(static_cast<size_t>(memory_pages_to_bytes(memory_min)), 0), bytes_delete};
         return {std::move(memory), module_memories[0].limits};
     }
     else if (imported_memories.size() == 1)
@@ -216,7 +219,8 @@ std::tuple<bytes_ptr, Limits> allocate_memory(const std::vector<Memory>& module_
             (memory_max.has_value() && *memory_max > memory_pages_limit))
         {
             throw instantiate_error{"imported memory limits cannot exceed hard memory limit of " +
-                                    std::to_string(memory_pages_limit * PageSize) + " bytes"};
+                                    std::to_string(memory_pages_to_bytes(memory_pages_limit)) +
+                                    " bytes"};
         }
 
         bytes_ptr memory{imported_memories[0].data, null_delete};
