@@ -154,9 +154,8 @@ inline uint32_t grow_memory(
     try
     {
         // new_pages <= memory_pages_limit <= MaxMemoryPagesLimit guarantees memory_pages_to_bytes
-        // will not overflow uint32_t.
-        assert(memory_pages_to_bytes(new_pages) <= std::numeric_limits<uint32_t>::max());
-        static_assert(sizeof(size_t) >= sizeof(uint32_t));
+        // will not overflow size_t.
+        assert(memory_pages_to_bytes(new_pages) <= std::numeric_limits<size_t>::max());
         memory.resize(static_cast<size_t>(memory_pages_to_bytes(new_pages)));
         return static_cast<uint32_t>(cur_pages);
     }
