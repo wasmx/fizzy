@@ -204,6 +204,9 @@ std::tuple<bytes_ptr, Limits> allocate_memory(const std::vector<Memory>& module_
                                     " bytes"};
         }
 
+        // memory_min <= memory_pages_limit <= MaxMemoryPagesLimit guarantees memory_pages_to_bytes
+        // will not overflow size_t.
+        assert(memory_pages_to_bytes(memory_min) <= std::numeric_limits<size_t>::max());
         // NOTE: fill it with zeroes
         bytes_ptr memory{
             new bytes(static_cast<size_t>(memory_pages_to_bytes(memory_min)), 0), bytes_delete};
