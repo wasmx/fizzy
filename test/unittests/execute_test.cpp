@@ -695,10 +695,15 @@ TEST(execute, memory_grow_custom_hard_limit)
     }
 
     {
-        const auto instance_huge_hard_limit = instantiate(*module, {}, {}, {}, {}, 65536);
+        const auto instance_huge_hard_limit =
+            instantiate(*module, {}, {}, {}, {}, MaxMemoryPagesLimit);
         // For huge hard limit we test only failure cases, because allocating 4GB of memory would
         // be too slow for unit tests.
         // EXPECT_THAT(execute(*instance_huge_hard_limit, 0, {65535}), Result(1));
+        if constexpr (sizeof(size_t) == sizeof(uint32_t))
+        {
+            EXPECT_THAT(execute(*instance_huge_hard_limit, 0, {65535}), Result(-1));
+        }
         EXPECT_THAT(execute(*instance_huge_hard_limit, 0, {65536}), Result(-1));
         EXPECT_THAT(execute(*instance_huge_hard_limit, 0, {0xffffffff}), Result(-1));
     }
@@ -746,8 +751,12 @@ TEST(execute, memory_grow_custom_hard_limit)
 
     {
         bytes memory(PageSize, 0);
-        const auto instance_huge_hard_limit =
-            instantiate(*module_imported, {}, {}, {{&memory, {1, std::nullopt}}}, {}, 65536);
+        const auto instance_huge_hard_limit = instantiate(
+            *module_imported, {}, {}, {{&memory, {1, std::nullopt}}}, {}, MaxMemoryPagesLimit);
+        if constexpr (sizeof(size_t) == sizeof(uint32_t))
+        {
+            EXPECT_THAT(execute(*instance_huge_hard_limit, 0, {65535}), Result(-1));
+        }
         EXPECT_THAT(execute(*instance_huge_hard_limit, 0, {65536}), Result(-1));
         EXPECT_THAT(execute(*instance_huge_hard_limit, 0, {0xffffffff}), Result(-1));
     }

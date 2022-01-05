@@ -884,7 +884,10 @@ TEST(capi, instantiate_custom_hard_memory_limit)
                   module, nullptr, 0, nullptr, nullptr, nullptr, 0, memory_pages_limit, &error),
         nullptr);
     EXPECT_EQ(error.code, FizzyErrorInstantiationFailed);
-    EXPECT_STREQ(error.message, "hard memory limit cannot exceed 4294967296 bytes");
+    if constexpr (sizeof(size_t) > sizeof(uint32_t))
+        EXPECT_STREQ(error.message, "hard memory limit cannot exceed 4294967296 bytes");
+    else
+        EXPECT_STREQ(error.message, "hard memory limit cannot exceed 4294901760 bytes");
 }
 
 TEST(capi, resolve_instantiate_no_imports)
@@ -1226,7 +1229,10 @@ TEST(capi, resolve_instantiate_custom_hard_memory_limit)
                   module, nullptr, 0, nullptr, nullptr, nullptr, 0, memory_pages_limit, &error),
         nullptr);
     EXPECT_EQ(error.code, FizzyErrorInstantiationFailed);
-    EXPECT_STREQ(error.message, "hard memory limit cannot exceed 4294967296 bytes");
+    if constexpr (sizeof(size_t) > sizeof(uint32_t))
+        EXPECT_STREQ(error.message, "hard memory limit cannot exceed 4294967296 bytes");
+    else
+        EXPECT_STREQ(error.message, "hard memory limit cannot exceed 4294901760 bytes");
 }
 
 TEST(capi, free_instance_null)

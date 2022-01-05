@@ -4,8 +4,10 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 
 namespace fizzy
 {
@@ -20,8 +22,13 @@ inline constexpr uint64_t memory_pages_to_bytes(uint32_t pages) noexcept
 
 /// The maximum memory page limit as defined by the specification.
 /// It is only possible to address 4 GB (32-bit) of memory.
-constexpr uint32_t MaxMemoryPagesLimit = (4 * 1024 * 1024 * 1024ULL) / PageSize;
-static_assert(MaxMemoryPagesLimit == 65536);
+/// For 32-bit build environment only max size_t value can be allocated (4 GB - 1 byte).
+constexpr auto MaxMemoryBytesLimit =
+    std::min<uint64_t>(4 * 1024 * 1024 * 1024ULL, std::numeric_limits<size_t>::max());
+constexpr uint32_t MaxMemoryPagesLimit = MaxMemoryBytesLimit / PageSize;
+static_assert((sizeof(size_t) > sizeof(uint32_t) && MaxMemoryPagesLimit == 65536) ||
+              MaxMemoryPagesLimit == 65535);
+static_assert(memory_pages_to_bytes(MaxMemoryPagesLimit) <= std::numeric_limits<size_t>::max());
 
 /// The default hard limit of the memory size (256MB) as number of pages.
 constexpr uint32_t DefaultMemoryPagesLimit = (256 * 1024 * 1024ULL) / PageSize;

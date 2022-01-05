@@ -528,11 +528,26 @@ TEST(instantiate, memory_single_custom_hard_limit)
 
     EXPECT_NO_THROW(instantiate(*module, {}, {}, {}, {}, 4));
     EXPECT_NO_THROW(instantiate(*module, {}, {}, {}, {}, 8));
-    EXPECT_NO_THROW(instantiate(*module, {}, {}, {}, {}, 65536));
-    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {}, {}, 65537), instantiate_error,
-        "hard memory limit cannot exceed 4294967296 bytes");
-    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {}, {}, std::numeric_limits<uint32_t>::max()),
-        instantiate_error, "hard memory limit cannot exceed 4294967296 bytes");
+    EXPECT_NO_THROW(instantiate(*module, {}, {}, {}, {}, 65535));
+    if constexpr (sizeof(size_t) > sizeof(uint32_t))
+    {
+        EXPECT_NO_THROW(instantiate(*module, {}, {}, {}, {}, 65536));
+        EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {}, {}, 65537), instantiate_error,
+            "hard memory limit cannot exceed 4294967296 bytes");
+        EXPECT_THROW_MESSAGE(
+            instantiate(*module, {}, {}, {}, {}, std::numeric_limits<uint32_t>::max()),
+            instantiate_error, "hard memory limit cannot exceed 4294967296 bytes");
+    }
+    else
+    {
+        EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {}, {}, 65536), instantiate_error,
+            "hard memory limit cannot exceed 4294901760 bytes");
+        EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {}, {}, 65537), instantiate_error,
+            "hard memory limit cannot exceed 4294901760 bytes");
+        EXPECT_THROW_MESSAGE(
+            instantiate(*module, {}, {}, {}, {}, std::numeric_limits<uint32_t>::max()),
+            instantiate_error, "hard memory limit cannot exceed 4294901760 bytes");
+    }
 }
 
 TEST(instantiate, imported_memory_custom_hard_limit)
@@ -585,7 +600,10 @@ TEST(instantiate, memory_pages_to_bytes)
     EXPECT_EQ(memory_pages_to_bytes(1), 65536);
     EXPECT_EQ(memory_pages_to_bytes(2), 2 * 65536);
     EXPECT_EQ(memory_pages_to_bytes(65536), uint64_t{65536} * 65536);
-    EXPECT_EQ(memory_pages_to_bytes(MaxMemoryPagesLimit), 4 * 1024 * 1024 * 1024ULL);
+    if constexpr (sizeof(size_t) > sizeof(uint32_t))
+        EXPECT_EQ(memory_pages_to_bytes(MaxMemoryPagesLimit), 4 * 1024 * 1024 * 1024ULL);
+    else
+        EXPECT_EQ(memory_pages_to_bytes(MaxMemoryPagesLimit), 4 * 1024 * 1024 * 1024ULL - PageSize);
 }
 
 TEST(instantiate, element_section)
