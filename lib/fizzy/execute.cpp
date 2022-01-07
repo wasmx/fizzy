@@ -151,13 +151,15 @@ inline uint32_t grow_memory(
 
     const auto new_pages = static_cast<uint32_t>(new_pages_u64);
 
+    const uint64_t new_bytes = memory_pages_to_bytes(new_pages);
+    if (!can_narrow<size_t>(new_bytes))
+        return static_cast<uint32_t>(-1);
+
     try
     {
-        // new_pages <= memory_pages_limit <= MaxMemoryPagesLimit guarantees memory_pages_to_bytes
-        // will not overflow uint32_t.
-        assert(memory_pages_to_bytes(new_pages) <= std::numeric_limits<uint32_t>::max());
-        static_assert(sizeof(size_t) >= sizeof(uint32_t));
-        memory.resize(static_cast<size_t>(memory_pages_to_bytes(new_pages)));
+        // can_narrow guarantees that new_bytes won't overflow size_t
+        assert(new_bytes <= std::numeric_limits<size_t>::max());
+        memory.resize(static_cast<size_t>(new_bytes));
         return static_cast<uint32_t>(cur_pages);
     }
     catch (...)

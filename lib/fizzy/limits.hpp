@@ -5,6 +5,8 @@
 #pragma once
 
 #include <cstdint>
+#include <limits>
+#include <type_traits>
 
 namespace fizzy
 {
@@ -15,6 +17,21 @@ constexpr uint32_t PageSize = 65536;
 inline constexpr uint64_t memory_pages_to_bytes(uint32_t pages) noexcept
 {
     return uint64_t{pages} * PageSize;
+}
+
+/// Check if an integral value can be casted to a narrower type without an overflow.
+template <typename TypeTo, typename TypeFrom,
+    typename =
+        typename std::enable_if_t<std::is_integral_v<TypeFrom> && std::is_integral_v<TypeTo> &&
+                                  sizeof(TypeFrom) >= sizeof(TypeTo)>>
+inline constexpr bool can_narrow([[maybe_unused]] TypeFrom value) noexcept
+{
+    if constexpr (sizeof(TypeFrom) > sizeof(TypeTo))
+    {
+        return value <= std::numeric_limits<TypeTo>::max();
+    }
+    else
+        return true;
 }
 
 /// The maximum memory page limit as defined by the specification.

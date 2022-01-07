@@ -588,6 +588,26 @@ TEST(instantiate, memory_pages_to_bytes)
     EXPECT_EQ(memory_pages_to_bytes(MaxMemoryPagesLimit), 4 * 1024 * 1024 * 1024ULL);
 }
 
+TEST(instantiate, can_narrow)
+{
+    EXPECT_TRUE(can_narrow<size_t>(std::numeric_limits<size_t>::max()));
+    EXPECT_TRUE(can_narrow<size_t>(uint64_t{std::numeric_limits<size_t>::max()}));
+
+    EXPECT_TRUE(can_narrow<size_t>(uint64_t{0}));
+    EXPECT_TRUE(can_narrow<size_t>(uint64_t{1}));
+    EXPECT_TRUE(can_narrow<size_t>(uint64_t{std::numeric_limits<size_t>::max()}));
+
+    if constexpr (sizeof(size_t) < sizeof(uint64_t))
+    {
+        EXPECT_FALSE(can_narrow<size_t>(uint64_t{std::numeric_limits<size_t>::max()} + 1));
+        EXPECT_FALSE(can_narrow<size_t>(std::numeric_limits<uint64_t>::max()));
+    }
+    else
+    {
+        EXPECT_TRUE(can_narrow<size_t>(std::numeric_limits<uint64_t>::max()));
+    }
+}
+
 TEST(instantiate, element_section)
 {
     /* wat2wasm
