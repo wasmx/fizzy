@@ -698,7 +698,15 @@ TEST(execute, memory_grow_custom_hard_limit)
         const auto instance_huge_hard_limit = instantiate(*module, {}, {}, {}, {}, 65536);
         // For huge hard limit we test only failure cases, because allocating 4GB of memory would
         // be too slow for unit tests.
-        // EXPECT_THAT(execute(*instance_huge_hard_limit, 0, {65535}), Result(1));
+        if constexpr (sizeof(size_t) < sizeof(uint64_t))
+        {
+            // On 32-bit 4 GB can't be allocated
+            EXPECT_THAT(execute(*instance_huge_hard_limit, 0, {65535}), Result(-1));
+        }
+        else
+        {
+            // EXPECT_THAT(execute(*instance_huge_hard_limit, 0, {65535}), Result(1));
+        }
         EXPECT_THAT(execute(*instance_huge_hard_limit, 0, {65536}), Result(-1));
         EXPECT_THAT(execute(*instance_huge_hard_limit, 0, {0xffffffff}), Result(-1));
     }

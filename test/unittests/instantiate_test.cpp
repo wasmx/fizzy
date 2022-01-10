@@ -535,6 +535,19 @@ TEST(instantiate, memory_single_custom_hard_limit)
         instantiate_error, "hard memory limit cannot exceed 4294967296 bytes");
 }
 
+TEST(instantiate, memory_32bit_cant_allocate_max_memory)
+{
+    if constexpr (sizeof(size_t) < sizeof(uint64_t))
+    {
+        /* wat2wasm
+          (memory 65536)
+        */
+        const auto bin_max_memory = from_hex("0061736d0100000005050100808004");
+        EXPECT_THROW_MESSAGE(instantiate(parse(bin_max_memory), {}, {}, {}, {}, 65536),
+            instantiate_error, "cannot allocate more than 4294967295 bytes");
+    }
+}
+
 TEST(instantiate, imported_memory_custom_hard_limit)
 {
     /* wat2wasm
