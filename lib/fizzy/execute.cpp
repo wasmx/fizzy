@@ -145,17 +145,19 @@ inline uint32_t grow_memory(
     assert(memory_pages_limit <= MaxMemoryPagesLimit);
     assert(cur_pages <= memory_pages_limit);
 
-    const auto new_pages = uint64_t{cur_pages} + delta_pages;
-    if (new_pages > memory_pages_limit)
+    const auto new_pages_u64 = uint64_t{cur_pages} + delta_pages;
+    if (new_pages_u64 > memory_pages_limit)
         return static_cast<uint32_t>(-1);
+
+    const auto new_pages = static_cast<uint32_t>(new_pages_u64);
 
     try
     {
-        // new_pages <= memory_pages_limit <= MaxMemoryPagesLimit guarantees multiplication
+        // new_pages <= memory_pages_limit <= MaxMemoryPagesLimit guarantees memory_pages_to_bytes
         // will not overflow uint32_t.
-        assert(new_pages * PageSize <= std::numeric_limits<uint32_t>::max());
+        assert(memory_pages_to_bytes(new_pages) <= std::numeric_limits<uint32_t>::max());
         static_assert(sizeof(size_t) >= sizeof(uint32_t));
-        memory.resize(static_cast<size_t>(new_pages) * PageSize);
+        memory.resize(static_cast<size_t>(memory_pages_to_bytes(new_pages)));
         return static_cast<uint32_t>(cur_pages);
     }
     catch (...)
