@@ -535,6 +535,19 @@ TEST(instantiate, memory_single_custom_hard_limit)
         instantiate_error, "hard memory limit cannot exceed 4294967296 bytes");
 }
 
+TEST(instantiate, memory_32bit_cant_allocate_max_memory)
+{
+    if constexpr (sizeof(size_t) < sizeof(uint64_t))
+    {
+        /* wat2wasm
+          (memory 65536)
+        */
+        const auto bin_max_memory = from_hex("0061736d0100000005050100808004");
+        EXPECT_THROW_MESSAGE(instantiate(parse(bin_max_memory), {}, {}, {}, {}, 65536),
+            instantiate_error, "cannot allocate more than 4294967295 bytes");
+    }
+}
+
 TEST(instantiate, imported_memory_custom_hard_limit)
 {
     /* wat2wasm
@@ -586,6 +599,26 @@ TEST(instantiate, memory_pages_to_bytes)
     EXPECT_EQ(memory_pages_to_bytes(2), 2 * 65536);
     EXPECT_EQ(memory_pages_to_bytes(65536), uint64_t{65536} * 65536);
     EXPECT_EQ(memory_pages_to_bytes(MaxMemoryPagesLimit), 4 * 1024 * 1024 * 1024ULL);
+}
+
+TEST(instantiate, can_narrow)
+{
+    EXPECT_TRUE(can_narrow<size_t>(std::numeric_limits<size_t>::max()));
+    EXPECT_TRUE(can_narrow<size_t>(uint64_t{std::numeric_limits<size_t>::max()}));
+
+    EXPECT_TRUE(can_narrow<size_t>(uint64_t{0}));
+    EXPECT_TRUE(can_narrow<size_t>(uint64_t{1}));
+    EXPECT_TRUE(can_narrow<size_t>(uint64_t{std::numeric_limits<size_t>::max()}));
+
+    if constexpr (sizeof(size_t) < sizeof(uint64_t))
+    {
+        EXPECT_FALSE(can_narrow<size_t>(uint64_t{std::numeric_limits<size_t>::max()} + 1));
+        EXPECT_FALSE(can_narrow<size_t>(std::numeric_limits<uint64_t>::max()));
+    }
+    else
+    {
+        EXPECT_TRUE(can_narrow<size_t>(std::numeric_limits<uint64_t>::max()));
+    }
 }
 
 TEST(instantiate, element_section)

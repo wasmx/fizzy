@@ -204,9 +204,16 @@ std::tuple<bytes_ptr, Limits> allocate_memory(const std::vector<Memory>& module_
                                     " bytes"};
         }
 
+        const uint64_t memory_min_bytes = memory_pages_to_bytes(memory_min);
+        if (!can_narrow<size_t>(memory_min_bytes))
+        {
+            throw instantiate_error{"cannot allocate more than " +
+                                    std::to_string(std::numeric_limits<size_t>::max()) + " bytes"};
+        }
         // NOTE: fill it with zeroes
-        bytes_ptr memory{
-            new bytes(static_cast<size_t>(memory_pages_to_bytes(memory_min)), 0), bytes_delete};
+        // can_narrow guarantees that memory_min_bytes won't overflow size_t
+        assert(memory_min_bytes <= std::numeric_limits<size_t>::max());
+        bytes_ptr memory{new bytes(static_cast<size_t>(memory_min_bytes), 0), bytes_delete};
         return {std::move(memory), module_memories[0].limits};
     }
     else if (imported_memories.size() == 1)
