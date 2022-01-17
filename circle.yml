@@ -9,6 +9,9 @@ executors:
   linux-gcc-latest:
     docker:
       - image: ethereum/cpp-build-env:17-gcc-11
+  linux-gcc-latest-multilib:
+    docker:
+      - image: ethereum/cpp-build-env:17-gcc-11-multilib
   linux-clang-latest:
     docker:
       - image: ethereum/cpp-build-env:17-clang-13
@@ -482,15 +485,21 @@ jobs:
       - spectest
 
   x86-linux:
-    docker:
-      - image: ethereum/cpp-build-env:17-gcc-11-multilib
+    executor: linux-gcc-latest-multilib
     steps:
       - install_testfloat
       - checkout
       - build:
-          build_type: Debug
+          configuration_name: "Coverage"
+          build_type: Coverage
           cmake_options: -DCMAKE_TOOLCHAIN_FILE=~/project/cmake/toolchains/32bit.cmake
       - test
+      - collect_coverage_gcc
+      - store_artifacts:
+          path: ~/build/coverage
+          destination: coverage-unittests
+      - upload_coverage:
+          flags: unittests-32
       # TODO: Disabled, because fixes to NaN payload handling in the tool are needed.
       # - spectest
 
