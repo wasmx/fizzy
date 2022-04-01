@@ -567,10 +567,6 @@ ExecutionResult execute(
         {
         case Instr::unreachable:
             goto trap;
-        case Instr::nop:
-        case Instr::block:
-        case Instr::loop:
-            break;
         case Instr::if_:
         {
             if (stack.pop().as<uint32_t>() != 0)
@@ -592,14 +588,12 @@ ExecutionResult execute(
         }
         case Instr::end:
         {
-            // End execution if it's a final end instruction.
-            if (pc == &code.instructions[code.instructions.size()])
-                goto end;
-            break;
+            assert(pc == &code.instructions[code.instructions.size()]);
+            goto end;
         }
         case Instr::br:
         case Instr::br_if:
-        case Instr::return_:
+        case Instr::return_:  // TODO: Replace return with br
         {
             const auto arity = read<uint32_t>(pc);
 
