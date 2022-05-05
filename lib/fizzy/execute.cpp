@@ -593,7 +593,7 @@ ExecutionResult execute(
         case Instr::end:
         {
             // End execution if it's a final end instruction.
-            if (pc == &code.instructions[code.instructions.size()])
+            if (pc == code.instructions.data() + code.instructions.size())
                 goto end;
             break;
         }
@@ -1563,7 +1563,8 @@ ExecutionResult execute(
     }
 
 end:
-    assert(pc == &code.instructions[code.instructions.size()]);  // End of code must be reached.
+    // End of code must be reached.
+    assert(pc == code.instructions.data() + code.instructions.size());
     assert(stack.size() == instance.module->get_function_type(func_idx).outputs.size());
 
     return stack.size() != 0 ? ExecutionResult{stack.top()} : Void;
