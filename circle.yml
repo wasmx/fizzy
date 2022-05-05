@@ -17,7 +17,7 @@ executors:
       xcode: 11.6.0
   rust:
     docker:
-      - image: cimg/rust:1.57
+      - image: cimg/rust:1.60
 
 commands:
   install_macos_deps:
@@ -288,8 +288,7 @@ commands:
           name: "Install system build dependencies"
           command: |
             sudo apt-get -q update
-            sudo apt-get -qy install cmake --no-install-recommends
-            sudo apt-get -qy install llvm-10-dev clang-10 --no-install-recommends
+            sudo apt-get -qy install llvm-12-dev clang-12 --no-install-recommends
 
   rust_install_nightly:
     steps:
