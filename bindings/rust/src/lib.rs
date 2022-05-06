@@ -46,12 +46,10 @@ struct FizzyErrorBox(Box<sys::FizzyError>);
 impl FizzyErrorBox {
     /// Create a safe, boxed, and zero initialised container.
     fn new() -> Self {
-        FizzyErrorBox {
-            0: Box::new(sys::FizzyError {
-                code: 0,
-                message: [0i8; 256],
-            }),
-        }
+        FizzyErrorBox(Box::new(sys::FizzyError {
+            code: 0,
+            message: [0i8; 256],
+        }))
     }
 
     /// Return a pointer passable to low-level functions (validate, parse, instantiate).
@@ -120,7 +118,7 @@ impl Clone for Module {
         let ptr = unsafe { sys::fizzy_clone_module(self.0) };
         // TODO: this can be zero in case of memory allocation error, should this be gracefully handled?
         assert!(!ptr.is_null());
-        Module { 0: ptr }
+        Module(ptr)
     }
 }
 
@@ -139,7 +137,7 @@ pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, String> {
         Err(err.message())
     } else {
         debug_assert!(err.code() == 0);
-        Ok(Module { 0: ptr })
+        Ok(Module(ptr))
     }
 }
 
@@ -178,9 +176,7 @@ impl Module {
             Err(err.message())
         } else {
             debug_assert!(err.code() == 0);
-            Ok(Instance {
-                0: unsafe { NonNull::new_unchecked(ptr) },
-            })
+            Ok(Instance(unsafe { NonNull::new_unchecked(ptr) }))
         }
     }
 }
@@ -371,8 +367,7 @@ impl Instance {
     ) -> Result<core::ops::Range<usize>, String> {
         // This is safe given usize::BITS >= u32::BITS, see https://doc.rust-lang.org/std/primitive.usize.html.
         let offset = offset as usize;
-        let has_memory = memory_data != std::ptr::null_mut();
-        if !has_memory {
+        if memory_data.is_null() {
             return Err("no memory is available".to_string());
         }
         if offset.checked_add(size).is_none() || (offset + size) > memory_size {
@@ -390,7 +385,7 @@ impl Instance {
         let memory_size = sys::fizzy_get_instance_memory_size(self.0.as_ptr());
         let range = Instance::checked_memory_range(memory_data, memory_size, offset, size)?;
         // Slices allow empty length, but data must be a valid pointer.
-        debug_assert!(memory_data != std::ptr::null_mut());
+        debug_assert!(!memory_data.is_null());
         let memory = std::slice::from_raw_parts(memory_data, memory_size);
         Ok(&memory[range])
     }
@@ -408,7 +403,7 @@ impl Instance {
         let memory_size = sys::fizzy_get_instance_memory_size(self.0.as_ptr());
         let range = Instance::checked_memory_range(memory_data, memory_size, offset, size)?;
         // Slices allow empty length, but data must be a valid pointer.
-        debug_assert!(memory_data != std::ptr::null_mut());
+        debug_assert!(!memory_data.is_null());
         let memory = std::slice::from_raw_parts_mut(memory_data, memory_size);
         Ok(&mut memory[range])
     }
@@ -459,9 +454,7 @@ impl Instance {
     /// # Safety
     /// This function expects a valid `func_idx` and appropriate number of `args`.
     pub unsafe fn unsafe_execute(&mut self, func_idx: u32, args: &[Value]) -> ExecutionResult {
-        ExecutionResult {
-            0: sys::fizzy_execute(self.0.as_ptr(), func_idx, args.as_ptr()),
-        }
+        ExecutionResult(sys::fizzy_execute(self.0.as_ptr(), func_idx, args.as_ptr()))
     }
 
     /// Find function type for a given index. Must be a valid index otherwise behaviour is undefined.
@@ -480,7 +473,7 @@ impl Instance {
         name: &str,
         args: &[TypedValue],
     ) -> Result<TypedExecutionResult, String> {
-        let func_idx = self.find_exported_function_index(&name);
+        let func_idx = self.find_exported_function_index(name);
         if func_idx.is_none() {
             return Err("function not found".to_string());
         }
