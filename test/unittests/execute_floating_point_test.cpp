@@ -51,25 +51,25 @@ TYPED_TEST(execute_floating_point_types, test_values_selftest)
     EXPECT_EQ(std::size(TV::positive_all()), TV::num_positive + TV::num_nans);
 
     for (const auto nan : TV::positive_nans())
-        EXPECT_TRUE(std::isnan(nan));
+        EXPECT_TRUE(nan.is_nan());
 
     EXPECT_TRUE(FP<TypeParam>{*TV::canonical_nan}.is_canonical_nan());
 
     for (const auto nan : TV::positive_noncanonical_nans())
     {
-        EXPECT_TRUE(std::isnan(nan));
+        EXPECT_TRUE(nan.is_nan());
         EXPECT_FALSE(FP<TypeParam>{nan}.is_canonical_nan());
     }
 
     for (const auto p : TV::positive_all())
-        EXPECT_EQ(std::signbit(p), 0);
+        EXPECT_EQ(p.sign_bit(), 0);
 
     const auto& ordered = TV::ordered();
     auto current = ordered[0];
     EXPECT_EQ(current, -FP<TypeParam>::Limits::infinity());
     for (size_t i = 1; i < ordered.size(); ++i)
     {
-        EXPECT_LT(current, ordered[i]);
+        EXPECT_LT(current.as_float(), ordered[i].as_float());
         current = ordered[i];
     }
 
@@ -79,19 +79,19 @@ TYPED_TEST(execute_floating_point_types, test_values_selftest)
     size_t nan_start_index = 0;
     for (size_t i = 1; i < ordered_and_nans.size(); ++i)
     {
-        if (std::isnan(ordered_and_nans[i]))
+        if (ordered_and_nans[i].is_nan())
         {
             nan_start_index = i;
             break;
         }
 
-        EXPECT_LT(current, ordered_and_nans[i]);
+        EXPECT_LT(current.as_float(), ordered_and_nans[i].as_float());
         current = ordered_and_nans[i];
     }
     ASSERT_NE(nan_start_index, 0);
     for (size_t i = nan_start_index; i < ordered_and_nans.size(); ++i)
     {
-        EXPECT_TRUE(std::isnan(ordered_and_nans[i]));
+        EXPECT_TRUE(ordered_and_nans[i].is_nan());
     }
 }
 
@@ -100,27 +100,32 @@ TYPED_TEST(execute_floating_point_types, nan_matchers)
     using testing::Not;
     using FP = FP<TypeParam>;
 
+    // Use TypedValue(FP).value as a way of creating Value out of FP objects.
+    static constexpr auto to_result = [](auto fp) noexcept {
+        return ExecutionResult{TypedValue{fp}.value};
+    };
+
     EXPECT_THAT(Void, Not(CanonicalNaN(TypeParam{})));
     EXPECT_THAT(Trap, Not(CanonicalNaN(TypeParam{})));
     EXPECT_THAT(ExecutionResult{Value{TypeParam{}}}, Not(CanonicalNaN(TypeParam{})));
-    EXPECT_THAT(ExecutionResult{Value{FP::nan(FP::canon)}}, CanonicalNaN(TypeParam{}));
-    EXPECT_THAT(ExecutionResult{Value{-FP::nan(FP::canon)}}, CanonicalNaN(TypeParam{}));
-    EXPECT_THAT(ExecutionResult{Value{FP::nan(FP::canon + 1)}}, Not(CanonicalNaN(TypeParam{})));
-    EXPECT_THAT(ExecutionResult{Value{-FP::nan(FP::canon + 1)}}, Not(CanonicalNaN(TypeParam{})));
-    EXPECT_THAT(ExecutionResult{Value{FP::nan(1)}}, Not(CanonicalNaN(TypeParam{})));
-    EXPECT_THAT(ExecutionResult{Value{-FP::nan(1)}}, Not(CanonicalNaN(TypeParam{})));
+    EXPECT_THAT(to_result(FP::nan(FP::canon)), CanonicalNaN(TypeParam{}));
+    EXPECT_THAT(to_result(-FP::nan(FP::canon)), CanonicalNaN(TypeParam{}));
+    EXPECT_THAT(to_result(FP::nan(FP::canon + 1)), Not(CanonicalNaN(TypeParam{})));
+    EXPECT_THAT(to_result(-FP::nan(FP::canon + 1)), Not(CanonicalNaN(TypeParam{})));
+    EXPECT_THAT(to_result(FP::nan(1)), Not(CanonicalNaN(TypeParam{})));
+    EXPECT_THAT(to_result(-FP::nan(1)), Not(CanonicalNaN(TypeParam{})));
 
     EXPECT_THAT(Void, Not(ArithmeticNaN(TypeParam{})));
     EXPECT_THAT(Trap, Not(ArithmeticNaN(TypeParam{})));
     EXPECT_THAT(ExecutionResult{Value{TypeParam{}}}, Not(ArithmeticNaN(TypeParam{})));
-    EXPECT_THAT(ExecutionResult{Value{FP::nan(FP::canon)}}, ArithmeticNaN(TypeParam{}));
-    EXPECT_THAT(ExecutionResult{Value{-FP::nan(FP::canon)}}, ArithmeticNaN(TypeParam{}));
-    EXPECT_THAT(ExecutionResult{Value{FP::nan(FP::canon + 1)}}, ArithmeticNaN(TypeParam{}));
-    EXPECT_THAT(ExecutionResult{Value{-FP::nan(FP::canon + 1)}}, ArithmeticNaN(TypeParam{}));
+    EXPECT_THAT(to_result(FP::nan(FP::canon)), ArithmeticNaN(TypeParam{}));
+    EXPECT_THAT(to_result(-FP::nan(FP::canon)), ArithmeticNaN(TypeParam{}));
+    EXPECT_THAT(to_result(FP::nan(FP::canon + 1)), ArithmeticNaN(TypeParam{}));
+    EXPECT_THAT(to_result(-FP::nan(FP::canon + 1)), ArithmeticNaN(TypeParam{}));
 
 #if SNAN_SUPPORTED
-    EXPECT_THAT(ExecutionResult{Value{FP::nan(1)}}, Not(ArithmeticNaN(TypeParam{})));
-    EXPECT_THAT(ExecutionResult{Value{-FP::nan(1)}}, Not(ArithmeticNaN(TypeParam{})));
+    EXPECT_THAT(to_result(FP::nan(1)), Not(ArithmeticNaN(TypeParam{})));
+    EXPECT_THAT(to_result(-FP::nan(1)), Not(ArithmeticNaN(TypeParam{})));
 #endif
 }
 
@@ -275,7 +280,7 @@ TYPED_TEST(execute_floating_point_types, compare)
             {
                 const auto a = ordered_values[i];
                 const auto b = ordered_values[j];
-                if (std::isnan(a) || std::isnan(b))
+                if (a.is_nan() || b.is_nan())
                 {
                     EXPECT_THAT(eq(a, b), Result(0)) << a << "==" << b;
                     EXPECT_THAT(ne(a, b), Result(1)) << a << "!=" << b;
@@ -321,6 +326,11 @@ TYPED_TEST(execute_floating_point_types, abs)
 
         for (const auto p : TestValues<TypeParam>::positive_all())
         {
+#if !SNAN_SUPPORTED
+            if (!p.is_arithmetic_nan())
+                continue;
+#endif
+
             // fabs(+-p) = +p
             EXPECT_THAT(exec(p), Result(p));
             EXPECT_THAT(exec(-p), Result(p));
@@ -341,6 +351,11 @@ TYPED_TEST(execute_floating_point_types, neg)
         SCOPED_TRACE(rounding_direction);
         for (const auto p : TestValues<TypeParam>::positive_all())
         {
+#if !SNAN_SUPPORTED
+            if (!p.is_arithmetic_nan())
+                continue;
+#endif
+
             // fneg(+-p) = -+p
             EXPECT_THAT(exec(p), Result(-p));
             EXPECT_THAT(exec(-p), Result(p));
@@ -708,7 +723,7 @@ TYPED_TEST(execute_floating_point_types, add_sub_neg_relation)
             const auto addneg_result = addneg(z1, z2);
             ASSERT_TRUE(addneg_result.has_value);
 
-            if (std::isnan(z1) || std::isnan(z2))
+            if (z1.is_nan() || z2.is_nan())
             {
                 if (FP{z1}.nan_payload() == FP::canon && FP{z2}.nan_payload() == FP::canon)
                 {
@@ -970,8 +985,18 @@ TYPED_TEST(execute_floating_point_types, copysign)
 
         for (const auto p1 : TestValues<TypeParam>::positive_all())
         {
+#if !SNAN_SUPPORTED
+            if (!p1.is_arithmetic_nan())
+                continue;
+#endif
             for (const auto p2 : TestValues<TypeParam>::positive_all())
             {
+#if !SNAN_SUPPORTED
+                if (!p2.is_arithmetic_nan())
+                    continue;
+#endif
+
+
                 // fcopysign(+-p1, +-p2) = +-p1
                 EXPECT_THAT(exec(p1, p2), Result(p1));
                 EXPECT_THAT(exec(-p1, -p2), Result(-p1));
@@ -999,7 +1024,9 @@ TEST(execute_floating_point, f32_load)
 
     auto instance = instantiate(parse(wasm));
 
-    const std::tuple<bytes, float> test_cases[]{
+    const std::tuple<bytes, FP32> test_cases[]
+    {
+        // clang-format off
         {"00000000"_bytes, 0.0f},
         {"00000080"_bytes, -0.0f},
         {"b6f39d3f"_bytes, 1.234f},
@@ -1020,8 +1047,11 @@ TEST(execute_floating_point, f32_load)
         {"0000c0ff"_bytes, -FP32::nan(FP32::canon)},
         {"0100c07f"_bytes, FP32::nan(FP32::canon + 1)},
         {"0100c0ff"_bytes, -FP32::nan(FP32::canon + 1)},
+#if SNAN_SUPPORTED
         {"0100807f"_bytes, FP32::nan(1)},
         {"010080ff"_bytes, -FP32::nan(1)},
+#endif
+        // clang-format on
     };
 
     uint32_t address = 0;
@@ -1072,7 +1102,9 @@ TEST(execute_floating_point, f64_load)
 
     auto instance = instantiate(parse(wasm));
 
-    const std::tuple<bytes, double> test_cases[]{
+    const std::tuple<bytes, FP64> test_cases[]
+    {
+        // clang-format off
         {"0000000000000000"_bytes, 0.0},
         {"0000000000000080"_bytes, -0.0},
         {"5839b4c876bef33f"_bytes, 1.234},
@@ -1093,8 +1125,11 @@ TEST(execute_floating_point, f64_load)
         {"000000000000f8ff"_bytes, -FP64::nan(FP64::canon)},
         {"010000000000f87f"_bytes, FP64::nan(FP64::canon + 1)},
         {"010000000000f8ff"_bytes, -FP64::nan(FP64::canon + 1)},
+#if SNAN_SUPPORTED
         {"010000000000f07f"_bytes, FP64::nan(1)},
         {"010000000000f0ff"_bytes, -FP64::nan(1)},
+#endif
+        // clang-format on
     };
 
     uint32_t address = 0;
@@ -1148,7 +1183,7 @@ TEST(execute_floating_point, f32_store)
         "0b06cccccccccccc");
     const auto module = parse(wasm);
 
-    const std::tuple<float, bytes> test_cases[]
+    const std::tuple<FP32, bytes> test_cases[]
     {
         // clang-format off
         {0.0f, "cc00000000cc"_bytes},
@@ -1229,7 +1264,7 @@ TEST(execute_floating_point, f64_store)
         "0b0ccccccccccccccccccccccccc");
     const auto module = parse(wasm);
 
-    const std::tuple<double, bytes> test_cases[]
+    const std::tuple<FP64, bytes> test_cases[]
     {
         // clang-format off
         {0.0, "cc0000000000000000cc"_bytes},

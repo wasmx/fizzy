@@ -228,13 +228,11 @@ constexpr TypedValue from_bits(ValType ty, uint64_t bits) noexcept
     switch (ty)
     {
     case ValType::i32:
-        return static_cast<uint32_t>(bits);
+    case ValType::f32:  // For f32 interpret bits as integer value not to convert sNaN -> qNaN.
+        return {ty, Value{static_cast<uint32_t>(bits)}};
     case ValType::i64:
-        return bits;
-    case ValType::f32:
-        return FP{static_cast<uint32_t>(bits)}.value;
-    case ValType::f64:
-        return FP{bits}.value;
+    case ValType::f64:  // For f64 interpret bits as integer value not to convert sNaN -> qNaN.
+        return {ty, bits};
     }
     __builtin_unreachable();
 }
@@ -275,7 +273,7 @@ bool eq(TypedValue v, uint64_t expected_bits, bool ignore_nan_payloads)
     {
         const FP fp_value{v.value.f32};
         const FP expected{static_cast<uint32_t>(expected_bits)};
-        if (ignore_nan_payloads && std::isnan(expected.value))
+        if (ignore_nan_payloads && expected.is_nan())
         {
             if (expected.is_canonical_nan())
                 return fp_value.is_canonical_nan();
@@ -290,7 +288,7 @@ bool eq(TypedValue v, uint64_t expected_bits, bool ignore_nan_payloads)
     {
         const FP fp_value{v.value.f64};
         const FP expected{expected_bits};
-        if (ignore_nan_payloads && std::isnan(expected.value))
+        if (ignore_nan_payloads && expected.is_nan())
         {
             if (expected.is_canonical_nan())
                 return fp_value.is_canonical_nan();

@@ -42,14 +42,14 @@ MATCHER_P(Result, value, "")  // NOLINT(readability-redundant-string-init)
         if (arg.trapped || !arg.has_value)
             return false;
 
-        if constexpr (std::is_same_v<value_type, float>)
+        if constexpr (std::is_same_v<value_type, float> || std::is_same_v<value_type, test::FP32>)
         {
-            return arg.type == ValType::f32 && arg.value.f32 == test::FP{value};
+            return arg.type == ValType::f32 && test::FP32{arg.value.f32} == value;
         }
 
-        if constexpr (std::is_same_v<value_type, double>)
+        if constexpr (std::is_same_v<value_type, double> || std::is_same_v<value_type, test::FP64>)
         {
-            return arg.type == ValType::f64 && arg.value.f64 == test::FP{value};
+            return arg.type == ValType::f64 && test::FP64{arg.value.f64} == value;
         }
 
         if constexpr (std::is_integral_v<value_type> && sizeof(value_type) == sizeof(uint64_t))
@@ -95,11 +95,11 @@ MATCHER_P(CResult, value, "")  // NOLINT(readability-redundant-string-init)
     if constexpr (std::is_floating_point_v<value_type>)
     {
         if constexpr (std::is_same_v<float, value_type>)
-            return arg.value.f32 == fizzy::test::FP{value};
+            return fizzy::test::FP{arg.value.f32} == value;
         else
         {
             static_assert(std::is_same_v<double, value_type>);
-            return arg.value.f64 == fizzy::test::FP{value};
+            return fizzy::test::FP{arg.value.f64} == value;
         }
     }
     else if constexpr (std::is_same_v<value_type, uint32_t>)

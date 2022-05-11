@@ -5,9 +5,11 @@
 #pragma once
 
 #include "cxx20/bit.hpp"
+#include "typed_value.hpp"
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <ostream>
 #include <type_traits>
 
 #ifdef __i386__
@@ -23,15 +25,24 @@ namespace fizzy::test
 template <typename T>
 struct FP
 {
-    static_assert(std::is_same_v<T, float> || std::is_same_v<T, double>);
+    /// The wrapped floating-point type.
+    using FloatType = T;
+
+    static_assert(std::is_same_v<FloatType, float> || std::is_same_v<FloatType, double>);
 
     /// Shortcut to numeric_limits.
-    using Limits = std::numeric_limits<T>;
+    using Limits = std::numeric_limits<FloatType>;
     static_assert(Limits::is_iec559);
 
     /// The unsigned integer type matching the size of this floating-point type.
-    using UintType = std::conditional_t<std::is_same_v<T, float>, uint32_t, uint64_t>;
-    static_assert(sizeof(T) == sizeof(UintType));
+    using UintType = std::conditional_t<std::is_same_v<FloatType, float>, uint32_t, uint64_t>;
+    static_assert(sizeof(FloatType) == sizeof(UintType));
+
+    /// The position of the sign bit counting from the lowest bits.
+    static constexpr auto sign_bit_pos = (sizeof(UintType) * 8 - 1);
+
+    /// The mask extracting the sign bit.
+    static constexpr auto sign_mask = UintType{1} << sign_bit_pos;
 
     /// The number of mantissa bits in the binary representation.
     static constexpr auto num_mantissa_bits = Limits::digits - 1;
@@ -40,7 +51,7 @@ struct FP
     static constexpr auto mantissa_mask = (UintType{1} << num_mantissa_bits) - 1;
 
     /// The number of exponent bits in the binary representation.
-    static constexpr auto num_exponent_bits = int{sizeof(T) * 8} - num_mantissa_bits - 1;
+    static constexpr auto num_exponent_bits = int{sizeof(FloatType) * 8} - num_mantissa_bits - 1;
 
     /// The exponent value (all exponent bits set) for NaNs.
     static constexpr auto nan_exponent = (UintType{1} << num_exponent_bits) - 1;
@@ -49,20 +60,45 @@ struct FP
     /// See: https://webassembly.github.io/spec/core/syntax/values.html#canonical-nan.
     static constexpr auto canon = UintType{1} << (num_mantissa_bits - 1);
 
-    T value{};
+private:
+    UintType m_storage{};  ///< Bits storage.
 
-    explicit FP(T v) noexcept : value{v} {}
+public:
+    FP() = default;
 
-    explicit FP(UintType u) noexcept : value{bit_cast<T>(u)} {}
+    FP(FloatType v) noexcept : m_storage{bit_cast<UintType>(v)} {}
+
+    explicit FP(UintType u) noexcept : m_storage{u} {}
+
+    operator TypedValue() const noexcept
+    {
+        if constexpr (std::is_same_v<FloatType, float>)
+            return {ValType::f32, Value{m_storage}};
+        else
+            return {ValType::f64, Value{m_storage}};
+    }
 
     /// Return unsigned integer with the binary representation of the value.
-    UintType as_uint() const noexcept { return bit_cast<UintType>(value); }
+    UintType as_uint() const noexcept { return m_storage; }
+
+    /// Return the floating-point value.
+    FloatType as_float() const noexcept { return bit_cast<FloatType>(m_storage); }
+
+    /// Returns true if the value is a NaN.
+    ///
+    /// The implementation only inspects the bit patterns in the storage.
+    /// Using floating-point functions like std::isnan() is explicitly avoided because
+    /// passing/returning float value to/from functions causes signaling-NaN to quiet-NaN
+    /// conversions on some architectures (e.g. i368).
+    bool is_nan() const noexcept
+    {
+        const auto exponent = (m_storage >> num_mantissa_bits) & nan_exponent;
+        const auto mantissa = m_storage & mantissa_mask;
+        return exponent == nan_exponent && mantissa != 0;
+    }
 
     /// Returns NaN payload if the value is a NaN, otherwise 0 (NaN payload is never 0).
-    UintType nan_payload() const noexcept
-    {
-        return std::isnan(value) ? (as_uint() & mantissa_mask) : 0;
-    }
+    UintType nan_payload() const noexcept { return is_nan() ? (as_uint() & mantissa_mask) : 0; }
 
     bool is_canonical_nan() const noexcept { return nan_payload() == canon; }
 
@@ -75,18 +111,37 @@ struct FP
     /// The IEEE 754 defines quiet NaN as having the top bit of the mantissa set to 1. Wasm calls
     /// this NaN _arithmetic_. The arithmetic NaN with the lowest mantissa (the top bit set, all
     /// other zeros) is the _canonical_ NaN.
-    static T nan(UintType payload) noexcept
+    static FP nan(UintType payload) noexcept
     {
-        return FP{(nan_exponent << num_mantissa_bits) | (payload & mantissa_mask)}.value;
+        return FP{(nan_exponent << num_mantissa_bits) | (payload & mantissa_mask)};
     }
 
+    /// Returns the value of the sign bit.
+    UintType sign_bit() const noexcept { return m_storage >> sign_bit_pos; }
+
+    /// Negates the value (works also for NaNs).
+    FP operator-() const noexcept { return FP{m_storage ^ sign_mask}; }
+
     friend bool operator==(FP a, FP b) noexcept { return a.as_uint() == b.as_uint(); }
-    friend bool operator==(FP a, T b) noexcept { return a == FP{b}; }
-    friend bool operator==(T a, FP b) noexcept { return FP{a} == b; }
+    friend bool operator==(FP a, FloatType b) noexcept { return a == FP{b}; }
+    friend bool operator==(FloatType a, FP b) noexcept { return FP{a} == b; }
 
     friend bool operator!=(FP a, FP b) noexcept { return !(a == b); }
-    friend bool operator!=(FP a, T b) noexcept { return a != FP{b}; }
-    friend bool operator!=(T a, FP b) noexcept { return FP{a} != b; }
+    friend bool operator!=(FP a, FloatType b) noexcept { return a != FP{b}; }
+    friend bool operator!=(FloatType a, FP b) noexcept { return FP{a} != b; }
+
+    friend std::ostream& operator<<(std::ostream& os, FP x)
+    {
+        const auto format_flags = os.flags();
+        os << x.as_float() << " [";
+        if (x.is_nan())
+            os << std::hex << x.nan_payload();
+        else
+            os << std::hexfloat << x.as_float();
+        os << "]";
+        os.flags(format_flags);
+        return os;
+    }
 };
 
 FP(uint32_t)->FP<float>;
