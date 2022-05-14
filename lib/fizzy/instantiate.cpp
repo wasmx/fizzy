@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "instantiate.hpp"
+#include "cxx20/bit.hpp"
 #include "execute.hpp"  // needed for implementation of ExecuteFunction for Wasm functions
 #include <algorithm>
 #include <cassert>
@@ -333,8 +334,21 @@ ExecutionResult ExecuteFunction::operator()(
 {
     if (m_instance)
         return execute(*m_instance, m_func_idx, args, ctx);
-    else
+    else if (m_host_function)
         return m_host_function(m_host_context, instance, args, ctx);
+    else
+    {
+        assert(m_c_host_function != nullptr);
+        const auto result = m_c_host_function(std::any_cast<void*&>(m_host_context),
+            reinterpret_cast<FizzyInstance*>(&instance), reinterpret_cast<const FizzyValue*>(args),
+            reinterpret_cast<FizzyExecutionContext*>(&ctx));
+        if (result.trapped)
+            return fizzy::Trap;
+        else if (!result.has_value)
+            return fizzy::Void;
+        else
+            return fizzy::bit_cast<fizzy::Value>(result.value);
+    }
 }
 
 std::unique_ptr<Instance> instantiate(std::unique_ptr<const Module> module,

@@ -130,6 +130,8 @@ typedef struct FizzyExternalFunction
 {
     /// Function type.
     FizzyFunctionType type;
+    FizzyInstance* instance;
+    uint32_t function_index;
     /// Pointer to function.
     FizzyExternalFn function;
     /// Opaque pointer to execution context, that will be passed to function.
@@ -555,15 +557,6 @@ size_t fizzy_get_instance_memory_size(FizzyInstance* instance) FIZZY_NOEXCEPT;
 /// @return                 true if function was found, false otherwise.
 bool fizzy_find_exported_function(
     FizzyInstance* instance, const char* name, FizzyExternalFunction* out_function) FIZZY_NOEXCEPT;
-
-/// Free resources associated with exported function.
-///
-/// @param  external_function    Pointer to external function struct filled by
-///                              fizzy_find_exported_function(). Cannot be NULL.
-///
-/// @note  This function may not be called with external function, which was not returned from
-///        fizzy_find_exported_function().
-void fizzy_free_exported_function(FizzyExternalFunction* external_function) FIZZY_NOEXCEPT;
 
 /// Find exported table by name.
 ///

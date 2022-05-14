@@ -479,12 +479,14 @@ TEST(capi, find_exported_function)
     ASSERT_TRUE(fizzy_find_exported_function(instance, "foo", &function));
     EXPECT_EQ(function.type.inputs_size, 0);
     EXPECT_EQ(function.type.output, FizzyValueTypeI32);
-    EXPECT_NE(function.context, nullptr);
-    ASSERT_NE(function.function, nullptr);
+    EXPECT_EQ(function.context, nullptr);
+    ASSERT_EQ(function.function, nullptr);
+    EXPECT_EQ(function.instance, instance);
+    EXPECT_EQ(function.function_index, 0);
 
-    EXPECT_THAT(function.function(function.context, instance, nullptr, nullptr), CResult(42_u32));
 
-    fizzy_free_exported_function(&function);
+    // EXPECT_THAT(function.function(function.context, instance, nullptr, nullptr),
+    // CResult(42_u32));
 
     EXPECT_FALSE(fizzy_find_exported_function(instance, "foo2", &function));
     EXPECT_FALSE(fizzy_find_exported_function(instance, "g1", &function));
@@ -731,7 +733,8 @@ TEST(capi, instantiate_imported_function)
     module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
-    FizzyExternalFunction host_funcs[] = {{{FizzyValueTypeI32, nullptr, 0}, NullFn, nullptr}};
+    FizzyExternalFunction host_funcs[] = {
+        {{FizzyValueTypeI32, nullptr, 0}, nullptr, 0, NullFn, nullptr}};
 
     auto instance = fizzy_instantiate(
         module, host_funcs, 1, nullptr, nullptr, nullptr, 0, FizzyMemoryPagesLimitDefault, nullptr);
@@ -921,7 +924,7 @@ TEST(capi, resolve_instantiate_no_imports)
 
     // providing unnecessary import
     FizzyImportedFunction host_funcs[] = {
-        {"mod", "foo", {{FizzyValueTypeVoid, nullptr, 0}, NullFn, nullptr}}};
+        {"mod", "foo", {{FizzyValueTypeVoid, nullptr, 0}, nullptr, 0, NullFn, nullptr}}};
 
     instance = fizzy_resolve_instantiate(
         module, host_funcs, 1, nullptr, nullptr, nullptr, 0, FizzyMemoryPagesLimitDefault, nullptr);
@@ -976,15 +979,19 @@ TEST(capi, resolve_instantiate_functions)
 
     const FizzyValueType input_type = FizzyValueTypeI32;
     FizzyValue result_int32{42};
-    FizzyExternalFunction mod1foo1 = {{FizzyValueTypeI32, &input_type, 1}, host_fn, &result_int32};
+    FizzyExternalFunction mod1foo1 = {
+        {FizzyValueTypeI32, &input_type, 1}, nullptr, 0, host_fn, &result_int32};
     FizzyValue result_int64{43};
-    FizzyExternalFunction mod1foo2 = {{FizzyValueTypeI64, &input_type, 1}, host_fn, &result_int64};
+    FizzyExternalFunction mod1foo2 = {
+        {FizzyValueTypeI64, &input_type, 1}, nullptr, 0, host_fn, &result_int64};
     FizzyValue result_f32;
     result_f32.f32 = 44.44f;
-    FizzyExternalFunction mod2foo1 = {{FizzyValueTypeF32, &input_type, 1}, host_fn, &result_f32};
+    FizzyExternalFunction mod2foo1 = {
+        {FizzyValueTypeF32, &input_type, 1}, nullptr, 0, host_fn, &result_f32};
     FizzyValue result_f64;
     result_f64.f64 = 45.45;
-    FizzyExternalFunction mod2foo2 = {{FizzyValueTypeF64, &input_type, 1}, host_fn, &result_f64};
+    FizzyExternalFunction mod2foo2 = {
+        {FizzyValueTypeF64, &input_type, 1}, nullptr, 0, host_fn, &result_f64};
 
     FizzyImportedFunction host_funcs[] = {{"mod1", "foo1", mod1foo1}, {"mod1", "foo2", mod1foo2},
         {"mod2", "foo1", mod2foo1}, {"mod2", "foo2", mod2foo2}};
@@ -1048,7 +1055,8 @@ TEST(capi, resolve_instantiate_function_duplicate)
         return FizzyExecutionResult{false, true, FizzyValue{42}};
     };
 
-    FizzyExternalFunction mod1foo1 = {{FizzyValueTypeI32, nullptr, 0}, host_fn, nullptr};
+    FizzyExternalFunction mod1foo1 = {
+        {FizzyValueTypeI32, nullptr, 0}, nullptr, 0, host_fn, nullptr};
     FizzyImportedFunction host_funcs[] = {{"mod1", "foo1", mod1foo1}};
 
     auto instance = fizzy_resolve_instantiate(
@@ -1096,7 +1104,7 @@ TEST(capi, resolve_instantiate_globals)
         return FizzyExecutionResult{true, false, {0}};
     };
     FizzyImportedFunction mod1foo1 = {
-        "mod1", "foo1", {{FizzyValueTypeVoid, nullptr, 0}, host_fn, nullptr}};
+        "mod1", "foo1", {{FizzyValueTypeVoid, nullptr, 0}, nullptr, 0, host_fn, nullptr}};
 
     FizzyValue mod1g1value{42};
     FizzyExternalGlobal mod1g1 = {&mod1g1value, {FizzyValueTypeI32, false}};
@@ -1428,12 +1436,12 @@ TEST(capi, execute_with_host_function)
     const FizzyValueType inputs[] = {FizzyValueTypeI32, FizzyValueTypeI32};
 
     FizzyExternalFunction host_funcs[] = {
-        {{FizzyValueTypeI32, nullptr, 0},
+        {{FizzyValueTypeI32, nullptr, 0}, nullptr, 0,
             [](void*, FizzyInstance*, const FizzyValue*, FizzyExecutionContext*) noexcept {
                 return FizzyExecutionResult{false, true, {42}};
             },
             nullptr},
-        {{FizzyValueTypeI32, &inputs[0], 2},
+        {{FizzyValueTypeI32, &inputs[0], 2}, nullptr, 0,
             [](void*, FizzyInstance*, const FizzyValue* args, FizzyExecutionContext*) noexcept {
                 FizzyValue v;
                 v.i32 = args[0].i32 / args[1].i32;
@@ -1466,7 +1474,7 @@ TEST(capi, imported_function_traps)
     auto module = fizzy_parse(wasm.data(), wasm.size(), nullptr);
     ASSERT_NE(module, nullptr);
 
-    FizzyExternalFunction host_funcs[] = {{{FizzyValueTypeI32, nullptr, 0},
+    FizzyExternalFunction host_funcs[] = {{{FizzyValueTypeI32, nullptr, 0}, nullptr, 0,
         [](void*, FizzyInstance*, const FizzyValue*, FizzyExecutionContext*) noexcept {
             return FizzyExecutionResult{true, false, {}};
         },
@@ -1495,7 +1503,7 @@ TEST(capi, imported_function_void)
     ASSERT_NE(module, nullptr);
 
     bool called = false;
-    FizzyExternalFunction host_funcs[] = {{{},
+    FizzyExternalFunction host_funcs[] = {{{}, nullptr, 0,
         [](void* context, FizzyInstance*, const FizzyValue*, FizzyExecutionContext*) noexcept {
             *static_cast<bool*>(context) = true;
             return FizzyExecutionResult{false, false, {}};
@@ -1558,7 +1566,6 @@ TEST(capi, imported_function_from_another_module)
     FizzyValue args[] = {{44}, {2}};
     EXPECT_THAT(fizzy_execute(instance2, 1, args), CResult(42_u32));
 
-    fizzy_free_exported_function(&func);
     fizzy_free_instance(instance2);
     fizzy_free_instance(instance1);
 }
@@ -1936,7 +1943,8 @@ TEST(capi, import_name_after_instantiate)
     EXPECT_STREQ(import0.module, "m");
     EXPECT_STREQ(import0.name, "f1");
 
-    FizzyExternalFunction host_funcs[] = {{{FizzyValueTypeI32, nullptr, 0}, NullFn, nullptr}};
+    FizzyExternalFunction host_funcs[] = {
+        {{FizzyValueTypeI32, nullptr, 0}, nullptr, 0, NullFn, nullptr}};
 
     auto instance = fizzy_instantiate(
         module, host_funcs, 1, nullptr, nullptr, nullptr, 0, FizzyMemoryPagesLimitDefault, nullptr);

@@ -10,6 +10,7 @@
 #include "module.hpp"
 #include "types.hpp"
 #include "value.hpp"
+#include <fizzy/fizzy.h>
 #include <any>
 #include <cstdint>
 #include <functional>
@@ -42,6 +43,8 @@ class ExecuteFunction
     /// Equals nullptr in case this ExecuteFunction represents WebAssembly function.
     HostFunctionPtr m_host_function = nullptr;
 
+    FizzyExternalFn m_c_host_function = nullptr;
+
     /// Opaque context of host function execution, which is passed to it as host_context parameter.
     /// Doesn't have value in case this ExecuteFunction represents WebAssembly function.
     std::any m_host_context;
@@ -67,8 +70,20 @@ public:
     ExecutionResult operator()(
         Instance& instance, const Value* args, ExecutionContext& ctx) noexcept;
 
+    ExecuteFunction(FizzyExternalFn f, void* host_context) noexcept
+      : m_c_host_function{f}, m_host_context{host_context}
+    {}
+
+    Instance* get_instance() const noexcept { return m_instance; }
+
     /// Function pointer stored inside this object.
     HostFunctionPtr get_host_function() const noexcept { return m_host_function; }
+
+    FizzyExternalFn get_c_host_function() const noexcept { return m_c_host_function; }
+
+    FuncIdx get_function_index() const noexcept { return m_func_idx; }
+
+    std::any& get_host_context() noexcept { return m_host_context; }
 };
 
 /// Function with associated input/output types,
