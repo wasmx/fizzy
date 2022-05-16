@@ -11,6 +11,17 @@
 #include <version>
 #endif
 
+#ifdef __cpp_lib_bit_cast
+
+#include <bit>
+
+namespace fizzy
+{
+using std::bit_cast;
+}  // namespace fizzy
+
+#else
+
 namespace fizzy
 {
 /// The non-constexpr implementation of C++20's std::bit_cast.
@@ -29,6 +40,8 @@ template <class To, class From>
     return dst;
 }
 }  // namespace fizzy
+
+#endif /* __cpp_lib_bit_cast */
 
 #ifdef __cpp_lib_bitops
 
