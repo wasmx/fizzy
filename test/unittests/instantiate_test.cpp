@@ -302,12 +302,12 @@ TEST(instantiate, imported_memory_invalid)
 
     // Allocated less than min
     EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{&memory_empty, {1, 3}}}), instantiate_error,
-        "provided imported memory doesn't fit provided limits");
+        "provided imported memory size must be equal to its min limit");
 
-    // Allocated more than max
-    bytes memory_big(PageSize * 4, 0);
-    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{&memory_big, {1, 3}}}), instantiate_error,
-        "provided imported memory doesn't fit provided limits");
+    // Allocated more than min but less than max
+    bytes memory_two_pages(PageSize * 2, 0);
+    EXPECT_THROW_MESSAGE(instantiate(*module, {}, {}, {{&memory_two_pages, {1, 3}}}),
+        instantiate_error, "provided imported memory size must be equal to its min limit");
 
     // Provided max exceeds the hard limit
     /* wat2wasm
