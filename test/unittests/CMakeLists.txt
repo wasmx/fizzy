@@ -11,6 +11,10 @@ target_sources(
     fizzy-unittests PRIVATE
     api_test.cpp
     asserts_test.cpp
+    capi_execute_test.cpp
+    capi_exports_test.cpp
+    capi_instantiate_test.cpp
+    capi_module_test.cpp
     capi_test.cpp
     constexpr_vector_test.cpp
     cxx20_bit_test.cpp
@@ -45,6 +49,12 @@ target_sources(
     wasi_test.cpp
     wasm_engine_test.cpp
 )
+
+if(CABLE_COMPILER_GNU AND (CMAKE_CXX_COMPILER_VERSION EQUAL "11.2.0"))
+    # GCC11 generates false positive error when linking capi_instantiate_test.cpp with sanitizers.
+    set_source_files_properties(capi_instantiate_test.cpp PROPERTIES COMPILE_OPTIONS "-fno-sanitize=pointer-compare")
+endif()
+
 
 gtest_discover_tests(
     fizzy-unittests
