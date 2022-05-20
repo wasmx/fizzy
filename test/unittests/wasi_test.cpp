@@ -23,6 +23,8 @@ public:
     std::optional<uvwasi_exitcode_t> exit_code;
     std::optional<uvwasi_fd_t> write_fd;
     std::vector<bytes> write_data;
+    std::optional<uvwasi_fd_t> read_fd;
+    const bytes read_data = from_hex("3243f6a8885a308d313198a2e03707");
 
     uvwasi_errno_t init(uvwasi_size_t /*argc*/, const char** /*argv*/) noexcept final
     {
@@ -53,9 +55,25 @@ public:
         return UVWASI_ESUCCESS;
     }
 
-    uvwasi_errno_t fd_read(uvwasi_fd_t /*fd*/, const uvwasi_iovec_t* /*iovs*/,
-        uvwasi_size_t /*iovs_len*/, uvwasi_size_t* /*nread*/) noexcept final
+    uvwasi_errno_t fd_read(uvwasi_fd_t fd, const uvwasi_iovec_t* iovs, uvwasi_size_t iovs_len,
+        uvwasi_size_t* nread) noexcept final
     {
+        read_fd = fd;
+
+        uvwasi_size_t total_len = 0;
+        for (uvwasi_size_t i = 0; i < iovs_len; ++i)
+        {
+            const auto n =
+                std::min(iovs[i].buf_len, static_cast<uvwasi_size_t>(read_data.size()) - total_len);
+            std::copy_n(&read_data[total_len], n, static_cast<uint8_t*>(iovs[i].buf));
+
+            total_len += n;
+
+            if (n < iovs[i].buf_len)
+                break;
+        }
+
+        *nread = total_len;
         return UVWASI_ESUCCESS;
     }
 
@@ -256,3 +274,123 @@ TEST_F(wasi_mocked_test, fd_write_invalid_input)
     EXPECT_TRUE(mock_uvwasi->init_called);
     EXPECT_NE(instance->globals[0].i32, 0);
 }
+
+TEST_F(wasi_mocked_test, fd_read)
+{
+    /* wat2wasm
+      (func (import "wasi_snapshot_preview1" "fd_read") (param i32 i32 i32 i32) (result i32))
+      (memory (export "memory") 1)
+      (data (i32.const 0)    "\08\00\00\00")    ;; buf ptr
+      (data (i32.const 0x04) "\04\00\00\00")    ;; buf len
+      (data (i32.const 0x08) "\12\34\56\78")    ;; buf data
+      (data (i32.const 0x0c) "\de\ad\be\ef")    ;; will be overwritten with nread
+      (func (export "_start")
+        (call 0
+          (i32.const 0) ;; fd
+          (i32.const 0) ;; iov_ptr
+          (i32.const 1) ;; iov_cnt
+          (i32.const 0x0c)) ;; nread_ptr
+        (if (i32.popcnt) (then unreachable)))
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010c0260047f7f7f7f017f60000002220116776173695f736e617073686f745f7072657669"
+        "6577310766645f726561640000030201010503010001071302066d656d6f72790200065f737461727400010a13"
+        "011100410041004101410c1000690440000b0b0b25040041000b04080000000041040b04040000000041080b04"
+        "1234567800410c0b04deadbeef");
+
+    auto instance = wasi::instantiate(*mock_uvwasi, wasm);
+
+    EXPECT_FALSE(mock_uvwasi->init_called);
+    EXPECT_FALSE(mock_uvwasi->read_fd.has_value());
+
+    std::ostringstream err;
+    EXPECT_TRUE(wasi::run(*mock_uvwasi, *instance, 0, nullptr, err)) << err.str();
+
+    EXPECT_TRUE(mock_uvwasi->init_called);
+    ASSERT_TRUE(mock_uvwasi->read_fd.has_value());
+    EXPECT_EQ(*mock_uvwasi->read_fd, 0);
+
+    // read data
+    EXPECT_EQ(instance->memory->substr(0x08, 4), mock_uvwasi->read_data.substr(0, 4));
+    // nread
+    EXPECT_EQ(instance->memory->substr(0x0c, 4), from_hex("04000000"));
+}
+
+TEST_F(wasi_mocked_test, fd_read_scatter)
+{
+    /* wat2wasm
+      (func (import "wasi_snapshot_preview1" "fd_read") (param i32 i32 i32 i32) (result i32))
+      (memory (export "memory") 1)
+      (data (i32.const 0)    "\10\00\00\00")    ;; buf1 ptr
+      (data (i32.const 0x04) "\04\00\00\00")    ;; buf1 len
+      (data (i32.const 0x08) "\14\00\00\00")    ;; buf2 ptr
+      (data (i32.const 0x0c) "\08\00\00\00")    ;; buf2 len
+      (data (i32.const 0x10) "\12\34\56\78")    ;; buf1 data
+      (data (i32.const 0x14) "\11\22\33\44\55\66\77\88") ;; buf2 data
+      (data (i32.const 0x1c) "\de\ad\be\ef")    ;; will be overwritten with nread
+      (func (export "_start")
+        (call 0
+          (i32.const 0) ;; fd
+          (i32.const 0) ;; iov_ptr
+          (i32.const 2) ;; iov_cnt
+          (i32.const 0x1c)) ;; nread_ptr
+        (if (i32.popcnt) (then unreachable)))
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010c0260047f7f7f7f017f60000002220116776173695f736e617073686f745f7072657669"
+        "6577310766645f726561640000030201010503010001071302066d656d6f72790200065f737461727400010a13"
+        "011100410041004102411c1000690440000b0b0b44070041000b04100000000041040b04040000000041080b04"
+        "1400000000410c0b04080000000041100b04123456780041140b08112233445566778800411c0b04deadbeef");
+
+    auto instance = wasi::instantiate(*mock_uvwasi, wasm);
+
+    EXPECT_FALSE(mock_uvwasi->init_called);
+    EXPECT_FALSE(mock_uvwasi->read_fd.has_value());
+
+    std::ostringstream err;
+    EXPECT_TRUE(wasi::run(*mock_uvwasi, *instance, 0, nullptr, err)) << err.str();
+
+    EXPECT_TRUE(mock_uvwasi->init_called);
+    ASSERT_TRUE(mock_uvwasi->read_fd.has_value());
+    EXPECT_EQ(*mock_uvwasi->read_fd, 0);
+
+    // read data
+    EXPECT_EQ(instance->memory->substr(0x10, 4), mock_uvwasi->read_data.substr(0, 4));
+    EXPECT_EQ(instance->memory->substr(0x14, 8), mock_uvwasi->read_data.substr(4, 8));
+    // nread
+    EXPECT_EQ(instance->memory->substr(0x1c, 4), from_hex("0c000000"));
+}
+
+TEST_F(wasi_mocked_test, fd_read_invalid_input)
+{
+    /* wat2wasm
+      (func (import "wasi_snapshot_preview1" "fd_read") (param i32 i32 i32 i32) (result i32))
+      (memory (export "memory") 1)
+      (data (i32.const 0)    "\00\00\01\00")    ;; buf ptr - out of memory bounds
+      (data (i32.const 0x04) "\04\00\00\00")    ;; buf len
+      (global (mut i32) (i32.const 0))
+      (func (export "_start")
+        (call 0
+          (i32.const 0) ;; fd
+          (i32.const 0) ;; iov_ptr
+          (i32.const 1) ;; iov_cnt
+          (i32.const 0x0c)) ;; nread_ptr
+        (global.set 0))
+    */
+    const auto wasm = from_hex(
+        "0061736d01000000010c0260047f7f7f7f017f60000002220116776173695f736e617073686f745f7072657669"
+        "6577310766645f7265616400000302010105030100010606017f0141000b071302066d656d6f72790200065f73"
+        "7461727400010a10010e00410041004101410c100024000b0b13020041000b04000001000041040b040400000"
+        "0");
+
+    auto instance = wasi::instantiate(*mock_uvwasi, wasm);
+
+    EXPECT_FALSE(mock_uvwasi->init_called);
+
+    std::ostringstream err;
+    EXPECT_TRUE(wasi::run(*mock_uvwasi, *instance, 0, nullptr, err)) << err.str();
+
+    EXPECT_TRUE(mock_uvwasi->init_called);
+    EXPECT_NE(instance->globals[0].i32, 0);
+}
+
