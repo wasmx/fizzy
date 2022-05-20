@@ -18,12 +18,12 @@ endif()
 ExternalProject_Add(wasm3
     EXCLUDE_FROM_ALL 1
     PREFIX ${prefix}
-    DOWNLOAD_NAME wasm3-v0.4.9.tar.gz
+    DOWNLOAD_NAME wasm3-v0.5.0.tar.gz
     DOWNLOAD_DIR ${prefix}/downloads
     SOURCE_DIR ${source_dir}
     BINARY_DIR ${binary_dir}
-    URL https://github.com/wasm3/wasm3/archive/v0.4.9.tar.gz
-    URL_HASH SHA256=4a09c118fae597db046bddad5734cc536a47f9afd333855789bda6955d08a617
+    URL https://github.com/wasm3/wasm3/archive/v0.5.0.tar.gz
+    URL_HASH SHA256=b778dd72ee2251f4fe9e2666ee3fe1c26f06f517c3ffce572416db067546536c
     CMAKE_ARGS
     ${toolchain_file}
     -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
