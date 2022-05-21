@@ -238,18 +238,23 @@ impl Module {
         // Forget Module (and avoid calling drop) because it has been consumed by instantiate (even if it failed).
         core::mem::forget(self);
         if ptr.is_null() {
-            return Err("Invalid ptr".into());
-        }
-        let instance = unsafe { NonNull::new_unchecked(ptr) };
-        Ok(Instance {
-            instance: instance,
-            module: Module {
-                ptr: unsafe {
-                    ConstNonNull::new_unchecked(sys::fizzy_get_instance_module(instance.as_ptr()))
+            debug_assert!(err.code() != 0);
+            Err(err.error().unwrap())
+        } else {
+            debug_assert!(err.code() == 0);
+            let instance = unsafe { NonNull::new_unchecked(ptr) };
+            Ok(Instance {
+                instance: instance,
+                module: Module {
+                    ptr: unsafe {
+                        ConstNonNull::new_unchecked(sys::fizzy_get_instance_module(
+                            instance.as_ptr(),
+                        ))
+                    },
+                    owned: false,
                 },
-                owned: false,
-            },
-        })
+            })
+        }
     }
 
     /// Returns true if the module has a start function defined.
