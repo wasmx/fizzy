@@ -506,6 +506,7 @@ impl Instance {
 
     /// Get a non-owned module instance.
     pub fn get_module(&self) -> &Module {
+        debug_assert!(!self.module.owned);
         &self.module
     }
 
