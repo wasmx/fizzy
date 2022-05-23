@@ -108,9 +108,7 @@ pub fn validate<T: AsRef<[u8]>>(input: T) -> Result<(), String> {
 pub struct Module(ConstNonNull<sys::FizzyModule>);
 
 impl Drop for Module {
-    fn drop(&mut self) {
-        unsafe { sys::fizzy_free_module(self.0.as_ptr()) }
-    }
+    fn drop(&mut self) {}
 }
 
 impl Clone for Module {
