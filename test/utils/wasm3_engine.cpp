@@ -42,8 +42,8 @@ namespace
 const void* env_adler32(
     IM3Runtime /*runtime*/, IM3ImportContext /*context*/, uint64_t* stack, void* mem) noexcept
 {
-    const uint32_t offset = static_cast<uint32_t>(stack[0]);
-    const uint32_t length = static_cast<uint32_t>(stack[1]);
+    const uint32_t offset = static_cast<uint32_t>(stack[1]);
+    const uint32_t length = static_cast<uint32_t>(stack[2]);
     stack[0] = fizzy::test::adler32({reinterpret_cast<uint8_t*>(mem) + offset, length});
     return m3Err_none;
 }
