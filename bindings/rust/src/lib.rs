@@ -35,10 +35,13 @@
 //! }
 //! ```
 
+mod constnonnull;
 mod sys;
 
 use std::ffi::{CStr, CString};
 use std::ptr::NonNull;
+
+use crate::constnonnull::ConstNonNull;
 
 /// A safe container for handling the low-level FizzyError struct.
 struct FizzyErrorBox(Box<sys::FizzyError>);
@@ -102,23 +105,20 @@ pub fn validate<T: AsRef<[u8]>>(input: T) -> Result<(), String> {
 }
 
 /// A parsed and validated WebAssembly 1.0 module.
-// NOTE: cannot use NonNull here given this is *const
-pub struct Module(*const sys::FizzyModule);
+pub struct Module(ConstNonNull<sys::FizzyModule>);
 
 impl Drop for Module {
     fn drop(&mut self) {
-        debug_assert!(!self.0.is_null());
-        unsafe { sys::fizzy_free_module(self.0) }
+        unsafe { sys::fizzy_free_module(self.0.as_ptr()) }
     }
 }
 
 impl Clone for Module {
     fn clone(&self) -> Self {
-        debug_assert!(!self.0.is_null());
-        let ptr = unsafe { sys::fizzy_clone_module(self.0) };
+        let ptr = unsafe { sys::fizzy_clone_module(self.0.as_ptr()) };
         // TODO: this can be zero in case of memory allocation error, should this be gracefully handled?
         assert!(!ptr.is_null());
-        Module(ptr)
+        Module(unsafe { ConstNonNull::new_unchecked(ptr) })
     }
 }
 
@@ -137,7 +137,7 @@ pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, String> {
         Err(err.message())
     } else {
         debug_assert!(err.code() == 0);
-        Ok(Module(ptr))
+        Ok(Module(unsafe { ConstNonNull::new_unchecked(ptr) }))
     }
 }
 
@@ -154,11 +154,10 @@ impl Module {
     /// Create an instance of a module.
     // TODO: support imported functions
     pub fn instantiate(self) -> Result<Instance, String> {
-        debug_assert!(!self.0.is_null());
         let mut err = FizzyErrorBox::new();
         let ptr = unsafe {
             sys::fizzy_instantiate(
-                self.0,
+                self.0.as_ptr(),
                 std::ptr::null(),
                 0,
                 std::ptr::null(),
