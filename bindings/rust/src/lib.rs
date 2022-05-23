@@ -1356,4 +1356,33 @@ mod tests {
             Error::InvalidMemoryOffsetOrSize
         );
     }
+
+    #[test]
+    fn execute_with_missing_import() {
+        /* wat2wasm
+        (module
+          (func $adler32 (import "env" "adler32") (param i32 i32) (result i32))
+          (memory (export "memory") 1)
+          (data (i32.const 0) "abcd")
+          (func (export "test") (result i32)
+            i32.const 0
+            i32.const 4
+            call $adler32
+          )
+        )
+        */
+        let input = hex::decode(
+        "0061736d01000000010b0260027f7f017f6000017f020f0103656e760761646c657233320000030201010503010001071102066d656d6f72790200047465737400010a0a0108004100410410000b0b0a010041000b0461626364").unwrap();
+
+        let module = parse(&input);
+        assert!(module.is_ok());
+        let instance = module.unwrap().instantiate();
+        assert!(instance.is_err());
+        assert_eq!(
+            instance.err().unwrap(),
+            Error::InstantiationFailed(
+                "module requires 1 imported functions, 0 provided".to_string()
+            )
+        );
+    }
 }
