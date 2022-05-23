@@ -19,6 +19,7 @@ target_sources(
     constexpr_vector_test.cpp
     cxx20_bit_test.cpp
     cxx20_span_test.cpp
+    cxx23_utility_test.cpp
     end_to_end_test.cpp
     execute_call_depth_test.cpp
     execute_call_test.cpp
