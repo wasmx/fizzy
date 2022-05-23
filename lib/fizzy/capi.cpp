@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "cxx20/bit.hpp"
+#include "cxx23/utility.hpp"
 #include "execute.hpp"
 #include "instantiate.hpp"
 #include "parser.hpp"
@@ -95,6 +96,13 @@ inline const fizzy::Module* unwrap(const FizzyModule* module) noexcept
 }
 
 static_assert(sizeof(FizzyValueType) == sizeof(fizzy::ValType));
+static_assert(FizzyValueTypeI32 == fizzy::to_underlying(fizzy::ValType::i32));
+static_assert(FizzyValueTypeI64 == fizzy::to_underlying(fizzy::ValType::i64));
+static_assert(FizzyValueTypeF32 == fizzy::to_underlying(fizzy::ValType::f32));
+static_assert(FizzyValueTypeF64 == fizzy::to_underlying(fizzy::ValType::f64));
+static_assert(FizzyValueTypeVoid == 0);
+static_assert(std::is_same_v<decltype(fizzy::to_underlying(fizzy::ValType::i32)),
+    std::remove_const<decltype(FizzyValueTypeI32)>::type>);
 
 inline const FizzyValueType* wrap(const fizzy::ValType* value_types) noexcept
 {
