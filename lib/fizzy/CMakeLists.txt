@@ -14,6 +14,7 @@ target_sources(
     asserts.hpp
     cxx20/bit.hpp
     cxx20/span.hpp
+    cxx23/utility.hpp
     bytes.hpp
     capi.cpp
     constexpr_vector.hpp
