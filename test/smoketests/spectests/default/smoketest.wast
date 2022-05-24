@@ -72,11 +72,15 @@
   (module (import "Mod0" "unknown" (global i32)))
   "unknown import"
 )
-(assert_unlinkable
-  (module (memory 0) (data (i32.const 0) "a"))
-  "data segment does not fit"
-)
 
+(assert_trap
+  (module (memory 0) (data (i32.const 0) "a"))
+  "out of bounds memory access"
+)
+(assert_trap
+  (module (table 0 funcref) (elem (i32.const 1)))
+  "out of bounds table access"
+)
 (assert_trap
   (module (func $main (unreachable)) (start $main))
   "unreachable"

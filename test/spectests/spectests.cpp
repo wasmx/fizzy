@@ -317,8 +317,11 @@ public:
             }
             else if (type == "assert_unlinkable" || type == "assert_uninstantiable")
             {
-                // NOTE: assert_uninstantiable should result in a start function trap
-                //       assert_unlinkable checks all other instantiation failures
+                // NOTE: assert_uninstantiable should result in one of:
+                //   - start function trap
+                //   - data segment out of memory bounds
+                //   - element segment out of table bounds
+                // assert_unlinkable checks all other instantiation failures
 
                 const auto module_type = cmd.at("module_type").get<std::string>();
                 if (module_type != "binary")
@@ -359,7 +362,10 @@ public:
                 }
                 catch (const fizzy::instantiate_error& ex)
                 {
-                    if (ex.what() == std::string{"start function failed to execute"})
+                    const std::string what = ex.what();
+                    if (what == "start function failed to execute" ||
+                        what == "data segment is out of memory bounds" ||
+                        what == "element segment is out of table bounds")
                     {
                         if (type == "assert_uninstantiable")
                             pass(ex.what());
