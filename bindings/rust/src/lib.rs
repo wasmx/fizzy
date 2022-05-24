@@ -1325,9 +1325,7 @@ mod tests {
         assert!(instance.is_err());
         assert_eq!(
             instance.err().unwrap(),
-            Error::InstantiationFailed(
-                "module requires 1 imported functions, 0 provided".to_string()
-            )
+            Error::InstantiationFailed("imported function env.adler32 is required".to_string())
         );
     }
 
