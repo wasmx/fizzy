@@ -367,36 +367,6 @@ impl ExecutionResult {
     }
 }
 
-/// The result of an execution.
-pub struct TypedExecutionResult {
-    result: sys::FizzyExecutionResult,
-    value_type: sys::FizzyValueType,
-}
-
-impl TypedExecutionResult {
-    /// True if execution has resulted in a trap.
-    pub fn trapped(&self) -> bool {
-        self.result.trapped
-    }
-
-    /// The optional return value. Only a single return value is allowed in WebAssembly 1.0.
-    pub fn value(&self) -> Option<TypedValue> {
-        if self.result.has_value {
-            assert!(!self.result.trapped);
-            assert!(self.value_type != sys::FizzyValueTypeVoid);
-            Some(match self.value_type {
-                sys::FizzyValueTypeI32 => TypedValue::U32(unsafe { self.result.value.i32 }),
-                sys::FizzyValueTypeI64 => TypedValue::U64(unsafe { self.result.value.i64 }),
-                sys::FizzyValueTypeF32 => TypedValue::F32(unsafe { self.result.value.f32 }),
-                sys::FizzyValueTypeF64 => TypedValue::F64(unsafe { self.result.value.f64 }),
-                _ => panic!(),
-            })
-        } else {
-            None
-        }
-    }
-}
-
 impl Instance {
     /// Ensure the range is valid according to the currently available memory size.
     fn checked_memory_range(
@@ -649,86 +619,6 @@ mod tests {
         assert!(v.as_i32().is_none());
         assert!(v.as_u64().is_none());
         assert!(v.as_i64().is_none());
-    }
-
-    #[test]
-    fn typed_execution_result() {
-        let r_fail = sys::FizzyExecutionResult {
-            trapped: true,
-            has_value: false,
-            value: sys::FizzyValue { i32: 0 },
-        };
-        let r_success_void = sys::FizzyExecutionResult {
-            trapped: false,
-            has_value: false,
-            value: sys::FizzyValue { i32: 0 },
-        };
-        let r_success_u32 = sys::FizzyExecutionResult {
-            trapped: false,
-            has_value: true,
-            value: sys::FizzyValue { i32: u32::MAX },
-        };
-        let r_success_u64 = sys::FizzyExecutionResult {
-            trapped: false,
-            has_value: true,
-            value: sys::FizzyValue { i64: u64::MAX },
-        };
-        let r_success_f32 = sys::FizzyExecutionResult {
-            trapped: false,
-            has_value: true,
-            value: sys::FizzyValue { f32: f32::MAX },
-        };
-        let r_success_f64 = sys::FizzyExecutionResult {
-            trapped: false,
-            has_value: true,
-            value: sys::FizzyValue { f64: f64::MAX },
-        };
-
-        let r = TypedExecutionResult {
-            result: r_fail,
-            value_type: sys::FizzyValueTypeVoid,
-        };
-        assert!(r.trapped());
-        assert!(r.value().is_none());
-
-        let r = TypedExecutionResult {
-            result: r_success_void,
-            value_type: sys::FizzyValueTypeVoid,
-        };
-        assert!(!r.trapped());
-        assert!(r.value().is_none());
-
-        let r = TypedExecutionResult {
-            result: r_success_u32,
-            value_type: sys::FizzyValueTypeI32,
-        };
-        assert!(!r.trapped());
-        assert!(r.value().is_some());
-        assert_eq!(r.value().unwrap().as_u32().unwrap(), u32::MAX);
-
-        let r = TypedExecutionResult {
-            result: r_success_u64,
-            value_type: sys::FizzyValueTypeI64,
-        };
-        assert!(!r.trapped());
-        assert!(r.value().is_some());
-        assert_eq!(r.value().unwrap().as_u64().unwrap(), u64::MAX);
-
-        let r = TypedExecutionResult {
-            result: r_success_f32,
-            value_type: sys::FizzyValueTypeF32,
-        };
-        assert!(!r.trapped());
-        assert!(r.value().is_some());
-        assert_eq!(r.value().unwrap().as_f32().unwrap(), f32::MAX);
-
-        let r = TypedExecutionResult {
-            result: r_success_f64,
-            value_type: sys::FizzyValueTypeF64,
-        };
-        assert!(!r.trapped());
-        assert!(r.value().is_some());
-        assert_eq!(r.value().unwrap().as_f64().unwrap(), f64::MAX);
     }
 
     #[test]
