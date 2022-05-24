@@ -365,6 +365,23 @@ impl ExecutionResult {
             None
         }
     }
+
+    pub fn typed_value(&self, expected_type: sys::FizzyValueType) -> Option<TypedValue> {
+        assert!(!self.0.trapped);
+        if expected_type != sys::FizzyValueTypeVoid {
+            assert!(self.0.has_value);
+            Some(match expected_type {
+                sys::FizzyValueTypeI32 => TypedValue::U32(unsafe { self.0.value.i32 }),
+                sys::FizzyValueTypeI64 => TypedValue::U64(unsafe { self.0.value.i64 }),
+                sys::FizzyValueTypeF32 => TypedValue::F32(unsafe { self.0.value.f32 }),
+                sys::FizzyValueTypeF64 => TypedValue::F64(unsafe { self.0.value.f64 }),
+                _ => panic!(),
+            })
+        } else {
+            assert!(!self.0.has_value);
+            None
+        }
+    }
 }
 
 impl Instance {
@@ -502,22 +519,11 @@ impl Instance {
         // Translate to untyped raw values.
         let args: Vec<Value> = args.iter().map(|v| v.into()).collect();
 
-        let ret: sys::FizzyExecutionResult =
-            unsafe { sys::fizzy_execute(self.0.as_ptr(), func_idx, args.as_ptr()) };
-        if ret.trapped {
-            return Err(Error::Trapped);
-        }
-        if ret.has_value {
-            assert!(func_type.output != sys::FizzyValueTypeVoid);
-            Ok(Some(match func_type.output {
-                sys::FizzyValueTypeI32 => TypedValue::U32(unsafe { ret.value.i32 }),
-                sys::FizzyValueTypeI64 => TypedValue::U64(unsafe { ret.value.i64 }),
-                sys::FizzyValueTypeF32 => TypedValue::F32(unsafe { ret.value.f32 }),
-                sys::FizzyValueTypeF64 => TypedValue::F64(unsafe { ret.value.f64 }),
-                _ => panic!(),
-            }))
+        let ret = unsafe { self.unsafe_execute(func_idx, &args) };
+        if ret.trapped() {
+            Err(Error::Trapped)
         } else {
-            Ok(None)
+            Ok(ret.typed_value(func_type.output))
         }
     }
 }
