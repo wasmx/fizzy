@@ -513,11 +513,9 @@ impl Instance {
         name: &str,
         args: &[TypedValue],
     ) -> Result<TypedExecutionResult, Error> {
-        let func_idx = self.find_exported_function_index(name);
-        if func_idx.is_none() {
-            return Err(Error::FunctionNotFound);
-        }
-        let func_idx = func_idx.unwrap();
+        let func_idx = self
+            .find_exported_function_index(name)
+            .ok_or(Error::FunctionNotFound)?;
 
         let func_type = unsafe { self.get_function_type(func_idx) };
         if func_type.inputs_size != args.len() {
