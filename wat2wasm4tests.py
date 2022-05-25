@@ -40,7 +40,7 @@ RS_EXTENSION = ".rs"
 WAT_RE = re.compile(r'/\* wat2wasm(.*)\n([^*]*)\*/', re.MULTILINE)
 WASM_CPP_RE = re.compile(r'\s*(?:const )?auto \w+ =\s*(?:fizzy\:\:test\:\:)?from_hex\(\s*"([^;]*)"\);',
                      re.MULTILINE)
-WASM_RUST_RE = re.compile(r'\s*let \w+ =\s*hex::decode\(\s*"([^;]*)"\).unwrap\(\);',
+WASM_RUST_RE = re.compile(r'\s*let \w+ =\s*hex::decode\(\s*"([^;]*)"\)\s*.unwrap\(\);',
                      re.MULTILINE)
 
 TMP_WAT_FILE = sys.argv[0] + '.wat'
