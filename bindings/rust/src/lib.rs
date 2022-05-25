@@ -1383,4 +1383,26 @@ mod tests {
             )
         );
     }
+
+    #[test]
+    fn execute_with_trap() {
+        /* wat2wasm
+        (module
+          (func (export "test")
+            unreachable
+          )
+        )
+        */
+        let input =
+            hex::decode("0061736d0100000001040160000003020100070801047465737400000a05010300000b")
+                .unwrap();
+
+        let module = parse(&input);
+        assert!(module.is_ok());
+        let instance = module.unwrap().instantiate();
+        assert!(instance.is_ok());
+        let result = instance.unwrap().execute("test", &[]);
+        assert!(result.is_ok());
+        assert!(result.unwrap().trapped());
+    }
 }
