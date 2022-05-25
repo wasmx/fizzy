@@ -35,14 +35,16 @@ IV) First class support for determistic applications (*blockchain*)
 
 ## Building and using
 
-Fizzy uses CMake as a build system:
+Fizzy uses CMake as a build system. This will build Fizzy as a library:
 ```sh
 $ mkdir build && cd build
 $ cmake ..
 $ cmake --build .
 ```
 
-This will build Fizzy as a library. [C API] is provided for embedding Fizzy engine in applications.
+### C API
+
+A public [C API] is provided for embedding the Fizzy engine in applications.
 
 A small example of using the C API, which loads a wasm binary and executes a function named `main`:
 
@@ -72,12 +74,16 @@ bool execute_main(const uint8_t* wasm_binary, size_t wasm_binary_size)
 }
 ```
 
+### CMake integration
+
 Fizzy also provides a CMake package for easy integration in projects that use it:
 ```cmake
 find_package(fizzy CONFIG REQUIRED)
 ...
 target_link_libraries(app_name PRIVATE fizzy::fizzy)
 ```
+
+### Rust
 
 Fizzy also has a Rust binding. It is published on [crates.io](https://crates.io/crates/fizzy) and the
 official documentation with examples can be read on [docs.rs](https://docs.rs/fizzy/).
