@@ -1373,8 +1373,6 @@ mod tests {
         // Successful execution.
         let result = instance.execute("foo", &[]);
         assert!(result.is_ok());
-        let result = result.unwrap();
-        assert!(!result.trapped());
-        assert!(result.value().is_none());
+        assert!(result.unwrap().is_none());
     }
 }
