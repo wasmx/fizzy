@@ -219,7 +219,9 @@ impl Module {
     // TODO: support imported functions
     pub fn instantiate(self) -> Result<Instance, Error> {
         if !self.owned {
-            return Err("Not owned".into());
+            return Err(Error::InstantiationFailed(
+                "Trying to instantiate not owned module".into(),
+            ));
         }
         let mut err = FizzyErrorBox::new();
         let ptr = unsafe {
