@@ -336,12 +336,12 @@ inline constexpr T popcnt(T value) noexcept
 template <typename T>
 T signbit(T value) noexcept = delete;
 
-inline bool signbit(float value) noexcept
+inline bit_cast_constexpr bool signbit(float value) noexcept
 {
     return (bit_cast<uint32_t>(value) & F32SignMask) != 0;
 }
 
-inline bool signbit(double value) noexcept
+inline bit_cast_constexpr bool signbit(double value) noexcept
 {
     return (bit_cast<uint64_t>(value) & F64SignMask) != 0;
 }
@@ -350,13 +350,13 @@ template <typename T>
 T fabs(T value) noexcept = delete;
 
 template <>
-inline float fabs(float value) noexcept
+inline bit_cast_constexpr float fabs(float value) noexcept
 {
     return bit_cast<float>(bit_cast<uint32_t>(value) & F32AbsMask);
 }
 
 template <>
-inline double fabs(double value) noexcept
+inline bit_cast_constexpr double fabs(double value) noexcept
 {
     return bit_cast<double>(bit_cast<uint64_t>(value) & F64AbsMask);
 }
@@ -365,13 +365,13 @@ template <typename T>
 T fneg(T value) noexcept = delete;
 
 template <>
-inline float fneg(float value) noexcept
+inline bit_cast_constexpr float fneg(float value) noexcept
 {
     return bit_cast<float>(bit_cast<uint32_t>(value) ^ F32SignMask);
 }
 
 template <>
-inline double fneg(double value) noexcept
+inline bit_cast_constexpr double fneg(double value) noexcept
 {
     return bit_cast<double>(bit_cast<uint64_t>(value) ^ F64SignMask);
 }
@@ -380,7 +380,7 @@ template <typename T>
 T copysign(T a, T b) noexcept = delete;
 
 template <>
-inline float copysign(float a, float b) noexcept
+inline bit_cast_constexpr float copysign(float a, float b) noexcept
 {
     const auto a_u = bit_cast<uint32_t>(a);
     const auto b_u = bit_cast<uint32_t>(b);
@@ -388,7 +388,7 @@ inline float copysign(float a, float b) noexcept
 }
 
 template <>
-inline double copysign(double a, double b) noexcept
+inline bit_cast_constexpr double copysign(double a, double b) noexcept
 {
     const auto a_u = bit_cast<uint64_t>(a);
     const auto b_u = bit_cast<uint64_t>(b);
