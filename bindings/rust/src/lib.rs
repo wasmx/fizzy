@@ -193,7 +193,7 @@ pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, Error> {
     }
 }
 
-/// A view of a moduel for inspection.
+/// A view of a module for inspection.
 pub struct ModuleInspector(*const sys::FizzyModule);
 
 impl ModuleInspector {
