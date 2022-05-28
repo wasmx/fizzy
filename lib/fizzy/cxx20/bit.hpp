@@ -20,6 +20,8 @@ namespace fizzy
 using std::bit_cast;
 }  // namespace fizzy
 
+#define bit_cast_constexpr constexpr
+
 #else
 
 namespace fizzy
@@ -40,6 +42,8 @@ template <class To, class From>
     return dst;
 }
 }  // namespace fizzy
+
+#define bit_cast_constexpr
 
 #endif /* __cpp_lib_bit_cast */
 
