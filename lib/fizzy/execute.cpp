@@ -376,10 +376,10 @@ inline double fneg(double value) noexcept
 }
 
 template <typename T>
-T fcopysign(T a, T b) noexcept = delete;
+T copysign(T a, T b) noexcept = delete;
 
 template <>
-inline float fcopysign(float a, float b) noexcept
+inline float copysign(float a, float b) noexcept
 {
     const auto a_u = bit_cast<uint32_t>(a);
     const auto b_u = bit_cast<uint32_t>(b);
@@ -387,7 +387,7 @@ inline float fcopysign(float a, float b) noexcept
 }
 
 template <>
-inline double fcopysign(double a, double b) noexcept
+inline double copysign(double a, double b) noexcept
 {
     const auto a_u = bit_cast<uint64_t>(a);
     const auto b_u = bit_cast<uint64_t>(b);
@@ -421,7 +421,7 @@ inline T ffloor(T value) noexcept
     // the __builtin_floor() outputs -0 where it should +0.
     // The following workarounds the issue by using the fact that the sign of
     // the output must always match the sign of the input value.
-    return fcopysign(result, value);
+    return copysign(result, value);
 }
 
 template <typename T>
@@ -452,7 +452,7 @@ T fnearest(T value) noexcept
     // This implementation is based on adjusting the result produced by trunc() by +-1 when needed.
     const auto t = std::trunc(value);
     if (const auto diff = fabs(value - t); diff > T{0.5} || (diff == T{0.5} && !is_even(t)))
-        return t + fcopysign(T{1}, value);
+        return t + copysign(T{1}, value);
     else
         return t;
 }
@@ -1361,7 +1361,7 @@ ExecutionResult execute(
         }
         case Instr::f32_copysign:
         {
-            binary_op(stack, fcopysign<float>);
+            binary_op(stack, copysign<float>);
             break;
         }
 
@@ -1433,7 +1433,7 @@ ExecutionResult execute(
         }
         case Instr::f64_copysign:
         {
-            binary_op(stack, fcopysign<double>);
+            binary_op(stack, copysign<double>);
             break;
         }
 
