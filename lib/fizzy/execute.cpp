@@ -335,13 +335,11 @@ inline constexpr T popcnt(T value) noexcept
 template <typename T>
 T fabs(T value) noexcept = delete;
 
-template <>
 inline float fabs(float value) noexcept
 {
     return bit_cast<float>(bit_cast<uint32_t>(value) & F32AbsMask);
 }
 
-template <>
 inline double fabs(double value) noexcept
 {
     return bit_cast<double>(bit_cast<uint64_t>(value) & F64AbsMask);
@@ -350,13 +348,11 @@ inline double fabs(double value) noexcept
 template <typename T>
 T fneg(T value) noexcept = delete;
 
-template <>
 inline float fneg(float value) noexcept
 {
     return bit_cast<float>(bit_cast<uint32_t>(value) ^ F32SignMask);
 }
 
-template <>
 inline double fneg(double value) noexcept
 {
     return bit_cast<double>(bit_cast<uint64_t>(value) ^ F64SignMask);
@@ -461,10 +457,9 @@ inline T fmax(T a, T b) noexcept
     return a < b ? b : a;
 }
 
-template <typename T>
-T fcopysign(T a, T b) noexcept = delete;
+template <typename T, typename U>
+T fcopysign(T a, U b) noexcept = delete;
 
-template <>
 inline float fcopysign(float a, float b) noexcept
 {
     const auto a_u = bit_cast<uint32_t>(a);
@@ -472,7 +467,6 @@ inline float fcopysign(float a, float b) noexcept
     return bit_cast<float>((a_u & F32AbsMask) | (b_u & F32SignMask));
 }
 
-template <>
 inline double fcopysign(double a, double b) noexcept
 {
     const auto a_u = bit_cast<uint64_t>(a);
