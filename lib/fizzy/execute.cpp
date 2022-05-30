@@ -551,15 +551,24 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
 }
 
 template <bool MeteringEnabled>
-ExecutionResult execute_local_function(
+ExecutionResult execute(
     Instance& instance, FuncIdx func_idx, const Value* args, ExecutionContext& ctx) noexcept
 {
+    assert(ctx.depth >= 0);
+    if (ctx.depth >= CallStackLimit)
+        return Trap;
+
+    const auto& func_type = instance.module->get_function_type(func_idx);
+
+    assert(instance.module->imported_function_types.size() == instance.imported_functions.size());
+    if (func_idx < instance.imported_functions.size())
+        return instance.imported_functions[func_idx].function(instance, args, ctx);
+
     const auto& code = instance.module->get_code(func_idx);
     auto* const memory = instance.memory.get();
 
     const auto local_ctx = ctx.create_local_context();
 
-    const auto& func_type = instance.module->get_function_type(func_idx);
     OperandStack stack(args, func_type.inputs.size(), code.local_count,
         static_cast<size_t>(code.max_stack_height));
 
@@ -1592,17 +1601,16 @@ trap:
 ExecutionResult execute(
     Instance& instance, FuncIdx func_idx, const Value* args, ExecutionContext& ctx) noexcept
 {
-    assert(ctx.depth >= 0);
-    if (ctx.depth >= CallStackLimit)
-        return Trap;
-
-    assert(instance.module->imported_function_types.size() == instance.imported_functions.size());
-    if (func_idx < instance.imported_functions.size())
-        return instance.imported_functions[func_idx].function(instance, args, ctx);
-
     if (ctx.metering_enabled)
-        return execute_local_function<true>(instance, func_idx, args, ctx);
+        return execute<true>(instance, func_idx, args, ctx);
     else
-        return execute_local_function<false>(instance, func_idx, args, ctx);
+        return execute<false>(instance, func_idx, args, ctx);
 }
+
+ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args) noexcept
+{
+    ExecutionContext ctx;
+    return execute<false>(instance, func_idx, args, ctx);
+}
+
 }  // namespace fizzy

@@ -59,9 +59,5 @@ ExecutionResult execute(
 /// Execute a function from an instance with execution context starting with default depth of 0 and
 /// metering disabled.
 /// Arguments and behavior is the same as in the other execute().
-inline ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args) noexcept
-{
-    ExecutionContext ctx;
-    return execute(instance, func_idx, args, ctx);
-}
+ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args) noexcept;
 }  // namespace fizzy
