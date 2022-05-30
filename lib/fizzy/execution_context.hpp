@@ -35,8 +35,12 @@ class ExecutionContext
 
 public:
     int depth = 0;  ///< Current call depth.
-    /// Current ticks left for execution. Execution traps when running out of ticks.
+    /// Current ticks left for execution, if #metering_enabled is true.
+    /// Execution traps when running out of ticks.
+    /// Ignored if #metering_enabled is false.
     int64_t ticks = std::numeric_limits<int64_t>::max();
+    /// Set to true to enable execution metering.
+    bool metering_enabled = false;
 
     /// Increments the call depth and returns the local call context which
     /// decrements the call depth back to the original value when going out of scope.

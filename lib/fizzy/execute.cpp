@@ -550,40 +550,33 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
     return true;
 }
 
-}  // namespace
-
-ExecutionResult execute(
+template <bool MeteringEnabled>
+ExecutionResult execute_local_function(
     Instance& instance, FuncIdx func_idx, const Value* args, ExecutionContext& ctx) noexcept
 {
-    assert(ctx.depth >= 0);
-    if (ctx.depth >= CallStackLimit)
-        return Trap;
-
-    const auto& func_type = instance.module->get_function_type(func_idx);
-
-    assert(instance.module->imported_function_types.size() == instance.imported_functions.size());
-    if (func_idx < instance.imported_functions.size())
-        return instance.imported_functions[func_idx].function(instance, args, ctx);
-
     const auto& code = instance.module->get_code(func_idx);
     auto* const memory = instance.memory.get();
 
     const auto local_ctx = ctx.create_local_context();
 
+    const auto& func_type = instance.module->get_function_type(func_idx);
     OperandStack stack(args, func_type.inputs.size(), code.local_count,
         static_cast<size_t>(code.max_stack_height));
 
     const uint8_t* pc = code.instructions.data();
 
-    const auto* cost_table = get_instruction_cost_table();
+    [[maybe_unused]] const auto* cost_table = get_instruction_cost_table();
 
     while (true)
     {
         const auto opcode = *pc++;
         const auto instruction = static_cast<Instr>(opcode);
 
-        if ((ctx.ticks -= cost_table[opcode]) < 0)
-            goto trap;
+        if constexpr (MeteringEnabled)
+        {
+            if ((ctx.ticks -= cost_table[opcode]) < 0)
+                goto trap;
+        }
 
         switch (instruction)
         {
@@ -1593,5 +1586,23 @@ end:
 
 trap:
     return Trap;
+}
+}  // namespace
+
+ExecutionResult execute(
+    Instance& instance, FuncIdx func_idx, const Value* args, ExecutionContext& ctx) noexcept
+{
+    assert(ctx.depth >= 0);
+    if (ctx.depth >= CallStackLimit)
+        return Trap;
+
+    assert(instance.module->imported_function_types.size() == instance.imported_functions.size());
+    if (func_idx < instance.imported_functions.size())
+        return instance.imported_functions[func_idx].function(instance, args, ctx);
+
+    if (ctx.metering_enabled)
+        return execute_local_function<true>(instance, func_idx, args, ctx);
+    else
+        return execute_local_function<false>(instance, func_idx, args, ctx);
 }
 }  // namespace fizzy
