@@ -510,10 +510,9 @@ void branch(const Code& code, OperandStack& stack, const uint8_t*& pc, uint32_t 
         stack.drop(stack_drop);
 }
 
-inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
-    OperandStack& stack, ExecutionContext& ctx) noexcept
+inline bool invoke_function(size_t num_args, [[maybe_unused]] size_t num_ret, uint32_t func_idx,
+    Instance& instance, OperandStack& stack, ExecutionContext& ctx) noexcept
 {
-    const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
     const auto call_args = stack.rend() - num_args;
 
@@ -525,7 +524,7 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
     stack.drop(num_args);
 
     // NOTE: validation ensures there is at most 1 output value
-    assert(func_type.outputs.size() == (ret.has_value ? 1 : 0));
+    assert(num_ret == (ret.has_value ? 1 : 0));
     // Push back the result
     if (ret.has_value)
         stack.push(ret.value);
@@ -631,7 +630,8 @@ ExecutionResult execute(
             const auto called_func_idx = read<uint32_t>(pc);
             const auto& called_func_type = instance.module->get_function_type(called_func_idx);
 
-            if (!invoke_function(called_func_type, called_func_idx, instance, stack, ctx))
+            if (!invoke_function(called_func_type.inputs.size(), called_func_type.outputs.size(),
+                    called_func_idx, instance, stack, ctx))
                 goto trap;
             break;
         }
@@ -657,8 +657,8 @@ ExecutionResult execute(
             if (expected_type != actual_type)
                 goto trap;
 
-            if (!invoke_function(
-                    actual_type, called_func.func_idx, *called_func.instance, stack, ctx))
+            if (!invoke_function(actual_type.inputs.size(), actual_type.outputs.size(),
+                    called_func.func_idx, *called_func.instance, stack, ctx))
                 goto trap;
             break;
         }
