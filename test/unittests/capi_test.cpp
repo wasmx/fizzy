@@ -271,7 +271,7 @@ TEST(capi, memory_access)
     memory[0] = 0xaa;
     memory[1] = 0xbb;
 
-    EXPECT_THAT(fizzy_execute(instance, 0, nullptr), CResult(0x22bbaa_u32));
+    EXPECT_THAT(fizzy_execute(instance, 0, nullptr, nullptr), CResult(0x22bbaa_u32));
 
     fizzy_free_instance(instance);
 }
@@ -314,7 +314,7 @@ TEST(capi, imported_memory_access)
         module, nullptr, 0, nullptr, &memory, nullptr, 0, FizzyMemoryPagesLimitDefault, nullptr);
     ASSERT_NE(instance, nullptr);
 
-    EXPECT_EQ(fizzy_execute(instance, 0, nullptr).value.i32, 0x221100);
+    EXPECT_EQ(fizzy_execute(instance, 0, nullptr, nullptr).value.i32, 0x221100);
 
     EXPECT_EQ(fizzy_get_instance_memory_size(instance), 65536);
 
@@ -324,8 +324,8 @@ TEST(capi, imported_memory_access)
     memory_data[0] = 0xaa;
     memory_data[1] = 0xbb;
 
-    EXPECT_EQ(fizzy_execute(instance_memory, 0, nullptr).value.i32, 0x22bbaa);
-    EXPECT_EQ(fizzy_execute(instance, 0, nullptr).value.i32, 0x22bbaa);
+    EXPECT_EQ(fizzy_execute(instance_memory, 0, nullptr, nullptr).value.i32, 0x22bbaa);
+    EXPECT_EQ(fizzy_execute(instance, 0, nullptr, nullptr).value.i32, 0x22bbaa);
 
     fizzy_free_instance(instance);
     fizzy_free_instance(instance_memory);

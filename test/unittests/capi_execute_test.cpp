@@ -30,11 +30,11 @@ TEST(capi_execute, execute)
         module, nullptr, 0, nullptr, nullptr, nullptr, 0, FizzyMemoryPagesLimitDefault, nullptr);
     ASSERT_NE(instance, nullptr);
 
-    EXPECT_THAT(fizzy_execute(instance, 0, nullptr), CResult());
-    EXPECT_THAT(fizzy_execute(instance, 1, nullptr), CResult(42_u32));
+    EXPECT_THAT(fizzy_execute(instance, 0, nullptr, nullptr), CResult());
+    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, nullptr), CResult(42_u32));
     FizzyValue args[] = {{42}, {2}};
-    EXPECT_THAT(fizzy_execute(instance, 2, args), CResult(21_u32));
-    EXPECT_THAT(fizzy_execute(instance, 3, nullptr), CTraps());
+    EXPECT_THAT(fizzy_execute(instance, 2, args, nullptr), CResult(21_u32));
+    EXPECT_THAT(fizzy_execute(instance, 3, nullptr, nullptr), CTraps());
 
     fizzy_free_instance(instance);
 }
@@ -71,10 +71,10 @@ TEST(capi_execute, execute_with_host_function)
         module, host_funcs, 2, nullptr, nullptr, nullptr, 0, FizzyMemoryPagesLimitDefault, nullptr);
     ASSERT_NE(instance, nullptr);
 
-    EXPECT_THAT(fizzy_execute(instance, 0, nullptr), CResult(42_u32));
+    EXPECT_THAT(fizzy_execute(instance, 0, nullptr, nullptr), CResult(42_u32));
 
     FizzyValue args[] = {{42}, {2}};
-    EXPECT_THAT(fizzy_execute(instance, 1, args), CResult(21_u32));
+    EXPECT_THAT(fizzy_execute(instance, 1, args, nullptr), CResult(21_u32));
 
     fizzy_free_instance(instance);
 }
@@ -102,7 +102,7 @@ TEST(capi_execute, imported_function_traps)
         module, host_funcs, 1, nullptr, nullptr, nullptr, 0, FizzyMemoryPagesLimitDefault, nullptr);
     ASSERT_NE(instance, nullptr);
 
-    EXPECT_THAT(fizzy_execute(instance, 1, nullptr), CTraps());
+    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, nullptr), CTraps());
 
     fizzy_free_instance(instance);
 }
@@ -132,7 +132,7 @@ TEST(capi_execute, imported_function_void)
         module, host_funcs, 1, nullptr, nullptr, nullptr, 0, FizzyMemoryPagesLimitDefault, nullptr);
     ASSERT_NE(instance, nullptr);
 
-    EXPECT_THAT(fizzy_execute(instance, 1, nullptr), CResult());
+    EXPECT_THAT(fizzy_execute(instance, 1, nullptr, nullptr), CResult());
     EXPECT_TRUE(called);
 
     fizzy_free_instance(instance);
@@ -182,7 +182,7 @@ TEST(capi_execute, imported_function_from_another_module)
     ASSERT_NE(instance2, nullptr);
 
     FizzyValue args[] = {{44}, {2}};
-    EXPECT_THAT(fizzy_execute(instance2, 1, args), CResult(42_u32));
+    EXPECT_THAT(fizzy_execute(instance2, 1, args, nullptr), CResult(42_u32));
 
     fizzy_free_exported_function(&func);
     fizzy_free_instance(instance2);
@@ -224,7 +224,7 @@ TEST(capi_execute, imported_table_from_another_module)
         module2, nullptr, 0, &table, nullptr, nullptr, 0, FizzyMemoryPagesLimitDefault, nullptr);
     ASSERT_NE(instance2, nullptr);
 
-    EXPECT_THAT(fizzy_execute(instance2, 0, nullptr), CResult(42_u32));
+    EXPECT_THAT(fizzy_execute(instance2, 0, nullptr, nullptr), CResult(42_u32));
 
     fizzy_free_instance(instance2);
     fizzy_free_instance(instance1);
@@ -262,7 +262,7 @@ TEST(capi_execute, imported_memory_from_another_module)
         module2, nullptr, 0, nullptr, &memory, nullptr, 0, FizzyMemoryPagesLimitDefault, nullptr);
     ASSERT_NE(instance2, nullptr);
 
-    EXPECT_THAT(fizzy_execute(instance2, 0, nullptr), CResult(0x00ffaa00_u32));
+    EXPECT_THAT(fizzy_execute(instance2, 0, nullptr, nullptr), CResult(0x00ffaa00_u32));
 
     fizzy_free_instance(instance2);
     fizzy_free_instance(instance1);
@@ -300,7 +300,7 @@ TEST(capi_execute, imported_global_from_another_module)
         module2, nullptr, 0, nullptr, nullptr, &global, 1, FizzyMemoryPagesLimitDefault, nullptr);
     ASSERT_NE(instance2, nullptr);
 
-    EXPECT_THAT(fizzy_execute(instance2, 0, nullptr), CResult(42_u32));
+    EXPECT_THAT(fizzy_execute(instance2, 0, nullptr, nullptr), CResult(42_u32));
 
     fizzy_free_instance(instance2);
     fizzy_free_instance(instance1);

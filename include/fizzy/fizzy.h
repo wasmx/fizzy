@@ -600,14 +600,16 @@ bool fizzy_find_exported_global(
 ///
 /// @param  instance    Pointer to module instance. Cannot be NULL.
 /// @param  args        Pointer to the argument array. Can be NULL if function has 0 inputs.
+/// @param  ctx         Opaque pointer to execution context. If NULL new execution context
+///                     will be allocated.
 /// @return             Result of execution.
 ///
 /// @note
 /// No validation is done on the number of arguments passed in @p args, nor on their types.
 /// When number of passed arguments or their types are different from the ones defined by the
 /// function type, behaviour is undefined.
-FizzyExecutionResult fizzy_execute(
-    FizzyInstance* instance, uint32_t func_idx, const FizzyValue* args) FIZZY_NOEXCEPT;
+FizzyExecutionResult fizzy_execute(FizzyInstance* instance, uint32_t func_idx,
+    const FizzyValue* args, FizzyExecutionContext* ctx) FIZZY_NOEXCEPT;
 
 #ifdef __cplusplus
 }

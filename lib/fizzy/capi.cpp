@@ -706,10 +706,14 @@ size_t fizzy_get_instance_memory_size(FizzyInstance* instance) noexcept
     return memory->size();
 }
 
-FizzyExecutionResult fizzy_execute(
-    FizzyInstance* instance, uint32_t func_idx, const FizzyValue* args) noexcept
+FizzyExecutionResult fizzy_execute(FizzyInstance* c_instance, uint32_t func_idx,
+    const FizzyValue* c_args, FizzyExecutionContext* c_ctx) noexcept
 {
-    const auto result = fizzy::execute(*unwrap(instance), func_idx, unwrap(args));
+    auto* instance = unwrap(c_instance);
+    const auto* args = unwrap(c_args);
+    const auto result =
+        (c_ctx == nullptr ? fizzy::execute(*instance, func_idx, args) :
+                            fizzy::execute(*instance, func_idx, args, unwrap(c_ctx)));
     return wrap(result);
 }
 

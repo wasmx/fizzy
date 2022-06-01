@@ -481,7 +481,12 @@ impl Instance {
     /// # Safety
     /// This function expects a valid `func_idx` and appropriate number of `args`.
     pub unsafe fn unsafe_execute(&mut self, func_idx: u32, args: &[Value]) -> ExecutionResult {
-        ExecutionResult(sys::fizzy_execute(self.0.as_ptr(), func_idx, args.as_ptr()))
+        ExecutionResult(sys::fizzy_execute(
+            self.0.as_ptr(),
+            func_idx,
+            args.as_ptr(),
+            std::ptr::null_mut(),
+        ))
     }
 
     /// Find function type for a given index. Must be a valid index otherwise behaviour is undefined.
