@@ -511,7 +511,7 @@ jobs:
       - install_testfloat
       - checkout
       - build:
-          build_type: Debug
+          build_type: Release
           cmake_options: -DCMAKE_TOOLCHAIN_FILE=~/project/cmake/toolchains/arm64-linux.cmake
       - test
       # TODO: Enable spectests
