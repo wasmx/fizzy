@@ -511,10 +511,29 @@ jobs:
       - install_testfloat
       - checkout
       - build:
-          build_type: Debug
+          build_type: Release
           cmake_options: -DCMAKE_TOOLCHAIN_FILE=~/project/cmake/toolchains/arm64-linux.cmake
       - test
       # TODO: Enable spectests
+
+  arm64-native:
+    machine:
+      image: ubuntu-2004:current
+      resource_class: arm.large
+    steps:
+      - run:
+          name: "Install ninja"
+          command: |
+            sudo apt-get -q update
+            sudo apt-get -qy install --no-install-recommends ninja-build
+      - install_testfloat
+      - checkout
+      - build:
+          build_type: Release
+      - test
+      - benchmark:
+          min_time: "0.01"
+      - spectest
 
   benchmark:
     machine:
@@ -752,7 +771,8 @@ workflows:
           requires:
             - coverage-clang
       - x86-linux
-      - arm64-linux
+      # - arm64-linux
+      - arm64-native
       - bindings-rust
       - bindings-rust-asan
       - bindings-rust-coverage
