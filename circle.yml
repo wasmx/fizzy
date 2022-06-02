@@ -771,7 +771,7 @@ workflows:
           requires:
             - coverage-clang
       - x86-linux
-      - arm64-linux
+      # - arm64-linux
       - arm64-native
       - bindings-rust
       - bindings-rust-asan
