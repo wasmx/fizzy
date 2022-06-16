@@ -5,6 +5,7 @@
 #include "execute.hpp"
 #include "asserts.hpp"
 #include "cxx20/bit.hpp"
+#include "instructions.hpp"
 #include "stack.hpp"
 #include "trunc_boundaries.hpp"
 #include "types.hpp"
@@ -524,6 +525,11 @@ void branch(const Code& code, OperandStack& stack, const uint8_t*& pc, uint32_t 
         stack.drop(stack_drop);
 }
 
+template <bool MeteringEnabled>
+ExecutionResult execute(
+    Instance& instance, FuncIdx func_idx, const Value* args, ExecutionContext& ctx) noexcept;
+
+template <bool MeteringEnabled>
 inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
     OperandStack& stack, ExecutionContext& ctx) noexcept
 {
@@ -531,7 +537,7 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
     assert(stack.size() >= num_args);
     const auto call_args = stack.rend() - num_args;
 
-    const auto ret = execute(instance, func_idx, call_args, ctx);
+    const auto ret = execute<MeteringEnabled>(instance, func_idx, call_args, ctx);
     // Bubble up traps
     if (ret.trapped)
         return false;
@@ -549,8 +555,7 @@ inline bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instan
     return true;
 }
 
-}  // namespace
-
+template <bool MeteringEnabled>
 ExecutionResult execute(
     Instance& instance, FuncIdx func_idx, const Value* args, ExecutionContext& ctx) noexcept
 {
@@ -574,9 +579,19 @@ ExecutionResult execute(
 
     const uint8_t* pc = code.instructions.data();
 
+    [[maybe_unused]] const auto* cost_table = get_instruction_cost_table();
+
     while (true)
     {
-        const auto instruction = static_cast<Instr>(*pc++);
+        const auto opcode = *pc++;
+        const auto instruction = static_cast<Instr>(opcode);
+
+        if constexpr (MeteringEnabled)
+        {
+            if ((ctx.ticks -= cost_table[opcode]) < 0)
+                goto trap;
+        }
+
         switch (instruction)
         {
         case Instr::unreachable:
@@ -647,7 +662,8 @@ ExecutionResult execute(
             const auto called_func_idx = read<uint32_t>(pc);
             const auto& called_func_type = instance.module->get_function_type(called_func_idx);
 
-            if (!invoke_function(called_func_type, called_func_idx, instance, stack, ctx))
+            if (!invoke_function<MeteringEnabled>(
+                    called_func_type, called_func_idx, instance, stack, ctx))
                 goto trap;
             break;
         }
@@ -673,7 +689,7 @@ ExecutionResult execute(
             if (expected_type != actual_type)
                 goto trap;
 
-            if (!invoke_function(
+            if (!invoke_function<MeteringEnabled>(
                     actual_type, called_func.func_idx, *called_func.instance, stack, ctx))
                 goto trap;
             break;
@@ -1586,4 +1602,21 @@ end:
 trap:
     return Trap;
 }
+}  // namespace
+
+ExecutionResult execute(
+    Instance& instance, FuncIdx func_idx, const Value* args, ExecutionContext& ctx) noexcept
+{
+    if (ctx.metering_enabled)
+        return execute<true>(instance, func_idx, args, ctx);
+    else
+        return execute<false>(instance, func_idx, args, ctx);
+}
+
+ExecutionResult execute(Instance& instance, FuncIdx func_idx, const Value* args) noexcept
+{
+    ExecutionContext ctx;
+    return execute<false>(instance, func_idx, args, ctx);
+}
+
 }  // namespace fizzy

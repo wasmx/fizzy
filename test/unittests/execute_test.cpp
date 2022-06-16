@@ -1074,3 +1074,30 @@ TEST(execute, stack_abuse)
 
     EXPECT_THAT(execute(parse(wasm), 0, {1000}), Result(1136));
 }
+
+TEST(execute, metering)
+{
+    /* wat2wasm
+    (func (result i32)
+      i32.const 1
+    )
+    */
+    const auto wasm = from_hex("0061736d010000000105016000017f030201000a0601040041010b");
+    auto instance = instantiate(parse(wasm));
+
+    ExecutionContext ctx;
+    ctx.metering_enabled = true;
+    ctx.ticks = 100;
+    EXPECT_THAT(execute(*instance, 0, {}, ctx), Result(1_u32));
+    EXPECT_EQ(ctx.ticks, 98);
+
+    ctx.ticks = 2;
+    EXPECT_THAT(execute(*instance, 0, {}, ctx), Result(1_u32));
+    EXPECT_EQ(ctx.ticks, 0);
+
+    ctx.ticks = 1;
+    EXPECT_THAT(execute(*instance, 0, {}, ctx), Traps());
+
+    ctx.ticks = 0;
+    EXPECT_THAT(execute(*instance, 0, {}, ctx), Traps());
+}
