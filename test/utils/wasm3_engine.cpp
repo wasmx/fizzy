@@ -38,7 +38,7 @@ public:
 
 namespace
 {
-const void* env_adler32(IM3Runtime /*runtime*/, uint64_t* stack, void* mem)
+const void* env_adler32(IM3Runtime /*runtime*/, uint64_t* stack, void* mem) noexcept
 {
     const uint32_t offset = static_cast<uint32_t>(stack[0]);
     const uint32_t length = static_cast<uint32_t>(stack[1]);

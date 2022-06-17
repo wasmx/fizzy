@@ -66,7 +66,7 @@ bool WabtEngine::instantiate(bytes_view wasm_binary)
     const auto host_func = wabt::interp::HostFunc::New(m_store,
         wabt::interp::FuncType{{wabt::Type::I32, wabt::Type::I32}, {wabt::Type::I32}},
         [](wabt::interp::Thread& thread, const wabt::interp::Values& args,
-            wabt::interp::Values& results, wabt::interp::Trap::Ptr*) -> wabt::Result {
+            wabt::interp::Values& results, wabt::interp::Trap::Ptr*) noexcept -> wabt::Result {
             assert(args.size() == 2);
             const auto offset = args[0].i32_;
             const auto length = args[1].i32_;
