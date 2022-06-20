@@ -166,14 +166,14 @@ inline fizzy::Value* unwrap(FizzyValue* value) noexcept
     return reinterpret_cast<fizzy::Value*>(value);
 }
 
-inline FizzyExecutionContext* wrap(fizzy::ExecutionContext& ctx) noexcept
+inline FizzyExecutionContext* wrap(fizzy::ExecutionContext* ctx) noexcept
 {
-    return reinterpret_cast<FizzyExecutionContext*>(&ctx);
+    return reinterpret_cast<FizzyExecutionContext*>(ctx);
 }
 
-inline fizzy::ExecutionContext& unwrap(FizzyExecutionContext* ctx) noexcept
+inline fizzy::ExecutionContext* unwrap(FizzyExecutionContext* ctx) noexcept
 {
-    return *reinterpret_cast<fizzy::ExecutionContext*>(ctx);
+    return reinterpret_cast<fizzy::ExecutionContext*>(ctx);
 }
 
 inline FizzyInstance* wrap(fizzy::Instance* instance) noexcept
@@ -208,7 +208,7 @@ inline fizzy::ExecuteFunction unwrap(FizzyExternalFn c_function, void* c_host_co
             fizzy::ExecutionContext& ctx) noexcept {
             const auto [c_func, c_host_ctx] =
                 *std::any_cast<std::pair<FizzyExternalFn, void*>>(&host_ctx);
-            return unwrap(c_func(c_host_ctx, wrap(&instance), wrap(args), wrap(ctx)));
+            return unwrap(c_func(c_host_ctx, wrap(&instance), wrap(args), wrap(&ctx)));
         };
 
     return {function, std::make_any<std::pair<FizzyExternalFn, void*>>(c_function, c_host_context)};
@@ -224,10 +224,10 @@ inline FizzyExternalFunction wrap(fizzy::ExternalFunction external_func)
         std::unique_ptr<fizzy::ExecutionContext> new_ctx;
         if (c_ctx == nullptr)
             new_ctx = std::make_unique<fizzy::ExecutionContext>();
-        auto& ctx = new_ctx ? *new_ctx : unwrap(c_ctx);
+        auto* ctx = new_ctx ? new_ctx.get() : unwrap(c_ctx);
 
         auto* func = static_cast<fizzy::ExternalFunction*>(host_ctx);
-        return wrap((func->function)(*unwrap(instance), unwrap(args), ctx));
+        return wrap((func->function)(*unwrap(instance), unwrap(args), *ctx));
     };
 
     auto host_ctx = std::make_unique<fizzy::ExternalFunction>(std::move(external_func));
@@ -706,10 +706,45 @@ size_t fizzy_get_instance_memory_size(FizzyInstance* instance) noexcept
     return memory->size();
 }
 
-FizzyExecutionResult fizzy_execute(
-    FizzyInstance* instance, uint32_t func_idx, const FizzyValue* args) noexcept
+FizzyExecutionContext* fizzy_create_execution_context(int depth) noexcept
 {
-    const auto result = fizzy::execute(*unwrap(instance), func_idx, unwrap(args));
+    auto ctx = std::make_unique<fizzy::ExecutionContext>();
+    ctx->depth = depth;
+    return wrap(ctx.release());
+}
+
+FizzyExecutionContext* fizzy_create_metered_execution_context(int depth, int64_t ticks) noexcept
+{
+    auto ctx = std::make_unique<fizzy::ExecutionContext>();
+    ctx->depth = depth;
+    ctx->metering_enabled = true;
+    ctx->ticks = ticks;
+    return wrap(ctx.release());
+}
+
+void fizzy_free_execution_context(FizzyExecutionContext* c_ctx) noexcept
+{
+    delete unwrap(c_ctx);
+}
+
+int* fizzy_get_execution_context_depth(FizzyExecutionContext* c_ctx) noexcept
+{
+    return &unwrap(c_ctx)->depth;
+}
+
+int64_t* fizzy_get_execution_context_ticks(FizzyExecutionContext* c_ctx) noexcept
+{
+    return &unwrap(c_ctx)->ticks;
+}
+
+FizzyExecutionResult fizzy_execute(FizzyInstance* c_instance, uint32_t func_idx,
+    const FizzyValue* c_args, FizzyExecutionContext* c_ctx) noexcept
+{
+    auto* instance = unwrap(c_instance);
+    const auto* args = unwrap(c_args);
+    const auto result =
+        (c_ctx == nullptr ? fizzy::execute(*instance, func_idx, args) :
+                            fizzy::execute(*instance, func_idx, args, *unwrap(c_ctx)));
     return wrap(result);
 }
 
