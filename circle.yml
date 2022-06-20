@@ -532,7 +532,7 @@ jobs:
       - test
       - benchmark:
           min_time: "0.01"
-      - spectest
+      # TODO: Enable spectests
 
   benchmark:
     machine:
