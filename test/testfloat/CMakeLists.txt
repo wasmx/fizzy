@@ -30,14 +30,9 @@ if(TESTFLOAT_GEN)
         list(APPEND IGNORE_LIST ui64_to_f64/min)
     endif()
 
-    if(CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64 AND CMAKE_SIZEOF_VOID_P EQUAL 4)
-        # TODO: On i386 (32-bit) there are bugs in the arithmetic instructions
-        #       with default rounding.
-        list(APPEND IGNORE_LIST
-            f64_add/near_even
-            f64_sub/near_even
-            f64_mul/near_even
-            f64_div/near_even)
+    if(CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64 AND CMAKE_SIZEOF_VOID_P EQUAL 4 AND CMAKE_CXX_COMPILER_ID MATCHES GNU)
+        # TODO: GCC 32-bit i386 build produces -0 for input 0, https://gcc.gnu.org/bugzilla/show_bug.cgi?id=100119.
+        list(APPEND IGNORE_LIST ui32_to_f64/min)
     endif()
 
     set(ROUNDING_MODES near_even minMag min max)
