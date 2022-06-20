@@ -36,13 +36,12 @@ commands:
       - run:
           name: "Install WABT tools"
           command: |
-            if type wast2json; then
-              wast2json --version
-            else
+            if ! type wast2json; then
               [[ $OSTYPE = darwin* ]] && os=macos || os=ubuntu
               cd /usr/local
               curl -L https://github.com/WebAssembly/wabt/releases/download/1.0.20/wabt-1.0.20-$os.tar.gz | sudo tar xz --strip 1
             fi
+            wast2json --version
 
   install_testfloat:
     description: "Install TestFloat test suite tools"
@@ -533,7 +532,7 @@ jobs:
       - test
       - benchmark:
           min_time: "0.01"
-      - spectest
+      # TODO: Enable spectests
 
   benchmark:
     machine:
