@@ -82,7 +82,7 @@ commands:
         default: ""
       build_type:
         type: enum
-        enum: [ "Debug", "Release", "RelWithDebInfo", "Coverage" ]
+        enum: ["Debug", "Release", "RelWithDebInfo", "Coverage"]
       cmake_options:
         type: string
         default: ""
@@ -230,6 +230,27 @@ commands:
           working_directory: ~/build
           command: bin/fizzy-bench-internal --benchmark_repetitions=<<parameters.repetitions>> --benchmark_min_time=<<parameters.min_time>> --benchmark_out=internal-<<parameters.out_dir>>
 
+  fetch_spectests:
+    description: "Download and preprocess the WebAssembly spec tests"
+    steps:
+      - install_wabt
+      - run:
+          name: "Download spectest files"
+          working_directory: "~"
+          command: |
+            git clone https://github.com/wasmx/wasm-spec --branch w3c-1.0-tests-backported-20210212 --depth 1 --single-branch
+      - run:
+          name: "Convert spectests to JSON"
+          working_directory: ~/spectests
+          command: |
+            wast2json --version
+            options='--disable-saturating-float-to-int --disable-sign-extension --disable-multi-value'
+            find ~/wasm-spec/test/core -name '*.wast' -exec wast2json $options {} \;
+      - persist_to_workspace:
+          root: ~/spectests
+          paths:
+            - '*'
+
   spectest:
     description: "Run spectest"
     parameters:
@@ -247,17 +268,8 @@ commands:
         default: 499
 
     steps:
-      - install_wabt
-      - run:
-          name: "Download spectest files"
-          working_directory: ~/build
-          command: |
-            if [ ! -d wasm-spec ]; then
-              git clone https://github.com/wasmx/wasm-spec --branch w3c-1.0-tests-backported-20210212 --depth 1 wasm-spec
-              mkdir json && cd json
-              options='--disable-saturating-float-to-int --disable-sign-extension --disable-multi-value'
-              find ../wasm-spec/test/core -name '*.wast' -exec wast2json $options {} \;
-            fi
+      - attach_workspace:
+          at: ~/spectests
       - run:
           name: "Run spectest<<#parameters.skip_validation>> (skip validation)<</parameters.skip_validation>>"
           working_directory: ~/build
@@ -265,7 +277,7 @@ commands:
             set +e
             export ASAN_OPTIONS=detect_invalid_pointer_pairs=2
             expected="  PASSED <<parameters.expected_passed>>, FAILED <<parameters.expected_failed>>, SKIPPED <<parameters.expected_skipped>>."
-            result=$(bin/fizzy-spectests <<#parameters.skip_validation>>--skip-validation<</parameters.skip_validation>> json | tail -1)
+            result=$(bin/fizzy-spectests <<#parameters.skip_validation>>--skip-validation<</parameters.skip_validation>> ~/spectests | tail -1)
             echo $result
             if [ "$expected" != "$result" ]; then exit 1; fi
 
@@ -532,7 +544,7 @@ jobs:
       - test
       - benchmark:
           min_time: "0.01"
-      # TODO: Enable spectests
+      - spectest
 
   benchmark:
     machine:
@@ -647,6 +659,14 @@ jobs:
           path: ~/build/artifacts
           destination: artifacts
 
+
+  fetch-spectests:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
+    steps:
+      - fetch_spectests
+
   spectest:
     executor: linux-clang-latest
     steps:
@@ -756,22 +776,34 @@ workflows:
     unless: <<pipeline.parameters.benchmark>>
     jobs:
       - lint
+      - fetch-spectests
       - release-linux
       - release-native-linux
       - release-macos
       - release-native-macos
-      - coverage-gcc
+      - coverage-gcc:
+          requires:
+            - fetch-spectests
       - coverage-clang
-      - sanitizers-clang
-      - sanitizers-gcc
-      - sanitizers-macos
+      - sanitizers-clang:
+          requires:
+            - fetch-spectests
+      - sanitizers-gcc:
+          requires:
+            - fetch-spectests
+      - sanitizers-macos:
+          requires:
+            - fetch-spectests
       - fuzzing
       - spectest:
           requires:
             - coverage-clang
+            - fetch-spectests
       - x86-linux
       # - arm64-linux
-      - arm64-native
+      - arm64-native:
+          requires:
+            - fetch-spectests
       - bindings-rust
       - bindings-rust-asan
       - bindings-rust-coverage
