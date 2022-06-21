@@ -682,12 +682,20 @@ jobs:
     steps:
       - rust_restore_cargo_cache
       - rust_install_system_dependencies
+      - rust_install_nightly
       - checkout
       - run:
           name: Check formatting
           command: |
             rustfmt --version
             cargo fmt --all -- --check
+      - run:
+          name: Check formatting (nightly)
+          command: |
+            cd bindings/rust
+            echo "format_code_in_doc_comments = true" > rustfmt.toml
+            cargo +nightly fmt --all -- --check
+            rm rustfmt.toml
       - install_wabt
       - run:
           name: Check wat2wasm4tests
