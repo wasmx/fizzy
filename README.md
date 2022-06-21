@@ -29,8 +29,8 @@ III) Conformance
 IV) First class support for determistic applications (*blockchain*)
 - [ ] Support canonical handling of floating point (i.e. NaNs stricter than in the spec)
 - [ ] Support an efficient big integer API (256-bit and perhaps 384-bit)
-- [ ] Support optional runtime metering in the interpreter
-- [ ] Support enforcing a call depth bound
+- [x] Support optional runtime metering in the interpreter
+- [x] Support enforcing a call depth bound
 - [ ] Further restrictions of complexity (e.g. number of locals, number of function parameters, number of labels, etc.)
 
 ## Building and using
