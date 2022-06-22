@@ -16,10 +16,12 @@ endif()
 
 if(NOT CMAKE_CONFIGURATION_TYPES)
     if(CMAKE_BUILD_TYPE STREQUAL Debug)
-        set(HUNTER_CONFIGURATION_TYPES Debug)
+        set(CONFIG Debug)
     else()
-        set(HUNTER_CONFIGURATION_TYPES Release)
+        set(CONFIG Release)
     endif()
+    set(HUNTER_CONFIGURATION_TYPES ${CONFIG} CACHE STRING "Build type of Hunter packages")
+    unset(CONFIG)
 endif()
 
 HunterGate(
