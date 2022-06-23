@@ -238,7 +238,7 @@ commands:
           name: "Download spectest files"
           working_directory: "~"
           command: |
-            git clone https://github.com/wasmx/wasm-spec --branch w3c-1.0-tests-backported-20210212 --depth 1 --single-branch
+            git clone https://github.com/wasmx/wasm-spec --branch w3c-1.0-tests-backported-20220623 --depth 1 --single-branch
       - run:
           name: "Convert spectests to JSON"
           working_directory: ~/spectests
@@ -259,7 +259,7 @@ commands:
         default: false
       expected_passed:
         type: integer
-        default: 19044
+        default: 19062
       expected_failed:
         type: integer
         default: 0
