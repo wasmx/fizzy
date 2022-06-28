@@ -4,7 +4,7 @@
 
 [package]
 name = "fizzy-integration-test"
-version = "0.8.0"
+version = "0.9.0-dev"
 authors = ["The Fizzy Authors"]
 license = "Apache-2.0"
 repository = "https://github.com/wasmx/fizzy"
@@ -12,4 +12,4 @@ edition = "2018"
 publish = false
 
 [dependencies]
-fizzy = { path = "../", version = "0.8.0" }
+fizzy = { path = "../", version = "0.9.0-dev" }
