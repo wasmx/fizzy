@@ -10,10 +10,13 @@
 #include <array>
 #include <cfenv>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-pragmas"
 // Enables access and modification of the floating-point environment.
 // Here we use it to change rounding direction in tests.
 // Although required by the C standard, neither GCC nor Clang supports it.
 #pragma STDC FENV_ACCESS ON
+#pragma GCC diagnostic pop
 
 MATCHER_P(CanonicalNaN, value, "result with a canonical NaN")
 {
