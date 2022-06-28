@@ -7,6 +7,183 @@ and this project adheres to [Semantic Versioning].
 
 ## [0.8.0] - unreleased
 
+With this release we are introducing support for runtime metering (i.e. deterministic execution). This is only available via the C API.
+
+Additionally we have made a lot of improvements to both the C and Rust APIs.
+
+Fizzy passes all the official WebAssembly 1.0 tests. We are maintaining the WebAssembly 1.0 test suite
+with corrections and additions backported from the WebAssembly specification master branch. For this
+Fizzy release [the snapshot from 2022-06-23](https://github.com/wasmx/wasm-spec/tree/w3c-1.0-tests-backported-20220623/test/core) is used:
+- 19062 of 19062 binary parser and execution tests,
+- 1049 of 1049 validation tests,
+- 499 skipped due to testing text format parser.
+
+Comparing with the previous release, the performance of instantiation remains unchanged (within 1% performance regression). 
+However, we were able to increase execution performance by around **7%**.
+
+<details><summary>Detailed benchmark results</summary>
+
+```
+Comparing Fizzy 0.7.0 to 0.8.0 (Intel Haswell CPU 4.4 GHz, Clang 14)
+Benchmark                                  CPU Time [µs]       Old       New
+----------------------------------------------------------------------------
+fizzy/parse/blake2b                              +0.0142        23        23
+fizzy/parse/ecpairing                            +0.0082      1313      1324
+fizzy/parse/keccak256                            +0.0075        42        42
+fizzy/parse/memset                               -0.0004         6         6
+fizzy/parse/mul256_opt0                          -0.0056         7         7
+fizzy/parse/ramanujan_pi                         +0.0023        24        24
+fizzy/parse/sha1                                 +0.0065        38        38
+fizzy/parse/sha256                               +0.0052        63        63
+fizzy/parse/taylor_pi                            -0.0070         2         2
+GEOMETRIC MEAN                                   +0.0034
+
+fizzy/instantiate/blake2b                        +0.0141        26        26
+fizzy/instantiate/ecpairing                      +0.0156      1363      1385
+fizzy/instantiate/keccak256                      +0.0105        46        46
+fizzy/instantiate/memset                         +0.0049         9         9
+fizzy/instantiate/mul256_opt0                    +0.0084        11        11
+fizzy/instantiate/ramanujan_pi                   +0.0082        27        27
+fizzy/instantiate/sha1                           +0.0031        42        42
+fizzy/instantiate/sha256                         +0.0079        66        67
+fizzy/instantiate/taylor_pi                      +0.0075         6         6
+GEOMETRIC MEAN                                   +0.0089
+
+fizzy/execute/blake2b/512_bytes_rounds_1         -0.0976        76        68
+fizzy/execute/blake2b/512_bytes_rounds_16        -0.1006      1149      1033
+fizzy/execute/ecpairing/onepoint                 -0.0600    366609    344611
+fizzy/execute/keccak256/512_bytes_rounds_1       -0.0594        89        84
+fizzy/execute/keccak256/512_bytes_rounds_16      -0.0477      1291      1230
+fizzy/execute/memset/256_bytes                   -0.0972         6         6
+fizzy/execute/memset/60000_bytes                 -0.0944      1395      1263
+fizzy/execute/mul256_opt0/input1                 -0.1092        25        23
+fizzy/execute/ramanujan_pi/33_runs               -0.1095       103        92
+fizzy/execute/sha1/512_bytes_rounds_1            -0.1069        84        75
+fizzy/execute/sha1/512_bytes_rounds_16           -0.1071      1174      1048
+fizzy/execute/sha256/512_bytes_rounds_1          -0.0275        77        75
+fizzy/execute/sha256/512_bytes_rounds_16         -0.0375      1062      1023
+fizzy/execute/taylor_pi/pi_1000000_runs          +0.0016     37519     37581
+GEOMETRIC MEAN                                   -0.0759
+
+
+Comparing Fizzy 0.7.0 to 0.8.0 (Intel Haswell CPU 4.4 GHz, GCC 12)
+Benchmark                                  CPU Time [µs]       Old       New
+----------------------------------------------------------------------------
+fizzy/parse/blake2b                              +0.0046        22        22
+fizzy/parse/ecpairing                            +0.0059      1296      1304
+fizzy/parse/keccak256                            +0.0091        41        42
+fizzy/parse/memset                               +0.0036         5         5
+fizzy/parse/mul256_opt0                          +0.0041         7         7
+fizzy/parse/ramanujan_pi                         -0.0008        23        23
+fizzy/parse/sha1                                 +0.0006        37        37
+fizzy/parse/sha256                               +0.0090        61        62
+fizzy/parse/taylor_pi                            -0.0106         2         2
+GEOMETRIC MEAN                                   +0.0028
+
+fizzy/instantiate/blake2b                        +0.0068        26        26
+fizzy/instantiate/ecpairing                      +0.0063      1348      1357
+fizzy/instantiate/keccak256                      +0.0019        45        45
+fizzy/instantiate/memset                         +0.0053         9         9
+fizzy/instantiate/mul256_opt0                    -0.0019        11        11
+fizzy/instantiate/ramanujan_pi                   -0.0010        27        27
+fizzy/instantiate/sha1                           +0.0085        41        41
+fizzy/instantiate/sha256                         +0.0019        65        66
+fizzy/instantiate/taylor_pi                      -0.0019         6         6
+GEOMETRIC MEAN                                   +0.0029
+
+fizzy/execute/blake2b/512_bytes_rounds_1         -0.0474        71        68
+fizzy/execute/blake2b/512_bytes_rounds_16        -0.0463      1076      1026
+fizzy/execute/ecpairing/onepoint                 -0.0192    338070    331572
+fizzy/execute/keccak256/512_bytes_rounds_1       -0.1336        76        66
+fizzy/execute/keccak256/512_bytes_rounds_16      -0.1376      1116       962
+fizzy/execute/memset/256_bytes                   -0.0681         6         6
+fizzy/execute/memset/60000_bytes                 -0.0720      1371      1272
+fizzy/execute/mul256_opt0/input1                 +0.0030        24        24
+fizzy/execute/ramanujan_pi/33_runs               -0.1126       102        91
+fizzy/execute/sha1/512_bytes_rounds_1            -0.0990        79        71
+fizzy/execute/sha1/512_bytes_rounds_16           -0.1016      1106       994
+fizzy/execute/sha256/512_bytes_rounds_1          -0.0810        78        72
+fizzy/execute/sha256/512_bytes_rounds_16         -0.0803      1074       988
+fizzy/execute/taylor_pi/pi_1000000_runs          +0.0003     38233     38244
+GEOMETRIC MEAN                                   -0.0721
+```
+
+</details>
+
+### Added
+
+- Runtime metering support. [#626](https://github.com/wasmx/fizzy/pull/626)
+- Doxygen documentation. [#692](https://github.com/wasmx/fizzy/pull/692)
+- Unit tests for WASI implementation. [#713](https://github.com/wasmx/fizzy/pull/713) 
+  [#790](https://github.com/wasmx/fizzy/pull/790) [#792](https://github.com/wasmx/fizzy/pull/792)
+  [#796](https://github.com/wasmx/fizzy/pull/796)
+- Support building on 32-bit platforms. [#745](https://github.com/wasmx/fizzy/pull/745)
+- Floating point support on 32-bit platforms requires to use SSE2 instructions. [#785](https://github.com/wasmx/fizzy/pull/785)
+- Check that limits of imported table/memory do not have min above max. [#762](https://github.com/wasmx/fizzy/pull/762)
+- Minor documentation improvements. [#763](https://github.com/wasmx/fizzy/pull/763)
+- Unit tests for out of memory errors. [#773](https://github.com/wasmx/fizzy/pull/773)
+- README clarifications. [#823](https://github.com/wasmx/fizzy/pull/823) [#835](https://github.com/wasmx/fizzy/pull/835)
+- Public C API:
+  - Detailed error reporting (error code and message). [#772](https://github.com/wasmx/fizzy/pull/772)
+    [#783](https://github.com/wasmx/fizzy/pull/783) [#784](https://github.com/wasmx/fizzy/pull/784)
+    [#788](https://github.com/wasmx/fizzy/pull/788)
+  - Support for custom hard memory limit in C API. [#780](https://github.com/wasmx/fizzy/pull/780)
+  - Access to `ExecutionContext` members, including metering and call depth. [#799](https://github.com/wasmx/fizzy/pull/799)
+  - Static assertions to check consistency of C value type constants with C++ `fizzy:ValType`.
+    [#821](https://github.com/wasmx/fizzy/pull/821)
+- Rust bindings: 
+  - Detailed error reporting. [#735](https://github.com/wasmx/fizzy/pull/735) [#769](https://github.com/wasmx/fizzy/pull/769)
+    [#772](https://github.com/wasmx/fizzy/pull/772) [#781](https://github.com/wasmx/fizzy/pull/781)
+    [#824](https://github.com/wasmx/fizzy/pull/824)
+  - Introduce `ConstNotNull` wrapper. [#720](https://github.com/wasmx/fizzy/pull/720)
+  - Test additions. [#822](https://github.com/wasmx/fizzy/pull/822) [#825](https://github.com/wasmx/fizzy/pull/825)
+
+### Changed
+
+- Use C++20 bit-manipulating functions instead of intrinsics if available. [#542](https://github.com/wasmx/fizzy/pull/542)
+  [#689](https://github.com/wasmx/fizzy/pull/689)
+- Minor floating point instruction optimization. [#592](https://github.com/wasmx/fizzy/pull/592)
+- Hard memory limit is capped at 4 GB. [#748](https://github.com/wasmx/fizzy/pull/748)
+- C++ API:
+  - Refactoring to make `execute()` not throwing exceptions. [#716](https://github.com/wasmx/fizzy/pull/716)
+    [#738](https://github.com/wasmx/fizzy/pull/738)
+  - Introduce `ExecutionContext` instead of `depth` parameter to `execute()`. [#756](https://github.com/wasmx/fizzy/pull/756)
+    [#757](https://github.com/wasmx/fizzy/pull/757) [#761](https://github.com/wasmx/fizzy/pull/761)
+    [#779](https://github.com/wasmx/fizzy/pull/779)
+    [#766](https://github.com/wasmx/fizzy/pull/766)
+  - Other minor improvements. [#746](https://github.com/wasmx/fizzy/pull/746) 
+    [#776](https://github.com/wasmx/fizzy/pull/776)
+- Public C API:  
+  - Functions marked with `noexcept`. [#775](https://github.com/wasmx/fizzy/pull/775)
+  - Unit tests are split into several files. [#800](https://github.com/wasmx/fizzy/pull/800)
+- Rust API: minor stylistic improvements. [#815](https://github.com/wasmx/fizzy/pull/815)
+- Floating point instruction tests fixes and improvements. [#786](https://github.com/wasmx/fizzy/pull/786)
+  [#793](https://github.com/wasmx/fizzy/pull/793) [#795](https://github.com/wasmx/fizzy/pull/795)
+- Other unit test improvements. [#787](https://github.com/wasmx/fizzy/pull/787) 
+  [#830](https://github.com/wasmx/fizzy/pull/830)
+- CMake files optimizations and refactorings. [#770](https://github.com/wasmx/fizzy/pull/770)
+  [#837](https://github.com/wasmx/fizzy/pull/837)
+- CI fixes and improvements. [#774](https://github.com/wasmx/fizzy/pull/774)
+  [#810](https://github.com/wasmx/fizzy/pull/810) [#814](https://github.com/wasmx/fizzy/pull/814)
+  [#818](https://github.com/wasmx/fizzy/pull/818) [#827](https://github.com/wasmx/fizzy/pull/827) 
+  [#829](https://github.com/wasmx/fizzy/pull/829) [#831](https://github.com/wasmx/fizzy/pull/831)
+  [#832](https://github.com/wasmx/fizzy/pull/832) [#834](https://github.com/wasmx/fizzy/pull/834)
+  [#839](https://github.com/wasmx/fizzy/pull/839)
+- Dependency upgrades. [#798](https://github.com/wasmx/fizzy/pull/798) [#802](https://github.com/wasmx/fizzy/pull/802)
+  [#804](https://github.com/wasmx/fizzy/pull/804)
+- Updated WebAssembly spec test suite. [#836](https://github.com/wasmx/fizzy/pull/836)
+
+### Fixed
+
+- Incorrect types in parser leading to build issues on 32-bit architectures. [#744](https://github.com/wasmx/fizzy/pull/744)
+- Validating that imported memory is multiple of page size. [#749](https://github.com/wasmx/fizzy/pull/749)
+- UTF-8 validation on 32-bit architectures and dead store warning in implementation. [#752](https://github.com/wasmx/fizzy/pull/752)
+- Memory allocation and `memory.grow` integer overflow fixes. [#747](https://github.com/wasmx/fizzy/pull/747)
+  [#808](https://github.com/wasmx/fizzy/pull/808) [#809](https://github.com/wasmx/fizzy/pull/809)
+- Exported memory min limit must be equal to current memory size. [#755](https://github.com/wasmx/fizzy/pull/755)
+- CMake error when including Fizzy into a project as a subdirectory. [#758](https:/github.com/wasmx/fizzy/pull/758)
+- Potential Undefined Behaviour in interpreter loop. [#813](https://github.com/wasmx/fizzy/pull/813)
+
 ## [0.7.0] — 2021-03-01
 
 With this release we aim to provide a much improved C and Rust API, including a clear separation of i32 and i64 types.
@@ -15,7 +192,7 @@ Fizzy passes all of the official WebAssembly 1.0 tests. We are maintaining the W
 with corrections and additions backported from the WebAssembly specification master branch. For this
 Fizzy release [the snapshot from 2021-02-12](https://github.com/wasmx/wasm-spec/tree/w3c-1.0-tests-backported-20210212/test/core) is used:
 - 19044 of 19044 binary parser and execution tests,
-- 1009 of 1009 validation tests,
+- 1049 of 1049 validation tests,
 - 499 skipped due to testing text format parser.
 
 There are no performance changes expected nor observed in this release.
@@ -94,7 +271,7 @@ With this release we focus on introducing three major features:
 All these features are work-in-progress with differing levels of completeness. More progress
 to be made in the next release.
 
-Fizzy passes all of the official WebAssembly 1.0 tests. We are maintaining the WebAssembly 1.0 test suite
+Fizzy passes all the official WebAssembly 1.0 tests. We are maintaining the WebAssembly 1.0 test suite
 with corrections and additions backported from the WebAssembly specification master branch. For this
 Fizzy release [the snapshot from 2020-11-13](https://github.com/wasmx/wasm-spec/tree/w3c-1.0-tests-backported-20201113/test/core) is used:
   - 18979 of 18979 binary parser and execution tests,
@@ -104,7 +281,7 @@ Fizzy release [the snapshot from 2020-11-13](https://github.com/wasmx/wasm-spec/
 We continued working on performance improvements. Worth noting, the internal program representation
 has been changed to favour execution time (8% faster) instead of instantiation time (9% slower).
 
-#### Detailed benchmark results
+<details><summary>Detailed benchmark results</summary>
 
 ```
 Comparing Fizzy 0.5.0 to 0.6.0 (Intel Haswell CPU 4.0 GHz, GCC 10, LTO)
@@ -167,6 +344,7 @@ fizzy/execute/micro/spinner/1000                 -0.1721         9         7
 fizzy/parse/stress/guido-fuzzer-find-1           +0.1121       125       139
 fizzy/instantiate/stress/guido-fuzzer-find-1     +0.0784       156       168
 ```
+</details>
 
 Note that in previous releases there was unnecessary copying of the module data during benchmarking instantiation 
 by Fizzy, and [eliminating it](https://github.com/wasmx/fizzy/pull/581) in this release by itself resulted in some 
