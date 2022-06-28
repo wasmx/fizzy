@@ -7,6 +7,91 @@ and this project adheres to [Semantic Versioning].
 
 ## [0.8.0] - unreleased
 
+With this release we are introducing support for runtime metering (i.e. deterministic execution). This is only available via the C API.
+
+Additionally we have made a lot of improvements to both the C and Rust APIs.
+
+Fizzy passes all the official WebAssembly 1.0 tests. We are maintaining the WebAssembly 1.0 test suite
+with corrections and additions backported from the WebAssembly specification master branch. For this
+Fizzy release [the snapshot from 2022-06-23](https://github.com/wasmx/wasm-spec/tree/w3c-1.0-tests-backported-20220623/test/core) is used:
+- 19062 of 19062 binary parser and execution tests,
+- 1049 of 1049 validation tests,
+- 499 skipped due to testing text format parser.
+
+### Added
+
+- Runtime metering support. [#626](https://github.com/wasmx/fizzy/pull/626)
+- Doxygen documentation. [#692](https://github.com/wasmx/fizzy/pull/692)
+- Unit tests for WASI implementation. [#713](https://github.com/wasmx/fizzy/pull/713) 
+  [#790](https://github.com/wasmx/fizzy/pull/790) [#792](https://github.com/wasmx/fizzy/pull/792)
+  [#796](https://github.com/wasmx/fizzy/pull/796)
+- Support building on 32-bit platforms. [#745](https://github.com/wasmx/fizzy/pull/745)
+- Floating point support on 32-bit platforms requires to use SSE2 instructions. [#785](https://github.com/wasmx/fizzy/pull/785)
+- Check that limits of imported table/memory do not have min above max. [#762](https://github.com/wasmx/fizzy/pull/762)
+- Minor documentation improvements. [#763](https://github.com/wasmx/fizzy/pull/763)
+- Unit tests for out of memory errors. [#773](https://github.com/wasmx/fizzy/pull/773)
+- README clarifications. [#823](https://github.com/wasmx/fizzy/pull/823) [#835](https://github.com/wasmx/fizzy/pull/835)
+- Public C API:
+  - Detailed error reporting (error code and message). [#772](https://github.com/wasmx/fizzy/pull/772)
+    [#783](https://github.com/wasmx/fizzy/pull/783) [#784](https://github.com/wasmx/fizzy/pull/784)
+    [#788](https://github.com/wasmx/fizzy/pull/788)
+  - Support for custom hard memory limit in C API. [#780](https://github.com/wasmx/fizzy/pull/780)
+  - Access to `ExecutionContext` members, including metering and call depth. [#799](https://github.com/wasmx/fizzy/pull/799)
+  - Static assertions to check consistency of C value type constants with C++ `fizzy:ValType`.
+    [#821](https://github.com/wasmx/fizzy/pull/821)
+- Rust bindings: 
+  - Detailed error reporting. [#735](https://github.com/wasmx/fizzy/pull/735) [#769](https://github.com/wasmx/fizzy/pull/769)
+    [#772](https://github.com/wasmx/fizzy/pull/772) [#781](https://github.com/wasmx/fizzy/pull/781)
+    [#824](https://github.com/wasmx/fizzy/pull/824)
+  - Introduce `ConstNotNull` wrapper. [#720](https://github.com/wasmx/fizzy/pull/720)
+  - Test additions. [#822](https://github.com/wasmx/fizzy/pull/822) [#825](https://github.com/wasmx/fizzy/pull/825)
+
+### Changed
+
+- Use C++20 bit-manipulating functions instead of intrinsics if available. [#542](https://github.com/wasmx/fizzy/pull/542)
+  [#689](https://github.com/wasmx/fizzy/pull/689)
+- Minor floating point instruction optimization. [#592](https://github.com/wasmx/fizzy/pull/592)
+- Hard memory limit is capped at 4 GB. [#748](https://github.com/wasmx/fizzy/pull/748)
+- C++ API:
+  - Refactoring to make `execute()` not throwing exceptions. [#716](https://github.com/wasmx/fizzy/pull/716)
+    [#738](https://github.com/wasmx/fizzy/pull/738)
+  - Introduce `ExecutionContext` instead of `depth` parameter to `execute()`. [#756](https://github.com/wasmx/fizzy/pull/756)
+    [#757](https://github.com/wasmx/fizzy/pull/757) [#761](https://github.com/wasmx/fizzy/pull/761)
+    [#779](https://github.com/wasmx/fizzy/pull/779)
+    [#766](https://github.com/wasmx/fizzy/pull/766)
+  - Other minor improvements. [#746](https://github.com/wasmx/fizzy/pull/746) 
+    [#776](https://github.com/wasmx/fizzy/pull/776)
+- Public C API:  
+  - Functions marked with `noexcept`. [#775](https://github.com/wasmx/fizzy/pull/775)
+  - Unit tests are split into several files. [#800](https://github.com/wasmx/fizzy/pull/800)
+- Rust API: minor stylistic improvements. [#815](https://github.com/wasmx/fizzy/pull/815)
+- Floating point instruction tests fixes and improvements. [#786](https://github.com/wasmx/fizzy/pull/786)
+  [#793](https://github.com/wasmx/fizzy/pull/793) [#795](https://github.com/wasmx/fizzy/pull/795)
+- Other unit test improvements. [#787](https://github.com/wasmx/fizzy/pull/787) 
+  [#830](https://github.com/wasmx/fizzy/pull/830)
+- CMake files optimizations and refactorings. [#770](https://github.com/wasmx/fizzy/pull/770)
+  [#837](https://github.com/wasmx/fizzy/pull/837)
+- CI fixes and improvements. [#774](https://github.com/wasmx/fizzy/pull/774)
+  [#810](https://github.com/wasmx/fizzy/pull/810) [#814](https://github.com/wasmx/fizzy/pull/814)
+  [#818](https://github.com/wasmx/fizzy/pull/818) [#827](https://github.com/wasmx/fizzy/pull/827) 
+  [#829](https://github.com/wasmx/fizzy/pull/829) [#831](https://github.com/wasmx/fizzy/pull/831)
+  [#832](https://github.com/wasmx/fizzy/pull/832) [#834](https://github.com/wasmx/fizzy/pull/834)
+  [#839](https://github.com/wasmx/fizzy/pull/839)
+- Dependency upgrades. [#798](https://github.com/wasmx/fizzy/pull/798) [#802](https://github.com/wasmx/fizzy/pull/802)
+  [#804](https://github.com/wasmx/fizzy/pull/804)
+- Updated WebAssembly spec test suite. [#836](https://github.com/wasmx/fizzy/pull/836)
+
+### Fixed
+
+- Incorrect types in parser leading to build issues on 32-bit architectures. [#744](https://github.com/wasmx/fizzy/pull/744)
+- Validating that imported memory is multiple of page size. [#749](https://github.com/wasmx/fizzy/pull/749)
+- UTF-8 validation on 32-bit architectures and dead store warning in implementation. [#752](https://github.com/wasmx/fizzy/pull/752)
+- Memory allocation and `memory.grow` integer overflow fixes. [#747](https://github.com/wasmx/fizzy/pull/747)
+  [#808](https://github.com/wasmx/fizzy/pull/808) [#809](https://github.com/wasmx/fizzy/pull/809)
+- Exported memory min limit must be equal to current memory size. [#755](https://github.com/wasmx/fizzy/pull/755)
+- CMake error when including Fizzy into a project as a subdirectory. [#758](https:/github.com/wasmx/fizzy/pull/758)
+- Potential Undefined Behaviour in interpreter loop. [#813](https://github.com/wasmx/fizzy/pull/813)
+
 ## [0.7.0] — 2021-03-01
 
 With this release we aim to provide a much improved C and Rust API, including a clear separation of i32 and i64 types.
@@ -15,7 +100,7 @@ Fizzy passes all of the official WebAssembly 1.0 tests. We are maintaining the W
 with corrections and additions backported from the WebAssembly specification master branch. For this
 Fizzy release [the snapshot from 2021-02-12](https://github.com/wasmx/wasm-spec/tree/w3c-1.0-tests-backported-20210212/test/core) is used:
 - 19044 of 19044 binary parser and execution tests,
-- 1009 of 1009 validation tests,
+- 1049 of 1049 validation tests,
 - 499 skipped due to testing text format parser.
 
 There are no performance changes expected nor observed in this release.
