@@ -8,6 +8,7 @@
 #include "instantiate.hpp"
 #include "parser.hpp"
 #include <fizzy/fizzy.h>
+#include <algorithm>
 #include <cstring>
 #include <memory>
 
