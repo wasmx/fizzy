@@ -1,4 +1,6 @@
 version: 2.1
+orbs:
+  win: circleci/windows@5.0
 
 parameters:
   benchmark:
@@ -400,6 +402,34 @@ jobs:
           cmake_options: -DNATIVE=ON
       - test
 
+  release-windows:
+    executor: win/server-2022
+    environment:
+      CMAKE_BUILD_TYPE: Release
+    steps:
+      - checkout
+      - run:
+          name: "Setup environment (bash)"
+          shell: bash
+          command: |
+            echo 'export PATH=$PATH:"/c/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin"' >> $BASH_ENV
+      - run:
+          name: 'Configure'
+          shell: powershell
+          command: |
+            $ErrorActionPreference = "Stop"
+            & 'C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\Launch-VsDevShell.ps1' -Arch amd64
+            which cmake
+            cmake -S . -B ~/build -G Ninja -DCMAKE_INSTALL_PREFIX=C:\install
+      - run:
+          name: 'Build'
+          shell: powershell
+          command: |
+            $ErrorActionPreference = "Stop"
+            & 'C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\Launch-VsDevShell.ps1' -Arch amd64
+            cmake --build ~/build
+      - test
+
   coverage-clang:
     executor: linux-clang-latest
     steps:
@@ -789,6 +819,7 @@ workflows:
       - release-native-linux
       - release-macos
       - release-native-macos
+      - release-windows
       - coverage-gcc:
           requires:
             - fetch-spectests
