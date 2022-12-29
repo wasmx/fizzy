@@ -16,7 +16,7 @@ namespace
 template <typename T>
 inline void store(uint8_t* dst, T value) noexcept
 {
-    __builtin_memcpy(dst, &value, sizeof(value));
+    memcpy(dst, &value, sizeof(value));
 }
 
 template <typename T>

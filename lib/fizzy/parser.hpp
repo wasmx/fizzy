@@ -40,7 +40,7 @@ inline parser_result<T> parse_value(const uint8_t* pos, const uint8_t* end)
         throw parser_error{"unexpected EOF"};
 
     T value;
-    __builtin_memcpy(&value, pos, size);
+    memcpy(&value, pos, size);
     return {value, pos + size};
 }
 

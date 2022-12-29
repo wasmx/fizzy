@@ -31,7 +31,7 @@ template <typename T>
 inline T read(const uint8_t*& input) noexcept
 {
     T ret;
-    __builtin_memcpy(&ret, input, sizeof(ret));
+    memcpy(&ret, input, sizeof(ret));
     input += sizeof(ret);
     return ret;
 }
@@ -39,14 +39,14 @@ inline T read(const uint8_t*& input) noexcept
 template <typename T>
 inline void store(bytes& input, size_t offset, T value) noexcept
 {
-    __builtin_memcpy(input.data() + offset, &value, sizeof(value));
+    memcpy(input.data() + offset, &value, sizeof(value));
 }
 
 template <typename T>
 inline T load(bytes_view input, size_t offset) noexcept
 {
     T ret;
-    __builtin_memcpy(&ret, input.data() + offset, sizeof(ret));
+    memcpy(&ret, input.data() + offset, sizeof(ret));
     return ret;
 }
 
