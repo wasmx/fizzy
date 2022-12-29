@@ -9,6 +9,7 @@
 #include "parser.hpp"
 #include <fizzy/fizzy.h>
 #include <algorithm>
+#include <iterator>
 #include <cstring>
 #include <memory>
 

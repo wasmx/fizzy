@@ -9,6 +9,7 @@
 #include "types.hpp"
 #include "utf8.hpp"
 #include <cassert>
+#include <iterator>
 #include <unordered_set>
 
 namespace fizzy
