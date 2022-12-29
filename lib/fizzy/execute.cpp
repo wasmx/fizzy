@@ -459,7 +459,10 @@ T fnearest(T value) noexcept
 }
 
 template <typename T>
-__attribute__((no_sanitize("float-divide-by-zero"))) inline constexpr T fdiv(T a, T b) noexcept
+#indef _MSC_VER
+__attribute__((no_sanitize("float-divide-by-zero")))
+#endif
+inline constexpr T fdiv(T a, T b) noexcept
 {
     static_assert(std::is_floating_point_v<T>);
     static_assert(std::numeric_limits<T>::is_iec559);
@@ -494,8 +497,10 @@ inline T fmax(T a, T b) noexcept
     return a < b ? b : a;
 }
 
-
-__attribute__((no_sanitize("float-cast-overflow"))) inline constexpr float demote(
+#ifndef _MSC_VER
+__attribute__((no_sanitize("float-cast-overflow")))
+#endif
+inline constexpr float demote(
     double value) noexcept
 {
     // The float-cast-overflow UBSan check disabled for this conversion. In older clang versions
