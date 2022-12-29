@@ -459,7 +459,7 @@ T fnearest(T value) noexcept
 }
 
 template <typename T>
-#indef _MSC_VER
+#ifndef _MSC_VER
 __attribute__((no_sanitize("float-divide-by-zero")))
 #endif
 inline constexpr T fdiv(T a, T b) noexcept
