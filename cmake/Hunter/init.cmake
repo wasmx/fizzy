@@ -4,8 +4,8 @@ include(FetchContent)
 
 FetchContent_Declare(
     huntergate
-    URL https://github.com/cpp-pm/gate/archive/v0.9.2.tar.gz
-    URL_HASH SHA256=edef54e8cec019a7b4e6b1e1d9e76346c431a6b64d0717422ec903dcd62b3dad
+    URL https://github.com/cpp-pm/hunter/archive/v0.23.297.tar.gz
+    URL_HASH SHA256=077e5d33db470dd5af3afef1f436539e050a84f5daffe80cbea7c3e16a931d8e
 )
 
 FetchContent_GetProperties(huntergate)
