@@ -12,6 +12,14 @@ set(include_dir ${source_dir}/include)
 set(uvwasi_library ${binary_dir}/${CMAKE_STATIC_LIBRARY_PREFIX}uvwasi_a${CMAKE_STATIC_LIBRARY_SUFFIX})
 set(uv_library ${binary_dir}/_deps/libuv-build/${CMAKE_STATIC_LIBRARY_PREFIX}uv_a${CMAKE_STATIC_LIBRARY_SUFFIX})
 
+# This is hack. Should fix proper uvwasi.cmake integration.
+if(WIN32)
+    list(APPEND uv_library iphlpapi)
+    list(APPEND uv_library userenv)
+    list(APPEND uv_library psapi)
+    list(APPEND uv_library ws2_32)
+endif()
+
 if(UNIX AND NOT APPLE)
     set(system_libs "pthread;dl;rt")
 endif()
