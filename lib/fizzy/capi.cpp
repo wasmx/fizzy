@@ -128,7 +128,7 @@ inline FizzyFunctionType wrap(fizzy::span<const fizzy::ValType> input_types,
     fizzy::span<const fizzy::ValType> output_types) noexcept
 {
     return {(output_types.empty() ? FizzyValueTypeVoid : wrap(output_types[0])),
-        (input_types.empty() ? nullptr : wrap(&input_types[0])), input_types.size()};
+        (input_types.empty() ? nullptr : wrap(input_types.data())), input_types.size()};
 }
 
 inline FizzyFunctionType wrap(const fizzy::FuncType& type) noexcept
