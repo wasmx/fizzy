@@ -5,6 +5,7 @@
 Checks: >
   bugprone-*,
   -bugprone-easily-swappable-parameters,
+  -bugprone-exception-escape,
   -bugprone-implicit-widening-of-multiplication-result,
   cert-*,
   -cert-err58-cpp,
@@ -20,8 +21,10 @@ Checks: >
   portability-*,
   readability-*,
   -readability-braces-around-statements,
+  -readability-container-data-pointer,
   -readability-else-after-return,
   -readability-function-cognitive-complexity,
+  -readability-identifier-length,
   -readability-implicit-bool-conversion,
   -readability-magic-numbers,
   -readability-named-parameter,
