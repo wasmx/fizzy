@@ -1101,3 +1101,26 @@ TEST(execute, metering)
     ctx.ticks = 0;
     EXPECT_THAT(execute(*instance, 0, {}, ctx), Traps());
 }
+
+TEST(execute, metering_memory)
+{
+    /* wat2wasm
+    (memory 0 1)
+    (func (result i32)
+      i32.const 1
+      memory.grow
+    )
+    */
+    const auto wasm =
+        from_hex("0061736d010000000105016000017f030201000504010100010a08010600410140000b");
+    auto instance = instantiate(parse(wasm));
+
+    ExecutionContext ctx;
+    ctx.metering_enabled = true;
+    ctx.ticks = 100000;
+    EXPECT_THAT(execute(*instance, 0, {}, ctx), Result(0));
+    EXPECT_EQ(ctx.ticks, 34461);
+
+    ctx.ticks = 65536;
+    EXPECT_THAT(execute(*instance, 0, {}, ctx), Traps());
+}
