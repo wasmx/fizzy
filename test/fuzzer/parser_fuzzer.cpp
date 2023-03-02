@@ -11,10 +11,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t data_size) noe
         fizzy::parse({data, data_size});
     }
     catch (const fizzy::parser_error&)
-    {
-    }
+    {}
     catch (const fizzy::validation_error&)
-    {
-    }
+    {}
     return 0;
 }

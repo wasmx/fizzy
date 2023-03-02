@@ -35,49 +35,63 @@ ExecutionResult proc_exit(
 ExecutionResult fd_write(
     std::any& host_context, Instance& instance, const Value* args, ExecutionContext&) noexcept
 {
-    auto* uvwasi = *std::any_cast<UVWASI*>(&host_context);
+    try
+    {
+        auto* uvwasi = *std::any_cast<UVWASI*>(&host_context);
 
-    const auto fd = args[0].as<uint32_t>();
-    const auto iov_ptr = args[1].as<uint32_t>();
-    const auto iov_cnt = args[2].as<uint32_t>();
-    const auto nwritten_ptr = args[3].as<uint32_t>();
+        const auto fd = args[0].as<uint32_t>();
+        const auto iov_ptr = args[1].as<uint32_t>();
+        const auto iov_cnt = args[2].as<uint32_t>();
+        const auto nwritten_ptr = args[3].as<uint32_t>();
 
-    std::vector<uvwasi_ciovec_t> iovs(iov_cnt);
-    // TODO: not sure what to pass as end, passing memory size...
-    uvwasi_errno_t ret = uvwasi_serdes_readv_ciovec_t(
-        instance.memory->data(), instance.memory->size(), iov_ptr, iovs.data(), iov_cnt);
-    if (ret != UVWASI_ESUCCESS)
+        std::vector<uvwasi_ciovec_t> iovs(iov_cnt);
+        // TODO: not sure what to pass as end, passing memory size...
+        uvwasi_errno_t ret = uvwasi_serdes_readv_ciovec_t(
+            instance.memory->data(), instance.memory->size(), iov_ptr, iovs.data(), iov_cnt);
+        if (ret != UVWASI_ESUCCESS)
+            return Value{uint32_t{ret}};
+
+        uvwasi_size_t nwritten;
+        ret = uvwasi->fd_write(static_cast<uvwasi_fd_t>(fd), iovs.data(), iov_cnt, &nwritten);
+        uvwasi_serdes_write_uint32_t(instance.memory->data(), nwritten_ptr, nwritten);
+
         return Value{uint32_t{ret}};
-
-    uvwasi_size_t nwritten;
-    ret = uvwasi->fd_write(static_cast<uvwasi_fd_t>(fd), iovs.data(), iov_cnt, &nwritten);
-    uvwasi_serdes_write_uint32_t(instance.memory->data(), nwritten_ptr, nwritten);
-
-    return Value{uint32_t{ret}};
+    }
+    catch (...)
+    {
+        return Value{uint32_t{UVWASI_EINVAL}};
+    }
 }
 
 ExecutionResult fd_read(
     std::any& host_context, Instance& instance, const Value* args, ExecutionContext&) noexcept
 {
-    auto* uvwasi = *std::any_cast<UVWASI*>(&host_context);
+    try
+    {
+        auto* uvwasi = *std::any_cast<UVWASI*>(&host_context);
 
-    const auto fd = args[0].as<uint32_t>();
-    const auto iov_ptr = args[1].as<uint32_t>();
-    const auto iov_cnt = args[2].as<uint32_t>();
-    const auto nread_ptr = args[3].as<uint32_t>();
+        const auto fd = args[0].as<uint32_t>();
+        const auto iov_ptr = args[1].as<uint32_t>();
+        const auto iov_cnt = args[2].as<uint32_t>();
+        const auto nread_ptr = args[3].as<uint32_t>();
 
-    std::vector<uvwasi_iovec_t> iovs(iov_cnt);
-    // TODO: not sure what to pass as end, passing memory size...
-    uvwasi_errno_t ret = uvwasi_serdes_readv_iovec_t(
-        instance.memory->data(), instance.memory->size(), iov_ptr, iovs.data(), iov_cnt);
-    if (ret != UVWASI_ESUCCESS)
+        std::vector<uvwasi_iovec_t> iovs(iov_cnt);
+        // TODO: not sure what to pass as end, passing memory size...
+        uvwasi_errno_t ret = uvwasi_serdes_readv_iovec_t(
+            instance.memory->data(), instance.memory->size(), iov_ptr, iovs.data(), iov_cnt);
+        if (ret != UVWASI_ESUCCESS)
+            return Value{uint32_t{ret}};
+
+        uvwasi_size_t nread;
+        ret = uvwasi->fd_read(static_cast<uvwasi_fd_t>(fd), iovs.data(), iov_cnt, &nread);
+        uvwasi_serdes_write_uint32_t(instance.memory->data(), nread_ptr, nread);
+
         return Value{uint32_t{ret}};
-
-    uvwasi_size_t nread;
-    ret = uvwasi->fd_read(static_cast<uvwasi_fd_t>(fd), iovs.data(), iov_cnt, &nread);
-    uvwasi_serdes_write_uint32_t(instance.memory->data(), nread_ptr, nread);
-
-    return Value{uint32_t{ret}};
+    }
+    catch (...)
+    {
+        return Value{uint32_t{UVWASI_EINVAL}};
+    }
 }
 
 ExecutionResult fd_prestat_get(

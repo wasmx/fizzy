@@ -14,10 +14,10 @@ executors:
       - image: ethereum/cpp-build-env:17-gcc-11-multilib
   linux-clang-latest:
     docker:
-      - image: ethereum/cpp-build-env:17-clang-13
+      - image: ethereum/cpp-build-env:18-clang-14
   macos:
     macos:
-      xcode: 11.6.0
+      xcode: 11.7.0
   rust:
     docker:
       - image: cimg/rust:1.60

@@ -42,18 +42,25 @@ public:
     uvwasi_errno_t fd_write(uvwasi_fd_t fd, const uvwasi_ciovec_t* iovs, uvwasi_size_t iovs_len,
         uvwasi_size_t* nwritten) noexcept final
     {
-        write_fd = fd;
-
-        uvwasi_size_t total_len = 0;
-        for (uvwasi_size_t i = 0; i < iovs_len; ++i)
+        try
         {
-            const auto* data = static_cast<const uint8_t*>(iovs[i].buf);
-            write_data.emplace_back(data, data + iovs[i].buf_len);
-            total_len += iovs[i].buf_len;
-        }
+            write_fd = fd;
 
-        *nwritten = total_len;
-        return UVWASI_ESUCCESS;
+            uvwasi_size_t total_len = 0;
+            for (uvwasi_size_t i = 0; i < iovs_len; ++i)
+            {
+                const auto* data = static_cast<const uint8_t*>(iovs[i].buf);
+                write_data.emplace_back(data, data + iovs[i].buf_len);
+                total_len += iovs[i].buf_len;
+            }
+
+            *nwritten = total_len;
+            return UVWASI_ESUCCESS;
+        }
+        catch (...)
+        {
+            return UVWASI_EINVAL;
+        }
     }
 
     uvwasi_errno_t fd_read(uvwasi_fd_t fd, const uvwasi_iovec_t* iovs, uvwasi_size_t iovs_len,
