@@ -104,6 +104,11 @@ impl FizzyErrorBox {
         }
     }
 
+    /// Return true if no error occurred.
+    fn success(&self) -> bool {
+        self.0.code == sys::FizzyErrorCode_FizzySuccess
+    }
+
     /// Return a translated error object.
     fn error(&self) -> Option<Error> {
         match self.code() {
@@ -137,10 +142,10 @@ pub fn validate<T: AsRef<[u8]>>(input: T) -> Result<(), Error> {
         )
     };
     if ret {
-        debug_assert!(err.code() == 0);
+        debug_assert!(err.success());
         Ok(())
     } else {
-        debug_assert!(err.code() != 0);
+        debug_assert!(!err.success());
         Err(err.error().unwrap())
     }
 }
@@ -174,10 +179,10 @@ pub fn parse<T: AsRef<[u8]>>(input: &T) -> Result<Module, Error> {
         )
     };
     if ptr.is_null() {
-        debug_assert!(err.code() != 0);
+        debug_assert!(!err.success());
         Err(err.error().unwrap())
     } else {
-        debug_assert!(err.code() == 0);
+        debug_assert!(err.success());
         Ok(Module(unsafe { ConstNonNull::new_unchecked(ptr) }))
     }
 }
@@ -212,10 +217,10 @@ impl Module {
         // Forget Module (and avoid calling drop) because it has been consumed by instantiate (even if it failed).
         core::mem::forget(self);
         if ptr.is_null() {
-            debug_assert!(err.code() != 0);
+            debug_assert!(!err.success());
             Err(err.error().unwrap())
         } else {
-            debug_assert!(err.code() == 0);
+            debug_assert!(err.success());
             Ok(Instance(unsafe { NonNull::new_unchecked(ptr) }))
         }
     }
@@ -542,6 +547,7 @@ mod tests {
         let mut err = FizzyErrorBox::new();
         assert_ne!(unsafe { err.as_mut_ptr() }, std::ptr::null_mut());
         assert_eq!(err.code(), 0);
+        assert_eq!(err.success(), true);
         assert_eq!(err.message(), "");
         assert!(err.error().is_none());
     }
