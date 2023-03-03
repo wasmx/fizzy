@@ -8,10 +8,11 @@ pub(crate) struct ConstNonNull<T: ?Sized> {
 }
 
 impl<T: ?Sized> ConstNonNull<T> {
+    /// # Safety
+    /// The caller must guarantee that `ptr` is non-null.
     #[inline]
     pub const unsafe fn new_unchecked(ptr: *const T) -> Self {
-        // SAFETY: the caller must guarantee that `ptr` is non-null.
-        unsafe { ConstNonNull { pointer: ptr } }
+        ConstNonNull { pointer: ptr }
     }
 
     #[must_use]
