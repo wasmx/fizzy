@@ -898,8 +898,15 @@ ExecutionResult execute(
         }
         case Instr::memory_grow:
         {
-            stack.top() =
-                grow_memory(*memory, stack.top().as<uint32_t>(), instance.memory_pages_limit);
+            const auto delta_pages = stack.top().as<uint32_t>();
+
+            if constexpr (MeteringEnabled)
+            {
+                if ((ctx.ticks -= get_grow_memory_cost(delta_pages)) < 0)
+                    goto trap;
+            }
+
+            stack.top() = grow_memory(*memory, delta_pages, instance.memory_pages_limit);
             break;
         }
         case Instr::i32_const:

@@ -31,4 +31,10 @@ const uint8_t* get_instruction_max_align_table() noexcept;
 /// execution metering.
 const int16_t* get_instruction_cost_table() noexcept;
 
+/// Calculates the cost of memory expansion. Currently set at 65536 per page (1 per byte).
+inline constexpr auto get_grow_memory_cost(uint32_t delta_pages) noexcept
+{
+    return delta_pages * 65536;
+}
+
 }  // namespace fizzy
