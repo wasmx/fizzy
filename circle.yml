@@ -546,6 +546,20 @@ jobs:
           min_time: "0.01"
       - spectest
 
+  m1-native:
+    machine:
+      resource_class: macos.m1.large.gen1
+    steps:
+      - install_macos_deps
+      - install_testfloat
+      - checkout
+      - build:
+          build_type: Release
+      - test
+      - benchmark:
+          min_time: "0.01"
+      - spectest
+
   benchmark:
     machine:
       image: ubuntu-1604:201903-01
@@ -810,6 +824,9 @@ workflows:
       - x86-linux
       # - arm64-linux
       - arm64-native:
+          requires:
+            - fetch-spectests
+      - m1-native:
           requires:
             - fetch-spectests
       - bindings-rust
