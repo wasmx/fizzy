@@ -10,6 +10,8 @@
 
 Fizzy aims to be a fast, deterministic, and pedantic WebAssembly interpreter written in C++.
 
+Fizzy is a project by [Ipsilon](https://github.com/ipsilon).
+
 ## Goals
 
 I) Code quality
@@ -32,6 +34,16 @@ IV) First class support for determistic applications (*blockchain*)
 - [x] Support optional runtime metering in the interpreter
 - [x] Support enforcing a call depth bound
 - [ ] Further restrictions of complexity (e.g. number of locals, number of function parameters, number of labels, etc.)
+
+V) Additional integration
+- [ ] Support WASI (partially accomplished)
+- [ ] Support the official WebAssembly C Embedding API
+
+V) Platforms
+- [x] Support POSIX-like (Linux, macOS, etc.)
+- [ ] Support Windows
+- [x] Support 32-bit & 64-bit
+- [ ] Support Big Endian architectures
 
 ## Building and using
 
