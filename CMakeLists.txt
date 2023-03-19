@@ -39,10 +39,10 @@ endif()
 
 cable_configure_compiler()
 cable_add_compile_options(
+    IF_SUPPORTED
     -Wcast-qual
     -Wcast-align
     -Wmissing-declarations
-    IF_SUPPORTED
     -Wextra-semi
     -Wold-style-cast
     -Wfinal-dtor-non-final-class

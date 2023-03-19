@@ -31,7 +31,7 @@ template <typename T>
 inline T read(const uint8_t*& input) noexcept
 {
     T ret;
-    __builtin_memcpy(&ret, input, sizeof(ret));
+    memcpy(&ret, input, sizeof(ret));
     input += sizeof(ret);
     return ret;
 }
@@ -39,14 +39,14 @@ inline T read(const uint8_t*& input) noexcept
 template <typename T>
 inline void store(bytes& input, size_t offset, T value) noexcept
 {
-    __builtin_memcpy(input.data() + offset, &value, sizeof(value));
+    memcpy(input.data() + offset, &value, sizeof(value));
 }
 
 template <typename T>
 inline T load(bytes_view input, size_t offset) noexcept
 {
     T ret;
-    __builtin_memcpy(&ret, input.data() + offset, sizeof(ret));
+    memcpy(&ret, input.data() + offset, sizeof(ret));
     return ret;
 }
 
@@ -459,7 +459,11 @@ T fnearest(T value) noexcept
 }
 
 template <typename T>
-__attribute__((no_sanitize("float-divide-by-zero"))) inline constexpr T fdiv(T a, T b) noexcept
+#ifndef _MSC_VER
+__attribute__((no_sanitize("float-divide-by-zero")))
+#endif
+inline constexpr T
+fdiv(T a, T b) noexcept
 {
     static_assert(std::is_floating_point_v<T>);
     static_assert(std::numeric_limits<T>::is_iec559);
@@ -494,9 +498,11 @@ inline T fmax(T a, T b) noexcept
     return a < b ? b : a;
 }
 
-
-__attribute__((no_sanitize("float-cast-overflow"))) inline constexpr float demote(
-    double value) noexcept
+#ifndef _MSC_VER
+__attribute__((no_sanitize("float-cast-overflow")))
+#endif
+inline constexpr float
+demote(double value) noexcept
 {
     // The float-cast-overflow UBSan check disabled for this conversion. In older clang versions
     // (up to 8.0) it reports a failure when non-infinity f64 value is converted to f32 infinity.

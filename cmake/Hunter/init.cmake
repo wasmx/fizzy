@@ -25,7 +25,7 @@ if(NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 HunterGate(
-    URL https://github.com/cpp-pm/hunter/archive/v0.23.294.tar.gz
-    SHA1 0dd1ee8723d54a15822519c17a877c1f281fce39
+    URL https://github.com/cpp-pm/hunter/archive/v0.24.13.tar.gz
+    SHA1 2bc7384b2bf27db5b3847739a6a5361fa04075e7
     LOCAL
 )

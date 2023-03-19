@@ -7,6 +7,7 @@
 #include "bytes.hpp"
 #include <algorithm>
 #include <cassert>
+#include <iterator>
 #include <memory>
 #include <optional>
 #include <stdexcept>

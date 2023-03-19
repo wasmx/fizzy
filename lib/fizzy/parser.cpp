@@ -9,6 +9,7 @@
 #include "types.hpp"
 #include "utf8.hpp"
 #include <cassert>
+#include <iterator>
 #include <unordered_set>
 
 namespace fizzy
@@ -455,8 +456,8 @@ inline parser_result<Data> parse(const uint8_t* pos, const uint8_t* end)
 
 std::unique_ptr<const Module> parse(bytes_view input)
 {
-    if (input.substr(0, wasm_prefix.size()) != wasm_prefix)
-        throw parser_error{"invalid wasm module prefix"};
+    //    if (input.substr(0, wasm_prefix.size()) != wasm_prefix)
+    //        throw parser_error{"invalid wasm module prefix"};
 
     input.remove_prefix(wasm_prefix.size());
 
