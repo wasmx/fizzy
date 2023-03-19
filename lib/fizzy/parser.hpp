@@ -7,6 +7,7 @@
 #include "exceptions.hpp"
 #include "leb128.hpp"
 #include "module.hpp"
+#include <cstring>
 #include <memory>
 
 namespace fizzy

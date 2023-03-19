@@ -8,6 +8,7 @@
 #include "parser.hpp"
 #include "stack.hpp"
 #include <cassert>
+#include <cstring>
 
 namespace fizzy
 {
