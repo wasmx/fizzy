@@ -26,6 +26,10 @@ constexpr uint32_t F32AbsMask = 0x7fffffff;
 constexpr uint32_t F32SignMask = ~F32AbsMask;
 constexpr uint64_t F64AbsMask = 0x7fffffffffffffff;
 constexpr uint64_t F64SignMask = ~F64AbsMask;
+constexpr uint32_t F32ExpMask = 0x7f800000;
+constexpr uint32_t F32FracMask = 0x007fffff;
+constexpr uint64_t F64ExpMask = 0x7ff0000000000000;
+constexpr uint64_t F64FracMask = 0x000fffffffffffff;
 
 template <typename T>
 inline T read(const uint8_t*& input) noexcept
@@ -336,27 +340,42 @@ inline constexpr T popcnt(T value) noexcept
 template <typename T>
 T signbit(T value) noexcept = delete;
 
-inline bool signbit(float value) noexcept
+inline bit_cast_constexpr bool signbit(float value) noexcept
 {
     return (bit_cast<uint32_t>(value) & F32SignMask) != 0;
 }
 
-inline bool signbit(double value) noexcept
+inline bit_cast_constexpr bool signbit(double value) noexcept
 {
     return (bit_cast<uint64_t>(value) & F64SignMask) != 0;
+}
+
+template <typename T>
+T isnan(T value) noexcept = delete;
+
+inline bit_cast_constexpr bool isnan(float value) noexcept
+{
+    const auto v = bit_cast<uint32_t>(value);
+    return ((v & F32ExpMask) == F32ExpMask) && ((v & F32FracMask) != 0);
+}
+
+inline bit_cast_constexpr bool isnan(double value) noexcept
+{
+    const auto v = bit_cast<uint64_t>(value);
+    return ((v & F64ExpMask) == F64ExpMask) && ((v & F64FracMask) != 0);
 }
 
 template <typename T>
 T fabs(T value) noexcept = delete;
 
 template <>
-inline float fabs(float value) noexcept
+inline bit_cast_constexpr float fabs(float value) noexcept
 {
     return bit_cast<float>(bit_cast<uint32_t>(value) & F32AbsMask);
 }
 
 template <>
-inline double fabs(double value) noexcept
+inline bit_cast_constexpr double fabs(double value) noexcept
 {
     return bit_cast<double>(bit_cast<uint64_t>(value) & F64AbsMask);
 }
@@ -365,13 +384,13 @@ template <typename T>
 T fneg(T value) noexcept = delete;
 
 template <>
-inline float fneg(float value) noexcept
+inline bit_cast_constexpr float fneg(float value) noexcept
 {
     return bit_cast<float>(bit_cast<uint32_t>(value) ^ F32SignMask);
 }
 
 template <>
-inline double fneg(double value) noexcept
+inline bit_cast_constexpr double fneg(double value) noexcept
 {
     return bit_cast<double>(bit_cast<uint64_t>(value) ^ F64SignMask);
 }
@@ -380,7 +399,7 @@ template <typename T>
 T copysign(T a, T b) noexcept = delete;
 
 template <>
-inline float copysign(float a, float b) noexcept
+inline bit_cast_constexpr float copysign(float a, float b) noexcept
 {
     const auto a_u = bit_cast<uint32_t>(a);
     const auto b_u = bit_cast<uint32_t>(b);
@@ -388,7 +407,7 @@ inline float copysign(float a, float b) noexcept
 }
 
 template <>
-inline double copysign(double a, double b) noexcept
+inline bit_cast_constexpr double copysign(double a, double b) noexcept
 {
     const auto a_u = bit_cast<uint64_t>(a);
     const auto b_u = bit_cast<uint64_t>(b);
@@ -399,7 +418,7 @@ template <typename T>
 inline T fceil(T value) noexcept
 {
     static_assert(std::is_floating_point_v<T>);
-    if (std::isnan(value))
+    if (isnan(value))
         return std::numeric_limits<T>::quiet_NaN();  // Positive canonical NaN.
 
     // The FE_INEXACT error is ignored (whenever the implementation reports it at all).
@@ -410,7 +429,7 @@ template <typename T>
 inline T ffloor(T value) noexcept
 {
     static_assert(std::is_floating_point_v<T>);
-    if (std::isnan(value))
+    if (isnan(value))
         return std::numeric_limits<T>::quiet_NaN();  // Positive canonical NaN.
 
     // The FE_INEXACT error is ignored (whenever the implementation reports it at all).
@@ -429,7 +448,7 @@ template <typename T>
 inline T ftrunc(T value) noexcept
 {
     static_assert(std::is_floating_point_v<T>);
-    if (std::isnan(value))
+    if (isnan(value))
         return std::numeric_limits<T>::quiet_NaN();  // Positive canonical NaN.
 
     // The FE_INEXACT error is ignored (whenever the implementation reports it at all).
@@ -441,7 +460,7 @@ T fnearest(T value) noexcept
 {
     static_assert(std::is_floating_point_v<T>);
 
-    if (std::isnan(value))
+    if (isnan(value))
         return std::numeric_limits<T>::quiet_NaN();  // Positive canonical NaN.
 
     // Check if the input integer (as floating-point type) is even.
@@ -467,11 +486,11 @@ __attribute__((no_sanitize("float-divide-by-zero"))) inline constexpr T fdiv(T a
 }
 
 template <typename T>
-inline T fmin(T a, T b) noexcept
+inline bit_cast_constexpr T fmin(T a, T b) noexcept
 {
     static_assert(std::is_floating_point_v<T>);
 
-    if (std::isnan(a) || std::isnan(b))
+    if (isnan(a) || isnan(b))
         return std::numeric_limits<T>::quiet_NaN();  // Positive canonical NaN.
 
     if (a == 0 && b == 0 && (signbit(a) || signbit(b)))
@@ -481,11 +500,11 @@ inline T fmin(T a, T b) noexcept
 }
 
 template <typename T>
-inline T fmax(T a, T b) noexcept
+inline bit_cast_constexpr T fmax(T a, T b) noexcept
 {
     static_assert(std::is_floating_point_v<T>);
 
-    if (std::isnan(a) || std::isnan(b))
+    if (isnan(a) || isnan(b))
         return std::numeric_limits<T>::quiet_NaN();  // Positive canonical NaN.
 
     if (a == 0 && b == 0 && (!signbit(a) || !signbit(b)))
