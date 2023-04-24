@@ -53,6 +53,8 @@ cable_add_compile_options(
     -Wduplicate-enum
     -Wlogical-op
     -Wno-unknown-attributes
+    -falign-functions=32
+    -mbranches-within-32B-boundaries
 )
 
 if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
