@@ -196,16 +196,70 @@ impl Drop for Instance {
     }
 }
 
+struct HostFunction {
+    module: CString,
+    name: CString,
+    inputs: Vec<sys::FizzyValueType>,
+    output: sys::FizzyValueType,
+    index: usize,
+}
+
+unsafe extern "C" fn host_callback(
+    host_context: *mut std::os::raw::c_void,
+    instance: *mut sys::FizzyInstance,
+    args: *const sys::FizzyValue,
+    context: *mut sys::FizzyExecutionContext,
+) -> sys::FizzyExecutionResult {
+    println!("host fuction called!");
+    //unimplemented!()
+    sys::FizzyExecutionResult {
+        trapped: false,
+        has_value: false,
+        value: sys::FizzyValue { i32: 0 },
+    }
+}
+
+fn create_function_import_list(
+    host_functions: &[&HostFunction],
+) -> Vec<sys::FizzyImportedFunction> {
+    assert!(host_functions.len() == 1);
+    let host_function = &host_functions[0];
+    let fn_type = sys::FizzyFunctionType {
+        output: host_function.output,
+        inputs: host_function.inputs.as_ptr(),
+        inputs_size: host_function.inputs.len(),
+    };
+    let ext_fn = sys::FizzyExternalFunction {
+        type_: fn_type,
+        function: Some(host_callback),
+        context: std::ptr::null_mut(),
+    };
+    vec![sys::FizzyImportedFunction {
+        module: host_function.module.as_ptr(),
+        name: host_function.name.as_ptr(),
+        external_function: ext_fn,
+    }]
+}
+
 impl Module {
     /// Create an instance of a module.
     // TODO: support imported functions
     pub fn instantiate(self) -> Result<Instance, Error> {
         let mut err = FizzyErrorBox::new();
+        let host_fn1 = HostFunction {
+            module: CString::new("env").expect("cstring to work"),
+            name: CString::new("print").expect("cstring to work"),
+            inputs: vec![],
+            output: sys::FizzyValueTypeVoid,
+            index: 0,
+        };
+        let import_list = vec![&host_fn1];
+        let import_list = create_function_import_list(&import_list);
         let ptr = unsafe {
-            sys::fizzy_instantiate(
+            sys::fizzy_resolve_instantiate(
                 self.0.as_ptr(),
-                std::ptr::null(),
-                0,
+                import_list.as_ptr(),
+                import_list.len(),
                 std::ptr::null(),
                 std::ptr::null(),
                 std::ptr::null(),
@@ -1277,9 +1331,7 @@ mod tests {
         assert!(instance.is_err());
         assert_eq!(
             instance.err().unwrap(),
-            Error::InstantiationFailed(
-                "module requires 1 imported functions, 0 provided".to_string()
-            )
+            Error::InstantiationFailed("imported function env.adler32 is required".to_string())
         );
     }
 
@@ -1303,5 +1355,30 @@ mod tests {
         let result = instance.unwrap().execute("test", &[]);
         assert!(result.is_err());
         assert_eq!(result.err().unwrap(), Error::Trapped);
+    }
+
+    #[test]
+    fn execute_host_function2() {
+        /* wat2wasm
+        (module
+          (func $print (import "env" "print"))
+          (func (export "foo")
+            call $print
+          )
+        )
+        */
+        let input = hex::decode(
+        "0061736d01000000010401600000020d0103656e76057072696e7400000302010007070103666f6f00010a0601040010000b").unwrap();
+
+        let module = parse(&input);
+        assert!(module.is_ok());
+        let instance = module.unwrap().instantiate();
+        assert!(instance.is_ok());
+        let mut instance = instance.unwrap();
+
+        // Successful execution.
+        let result = instance.execute("foo", &[]);
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_none());
     }
 }

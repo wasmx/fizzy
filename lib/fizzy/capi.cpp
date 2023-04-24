@@ -10,6 +10,7 @@
 #include <fizzy/fizzy.h>
 #include <cstring>
 #include <memory>
+#include <iostream>
 
 namespace
 {
@@ -275,6 +276,7 @@ inline fizzy::ImportedFunction unwrap(const FizzyImportedFunction& c_imported_fu
 
     auto function = unwrap(
         c_imported_func.external_function.function, c_imported_func.external_function.context);
+    std::cout << "c_imported_func:" << c_imported_func.module << ":" << c_imported_func.name << std::endl;
 
     return {c_imported_func.module, c_imported_func.name, std::move(inputs), output,
         std::move(function)};
@@ -640,6 +642,11 @@ FizzyInstance* fizzy_instantiate(const FizzyModule* module,
 
         set_success(error);
         return wrap(instance.release());
+    }
+    catch (fizzy::instantiate_error const& e)
+    {
+        std::cout << e.what() << std::endl;
+        return nullptr;
     }
     catch (...)
     {

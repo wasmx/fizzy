@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <iostream>
 
 namespace fizzy
 {
@@ -261,7 +262,7 @@ ExternalFunction find_imported_function(const std::string& module, const std::st
     const FuncType& module_func_type, const std::vector<ImportedFunction>& imported_functions)
 {
     const auto it = std::find_if(imported_functions.begin(), imported_functions.end(),
-        [module, name](const auto& func) { return module == func.module && name == func.name; });
+        [module, name](const auto& func) { std::cout << func.module << ":" << func.name << std::endl; return module == func.module && name == func.name; });
 
     if (it == imported_functions.end())
     {
