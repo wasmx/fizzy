@@ -23,12 +23,12 @@ endif()
 ExternalProject_Add(uvwasi
     EXCLUDE_FROM_ALL 1
     PREFIX ${prefix}
-    DOWNLOAD_NAME uvwasi-0.0.12.tar.gz
+    DOWNLOAD_NAME uvwasi-0.0.23.tar.gz
     DOWNLOAD_DIR ${prefix}/downloads
     SOURCE_DIR ${source_dir}
     BINARY_DIR ${binary_dir}
-    URL https://github.com/nodejs/uvwasi/archive/v0.0.12.tar.gz
-    URL_HASH SHA256=f310a628d2657b9ed523a19284f58e4a407466f2e17efb2250d2e58524d02c53
+    URL https://github.com/nodejs/uvwasi/archive/v0.0.23.tar.gz
+    URL_HASH SHA256=cdb148aac298883b51da887657deca910c7c02f35435e24f125cef536fe8d5e1
     CMAKE_ARGS
     ${toolchain_file}
     -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
