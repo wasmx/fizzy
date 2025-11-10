@@ -8,7 +8,7 @@
 [![codecov badge]][codecov]
 [![license badge]][Apache License, Version 2.0]
 
-Fizzy aims to be a fast, deterministic, and pedantic WebAssembly interpreter written in C++.
+Fizzy aims to be a fast, deterministic, and pedantic WebAssembly interpreter written in C++. It is a project by [Ipsilon](https://ipsilon.xyz).
 
 ## Goals
 
