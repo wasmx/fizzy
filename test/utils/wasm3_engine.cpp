@@ -8,6 +8,7 @@
 #include <test/utils/wasm_engine.hpp>
 #include <cassert>
 #include <cstring>
+#include <stdexcept>
 
 namespace fizzy::test
 {
@@ -38,10 +39,11 @@ public:
 
 namespace
 {
-const void* env_adler32(IM3Runtime /*runtime*/, uint64_t* stack, void* mem) noexcept
+const void* env_adler32(
+    IM3Runtime /*runtime*/, IM3ImportContext /*context*/, uint64_t* stack, void* mem) noexcept
 {
-    const uint32_t offset = static_cast<uint32_t>(stack[0]);
-    const uint32_t length = static_cast<uint32_t>(stack[1]);
+    const uint32_t offset = static_cast<uint32_t>(stack[1]);
+    const uint32_t length = static_cast<uint32_t>(stack[2]);
     stack[0] = fizzy::test::adler32({reinterpret_cast<uint8_t*>(mem) + offset, length});
     return m3Err_none;
 }
@@ -83,12 +85,15 @@ bool Wasm3Engine::instantiate(bytes_view wasm_binary)
     // Transfers ownership to runtime.
     if (m3_LoadModule(m_runtime, module) != m3Err_none)
     {
-        // NOTE: apparently m3_FreeModule isn't needed in neither the failure nor the success case
+        m3_FreeModule(module);
         return false;
     }
 
-    auto ret = m3_LinkRawFunction(module, "env", "adler32", "i(ii)", env_adler32);
-    return ret == m3Err_none || ret == m3Err_functionLookupFailed;
+    const auto ret = m3_LinkRawFunction(module, "env", "adler32", "i(ii)", env_adler32);
+    if (ret != m3Err_none && ret != m3Err_functionLookupFailed)
+        return false;
+
+    return m3_RunStart(module) == m3Err_none;
 }
 
 bool Wasm3Engine::init_memory(fizzy::bytes_view memory)
@@ -111,24 +116,54 @@ fizzy::bytes_view Wasm3Engine::get_memory() const
 }
 
 std::optional<WasmEngine::FuncRef> Wasm3Engine::find_function(
-    std::string_view name, std::string_view) const
+    std::string_view name, std::string_view signature) const
 {
     IM3Function function;
-    if (m3_FindFunction(&function, m_runtime, name.data()) == m3Err_none)
-        return reinterpret_cast<WasmEngine::FuncRef>(function);
-    return std::nullopt;
+    if (m3_FindFunction(&function, m_runtime, name.data()) != m3Err_none)
+        return std::nullopt;
+
+    const auto [inputs, outputs] = translate_function_signature<M3ValueType,
+        M3ValueType::c_m3Type_i32, M3ValueType::c_m3Type_i64>(signature);
+
+    if (inputs.size() != m3_GetArgCount(function))
+        return std::nullopt;
+    for (unsigned i = 0; i < m3_GetArgCount(function); i++)
+        if (inputs[i] != m3_GetArgType(function, i))
+            return std::nullopt;
+
+    if (outputs.size() != m3_GetRetCount(function))
+        return std::nullopt;
+    for (unsigned i = 0; i < m3_GetRetCount(function); i++)
+        if (outputs[i] != m3_GetRetType(function, i))
+            return std::nullopt;
+
+    return reinterpret_cast<WasmEngine::FuncRef>(function);
 }
 
 WasmEngine::Result Wasm3Engine::execute(
     WasmEngine::FuncRef func_ref, const std::vector<uint64_t>& args)
 {
-    unsigned ret_valid;
-    uint64_t ret_value;
     auto function = reinterpret_cast<IM3Function>(func_ref);  // NOLINT(performance-no-int-to-ptr)
-    auto const result = m3_CallProper(
-        function, static_cast<uint32_t>(args.size()), args.data(), &ret_valid, &ret_value);
-    if (result == m3Err_none)
-        return {false, ret_valid ? ret_value : std::optional<uint64_t>{}};
+
+    if (args.size() > 32)
+        throw std::runtime_error{"Does not support more than 32 arguments"};
+    const void* argPtrs[32];
+    for (unsigned i = 0; i < args.size(); i++)
+        argPtrs[i] = &args[i];
+
+    // This ensures input count/type matches. For the return value we assume find_function did the
+    // validation.
+    if (m3_Call(function, static_cast<uint32_t>(args.size()), argPtrs) == m3Err_none)
+    {
+        if (m3_GetRetCount(function) == 0)
+            return {false, std::nullopt};
+
+        uint64_t ret_value = 0;
+        // This should not fail because we check GetRetCount.
+        [[maybe_unused]] const auto ret = m3_GetResultsV(function, &ret_value);
+        assert(ret == m3Err_none);
+        return {false, ret_value};
+    }
     return {true, std::nullopt};
 }
 }  // namespace fizzy::test
